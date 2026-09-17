@@ -58,3 +58,5 @@ services:
     envVars:
       - key: VITE_API_URL
         value: https://ikan-772d.onrender.com/api/v1
+      - key: VITE_CLIENT_URL
+        value: https://ikan-1.onrender.com

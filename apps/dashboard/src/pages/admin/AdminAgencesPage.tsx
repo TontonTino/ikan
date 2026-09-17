@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { agencesApi, dashboardApi } from '../../services/api';
+import { CLIENT_URL, getFeedbackUrl } from '../../config';
 import { useAuthStore } from '../../stores/authStore';
 import type { Agence, AgenceStats } from '../../types';
 import PageHeader from '../../components/ui/PageHeader';
@@ -667,7 +668,7 @@ export default function AdminAgencesPage() {
                 </div>
                 <div style={{ fontSize: '0.76rem', color: '#64748B' }}>
                   {qrMode === 'render'
-                    ? 'Scannable depuis n’importe quel smartphone en 4G/5G ou autre réseau (https://ikanai-client.onrender.com).'
+                    ? `Scannable depuis n'importe quel smartphone en 4G/5G ou autre réseau (${CLIENT_URL}).`
                     : `Scannable par les smartphones connectés sur votre même réseau Wi-Fi (${qrHost || '192.168.1.117'}).`}
                 </div>
               </div>
@@ -747,7 +748,7 @@ export default function AdminAgencesPage() {
             {agencesEnrichies.map((a) => {
               const effectiveHost = qrHost || window.location.hostname;
               const qrUrl = qrMode === 'render'
-                ? `https://ikanai-client.onrender.com/feedback/${a.qr_code_token || a.id}`
+                ? getFeedbackUrl(a.qr_code_token || a.id)
                 : `http://${effectiveHost}:4321/feedback/${a.qr_code_token || a.id}`;
               return (
                 <div
@@ -988,7 +989,7 @@ export default function AdminAgencesPage() {
       {qrModalTarget && (() => {
         const effectiveHost = qrHost || window.location.hostname;
         const modalQrUrl = qrMode === 'render'
-          ? `https://ikanai-client.onrender.com/feedback/${qrModalTarget.qr_code_token || qrModalTarget.id}`
+          ? getFeedbackUrl(qrModalTarget.qr_code_token || qrModalTarget.id)
           : `http://${effectiveHost}:4321/feedback/${qrModalTarget.qr_code_token || qrModalTarget.id}`;
 
         return (

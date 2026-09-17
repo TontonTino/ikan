@@ -21,12 +21,13 @@ import AgentIAPage from './pages/cx/AgentIAPage';
 import AbonnementsPage from './pages/cx/AbonnementsPage';
 
 import { useParams } from 'react-router-dom';
+import { getFeedbackUrl } from './config';
 
 function FeedbackRedirect() {
   const { code } = useParams();
   const host = window.location.hostname;
   const isLocal = host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.');
-  const clientUrl = isLocal ? `http://${host}:4321/feedback/${code || ''}` : `https://ikanai-client.onrender.com/feedback/${code || ''}`;
+  const clientUrl = isLocal ? `http://${host}:4321/feedback/${code || ''}` : getFeedbackUrl(code || '');
   window.location.href = clientUrl;
   return (
     <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'sans-serif' }}>
