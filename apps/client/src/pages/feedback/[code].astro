@@ -6,7 +6,7 @@
 import FeedbackLayout from '../../layouts/FeedbackLayout.astro';
 
 const { code } = Astro.params;
-const DEFAULT_API_URL = 'https://ikanai-api.onrender.com/api/v1';
+const DEFAULT_API_URL = 'https://ikan-772d.onrender.com/api/v1';
 const SSR_API_URL = import.meta.env.PUBLIC_API_URL || DEFAULT_API_URL;
 
 let agenceInfo: { agence_nom?: string; code?: string; actif?: boolean } | null = null;
@@ -1357,7 +1357,7 @@ try {
 
 <script>
   // Navigation & Paramètres
-  const DEFAULT_API_URL = 'https://ikanai-api.onrender.com/api/v1';
+  const DEFAULT_API_URL = 'https://ikan-772d.onrender.com/api/v1';
   const pageOuter = document.querySelector('.page-outer') as HTMLElement | null;
   let API_URL = pageOuter?.dataset.apiUrl || DEFAULT_API_URL;
 

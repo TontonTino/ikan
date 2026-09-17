@@ -41,7 +41,7 @@ services:
       - key: NODE_VERSION
         value: "20"
       - key: PUBLIC_API_URL
-        value: https://ikanai-api.onrender.com/api/v1
+        value: https://ikan-772d.onrender.com/api/v1
 
   - type: static
     name: ikanai-dashboard
@@ -57,4 +57,4 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        value: https://ikanai-api.onrender.com/api/v1
+        value: https://ikan-772d.onrender.com/api/v1
