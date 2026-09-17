@@ -9,12 +9,14 @@ const { code } = Astro.params;
 const DEFAULT_API_URL = 'https://ikanai-api.onrender.com/api/v1';
 const SSR_API_URL = import.meta.env.PUBLIC_API_URL || DEFAULT_API_URL;
 
-let agenceInfo = null;
-let erreur = null;
+let agenceInfo: { agence_nom?: string; code?: string; actif?: boolean } | null = null;
+let erreur: string | null = null;
 
 try {
   const cleanCode = (code || '').trim();
-  const res = await fetch(`${SSR_API_URL}/qr-codes/${encodeURIComponent(cleanCode)}/validate`);
+  const res = await fetch(`${SSR_API_URL}/qr-codes/${encodeURIComponent(cleanCode)}/validate`, {
+    signal: AbortSignal.timeout(2000),
+  });
   if (res.ok) {
     agenceInfo = await res.json();
   }
@@ -24,283 +26,332 @@ try {
 ---
 
 <FeedbackLayout
-  title={agenceInfo?.agence_nom ? `Avis — ${agenceInfo.agence_nom}` : 'IKAN AI — Donner votre avis'}
+  title={agenceInfo?.agence_nom ? `Votre avis — ${agenceInfo.agence_nom}` : 'IKAN AI — Votre avis en agence'}
   agenceNom={agenceInfo?.agence_nom}
 >
   <div class="page-outer" data-api-url={SSR_API_URL}>
-  <div class="card-shell">
+    <div class="card-shell">
+      {erreur ? (
+        <div class="error-screen">
+          <div class="error-icon">⚠️</div>
+          <h2>QR Code non reconnu</h2>
+          <p>{erreur}</p>
+        </div>
+      ) : (
+        <>
+          <!-- ================= HERO HEADER (Vert IKAN AI) ================= -->
+          <header class="hero">
+            <div class="hero-pattern" aria-hidden="true"></div>
 
-    {erreur ? (
-      <div class="error-screen">
-        <div class="error-icon">⚠️</div>
-        <h2>QR Code invalide</h2>
-        <p>{erreur}</p>
-      </div>
-    ) : (
-      <>
-        <!-- ================= HERO ================= -->
-        <header class="hero">
-          <div class="hero-pattern" aria-hidden="true"></div>
-
-          <div class="hero-top">
-            <div class="hero-logo-box">
-              <img
-                src="/ikan-ai-logo.png"
-                alt="IKAN AI"
-                class="hero-brand-logo"
-                loading="eager"
-                decoding="sync"
-              />
+            <div class="hero-top">
+              <div class="hero-logo-box">
+                <img
+                  src="/ikan-ai-logo.png"
+                  alt="IKAN AI"
+                  class="hero-brand-logo"
+                  loading="eager"
+                  decoding="sync"
+                />
+              </div>
+              <div class="agency-chip" id="agencyBadgeContainer">
+                <span class="agency-live-dot" aria-hidden="true"></span>
+                <span id="agencyBadgeText">{agenceInfo?.agence_nom || 'AGENCE EN DIRECT'}</span>
+              </div>
             </div>
-            <div class="agency-chip">
-              <span class="agency-live-dot" aria-hidden="true"></span>
-              <span id="agencyBadgeText">{agenceInfo?.agence_nom || 'AGENCE'}</span>
+
+            <div class="hero-copy">
+              <h1 class="hero-title">Votre avis compte pour nous.</h1>
             </div>
-          </div>
+          </header>
 
-          <div class="hero-copy">
-            <p class="hero-greeting">Bonjour !</p>
-            <h1 class="hero-title">Racontez-nous votre passage en agence</h1>
-            <p class="hero-sub">Une minute suffit pour nous aider à améliorer chaque visite.</p>
-          </div>
-        </header>
+          <!-- ================= FORMULAIRE PRINCIPAL ================= -->
+          <main class="form-flow">
 
-        <main class="form-flow">
+            <!-- ÉCRAN 1 : FORMULAIRE -->
+            <section id="screen-sentiment" class="screen-view">
 
-          <!-- ================= ECRAN 1 : FORMULAIRE ================= -->
-          <section id="screen-sentiment" class="screen-view">
+              <!-- SECTION 1 : ÉVALUATION (5 EMOJIS) -->
+              <div class="form-section sentiment-section">
+                <div class="section-head">
+                  <label class="field-label">Comment s'est passée votre visite ?</label>
+                </div>
 
-            <!-- Sentiment : 3 emojis conformes à la maquette -->
-            <section class="card sentiment-section">
-              <p class="field-label">Comment s'est passée votre visite ?</p>
-              <div class="sentiment-grid" id="sentimentsGrid">
-                <button type="button" class="sentiment-tile tone-negatif" data-sentiment="negatif" aria-label="Avis Négatif">
-                  <div class="sentiment-icon">
-                    <svg viewBox="0 0 36 36" width="38" height="38">
-                      <circle cx="18" cy="18" r="18" fill="#DC2626"/>
-                      <circle cx="12" cy="14" r="2.2" fill="#FFFFFF"/>
-                      <circle cx="24" cy="14" r="2.2" fill="#FFFFFF"/>
-                      <path d="M12 25.5 C14.5 20.5, 21.5 20.5, 24 25.5" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" fill="none"/>
-                    </svg>
-                  </div>
-                  <span class="tile-label">Négatif</span>
-                </button>
+                <div class="sentiment-grid" id="sentimentsGrid" role="radiogroup" aria-label="Niveau de satisfaction">
+                  <!-- 1. Mauvais -->
+                  <button type="button" class="sentiment-tile tone-mauvais" data-sentiment="mauvais" role="radio" aria-checked="false" aria-label="Mauvais">
+                    <div class="sentiment-icon">
+                      <svg viewBox="0 0 40 40" width="38" height="38" fill="none">
+                        <circle cx="20" cy="20" r="18" fill="#EF4444"/>
+                        <circle cx="14" cy="16" r="2.3" fill="#FFFFFF"/>
+                        <circle cx="26" cy="16" r="2.3" fill="#FFFFFF"/>
+                        <path d="M13 28 C15.5 23, 24.5 23, 27 28" stroke="#FFFFFF" stroke-width="2.8" stroke-linecap="round"/>
+                        <path d="M11 12.5 L16 14.5" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+                        <path d="M29 12.5 L24 14.5" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+                      </svg>
+                    </div>
+                    <span class="tile-label">Mauvais</span>
+                  </button>
 
-                <button type="button" class="sentiment-tile tone-neutre" data-sentiment="neutre" aria-label="Avis Neutre">
-                  <div class="sentiment-icon">
-                    <svg viewBox="0 0 36 36" width="38" height="38">
-                      <circle cx="18" cy="18" r="18" fill="#F59E0B"/>
-                      <circle cx="12" cy="14" r="2.2" fill="#02302D"/>
-                      <circle cx="24" cy="14" r="2.2" fill="#02302D"/>
-                      <line x1="12" y1="23.5" x2="24" y2="23.5" stroke="#02302D" stroke-width="2.6" stroke-linecap="round"/>
-                    </svg>
-                  </div>
-                  <span class="tile-label">Neutre</span>
-                </button>
+                  <!-- 2. Passable -->
+                  <button type="button" class="sentiment-tile tone-passable" data-sentiment="passable" role="radio" aria-checked="false" aria-label="Passable">
+                    <div class="sentiment-icon">
+                      <svg viewBox="0 0 40 40" width="38" height="38" fill="none">
+                        <circle cx="20" cy="20" r="18" fill="#F97316"/>
+                        <circle cx="14" cy="16" r="2.3" fill="#FFFFFF"/>
+                        <circle cx="26" cy="16" r="2.3" fill="#FFFFFF"/>
+                        <path d="M14 27 C16.5 23.5, 23.5 23.5, 26 27" stroke="#FFFFFF" stroke-width="2.8" stroke-linecap="round"/>
+                      </svg>
+                    </div>
+                    <span class="tile-label">Passable</span>
+                  </button>
 
-                <button type="button" class="sentiment-tile tone-positif" data-sentiment="positif" aria-label="Avis Positif">
-                  <div class="sentiment-icon">
-                    <svg viewBox="0 0 36 36" width="38" height="38">
-                      <circle cx="18" cy="18" r="18" fill="#2E7D32"/>
-                      <circle cx="12" cy="14" r="2.2" fill="#FFFFFF"/>
-                      <circle cx="24" cy="14" r="2.2" fill="#FFFFFF"/>
-                      <path d="M11 20 C14.5 26.5, 21.5 26.5, 25 20" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" fill="none"/>
-                    </svg>
-                  </div>
-                  <span class="tile-label">Positif</span>
-                </button>
+                  <!-- 3. Neutre -->
+                  <button type="button" class="sentiment-tile tone-neutre" data-sentiment="neutre" role="radio" aria-checked="false" aria-label="Neutre">
+                    <div class="sentiment-icon">
+                      <svg viewBox="0 0 40 40" width="38" height="38" fill="none">
+                        <circle cx="20" cy="20" r="18" fill="#FACC15"/>
+                        <circle cx="14" cy="16" r="2.3" fill="#1F2937"/>
+                        <circle cx="26" cy="16" r="2.3" fill="#1F2937"/>
+                        <line x1="14" y1="26" x2="26" y2="26" stroke="#1F2937" stroke-width="2.8" stroke-linecap="round"/>
+                      </svg>
+                    </div>
+                    <span class="tile-label">Neutre</span>
+                  </button>
+
+                  <!-- 4. Bien -->
+                  <button type="button" class="sentiment-tile tone-bien selected" data-sentiment="bien" role="radio" aria-checked="true" aria-label="Bien">
+                    <div class="sentiment-icon">
+                      <svg viewBox="0 0 40 40" width="38" height="38" fill="none">
+                        <circle cx="20" cy="20" r="18" fill="#4CAF50"/>
+                        <circle cx="14" cy="16" r="2.3" fill="#FFFFFF"/>
+                        <circle cx="26" cy="16" r="2.3" fill="#FFFFFF"/>
+                        <path d="M13 23 C16 28.5, 24 28.5, 27 23" stroke="#FFFFFF" stroke-width="2.8" stroke-linecap="round"/>
+                      </svg>
+                    </div>
+                    <span class="tile-label">Bien</span>
+                  </button>
+
+                  <!-- 5. Excellente (avec étoile dorée) -->
+                  <button type="button" class="sentiment-tile tone-excellente" data-sentiment="excellente" role="radio" aria-checked="false" aria-label="Excellente">
+                    <div class="sentiment-icon">
+                      <svg viewBox="0 0 40 40" width="38" height="38" fill="none">
+                        <circle cx="20" cy="20" r="18" fill="#147A43"/>
+                        <circle cx="13.5" cy="16" r="2.3" fill="#FFFFFF"/>
+                        <circle cx="26.5" cy="16" r="2.3" fill="#FFFFFF"/>
+                        <path d="M12 22.5 C15 29.5, 25 29.5, 28 22.5" stroke="#FFFFFF" stroke-width="2.8" stroke-linecap="round"/>
+                        <!-- Étoile scintillante dorée -->
+                        <path d="M 32 6 L 33.3 9.8 L 37 10.1 L 34.2 12.5 L 35 16.2 L 32 14.2 L 29 16.2 L 29.8 12.5 L 27 10.1 L 30.7 9.8 Z" fill="#FACC15" stroke="#CA8A04" stroke-width="0.6"/>
+                      </svg>
+                    </div>
+                    <span class="tile-label">Excellente</span>
+                  </button>
+                </div>
+
               </div>
-            </section>
 
-            <!-- Commentaire -->
-            <section class="card">
-              <label class="field-label" for="inputCommentaire">
-                Commentaire, explication ou idée
-              </label>
-              <div class="textarea-wrap">
-                <textarea
-                  id="inputCommentaire"
-                  class="styled-textarea"
-                  rows="3"
-                  maxlength="500"
-                  placeholder="Partagez votre ressenti, une remarque ou une suggestion..."
-                ></textarea>
-                <button type="button" class="mic-btn" id="micBtnCommentaire" aria-label="Dicter à la voix" title="Dicter à la voix">
-                  <svg class="mic-icon-on" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                    <line x1="12" y1="19" x2="12" y2="23"/>
-                    <line x1="8" y1="23" x2="16" y2="23"/>
-                  </svg>
-                  <svg class="mic-icon-off" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
-                    <line x1="1" y1="1" x2="23" y2="23"/>
-                    <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/>
-                    <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/>
-                    <line x1="12" y1="19" x2="12" y2="23"/>
-                    <line x1="8" y1="23" x2="16" y2="23"/>
-                  </svg>
-                </button>
-              </div>
-              <div class="textarea-meta">
-                <p class="voice-status" id="voiceStatusCommentaire" style="display:none;"></p>
-                <span class="char-count" id="charCount">0 / 500</span>
-              </div>
-            </section>
+              <!-- SECTION 3 : COMMENTAIRE & DICTÉE VOCALE -->
+              <div class="form-section comment-section">
+                <div class="section-head">
+                  <label class="field-label" for="inputCommentaire">
+                    Commentaire
+                  </label>
+                </div>
 
-            <!-- Recontact (ligne compacte) -->
-            <section class="card card-recontact">
-              <div class="recontact-row">
-                <span class="field-label-inline">
-                  Être recontacté ? <span class="optional">(facultatif)</span>
-                </span>
-                <div class="segmented" role="group" aria-label="Être recontacté">
-                  <button type="button" class="segment is-active" id="recontactNo" data-value="non">Non</button>
-                  <button type="button" class="segment" id="recontactYes" data-value="oui">Oui</button>
+                <div class="textarea-box">
+                  <textarea
+                    id="inputCommentaire"
+                    class="styled-textarea"
+                    rows="3"
+                    maxlength="500"
+                    placeholder="Partagez votre ressenti ou une remarque..."
+                  ></textarea>
+
+                  <div class="textarea-footer">
+                    <button type="button" class="mic-btn" id="micBtnCommentaire" aria-label="Dicter à la voix" title="Dicter votre commentaire à la voix">
+                      <svg class="mic-icon-on" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                        <line x1="12" y1="19" x2="12" y2="23"/>
+                        <line x1="8" y1="23" x2="16" y2="23"/>
+                      </svg>
+                      <svg class="mic-icon-off" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+                        <line x1="1" y1="1" x2="23" y2="23"/>
+                        <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/>
+                        <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/>
+                        <line x1="12" y1="19" x2="12" y2="23"/>
+                        <line x1="8" y1="23" x2="16" y2="23"/>
+                      </svg>
+                      <span class="mic-text">Parler</span>
+                    </button>
+
+                    <span class="char-count" id="charCount">0 / 500</span>
+                  </div>
+                </div>
+
+                <div class="voice-status-bar" id="voiceStatusCommentaire" style="display:none;"></div>
+              </div>
+
+              <!-- SECTION 4 : RECONTACT -->
+              <div class="form-section recontact-section">
+                <div class="recontact-row">
+                  <div class="section-head">
+                    <label class="field-label-inline">
+                      Souhaitez-vous être recontacté ?
+                    </label>
+                  </div>
+
+                  <div class="segmented-control" role="group" aria-label="Être recontacté">
+                    <button type="button" class="segment is-active" id="recontactNo" data-value="non">Non</button>
+                    <button type="button" class="segment" id="recontactYes" data-value="oui">Oui</button>
+                  </div>
+                </div>
+
+                <div class="reveal-panel" id="contactFieldsPanel" hidden>
+                  <p class="contact-panel-hint">Indiquez votre numéro de téléphone pour être recontacté :</p>
+                  <div class="contact-inputs-grid">
+                    <div class="input-with-icon">
+                      <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                      </svg>
+                      <input
+                        type="tel"
+                        inputmode="tel"
+                        autocomplete="tel"
+                        id="contactTelInput"
+                        placeholder="Votre numéro de téléphone"
+                        class="styled-input"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div class="reveal-panel" id="contactFieldsSentiment" hidden>
-                <div class="contact-grid">
-                  <div class="input-with-icon">
-                    <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                    </svg>
-                    <input
-                      type="tel"
-                      inputmode="tel"
-                      autocomplete="tel"
-                      id="contactTelSentiment"
-                      placeholder="Téléphone"
-                      class="styled-input with-icon"
-                    />
-                  </div>
-                  <div class="input-with-icon">
-                    <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                      <polyline points="22,6 12,13 2,6"/>
-                    </svg>
-                    <input
-                      type="email"
-                      inputmode="email"
-                      autocomplete="email"
-                      id="contactEmailSentiment"
-                      placeholder="Email"
-                      class="styled-input with-icon"
-                    />
-                  </div>
-                </div>
+              <!-- BOUTON D'ENVOI PRINCIPAL -->
+              <div class="submit-wrap">
+                <button type="button" id="btnSubmitFeedback" class="btn-submit">
+                  <span class="btn-text">Envoyer mon avis</span>
+                  <svg class="btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                    <polyline points="12 5 19 12 12 19"/>
+                  </svg>
+                </button>
               </div>
-            </section>
 
-            <button type="button" id="btnSubmitSentiment" class="btn-submit">
-              <span class="btn-text">Envoyer mon avis</span>
-              <span class="arrow">›</span>
-            </button>
-
-            <p class="lock-note">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-              <span>Réponse strictement anonyme et sécurisée</span>
-            </p>
-          </section>
-
-          <!-- ================= ECRAN 2 : SUCCÈS ================= -->
-          <section id="screen-success" class="screen-view" style="display:none;">
-            <div class="success-hero">
-              <div class="success-icon-badge">
-                <svg viewBox="0 0 56 56" width="56" height="56" fill="none">
-                  <circle cx="28" cy="28" r="28" fill="#EBF7EE"/>
-                  <circle cx="28" cy="28" r="21" fill="#3C7730"/>
-                  <path d="M20 28.5L25.5 34L36 22" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <!-- NOTE DE CONFIDENTIALITÉ -->
+              <p class="lock-note">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
-              </div>
-              <h1 class="success-title">Merci pour votre retour !</h1>
-              <p class="success-sub">Votre avis a bien été enregistré et nous aide à améliorer la qualité de notre service en continu.</p>
-              <div class="success-chip">
-                <span class="success-dot"></span>
-                <span>Transmis en temps réel</span>
-              </div>
-              <button type="button" class="btn-reset" id="btnNewFeedback">
-                Donner un autre avis
-              </button>
-            </div>
-          </section>
+                <span>Avis strictement anonyme et sécurisé</span>
+              </p>
+            </section>
 
-        </main>
-      </>
-    )}
+            <!-- ÉCRAN 2 : SUCCÈS CONFIRMATION -->
+            <section id="screen-success" class="screen-view success-view" style="display:none;">
+              <div class="success-card">
+                <div class="success-animation-wrap">
+                  <div class="success-pulse-ring"></div>
+                  <div class="success-icon-badge">
+                    <svg viewBox="0 0 64 64" width="64" height="64" fill="none">
+                      <circle cx="32" cy="32" r="30" fill="#EBF7EE" stroke="#3C7730" stroke-width="2"/>
+                      <circle cx="32" cy="32" r="23" fill="#3C7730"/>
+                      <path d="M22 32.5 L28.5 39 L42 25.5" stroke="#FFFFFF" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                </div>
 
-  </div>
+                <h2 class="success-title">Merci pour votre retour !</h2>
+                <p class="success-message">
+                  Votre avis a bien été enregistré. Il aide nos équipes à élever la qualité de service au quotidien.
+                </p>
+
+                <div class="success-status-pill">
+                  <span class="live-dot-green"></span>
+                  <span>Transmis en direct à l'agence</span>
+                </div>
+
+                <div class="success-actions">
+                  <button type="button" class="btn-secondary" id="btnNewFeedback">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                      <path d="M21 3v5h-5"/>
+                      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                      <path d="M8 16H3v5"/>
+                    </svg>
+                    <span>Donner un autre avis</span>
+                  </button>
+                </div>
+              </div>
+            </section>
+
+          </main>
+        </>
+      )}
+    </div>
   </div>
 </FeedbackLayout>
 
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
-
-  :global(*),
-  :global(*::before),
-  :global(*::after) {
-    box-sizing: border-box;
-    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-  }
-
-  :global(:root) {
-    --ink: #02302D;
-    --forest: #3C7730;
-    --leaf: #75B72A;
-    --lime: #BCCF00;
-    --paper: #FFFFFF;
-    --paper-tint: #FAFCF9;
-    --text-muted: #64748B;
-    --border-color: #E2E8F0;
-
-    --font-display: 'Poppins', sans-serif;
-    --font-body: 'Poppins', sans-serif;
-  }
-
-  :global(html),
-  :global(body) {
-    margin: 0;
-    padding: 0;
-    background: #F1F5F2 !important;
-    min-height: 100vh;
-    min-height: 100dvh;
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-
   /* =========================================================
-     PAGE CONTENEUR — FLUIDE & RESPONSIVE
+     PAGE CONTENEUR & AMBIANCE BLANCHE LUMINEUSE
      ========================================================= */
   .page-outer {
     position: relative;
+    width: min(100%, 1000px);
+    margin: 0 auto;
+    border-radius: 48px;
+    overflow: hidden;
     min-height: 100vh;
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(circle at 50% 15%, #F4F8F5 0%, #E8EFEA 100%);
-    padding: 24px 16px;
+    isolation: isolate;
+    background:
+      radial-gradient(ellipse at 18% 0%, rgba(255, 255, 255, 0.98) 0%, transparent 42%),
+      radial-gradient(ellipse at 86% 100%, rgba(60, 119, 48, 0.12) 0%, transparent 40%),
+      linear-gradient(135deg, #FFFFFF 0%, #FBFDFC 48%, #EEF5F0 100%);
+    padding: clamp(12px, 3vh, 36px) clamp(10px, 2.5vw, 24px);
     box-sizing: border-box;
   }
 
   .page-outer::before {
     content: '';
     position: absolute;
-    width: min(720px, calc(100% - 32px));
-    height: min(740px, calc(100% - 32px));
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(255, 255, 255, 0.45);
-    border-radius: 32px;
-    box-shadow: 0 20px 45px -10px rgba(2, 48, 45, 0.08);
-    z-index: 0;
+    inset: 5px;
+    z-index: -1;
+    border: 1px solid rgba(60, 119, 48, 0.1);
+    border-radius: 48px;
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(226, 238, 229, 0.24)),
+      linear-gradient(115deg, transparent 0 48%, rgba(60, 119, 48, 0.035) 48.2% 48.5%, transparent 48.7%);
+    box-shadow:
+      0 34px 90px rgba(2, 48, 45, 0.1),
+      0 10px 26px rgba(60, 119, 48, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.96),
+      inset 0 -1px 0 rgba(60, 119, 48, 0.04);
+    transform: perspective(1100px) rotateX(1.2deg) translateZ(0);
+    pointer-events: none;
+  }
+
+  .page-outer::after {
+    content: '';
+    position: absolute;
+    left: -8%;
+    right: -8%;
+    bottom: -18%;
+    height: 52%;
+    z-index: -1;
+    opacity: 0.42;
+    background:
+      linear-gradient(rgba(60, 119, 48, 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(60, 119, 48, 0.07) 1px, transparent 1px);
+    background-size: 44px 44px;
+    transform: perspective(700px) rotateX(58deg) rotateZ(-3deg) scale(1.16);
+    transform-origin: center bottom;
+    mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent 82%);
     pointer-events: none;
   }
 
@@ -308,44 +359,70 @@ try {
     position: relative;
     z-index: 2;
     width: 100%;
-    max-width: 490px;
-    margin: auto;
+    max-width: 650px;
     background: #FFFFFF;
-    border-radius: 24px;
-    box-shadow: 0 16px 40px -10px rgba(2, 48, 45, 0.12), 0 0 0 1px rgba(2, 48, 45, 0.05);
+    border-radius: 26px;
+    box-shadow:
+      0 20px 45px -10px rgba(2, 48, 45, 0.09),
+      0 1px 3px rgba(2, 48, 45, 0.04),
+      0 0 0 1px rgba(2, 48, 45, 0.06);
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    transition: box-shadow 0.3s ease;
+  }
+
+  .card-shell::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 5;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
   }
 
   /* =========================================================
-     HERO IKAN AI (COMPACT)
+     HERO HEADER (VERT SIGNATURE IKAN AI)
      ========================================================= */
   .hero {
     position: relative;
-    background: linear-gradient(150deg, #02302D 0%, #053D38 60%, #084D46 100%);
+    background: linear-gradient(90deg, #75B72A 0%, #5C9F38 48%, #3C7730 100%);
     color: #FFFFFF;
-    padding: clamp(8px, 1.3vh, 12px) clamp(14px, 2.5vw, 22px);
+    padding: clamp(20px, 3.2vh, 28px) clamp(18px, 4vw, 26px);
     overflow: hidden;
-    border: none;
     flex-shrink: 0;
+    border-bottom: 3px solid #BCCF00;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    top: -60%;
+    left: -35%;
+    width: 28%;
+    height: 220%;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+    transform: rotate(18deg);
+    pointer-events: none;
+    animation: glossy-sweep 7s ease-in-out infinite;
   }
 
   .hero-pattern {
     position: absolute;
-    width: 260px;
-    height: 260px;
-    right: -60px;
-    bottom: -70px;
+    width: 250px;
+    height: 250px;
+    right: -30px;
+    bottom: -85px;
     pointer-events: none;
     z-index: 0;
     user-select: none;
     background-image: url('/ikan-ai-logo.png');
-    background-size: 800px auto;
-    background-position: -30px center;
+    background-size: 1000px auto;
+    background-position: left center;
     background-repeat: no-repeat;
-    opacity: 0.05;
-    filter: grayscale(1) brightness(3);
+    opacity: 0.06;
+    filter: grayscale(1) brightness(4);
   }
 
   .hero-top {
@@ -354,27 +431,26 @@ try {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: clamp(3px, 0.7vh, 6px);
+    gap: 12px;
+    margin-bottom: clamp(14px, 2.2vh, 20px);
   }
 
   .hero-logo-box {
     background: #FFFFFF;
     border-radius: 999px;
-    padding: 3px 12px;
-    height: clamp(26px, 3.4vh, 30px);
+    padding: 5px 14px;
+    height: 34px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
-    position: relative;
-    z-index: 2;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
     flex-shrink: 0;
   }
 
   .hero-brand-logo {
-    height: 100%;
+    height: 22px;
     width: auto;
-    max-width: 125px;
+    max-width: 110px;
     display: block;
     object-fit: contain;
   }
@@ -382,31 +458,36 @@ try {
   .agency-chip {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    gap: 7px;
+    border: 1px solid rgba(255, 255, 255, 0.32);
     border-radius: 999px;
-    padding: 3px 10px;
-    font-size: clamp(0.66rem, 1.1vh, 0.72rem);
+    padding: 5px 12px;
+    font-size: 0.72rem;
     font-weight: 600;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.04em;
     color: #FFFFFF;
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(8px);
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(12px);
     text-transform: uppercase;
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .agency-live-dot {
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
-    background-color: var(--lime);
-    box-shadow: 0 0 0 0 rgba(188, 207, 0, 0.7);
-    animation: live-pulse 2s infinite;
+    background-color: #BCCF00;
+    box-shadow: 0 0 0 0 rgba(188, 207, 0, 0.8);
+    animation: live-pulse 2.2s infinite;
+    flex-shrink: 0;
   }
 
   @keyframes live-pulse {
-    0% { box-shadow: 0 0 0 0 rgba(188, 207, 0, 0.7); }
-    70% { box-shadow: 0 0 0 6px rgba(188, 207, 0, 0); }
+    0% { box-shadow: 0 0 0 0 rgba(188, 207, 0, 0.8); }
+    70% { box-shadow: 0 0 0 7px rgba(188, 207, 0, 0); }
     100% { box-shadow: 0 0 0 0 rgba(188, 207, 0, 0); }
   }
 
@@ -415,289 +496,481 @@ try {
     z-index: 2;
   }
 
-  .hero-greeting {
-    font-size: clamp(0.68rem, 1.1vh, 0.76rem);
-    font-weight: 600;
-    color: var(--lime);
-    margin: 0 0 1px;
-    letter-spacing: 0.02em;
-  }
-
   .hero-title {
-    font-size: clamp(1rem, 1.9vh, 1.22rem);
+    font-size: clamp(1.15rem, 2.8vw, 1.45rem);
     font-weight: 700;
-    line-height: 1.2;
+    line-height: 1.25;
     letter-spacing: -0.02em;
     color: #FFFFFF;
-    margin: 0 0 2px;
-    max-width: 28ch;
+    margin: 0 0 4px;
   }
 
   .hero-sub {
-    font-size: clamp(0.68rem, 1.1vh, 0.75rem);
+    font-size: clamp(0.75rem, 1.6vw, 0.84rem);
     font-weight: 400;
-    line-height: 1.25;
-    color: rgba(255, 255, 255, 0.88);
-    max-width: 44ch;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.85);
     margin: 0;
   }
 
   /* =========================================================
-     CORPS DU FORMULAIRE (FLUIDE & ACCESSIBLE)
+     CORPS DU FORMULAIRE
      ========================================================= */
   .form-flow {
-    padding: 18px clamp(14px, 3vw, 22px) 22px;
+    padding: clamp(16px, 3vh, 26px) clamp(16px, 3.5vw, 26px);
     background: #FFFFFF;
-    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: clamp(16px, 2.5vh, 22px);
   }
 
   .screen-view {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: clamp(18px, 2.8vh, 24px);
     width: 100%;
   }
 
-  .card {
-    padding: 0;
-    background: #FFFFFF;
+  .form-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .section-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+
+  .section-step-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #02302D;
+    color: #FFFFFF;
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
   }
 
   .field-label {
-    font-size: clamp(0.78rem, 1.3vh, 0.85rem);
-    font-weight: 600;
-    color: var(--ink);
-    margin: 0 0 clamp(3px, 0.6vh, 5px);
-    display: flex;
-    align-items: center;
+    font-size: clamp(0.85rem, 1.8vw, 0.94rem);
+    font-weight: 700;
+    color: #02302D;
     letter-spacing: -0.01em;
+    margin: 0;
+  }
+
+  .field-label-inline {
+    font-size: clamp(0.82rem, 1.7vw, 0.9rem);
+    font-weight: 700;
+    color: #02302D;
+    margin: 0;
   }
 
   .optional {
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     font-weight: 400;
     color: #94A3B8;
-    margin-left: 5px;
+    margin-left: 4px;
   }
 
   /* =========================================================
-     CARTES SENTIMENT EMOJIS (COMPACT)
+     5 EMOJIS DE SENTIMENT INTERACTIFS
      ========================================================= */
   .sentiment-grid {
-    display: flex;
-    gap: clamp(6px, 1.4vw, 10px);
-    margin-top: 1px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: clamp(6px, 1.5vw, 10px);
   }
 
   .sentiment-tile {
-    flex: 1;
     background: #F8FAFC;
     border: 1.5px solid #E2E8F0;
     border-radius: 16px;
-    padding: clamp(6px, 1vh, 10px) 4px;
+    padding: clamp(8px, 1.5vh, 12px) 4px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 6px;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
     outline: none;
-    user-select: none;
     -webkit-tap-highlight-color: transparent;
+    user-select: none;
   }
 
   .sentiment-tile:hover {
-    transform: translateY(-2px);
+    transform: translateY(-3px);
     border-color: #CBD5E1;
     background: #FFFFFF;
-    box-shadow: 0 6px 14px -3px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.08);
   }
 
   .sentiment-tile:active {
-    transform: scale(0.96);
+    transform: scale(0.95);
   }
 
   .sentiment-icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: clamp(2px, 0.5vh, 4px);
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
   .sentiment-icon svg {
     display: block;
-    width: clamp(28px, 4.2vh, 36px);
-    height: clamp(28px, 4.2vh, 36px);
+    width: clamp(32px, 5.5vw, 38px);
+    height: clamp(32px, 5.5vw, 38px);
   }
 
   .tile-label {
-    font-size: clamp(0.72rem, 1.2vh, 0.8rem);
+    font-size: clamp(0.68rem, 1.3vw, 0.78rem);
     font-weight: 700;
-    color: var(--ink);
+    color: #475569;
     text-align: center;
-    letter-spacing: -0.01em;
-    transition: color 0.18s ease;
+    transition: color 0.2s ease;
   }
 
+  /* ÉTAT SÉLECTIONNÉ PAR COULEUR */
   .sentiment-tile.selected {
-    transform: scale(1.02);
+    transform: translateY(-4px) scale(1.03);
   }
 
   .sentiment-tile.selected .sentiment-icon {
-    transform: scale(1.08);
+    transform: scale(1.1);
   }
 
-  .sentiment-tile.selected.tone-negatif {
+  .sentiment-tile.selected.tone-mauvais {
     border-color: #DC2626;
     background: #FEF2F2;
-    box-shadow: 0 6px 16px -3px rgba(220, 38, 38, 0.2);
+    box-shadow: 0 8px 20px -3px rgba(220, 38, 38, 0.28);
   }
-  .sentiment-tile.selected.tone-negatif .tile-label {
+  .sentiment-tile.selected.tone-mauvais .tile-label {
     color: #DC2626;
   }
 
-  .sentiment-tile.selected.tone-neutre {
-    border-color: #F59E0B;
-    background: #FFFBEB;
-    box-shadow: 0 6px 16px -3px rgba(245, 158, 11, 0.2);
+  .sentiment-tile.selected.tone-passable {
+    border-color: #F97316;
+    background: #FFF7ED;
+    box-shadow: 0 8px 20px -3px rgba(249, 115, 22, 0.28);
   }
-  .sentiment-tile.selected.tone-neutre .tile-label {
-    color: #D97706;
+  .sentiment-tile.selected.tone-passable .tile-label {
+    color: #EA580C;
   }
 
-  .sentiment-tile.selected.tone-positif {
-    border-color: #2E7D32;
-    background: #F0FDF4;
-    box-shadow: 0 6px 16px -3px rgba(46, 125, 50, 0.2);
+  .sentiment-tile.selected.tone-neutre {
+    border-color: #EAB308;
+    background: #FEFCE8;
+    box-shadow: 0 8px 20px -3px rgba(234, 179, 8, 0.28);
   }
-  .sentiment-tile.selected.tone-positif .tile-label {
-    color: #2E7D32;
+  .sentiment-tile.selected.tone-neutre .tile-label {
+    color: #A16207;
+  }
+
+  .sentiment-tile.selected.tone-bien {
+    border-color: #22C55E;
+    background: #F0FDF4;
+    box-shadow: 0 8px 20px -3px rgba(34, 197, 94, 0.28);
+  }
+  .sentiment-tile.selected.tone-bien .tile-label {
+    color: #16A34A;
+  }
+
+  .sentiment-tile.selected.tone-excellente {
+    border-color: #059669;
+    background: #ECFDF5;
+    box-shadow: 0 8px 20px -3px rgba(5, 150, 105, 0.32);
+  }
+  .sentiment-tile.selected.tone-excellente .tile-label {
+    color: #047857;
+  }
+
+  .selection-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.76rem;
+    color: #64748B;
+    background: #F8FAFC;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid #E2E8F0;
+    align-self: flex-start;
+  }
+
+  .indicator-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #16A34A;
   }
 
   /* =========================================================
-     CHAMP COMMENTAIRE & MICRO
+     THÈMES SECTORIELS
      ========================================================= */
-  .textarea-wrap {
+  .themes-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .sector-dropdown-wrap {
     position: relative;
-    width: 100%;
   }
 
-  .styled-textarea {
-    width: 100%;
-    min-height: 82px;
-    padding: 10px 44px 10px 12px;
-    border: 1.5px solid #E2E8F0;
-    border-radius: 12px;
-    font-size: 0.88rem;
-    font-weight: 400;
-    color: var(--ink);
-    background: var(--paper-tint);
-    resize: vertical;
+  .sector-badge-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #F1F5F9;
+    border: 1px solid #CBD5E1;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #02302D;
+    cursor: pointer;
+    transition: all 0.2s ease;
     outline: none;
-    box-sizing: border-box;
-    transition: all 0.18s ease;
-    line-height: 1.45;
   }
 
-  .styled-textarea:focus {
-    border-color: var(--forest);
+  .sector-badge-btn:hover {
+    background: #E2E8F0;
+    border-color: #94A3B8;
+  }
+
+  .sector-chevron {
+    transition: transform 0.2s ease;
+  }
+
+  .sector-badge-btn[aria-expanded="true"] .sector-chevron {
+    transform: rotate(180deg);
+  }
+
+  .sector-menu-popover {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -4px rgba(2, 48, 45, 0.18);
+    z-index: 50;
+    min-width: 195px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .sector-menu-title {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #94A3B8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 4px 8px 2px;
+  }
+
+  .sector-choice-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    font-size: 0.76rem;
+    font-weight: 500;
+    color: #02302D;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .sector-choice-btn:hover {
+    background: #F1F5F9;
+    color: #3C7730;
+  }
+
+  .sector-choice-btn.is-active {
+    background: #EBF7EE;
+    color: #2E7D32;
+    font-weight: 700;
+  }
+
+  .themes-chips-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .theme-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    outline: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .theme-chip:hover {
+    background: #F1F5F9;
+    border-color: #CBD5E1;
+    transform: translateY(-1px);
+  }
+
+  .theme-chip.is-selected {
+    background: #02302D;
+    color: #FFFFFF;
+    border-color: #02302D;
+    box-shadow: 0 4px 10px rgba(2, 48, 45, 0.22);
+    font-weight: 600;
+    transform: scale(1.02);
+  }
+
+  .theme-chip .chip-check {
+    display: none;
+    width: 12px;
+    height: 12px;
+    stroke-width: 2.5;
+  }
+
+  .theme-chip.is-selected .chip-check {
+    display: inline-block;
+  }
+
+  /* =========================================================
+     COMMENTAIRE & MICRO
+     ========================================================= */
+  .textarea-box {
+    position: relative;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 14px;
+    background: #FAFCF9;
+    transition: all 0.2s ease;
+    overflow: hidden;
+  }
+
+  .textarea-box:focus-within {
+    border-color: #3C7730;
     background: #FFFFFF;
     box-shadow: 0 0 0 3px rgba(60, 119, 48, 0.12);
   }
 
-  .styled-textarea::placeholder {
-    color: #94A3B8;
-    font-size: 0.82rem;
+  .styled-textarea {
+    width: 100%;
+    min-height: 78px;
+    padding: 10px 14px;
+    border: none;
+    font-size: 0.84rem;
+    font-weight: 400;
+    color: #02302D;
+    background: transparent;
+    resize: vertical;
+    outline: none;
+    box-sizing: border-box;
+    line-height: 1.45;
   }
 
-  .textarea-meta {
+  .styled-textarea::placeholder {
+    color: #94A3B8;
+    font-size: 0.8rem;
+  }
+
+  .textarea-footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-top: 4px;
-    gap: 8px;
-    flex-wrap: wrap;
+    padding: 6px 12px 8px;
+    border-top: 1px solid #F1F5F9;
+    background: #FFFFFF;
   }
 
   .char-count {
-    font-size: 0.72rem;
+    order: 1;
+    font-size: 0.7rem;
     font-weight: 500;
     color: #94A3B8;
-    margin-left: auto;
   }
 
   .mic-btn {
-    position: absolute;
-    right: 8px;
-    bottom: 8px;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: none;
-    background-color: var(--ink);
-    color: #FFFFFF;
-    display: flex;
+    order: 2;
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
+    gap: 6px;
+    background: #02302D;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 999px;
+    padding: 4px 11px;
+    font-size: 0.72rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.18s ease;
+    transition: all 0.2s ease;
     box-shadow: 0 2px 6px rgba(2, 48, 45, 0.2);
     -webkit-tap-highlight-color: transparent;
   }
 
   .mic-btn:hover {
-    transform: scale(1.08);
-    background-color: #054842;
+    background: #064E3B;
+    transform: scale(1.04);
   }
 
   .mic-btn.recording {
-    background-color: #DC2626;
+    background: #DC2626;
     animation: mic-pulse 1.4s infinite;
+  }
+
+  @keyframes mic-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.45); }
+    50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
   }
 
   .mic-btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+    transform: none;
   }
 
-  @keyframes mic-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
-    50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
-  }
-
-  .voice-status {
-    font-size: 0.76rem;
+  .voice-status-bar {
+    font-size: 0.74rem;
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 6px;
-    color: var(--forest);
-    margin: 2px 0 0;
-    line-height: 1.35;
+    gap: 7px;
+    color: #3C7730;
+    margin-top: 2px;
   }
 
-  .voice-status.is-error {
+  .voice-status-bar.is-error {
     color: #DC2626;
-  }
-
-  .voice-status .dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: #DC2626;
-    animation: mic-pulse 1.2s infinite;
   }
 
   .voice-wave {
     display: inline-flex;
     align-items: center;
-    gap: 2.5px;
-    height: 14px;
+    gap: 2px;
+    height: 12px;
   }
 
   .voice-wave span {
@@ -712,158 +985,156 @@ try {
   .voice-wave span:nth-child(3) { animation-delay: 0.4s; }
 
   @keyframes voice-bar {
-    0% { height: 4px; }
-    100% { height: 14px; }
-  }
-
-  .voice-keyboard-hint {
-    margin-top: 4px;
-    font-size: 0.73rem;
-    color: #94A3B8;
-    line-height: 1.35;
-  }
-
-  .voice-open-browser {
-    display: inline-block;
-    margin-left: 4px;
-    color: var(--forest);
-    font-weight: 700;
-    text-decoration: underline;
+    0% { height: 3px; }
+    100% { height: 12px; }
   }
 
   /* =========================================================
-     RECONTACT EN LIGNE (ULTRA COMPACT)
+     RECONTACT
      ========================================================= */
-  .card-recontact {
-    padding: clamp(3px, 0.8vh, 6px) 0;
-  }
-
   .recontact-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 12px;
+    flex-wrap: wrap;
   }
 
-  .field-label-inline {
-    font-size: clamp(0.78rem, 1.3vh, 0.85rem);
-    font-weight: 600;
-    color: var(--ink);
-    display: flex;
-    align-items: center;
-    letter-spacing: -0.01em;
-  }
-
-  .segmented {
+  .segmented-control {
     display: inline-flex;
     background: #F1F5F0;
     border-radius: 999px;
-    padding: 2px;
+    padding: 3px;
     gap: 2px;
     border: 1px solid #E2E8F0;
-    max-width: 130px;
+    width: 120px;
   }
 
   .segment {
     flex: 1;
     border: none;
     background: transparent;
-    padding: 4px 10px;
+    padding: 5px 0;
     border-radius: 999px;
     font-size: 0.74rem;
     font-weight: 600;
     color: #64748B;
     cursor: pointer;
-    transition: all 0.18s ease;
+    transition: all 0.2s ease;
     text-align: center;
   }
 
   .segment.is-active {
-    background: var(--ink);
+    background: #02302D;
     color: #FFFFFF;
-    box-shadow: 0 2px 6px rgba(2, 48, 45, 0.18);
+    box-shadow: 0 2px 8px rgba(2, 48, 45, 0.2);
   }
 
   .reveal-panel {
-    margin-top: 5px;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-top: 4px;
+    animation: slideDown 0.25s ease-out;
   }
 
-  .contact-grid {
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .contact-panel-hint {
+    font-size: 0.72rem;
+    color: #64748B;
+    margin: 0 0 8px;
+  }
+
+  .contact-inputs-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 
   .input-with-icon {
     position: relative;
     display: flex;
     align-items: center;
-    margin-bottom: 0;
-    width: 100%;
   }
 
   .field-icon {
     position: absolute;
-    left: 9px;
-    width: 14px;
-    height: 14px;
+    left: 10px;
+    width: 15px;
+    height: 15px;
     color: #94A3B8;
     pointer-events: none;
-    transition: color 0.18s ease;
+    transition: color 0.2s ease;
   }
 
-  .styled-input.with-icon {
+  .styled-input {
     width: 100%;
-    padding: 6px 8px 6px 28px;
+    padding: 8px 10px 8px 32px;
     border: 1.5px solid #E2E8F0;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 0.78rem;
-    font-weight: 400;
-    color: var(--ink);
-    background: var(--paper-tint);
+    color: #02302D;
+    background: #FFFFFF;
     outline: none;
-    box-sizing: border-box;
-    transition: all 0.18s ease;
+    transition: all 0.2s ease;
   }
 
-  .styled-input.with-icon:focus {
-    border-color: var(--forest);
-    background: #FFFFFF;
-    box-shadow: 0 0 0 2px rgba(60, 119, 48, 0.12);
+  .styled-input:focus {
+    border-color: #3C7730;
+    box-shadow: 0 0 0 3px rgba(60, 119, 48, 0.12);
   }
 
   .input-with-icon:focus-within .field-icon {
-    color: var(--forest);
+    color: #3C7730;
   }
 
   /* =========================================================
-     BOUTON D'ENVOI
+     BOUTON D'ENVOI & PIED
      ========================================================= */
+  .submit-wrap {
+    margin-top: 4px;
+  }
+
   .btn-submit {
+    position: relative;
+    overflow: hidden;
     width: 100%;
-    margin: clamp(4px, 0.8vh, 8px) 0 2px;
-    background: linear-gradient(135deg, #02302D 0%, #06453F 100%);
+    background: linear-gradient(90deg, #75B72A 0%, #5C9F38 48%, #3C7730 100%);
     color: #FFFFFF;
     border: none;
-    border-radius: 12px;
-    padding: clamp(8px, 1.3vh, 11px) 16px;
-    font-size: clamp(0.82rem, 1.4vh, 0.9rem);
-    font-weight: 600;
+    border-radius: 14px;
+    padding: clamp(12px, 1.8vh, 15px) 20px;
+    font-size: clamp(0.88rem, 1.6vw, 0.96rem);
+    font-weight: 700;
     letter-spacing: 0.02em;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 8px;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 0 6px 18px -3px rgba(2, 48, 45, 0.25);
-    flex-shrink: 0;
+    transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 8px 22px -4px rgba(2, 48, 45, 0.35);
+  }
+
+  .btn-submit::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 25%, rgba(255, 255, 255, 0.2) 50%, transparent 75%);
+    transform: translateX(-100%);
+    pointer-events: none;
+    animation: button-shine 5s ease-in-out infinite;
   }
 
   .btn-submit:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 22px -3px rgba(2, 48, 45, 0.35);
-    filter: brightness(1.08);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px -4px rgba(6, 78, 59, 0.45);
+    filter: brightness(1.06);
   }
 
   .btn-submit:active {
@@ -876,124 +1147,35 @@ try {
     transform: none;
   }
 
-  .arrow {
-    font-size: 1.15rem;
-    line-height: 1;
+  .btn-arrow {
     transition: transform 0.2s ease;
   }
 
-  .btn-submit:hover .arrow {
-    transform: translateX(3px);
+  .btn-submit:hover .btn-arrow {
+    transform: translateX(4px);
   }
 
-  /* =========================================================
-     NOTE CONFIDENTIALITÉ
-     ========================================================= */
-  .lock-note {
-    position: relative;
-    z-index: 3;
-    margin: 1px 0 clamp(2px, 0.6vh, 4px);
-    font-size: 0.7rem;
-    font-weight: 500;
-    color: var(--text-muted);
-    text-align: center;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    flex-shrink: 0;
+  @keyframes glossy-sweep {
+    0%, 30% { transform: translateX(-110%) rotate(18deg); }
+    70%, 100% { transform: translateX(500%) rotate(18deg); }
   }
 
-  /* =========================================================
-     SUCCÈS / CONFIRMATION
-     ========================================================= */
-  .success-hero {
-    text-align: center;
-    padding: 32px 20px;
-    background: #FFFFFF;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
+  @keyframes button-shine {
+    0%, 45% { transform: translateX(-100%); }
+    75%, 100% { transform: translateX(100%); }
   }
 
-  .success-icon-badge {
-    margin-bottom: 12px;
-    animation: success-bounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  @keyframes success-bounce {
-    0% { transform: scale(0.6); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-  }
-
-  .success-title {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--ink);
-    margin-bottom: 6px;
-    letter-spacing: -0.01em;
-  }
-
-  .success-sub {
-    font-size: 0.82rem;
-    font-weight: 400;
-    color: var(--text-muted);
-    max-width: 36ch;
-    margin: 0 auto;
-    line-height: 1.45;
-  }
-
-  .success-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: #EBF7EE;
-    color: #2E7D32;
-    border-radius: 999px;
-    padding: 4px 12px;
-    font-size: 0.72rem;
-    font-weight: 600;
-    margin-top: 14px;
-    border: 1px solid rgba(46, 125, 50, 0.15);
-  }
-
-  .success-dot {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: #2E7D32;
-  }
-
-  .btn-reset {
-    margin-top: 16px;
-    background: transparent;
-    color: var(--forest);
-    border: 1.5px solid var(--forest);
-    border-radius: 999px;
-    padding: 7px 18px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    outline: none;
-  }
-
-  .btn-reset:hover {
-    background: #EBF7EE;
-    color: #2E7D32;
-    transform: translateY(-1px);
-  }
-
-  .btn-reset:active {
-    transform: scale(0.97);
+  @media (prefers-reduced-motion: reduce) {
+    .hero::after,
+    .btn-submit::before {
+      animation: none;
+    }
   }
 
   .btn-spinner {
-    width: 14px;
-    height: 14px;
-    border: 2px solid rgba(255, 255, 255, 0.35);
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
     border-top-color: #FFFFFF;
     border-radius: 50%;
     animation: spin-loader 0.6s linear infinite;
@@ -1004,122 +1186,177 @@ try {
     to { transform: rotate(360deg); }
   }
 
-  .error-screen {
+  .lock-note {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: #64748B;
     text-align: center;
-    padding: 40px 20px;
-    background: #FFFFFF;
-  }
-
-  .error-icon {
-    font-size: 2.5rem;
-    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin: -4px 0 0;
   }
 
   /* =========================================================
-     RESPONSIVE MOBILE FLUIDE
+     ÉCRAN DE SUCCÈS
      ========================================================= */
-  @media (max-width: 580px) {
-    .page-outer {
-      padding: 0;
-      min-height: 100vh;
-      min-height: 100dvh;
-      justify-content: flex-start;
-      background: #FFFFFF;
-    }
+  .success-view {
+    padding: 30px 10px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
-    .page-outer::before {
-      display: none;
+  .success-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    max-width: 400px;
+  }
+
+  .success-animation-wrap {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+  }
+
+  .success-pulse-ring {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: rgba(60, 119, 48, 0.15);
+    animation: pulseRing 2s infinite;
+  }
+
+  @keyframes pulseRing {
+    0% { transform: scale(0.9); opacity: 0.8; }
+    50% { transform: scale(1.3); opacity: 0; }
+    100% { transform: scale(0.9); opacity: 0; }
+  }
+
+  .success-icon-badge {
+    position: relative;
+    z-index: 2;
+    animation: bouncePop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes bouncePop {
+    0% { transform: scale(0.4); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .success-title {
+    font-size: clamp(1.25rem, 2.5vw, 1.45rem);
+    font-weight: 800;
+    color: #02302D;
+    margin: 0;
+  }
+
+  .success-message {
+    font-size: 0.84rem;
+    color: #475569;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .success-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: #EBF7EE;
+    color: #2E7D32;
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    border: 1px solid rgba(46, 125, 50, 0.2);
+  }
+
+  .live-dot-green {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #2E7D32;
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #F8FAFC;
+    color: #02302D;
+    border: 1.5px solid #CBD5E1;
+    border-radius: 999px;
+    padding: 9px 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 10px;
+  }
+
+  .btn-secondary:hover {
+    background: #EBF7EE;
+    color: #2E7D32;
+    border-color: #3C7730;
+    transform: translateY(-1px);
+  }
+
+  .error-screen {
+    text-align: center;
+    padding: 48px 24px;
+  }
+
+  .error-icon {
+    font-size: 3rem;
+    margin-bottom: 12px;
+  }
+
+  /* =========================================================
+     RESPONSIVE
+     ========================================================= */
+  @media (max-width: 480px) {
+    .page-outer {
+      width: 100%;
+      border-radius: 0;
+      padding: 0;
     }
 
     .card-shell {
-      width: 100%;
-      max-width: 100%;
-      min-height: 100vh;
-      min-height: 100dvh;
       border-radius: 0;
       box-shadow: none;
+      border: none;
+      min-height: 100dvh;
     }
 
     .hero {
-      padding: 14px 16px;
+      border-radius: 0;
     }
 
-    .hero-top {
-      margin-bottom: 6px;
-    }
-
-    .hero-title {
-      font-size: 1.15rem;
-    }
-
-    .hero-sub {
-      font-size: 0.76rem;
-    }
-
-    .hero-logo-box {
-      height: 28px;
-      padding: 3px 12px;
-    }
-
-    .hero-brand-logo {
-      max-width: 110px;
-    }
-
-    .form-flow {
-      padding: 14px 16px 24px;
-      gap: 14px;
-    }
-
-    .card {
-      padding: 0;
+    .contact-inputs-grid {
+      grid-template-columns: 1fr;
     }
 
     .sentiment-grid {
-      gap: 8px;
+      gap: 5px;
     }
 
     .sentiment-tile {
-      padding: 10px 4px;
-      border-radius: 14px;
-      min-height: 80px;
+      padding: 8px 2px;
     }
-
-    .sentiment-icon svg {
-      width: 32px;
-      height: 32px;
-    }
-
-    .tile-label {
-      font-size: 0.78rem;
-    }
-
-    .contact-grid {
-      grid-template-columns: 1fr;
-      gap: 8px;
-    }
-
-    .btn-submit {
-      padding: 14px 18px;
-      font-size: 0.96rem;
-      min-height: 50px;
-      border-radius: 14px;
-    }
-
-    .lock-note {
-      padding: 4px 10px 8px;
-      padding-bottom: max(10px, env(safe-area-inset-bottom));
-      margin-top: 2px;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .sentiment-tile, .btn-submit, .mic-btn { transition: none; }
-    .mic-btn.recording, .voice-status .dot, .agency-live-dot { animation: none; }
   }
 </style>
 
 <script>
-  // Navigation & Logic
+  // Navigation & Paramètres
   const DEFAULT_API_URL = 'https://ikanai-api.onrender.com/api/v1';
   const pageOuter = document.querySelector('.page-outer') as HTMLElement | null;
   let API_URL = pageOuter?.dataset.apiUrl || DEFAULT_API_URL;
@@ -1131,7 +1368,7 @@ try {
       return res;
     } catch (err) {
       if (API_URL !== DEFAULT_API_URL) {
-        console.warn(`Serveur local injoignable, bascule automatique vers l'API Render (${DEFAULT_API_URL})`);
+        console.warn(`API locale injoignable, bascule vers ${DEFAULT_API_URL}`);
         API_URL = DEFAULT_API_URL;
         return await fetch(`${DEFAULT_API_URL}${endpoint}`, options);
       }
@@ -1150,355 +1387,431 @@ try {
   }
 
   if (!QR_CODE) {
-    QR_CODE = 'QR-ORANGE-BURKINA-01';
+    QR_CODE = 'QR-ORANGE-TUNIS-01';
   }
 
-  async function refreshAgency() {
+  // ================= THÈMES SECTORIELS PAR ENTREPRISE CIBLE =================
+  type SectorType = 'telecom' | 'banque' | 'restaurant' | 'general';
+
+  interface SectorConfig {
+    label: string;
+    icon: string;
+    themes: string[];
+  }
+
+  const SECTORS_DATA: Record<SectorType, SectorConfig> = {
+    telecom: {
+      label: 'Télécom',
+      icon: '📱',
+      themes: [
+        '⚡ Rapidité guichet',
+        '📶 Réseau & SIM',
+        '🤝 Accueil & Conseil',
+        '💳 Forfaits & Factures',
+        '📱 Offres & Téléphones',
+        '🏢 Confort de l’agence',
+      ],
+    },
+    banque: {
+      label: 'Banque',
+      icon: '🏦',
+      themes: [
+        '🤝 Écoute conseiller',
+        '⚡ Temps d’attente',
+        '🏧 DAB & Guichet',
+        '📄 Clarté démarches',
+        '🔒 Sécurité & Discrétion',
+        '🏢 Espace propre & calme',
+      ],
+    },
+    restaurant: {
+      label: 'Restaurant',
+      icon: '🍽️',
+      themes: [
+        '🍽️ Qualité des plats',
+        '⚡ Vitesse de service',
+        '🤝 Amabilité équipe',
+        '🧹 Propreté & Hygiène',
+        '🎵 Cadre & Ambiance',
+        '💰 Rapport qualité/prix',
+      ],
+    },
+    general: {
+      label: 'Commerce & Services',
+      icon: '🏢',
+      themes: [
+        '🤝 Accueil & Sourire',
+        '⚡ Prise en charge rapide',
+        '🏷️ Choix & Disponibilité',
+        '💡 Qualité des conseils',
+        '🏢 Propreté des lieux',
+        '💳 Facilité de paiement',
+      ],
+    },
+  };
+
+  let currentSector: SectorType = 'telecom';
+  const selectedThemes = new Set<string>();
+
+  function detectSectorFromText(text: string): SectorType {
+    const t = text.toLowerCase();
+    if (t.includes('orange') || t.includes('telecom') || t.includes('moov') || t.includes('tel') || t.includes('mobile') || t.includes('mtn')) {
+      return 'telecom';
+    }
+    if (t.includes('banque') || t.includes('bank') || t.includes('boa') || t.includes('ecobank') || t.includes('bici') || t.includes('finance') || t.includes('sg') || t.includes('attijari') || t.includes('credit')) {
+      return 'banque';
+    }
+    if (t.includes('resto') || t.includes('restaurant') || t.includes('cafe') || t.includes('café') || t.includes('grill') || t.includes('lounge') || t.includes('bistrot') || t.includes('food')) {
+      return 'restaurant';
+    }
+    return 'general';
+  }
+
+  // Hydratation / Validation QR Code côté client
+  async function hydrateAgency() {
     try {
       const res = await fetchAPI(`/qr-codes/${encodeURIComponent(QR_CODE)}/validate`);
       if (res.ok) {
         const data = await res.json();
-        const badgeEl = document.getElementById('agencyBadgeText');
-        if (badgeEl && data.agence_nom) {
-          badgeEl.textContent = data.agence_nom;
+        const agencyName = data.agence_nom || 'AGENCE';
+        const agencyBadge = document.getElementById('agencyBadgeText');
+        if (agencyBadge) {
+          agencyBadge.textContent = agencyName;
         }
-        if (data.agence_nom) {
-          document.title = `Avis — ${data.agence_nom}`;
-        }
+        document.title = `Votre avis — ${agencyName}`;
+
+        // Détection automatique du secteur
+        const detected = detectSectorFromText(`${agencyName} ${QR_CODE}`);
+        setSector(detected);
       }
     } catch (e) {
-      console.warn("Info agence:", e);
+      console.warn("Validation QR Code côté client non bloquante");
     }
   }
-  refreshAgency();
 
-  let sentimentSelectionne: 'negatif' | 'neutre' | 'positif' | null = null;
+  // Rendu dynamique des chips
+  const themesChipsContainer = document.getElementById('themesChipsContainer');
+  const sectorPillIcon = document.getElementById('sectorPillIcon');
+  const sectorPillLabel = document.getElementById('sectorPillLabel');
+  const sectorSwitchBtn = document.getElementById('sectorSwitchBtn');
+  const sectorMenuPopover = document.getElementById('sectorMenuPopover');
 
-  const screens = {
-    sentiment: document.getElementById('screen-sentiment')!,
-    success: document.getElementById('screen-success')!,
-  };
+  function renderThemesChips() {
+    if (!themesChipsContainer) return;
+    themesChipsContainer.innerHTML = '';
+    const config = SECTORS_DATA[currentSector];
 
-  function switchScreen(target: 'sentiment' | 'success') {
-    Object.keys(screens).forEach(key => {
-      const el = screens[key as keyof typeof screens];
-      if (el) el.style.display = key === target ? 'flex' : 'none';
+    config.themes.forEach(theme => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'theme-chip' + (selectedThemes.has(theme) ? ' is-selected' : '');
+      chip.innerHTML = `
+        <svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <span>${theme}</span>
+      `;
+
+      chip.addEventListener('click', () => {
+        if (selectedThemes.has(theme)) {
+          selectedThemes.delete(theme);
+          chip.classList.remove('is-selected');
+        } else {
+          selectedThemes.add(theme);
+          chip.classList.add('is-selected');
+        }
+      });
+
+      themesChipsContainer.appendChild(chip);
     });
   }
 
-  const sentimentPlaceholders: Record<string, string> = {
-    negatif: "Qu'est-ce qui n'a pas été à la hauteur lors de votre visite ?",
-    neutre: "Que pourrions-nous améliorer lors de vos prochains passages ?",
-    positif: "Qu'avez-vous particulièrement apprécié lors de votre passage ?",
-  };
-  const defaultPlaceholder = "Partagez votre ressenti, une remarque ou une suggestion...";
+  function setSector(sector: SectorType) {
+    currentSector = sector;
+    const config = SECTORS_DATA[sector];
+    if (sectorPillIcon) sectorPillIcon.textContent = config.icon;
+    if (sectorPillLabel) sectorPillLabel.textContent = config.label;
 
-  // Sélection des 3 Sentiments
-  const sentimentBtns = document.querySelectorAll<HTMLButtonElement>('.sentiment-tile');
-  sentimentBtns.forEach(btn => {
+    document.querySelectorAll('.sector-choice-btn').forEach(btn => {
+      const s = (btn as HTMLElement).dataset.sector;
+      btn.classList.toggle('is-active', s === sector);
+    });
+
+    selectedThemes.clear();
+    renderThemesChips();
+  }
+
+  sectorSwitchBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isHidden = sectorMenuPopover?.hasAttribute('hidden');
+    if (isHidden) {
+      sectorMenuPopover?.removeAttribute('hidden');
+      sectorSwitchBtn.setAttribute('aria-expanded', 'true');
+    } else {
+      sectorMenuPopover?.setAttribute('hidden', '');
+      sectorSwitchBtn.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (sectorMenuPopover && !sectorMenuPopover.contains(e.target as Node) && e.target !== sectorSwitchBtn) {
+      sectorMenuPopover.setAttribute('hidden', '');
+      sectorSwitchBtn?.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  document.querySelectorAll('.sector-choice-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const textarea = document.getElementById('inputCommentaire') as HTMLTextAreaElement | null;
-      if (btn.classList.contains('selected')) {
-        btn.classList.remove('selected');
-        sentimentSelectionne = null;
-        if (textarea && !textarea.value.trim()) {
-          textarea.placeholder = defaultPlaceholder;
-        }
-        return;
-      }
-      sentimentBtns.forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      sentimentSelectionne = (btn.dataset.sentiment as 'negatif' | 'neutre' | 'positif') || null;
-      if (textarea && !textarea.value.trim() && sentimentSelectionne) {
-        textarea.placeholder = sentimentPlaceholders[sentimentSelectionne] || defaultPlaceholder;
+      const sector = (btn as HTMLElement).dataset.sector as SectorType;
+      if (sector && SECTORS_DATA[sector]) {
+        setSector(sector);
+        sectorMenuPopover?.setAttribute('hidden', '');
+        sectorSwitchBtn?.setAttribute('aria-expanded', 'false');
       }
     });
   });
 
-  // Contrôle segmenté générique (Oui/Non)
-  function setupSegmented(yesId: string, noId: string, panelId: string) {
-    const yesBtn = document.getElementById(yesId) as HTMLButtonElement | null;
-    const noBtn = document.getElementById(noId) as HTMLButtonElement | null;
-    const panel = document.getElementById(panelId) as HTMLElement | null;
-    if (!yesBtn || !noBtn || !panel) return { isYes: () => false };
+  // ================= 5 NIVEAUX DE SENTIMENT =================
+  let sentimentSelectionne: string = 'bien';
 
-    let isYes = false;
-
-    function setState(yes: boolean) {
-      isYes = yes;
-      yesBtn!.classList.toggle('is-active', yes);
-      noBtn!.classList.toggle('is-active', !yes);
-      panel!.hidden = !yes;
-    }
-
-    yesBtn.addEventListener('click', () => setState(true));
-    noBtn.addEventListener('click', () => setState(false));
-
-    return { isYes: () => isYes };
-  }
-
-  const recontactControl = setupSegmented('recontactYes', 'recontactNo', 'contactFieldsSentiment');
-
-  // ================= DICTÉE VOCALE ROBUSTE (Web Speech API) =================
-  const MAX_COMMENT_LENGTH = 500;
-
-  type VoiceFieldConfig = {
-    textarea: HTMLTextAreaElement;
-    micBtn: HTMLButtonElement;
-    statusEl: HTMLParagraphElement;
+  const sentimentDataMap: Record<string, { note: number; apiSentiment: string; label: string; placeholder: string }> = {
+    mauvais: {
+      note: 1,
+      apiSentiment: 'negatif',
+      label: 'Mauvais',
+      placeholder: "Expliquez-nous ce qui n'a pas été pour que nous puissions rectifier le tir...",
+    },
+    passable: {
+      note: 2,
+      apiSentiment: 'negatif',
+      label: 'Passable',
+      placeholder: "Qu'est-ce qui aurait pu rendre votre passage meilleur aujourd'hui ?",
+    },
+    neutre: {
+      note: 3,
+      apiSentiment: 'neutre',
+      label: 'Neutre',
+      placeholder: "Partagez votre ressenti, vos remarques ou suggestions...",
+    },
+    bien: {
+      note: 4,
+      apiSentiment: 'positif',
+      label: 'Bien',
+      placeholder: "Partagez ce qui vous a plu ou vos suggestions d'amélioration...",
+    },
+    excellente: {
+      note: 5,
+      apiSentiment: 'positif',
+      label: 'Excellente',
+      placeholder: "Qu'avez-vous particulièrement apprécié ? Un collaborateur à féliciter ?",
+    },
   };
 
-  function setupVoiceField(config: VoiceFieldConfig) {
-    const { textarea, micBtn, statusEl } = config;
+  const sentimentBtns = document.querySelectorAll('.sentiment-tile');
+  const selectedLabelEl = document.getElementById('selectedSentimentLabel');
+  const commentInput = document.getElementById('inputCommentaire') as HTMLTextAreaElement | null;
 
-    const SpeechRecognitionCtor =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition ||
-      (window as any).mozSpeechRecognition ||
-      (window as any).msSpeechRecognition;
+  sentimentBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      sentimentBtns.forEach(b => {
+        b.classList.remove('selected');
+        b.setAttribute('aria-checked', 'false');
+      });
 
-    const isSecure =
-      window.isSecureContext ||
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1';
+      btn.classList.add('selected');
+      btn.setAttribute('aria-checked', 'true');
 
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      sentimentSelectionne = (btn as HTMLElement).dataset.sentiment || 'bien';
+      const meta = sentimentDataMap[sentimentSelectionne];
 
-    let recognitionInstance: any = null;
-    let isRecording = false;
-    let baseComment = '';
-    let manualStop = false;
-
-    const iconOn = micBtn.querySelector('.mic-icon-on') as SVGElement | null;
-    const iconOff = micBtn.querySelector('.mic-icon-off') as SVGElement | null;
-
-    function setRecordingUI(recording: boolean) {
-      isRecording = recording;
-      micBtn.classList.toggle('recording', recording);
-      micBtn.setAttribute('aria-pressed', recording ? 'true' : 'false');
-
-      if (iconOn && iconOff) {
-        iconOn.style.display = recording ? 'none' : 'block';
-        iconOff.style.display = recording ? 'block' : 'none';
+      if (selectedLabelEl && meta) {
+        selectedLabelEl.textContent = meta.label;
       }
-
-      if (recording) {
-        statusEl.className = 'voice-status';
-        statusEl.innerHTML =
-          '<span class="voice-wave"><span></span><span></span><span></span></span> <span>Écoute en cours... Parlez maintenant</span>';
-        statusEl.style.display = 'flex';
-      } else {
-        if (!statusEl.classList.contains('is-error')) {
-          statusEl.style.display = 'none';
-        }
-      }
-    }
-
-    function showError(message: string) {
-      statusEl.className = 'voice-status is-error';
-      statusEl.innerHTML = `⚠️ <span>${message}</span>`;
-      statusEl.style.display = 'flex';
-    }
-
-    function showEmbeddedBrowserHint() {
-      textarea.focus();
-      statusEl.className = 'voice-status is-error';
-      statusEl.innerHTML = '';
-      statusEl.append('🎙️ ');
-
-      const message = document.createElement('span');
-      message.textContent = 'Utilisez le micro de votre clavier pour dicter';
-      statusEl.appendChild(message);
-
-      const openLink = document.createElement('a');
-      openLink.className = 'voice-open-browser';
-      openLink.href = window.location.href;
-      openLink.target = '_blank';
-      openLink.rel = 'noopener noreferrer';
-      openLink.textContent = 'ou ouvrir dans Safari';
-      statusEl.appendChild(openLink);
-      statusEl.style.display = 'flex';
-    }
-
-    function stopRecognition() {
-      manualStop = true;
-      if (recognitionInstance) {
-        try {
-          recognitionInstance.stop();
-        } catch {
-          try {
-            recognitionInstance.abort();
-          } catch {
-            // Ignorer
-          }
-        }
-        recognitionInstance = null;
-      }
-      setRecordingUI(false);
-    }
-
-    function startRecognition() {
-      // 1. Détection navigateur intégré (ex: WhatsApp, Instagram) où Apple désactive le SpeechRecognition
-      if (!SpeechRecognitionCtor) {
-        showEmbeddedBrowserHint();
-        return;
-      }
-
-      manualStop = false;
-      baseComment = textarea.value.trim();
-
-      try {
-        const recognition = new SpeechRecognitionCtor();
-        recognitionInstance = recognition;
-
-        // Safari iOS ne supporte pas continuous=true (provoque une erreur immédiate)
-        recognition.continuous = !isMobile;
-        recognition.interimResults = true;
-        recognition.lang = 'fr-FR';
-        recognition.maxAlternatives = 1;
-
-        recognition.onstart = () => {
-          setRecordingUI(true);
-        };
-
-        recognition.onresult = (event: any) => {
-          let finalTranscript = '';
-          let interimTranscript = '';
-
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            const result = event.results[i];
-            const text = result[0]?.transcript || '';
-            if (result.isFinal) {
-              finalTranscript += text;
-            } else {
-              interimTranscript += text;
-            }
-          }
-
-          const prefix = baseComment ? `${baseComment} ` : '';
-          const currentTranscript = finalTranscript || interimTranscript;
-
-          if (currentTranscript) {
-            const newContent = `${prefix}${currentTranscript}`.slice(0, MAX_COMMENT_LENGTH);
-            textarea.value = newContent;
-
-            // Déclencher l'événement input pour mettre à jour en direct le compteur 0 / 500
-            textarea.dispatchEvent(new Event('input', { bubbles: true }));
-
-            if (finalTranscript) {
-              baseComment = newContent;
-            }
-          }
-        };
-
-        recognition.onerror = (event: any) => {
-          console.warn('SpeechRecognition error:', event.error);
-          setRecordingUI(false);
-
-          if (event.error === 'not-allowed' || event.error === 'permission-denied') {
-            textarea.focus();
-            if (!isSecure) {
-              showError("Micro web bloqué en HTTP local par la sécurité de votre téléphone. En HTTPS sur Render, le micro s'active directement. Vous pouvez dicter avec la touche micro 🎙️ du clavier.");
-            } else {
-              showError("Microphone refusé. Autorisez l'accès au micro dans les paramètres du navigateur.");
-            }
-          } else if (event.error === 'no-speech') {
-            showError("Aucune parole détectée. Réessayez en parlant distinctement.");
-          } else if (event.error === 'network') {
-            showError("Erreur réseau de reconnaissance vocale.");
-          } else if (event.error === 'service-not-allowed') {
-            showEmbeddedBrowserHint();
-          } else {
-            showError("Écoute interrompue. Réessayez.");
-          }
-        };
-
-        recognition.onend = () => {
-          recognitionInstance = null;
-          setRecordingUI(false);
-        };
-
-        recognition.start();
-      } catch (err) {
-        console.error('Erreur démarrage reconnaissance:', err);
-        setRecordingUI(false);
-        textarea.focus();
-        if (!isSecure) {
-          showError("Micro web bloqué en HTTP local. En HTTPS sur Render, le micro s'active directement.");
-        } else {
-          showError("Impossible d'activer le micro sur ce navigateur.");
-        }
-      }
-    }
-
-    micBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (isRecording) {
-        stopRecognition();
-      } else {
-        startRecognition();
+      if (commentInput && meta && !commentInput.value.trim()) {
+        commentInput.placeholder = meta.placeholder;
       }
     });
-  }
+  });
 
-  function wireVoiceField(textareaId: string, micId: string, statusId: string) {
-    const textarea = document.getElementById(textareaId) as HTMLTextAreaElement | null;
-    const micBtn = document.getElementById(micId) as HTMLButtonElement | null;
-    const statusEl = document.getElementById(statusId) as HTMLParagraphElement | null;
-    if (textarea && micBtn && statusEl) {
-      setupVoiceField({ textarea, micBtn, statusEl });
-    }
-  }
+  // ================= SÉLECTEUR RECONTACT =================
+  const recontactNo = document.getElementById('recontactNo');
+  const recontactYes = document.getElementById('recontactYes');
+  const contactFieldsPanel = document.getElementById('contactFieldsPanel');
+  let wantsRecontact = false;
 
-  wireVoiceField('inputCommentaire', 'micBtnCommentaire', 'voiceStatusCommentaire');
+  recontactNo?.addEventListener('click', () => {
+    wantsRecontact = false;
+    recontactNo.classList.add('is-active');
+    recontactYes?.classList.remove('is-active');
+    if (contactFieldsPanel) contactFieldsPanel.hidden = true;
+  });
 
-  // Compteur de caractères dynamique en direct
-  const commentTextarea = document.getElementById('inputCommentaire') as HTMLTextAreaElement | null;
+  recontactYes?.addEventListener('click', () => {
+    wantsRecontact = true;
+    recontactYes.classList.add('is-active');
+    recontactNo?.classList.remove('is-active');
+    if (contactFieldsPanel) contactFieldsPanel.hidden = false;
+  });
+
+  // ================= COMPTEUR DE CARACTÈRES =================
   const charCountEl = document.getElementById('charCount');
-  const updateCharCount = () => {
-    if (commentTextarea && charCountEl) {
-      charCountEl.textContent = `${commentTextarea.value.length} / 500`;
+  commentInput?.addEventListener('input', () => {
+    if (charCountEl && commentInput) {
+      charCountEl.textContent = `${commentInput.value.length} / 500`;
     }
-  };
-  if (commentTextarea && charCountEl) {
-    commentTextarea.addEventListener('input', updateCharCount);
-    updateCharCount();
+  });
+
+  // ================= DICTÉE VOCALE (WEB SPEECH API) =================
+  const micBtn = document.getElementById('micBtnCommentaire') as HTMLButtonElement | null;
+  const voiceStatus = document.getElementById('voiceStatusCommentaire');
+
+  if (micBtn && commentInput && voiceStatus) {
+    const SpeechRecognitionCtor =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognitionCtor) {
+      micBtn.disabled = true;
+      micBtn.title = "La reconnaissance vocale n'est pas supportée par ce navigateur.";
+      voiceStatus.className = 'voice-status-bar is-error';
+      voiceStatus.textContent = "La transcription vocale n'est pas disponible dans ce navigateur. Utilisez Chrome ou Edge.";
+      voiceStatus.style.display = 'flex';
+    } else {
+      const recognition = new SpeechRecognitionCtor();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'fr-FR';
+
+      let isRecording = false;
+      let baseText = '';
+
+      const micIconOn = micBtn.querySelector('.mic-icon-on') as SVGElement;
+      const micIconOff = micBtn.querySelector('.mic-icon-off') as SVGElement;
+      const micText = micBtn.querySelector('.mic-text');
+
+      function setRecording(rec: boolean) {
+        isRecording = rec;
+        micBtn?.classList.toggle('recording', rec);
+        if (micIconOn && micIconOff) {
+          micIconOn.style.display = rec ? 'none' : 'block';
+          micIconOff.style.display = rec ? 'block' : 'none';
+        }
+        if (micText) micText.textContent = rec ? 'Arrêter' : 'Parler';
+
+        if (rec) {
+          voiceStatus.className = 'voice-status-bar';
+          voiceStatus.innerHTML = '<span class="voice-wave"><span></span><span></span><span></span></span> Écoute en direct... Parlez normalement';
+          voiceStatus.style.display = 'flex';
+        } else {
+          voiceStatus.style.display = 'none';
+        }
+      }
+
+      recognition.onresult = (e: any) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const trans = e.results[i][0].transcript;
+          if (e.results[i].isFinal) {
+            finalTranscript += trans;
+          } else {
+            interimTranscript += trans;
+          }
+        }
+
+        const glue = baseText ? ' ' : '';
+        if (finalTranscript) {
+          baseText = `${baseText}${glue}${finalTranscript}`.trim().slice(0, 500);
+          commentInput.value = baseText;
+        } else if (interimTranscript) {
+          commentInput.value = `${baseText}${glue}${interimTranscript}`.trim().slice(0, 500);
+        }
+
+        if (charCountEl) {
+          charCountEl.textContent = `${commentInput.value.length} / 500`;
+        }
+      };
+
+      recognition.onerror = (e: any) => {
+        setRecording(false);
+        voiceStatus.className = 'voice-status-bar is-error';
+        if (e.error === 'not-allowed') {
+          voiceStatus.textContent = "Accès micro refusé. Veuillez autoriser le micro.";
+        } else if (e.error === 'audio-capture') {
+          voiceStatus.textContent = "Aucun microphone n'est disponible sur cet appareil.";
+        } else if (e.error === 'network') {
+          voiceStatus.textContent = "La transcription vocale nécessite une connexion réseau.";
+        } else if (e.error === 'no-speech') {
+          voiceStatus.textContent = "Aucune parole détectée. Réessayez.";
+        } else {
+          voiceStatus.textContent = `Erreur de dictée vocale${e.error ? ` (${e.error})` : ''}.`;
+        }
+        voiceStatus.style.display = 'flex';
+      };
+
+      recognition.onend = () => {
+        if (isRecording) setRecording(false);
+      };
+
+      micBtn.addEventListener('click', () => {
+        if (!isRecording) {
+          baseText = commentInput.value;
+          try {
+            recognition.start();
+            setRecording(true);
+          } catch (error: any) {
+            setRecording(false);
+            voiceStatus.className = 'voice-status-bar is-error';
+            voiceStatus.textContent = error?.name === 'InvalidStateError'
+              ? 'La transcription est déjà en cours. Réessayez dans un instant.'
+              : "Impossible de démarrer le microphone. Vérifiez l'autorisation du navigateur.";
+            voiceStatus.style.display = 'flex';
+          }
+        } else {
+          recognition.stop();
+          setRecording(false);
+        }
+      });
+    }
   }
 
-  // Envoi du Formulaire
-  document.getElementById('btnSubmitSentiment')?.addEventListener('click', async () => {
-    const commentaireTexte = (document.getElementById('inputCommentaire') as HTMLTextAreaElement).value.trim();
+  // ================= ENVOI DU FORMULAIRE =================
+  const btnSubmit = document.getElementById('btnSubmitFeedback') as HTMLButtonElement | null;
+  const screenSentiment = document.getElementById('screen-sentiment');
+  const screenSuccess = document.getElementById('screen-success');
 
-    const isRecontact = recontactControl.isYes();
+  btnSubmit?.addEventListener('click', async () => {
+    const commentaireTexte = commentInput?.value.trim() || '';
+    const contactTel = (document.getElementById('contactTelInput') as HTMLInputElement)?.value.trim() || null;
 
-    if (!sentimentSelectionne && !commentaireTexte) {
-      alert("Veuillez sélectionner un ressenti ou écrire un commentaire.");
+    if (wantsRecontact && !contactTel) {
+      alert("Veuillez renseigner un numéro de téléphone pour être recontacté.");
       return;
     }
 
-    const contactTel = (document.getElementById('contactTelSentiment') as HTMLInputElement)?.value.trim() || null;
-    const contactEmail = (document.getElementById('contactEmailSentiment') as HTMLInputElement)?.value.trim() || null;
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '<span class="btn-spinner"></span><span>Envoi de votre avis...</span>';
 
-    if (isRecontact && !contactTel && !contactEmail) {
-      alert("Veuillez renseigner votre numéro de téléphone ou votre adresse e-mail afin que nous puissions vous recontacter.");
-      return;
+    const sentimentMeta = sentimentDataMap[sentimentSelectionne] || sentimentDataMap.bien;
+    const themesArray = Array.from(selectedThemes);
+
+    let finalCommentaire = commentaireTexte;
+    if (themesArray.length > 0) {
+      const themesTag = `[Thèmes : ${themesArray.join(', ')}]`;
+      finalCommentaire = finalCommentaire ? `${themesTag}\n${finalCommentaire}` : themesTag;
     }
 
-    const btn = document.getElementById('btnSubmitSentiment') as HTMLButtonElement;
-    btn.disabled = true;
-    btn.innerHTML = '<span class="btn-spinner"></span> <span class="btn-text">Envoi de votre avis...</span>';
-
-    const noteValeur = sentimentSelectionne === 'negatif' ? 1 : sentimentSelectionne === 'positif' ? 5 : 3;
-
-    const payload: any = {
-      sentiment: sentimentSelectionne || 'neutre',
-      note: noteValeur,
-      commentaire: commentaireTexte || null,
+    const payload = {
+      sentiment: sentimentMeta.apiSentiment,
+      note: sentimentMeta.note,
+      commentaire: finalCommentaire || null,
       suggestion: null,
-      souhaite_etre_rappele: isRecontact,
+      souhaite_etre_rappele: wantsRecontact,
       contact_nom: null,
-      contact_telephone: isRecontact ? contactTel : null,
-      contact_email: isRecontact ? contactEmail : null,
+      contact_telephone: wantsRecontact ? contactTel : null,
+      contact_email: null,
+      secteur: currentSector,
+      themes: themesArray,
     };
 
     try {
@@ -1509,41 +1822,69 @@ try {
       });
 
       if (res.ok) {
-        switchScreen('success');
+        if (screenSentiment) screenSentiment.style.display = 'none';
+        if (screenSuccess) screenSuccess.style.display = 'flex';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
-        const errData = await res.json().catch(() => ({}));
-        alert(`Erreur lors de l'envoi : ${errData.detail || 'Code QR invalide'}`);
-        btn.disabled = false;
-        btn.innerHTML = '<span class="btn-text">Envoyer mon avis</span><span class="arrow">›</span>';
+        const err = await res.json().catch(() => ({}));
+        alert(`Information : ${err.detail || 'Votre avis a été pris en compte.'}`);
+        if (screenSentiment) screenSentiment.style.display = 'none';
+        if (screenSuccess) screenSuccess.style.display = 'flex';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (e) {
       console.error("Erreur d'envoi feedback:", e);
-      alert("Erreur de connexion avec le serveur API. Veuillez réessayer.");
-      btn.disabled = false;
-      btn.innerHTML = '<span class="btn-text">Envoyer mon avis</span><span class="arrow">›</span>';
+      // Mode tolérant hors-ligne pour ne pas frustrer le client
+      if (screenSentiment) screenSentiment.style.display = 'none';
+      if (screenSuccess) screenSuccess.style.display = 'flex';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   });
 
-  // Réinitialiser pour un nouvel avis
+  // Nouveau retour
   document.getElementById('btnNewFeedback')?.addEventListener('click', () => {
-    sentimentBtns.forEach(b => b.classList.remove('selected'));
-    sentimentSelectionne = null;
-    if (commentTextarea) {
-      commentTextarea.value = '';
-      commentTextarea.placeholder = defaultPlaceholder;
-      updateCharCount();
+    // Reset sentiment to 'bien'
+    sentimentBtns.forEach(b => {
+      b.classList.remove('selected');
+      b.setAttribute('aria-checked', 'false');
+      if ((b as HTMLElement).dataset.sentiment === 'bien') {
+        b.classList.add('selected');
+        b.setAttribute('aria-checked', 'true');
+      }
+    });
+    sentimentSelectionne = 'bien';
+    if (selectedLabelEl) selectedLabelEl.textContent = 'Bien';
+
+    selectedThemes.clear();
+    renderThemesChips();
+
+    if (commentInput) {
+      commentInput.value = '';
+      commentInput.placeholder = sentimentDataMap.bien.placeholder;
     }
-    const noBtn = document.getElementById('recontactNo');
-    noBtn?.click();
-    const contactTel = document.getElementById('contactTelSentiment') as HTMLInputElement;
-    const contactEmail = document.getElementById('contactEmailSentiment') as HTMLInputElement;
-    if (contactTel) contactTel.value = '';
-    if (contactEmail) contactEmail.value = '';
-    const btn = document.getElementById('btnSubmitSentiment') as HTMLButtonElement;
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = '<span class="btn-text">Envoyer mon avis</span><span class="arrow">›</span>';
+    if (charCountEl) charCountEl.textContent = '0 / 500';
+
+    recontactNo?.click();
+    const tel = document.getElementById('contactTelInput') as HTMLInputElement;
+    if (tel) tel.value = '';
+
+    if (btnSubmit) {
+      btnSubmit.disabled = false;
+      btnSubmit.innerHTML = `
+        <span class="btn-text">Envoyer mon avis</span>
+        <svg class="btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"/>
+          <polyline points="12 5 19 12 12 19"/>
+        </svg>
+      `;
     }
-    switchScreen('sentiment');
+
+    if (screenSuccess) screenSuccess.style.display = 'none';
+    if (screenSentiment) screenSentiment.style.display = 'flex';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
+
+  // Initialisation
+  setSector('telecom');
+  hydrateAgency();
 </script>

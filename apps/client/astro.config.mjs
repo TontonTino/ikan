@@ -6,9 +6,6 @@ export default defineConfig({
   adapter: node({
     mode: 'standalone',
   }),
-  devToolbar: {
-    enabled: false,
-  },
   server: {
     port: 4321,
     host: '0.0.0.0',
