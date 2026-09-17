@@ -73,8 +73,8 @@ ikanai/
 
 ```bash
 # 1. Cloner le projet
-git clone https://github.com/jasstx/IKAN-AI.git
-cd IKAN-AI
+git clone https://github.com/TontonTino/ikan.git
+cd ikan
 
 # 2. Lancer le Backend API
 cd apps/api
