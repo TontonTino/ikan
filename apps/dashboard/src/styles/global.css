@@ -1,0 +1,227 @@
+/* Design System IKAN AI — Style Visuel SaaS Moderne & Épuré (Inspiré de Bolt.new) */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* Charte Graphique Officielle IKAN AI */
+  --color-primary-dark: #02302D;   /* Midnight Green Profond */
+  --color-primary: #3C7730;        /* Forest Green */
+  --color-accent: #75B72A;         /* Lime Green Vif */
+  --color-lime: #BCCF00;           /* Electric Lime */
+  --color-surface: #FFFFFF;        /* Blanc Pur */
+  
+  /* Nuances Neutres & Arrière-plans Doux */
+  --color-bg: #F8FAFB;             /* Fond d'application doux et lumineux */
+  --color-bg-subtle: #F1F5F2;      /* Fond secondaire conteneurs */
+  --color-bg-hover: #F4F7F5;       /* Hover léger */
+  --color-active-item: #EAF5EC;    /* Vert sauge / menthe douce pour items actifs */
+  
+  /* Bordures */
+  --color-border: #E8ECE6;         /* Bordure fine et discrète */
+  --color-border-subtle: #F1F4EE;
+  --color-border-focus: #3C7730;
+  
+  /* Typographie & Textes */
+  --color-text-main: #02302D;      /* Texte principal foncé */
+  --color-text-body: #1E293B;      /* Corps de texte */
+  --color-text-muted: #64748B;     /* Texte secondaire gris */
+  --color-text-subtle: #94A3B8;    /* Texte discret / placeholders */
+
+  /* Statuts & Badges */
+  --color-success: #3C7730;
+  --color-success-bg: #EBF5E9;
+  --color-warning: #D97706;
+  --color-warning-bg: #FEF3C7;
+  --color-error: #DC2626;
+  --color-error-bg: #FEE2E2;
+  --color-info: #0369A1;
+  --color-info-bg: #E0F2FE;
+
+  /* Dimensions & Rayons de courbure */
+  --sidebar-width: 270px;
+  --header-height: 70px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-pill: 9999px;
+  
+  /* Ombres Subtiles */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.025), 0 1px 3px rgba(0, 0, 0, 0.02);
+  --shadow-hover: 0 8px 24px rgba(2, 48, 45, 0.06);
+  --shadow-dropdown: 0 10px 30px rgba(0, 0, 0, 0.08);
+
+  --font-main: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-main);
+  background: var(--color-bg);
+  color: var(--color-text-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100vh;
+}
+
+/* Scrollbar Design */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D9DFD8;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #BAC3B9;
+}
+
+/* Utilitaires Typographiques */
+.text-muted { color: var(--color-text-muted); }
+.text-dark { color: var(--color-primary-dark); }
+.text-success { color: var(--color-success); }
+.text-warning { color: var(--color-warning); }
+.text-error { color: var(--color-error); }
+
+/* Cartes SaaS */
+.saas-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+  padding: 24px;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.saas-card:hover {
+  border-color: #DDE4DB;
+  box-shadow: var(--shadow-hover);
+}
+
+/* Inputs & Formulaires */
+.saas-input {
+  background: #FFFFFF;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  color: var(--color-text-body);
+  font-family: inherit;
+  font-size: 0.88rem;
+  outline: none;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+
+.saas-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(60, 119, 48, 0.12);
+}
+
+/* Boutons */
+.btn-primary {
+  background: var(--color-primary-dark);
+  color: #FFFFFF;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 10px 18px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(2, 48, 45, 0.15);
+}
+
+.btn-primary:hover {
+  background: #03423E;
+  box-shadow: 0 4px 12px rgba(2, 48, 45, 0.22);
+}
+
+.btn-secondary {
+  background: #FFFFFF;
+  color: var(--color-text-body);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.btn-secondary:hover {
+  background: var(--color-bg-hover);
+  border-color: #D5DCD2;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.badge-success { background: var(--color-success-bg); color: var(--color-success); }
+.badge-warning { background: var(--color-warning-bg); color: var(--color-warning); }
+.badge-error { background: var(--color-error-bg); color: var(--color-error); }
+.badge-info { background: var(--color-info-bg); color: var(--color-info); }
+.badge-neutral { background: #F1F5F9; color: #475569; }
+
+/* Indicateur En direct / Pulse */
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  display: inline-block;
+  box-shadow: 0 0 0 0 rgba(117, 183, 42, 0.7);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(117, 183, 42, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(117, 183, 42, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(117, 183, 42, 0);
+  }
+}

@@ -1,0 +1,65 @@
+---
+/**
+ * IkanBrandPattern — Motif de fond branding IKAN AI
+ *
+ * Cube isométrique en filigrane, répété en diagonale.
+ * Usage : panneaux branding, page login, splash screens.
+ *
+ * Paramètres :
+ *  opacity  — opacité du motif (défaut 0.05 = 5%, spec 4-6%)
+ *  color    — couleur du cube (défaut #3C7730 sur fond #02302D)
+ */
+
+export interface Props {
+  opacity?: number;
+  color?: string;
+  class?: string;
+}
+
+const { opacity = 0.05, color = '#3C7730', class: className } = Astro.props;
+---
+
+<!--
+  SVG inline réutilisable — motif diagonal cube isométrique.
+  Position absolute/fixed : le parent doit avoir position:relative/absolute/fixed.
+-->
+<svg
+  class={className}
+  xmlns="http://www.w3.org/2000/svg"
+  style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;"
+  aria-hidden="true"
+>
+  <defs>
+    <!--
+      Tuile 64×64 px, cube isométrique centré.
+      Rotation 0° — la répétition patternTransform fait la diagonale.
+    -->
+    <pattern
+      id="ikan-brand-pattern"
+      x="0" y="0"
+      width="64" height="64"
+      patternUnits="userSpaceOnUse"
+      patternTransform="rotate(-30)"
+    >
+      <!-- Face dessus -->
+      <polygon
+        points="32,8 48,17 32,26 16,17"
+        fill={color}
+        opacity={opacity}
+      />
+      <!-- Face gauche -->
+      <polygon
+        points="16,17 32,26 32,44 16,35"
+        fill={color}
+        opacity={opacity * 0.75}
+      />
+      <!-- Face droite -->
+      <polygon
+        points="48,17 32,26 32,44 48,35"
+        fill={color}
+        opacity={opacity * 0.5}
+      />
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#ikan-brand-pattern)" />
+</svg>

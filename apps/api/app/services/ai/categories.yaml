@@ -1,0 +1,18 @@
+# Les 15 catégories IKAN AI — ordre figé, ne JAMAIS changer une fois l'entraînement commencé
+theme:
+  - attente
+  - accueil
+  - disponibilite_accessibilite
+  - tarifs
+  - qualite_produit
+  - proprete_cadre
+  - application_mobile
+  - reseau
+  - facturation
+  - communication_information
+  - livraison_logistique
+  - resolution_probleme
+  - securite_confidentialite
+  - disponibilite_produit
+  - personnalisation_besoin
+

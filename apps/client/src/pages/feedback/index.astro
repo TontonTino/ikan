@@ -1,0 +1,24 @@
+---
+import FeedbackLayout from '../../layouts/FeedbackLayout.astro';
+import IkanLogo from '../../components/IkanLogo.astro';
+---
+<FeedbackLayout title="IKAN AI — Avis Client">
+  <div class="mobile-container" style="text-align: center; padding: 60px 24px;">
+    <div style="display: flex; justify-content: center; margin-bottom: 24px;">
+      <IkanLogo variant="dark" size={56} />
+    </div>
+    <div style="font-size: 1.1rem; color: #02302D; font-weight: 600; margin-bottom: 12px;">
+      Chargement de votre espace avis...
+    </div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const qrParam = urlParams.get('qr') || urlParams.get('code');
+    if (qrParam) {
+      window.location.href = `/feedback/${encodeURIComponent(qrParam)}`;
+    } else {
+      window.location.href = '/feedback/QR-ORANGE-TUNIS-01';
+    }
+  </script>
+</FeedbackLayout>

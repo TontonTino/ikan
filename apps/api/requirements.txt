@@ -1,0 +1,41 @@
+# Web framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+
+# Database
+sqlalchemy>=2.0.0
+alembic>=1.13.0
+psycopg2-binary>=2.9.9
+asyncpg>=0.29.0
+
+# Authentication & Security
+python-jose[cryptography]>=3.3.0
+passlib[argon2]>=1.7.4
+python-multipart>=0.0.9
+
+# Environment & Config
+python-dotenv>=1.0.0
+pydantic>=2.7.0
+pydantic-settings>=2.2.0
+
+# NLP & IA (Moteur sémantique ultra-léger < 80MB RAM)
+# Note: torch/transformers désactivés pour respecter la limite Render Free 512MB
+# torch>=2.0.0
+# transformers>=4.40.0
+# safetensors>=0.4.0
+# sentencepiece>=0.2.0
+pyyaml>=6.0
+langdetect>=1.0.9
+
+# Tasks
+apscheduler>=3.10.4
+
+# Email
+fastapi-mail>=1.4.1
+
+# Validation
+email-validator>=2.1.0
+
+# Testing
+pytest>=8.0.0
+httpx>=0.27.0

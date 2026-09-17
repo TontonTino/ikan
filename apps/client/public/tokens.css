@@ -1,0 +1,81 @@
+/* COPIE de shared/tokens.css — resynchroniser à chaque modification */
+
+/*
+ * ═══════════════════════════════════════════════════════════
+ *  IKAN AI — Design Tokens officiels
+ *  Source unique de vérité pour apps/client et apps/dashboard
+ *  NE PAS modifier les valeurs de couleurs de marque.
+ * ═══════════════════════════════════════════════════════════
+ */
+
+:root {
+  /* ──────────────────────────────────────────────
+   * Couleurs de marque officielles
+   * ──────────────────────────────────────────────
+   * Hiérarchie d'usage :
+   *  --ikan-ink      → structure (sidebar, boutons primaires, titres)
+   *  --ikan-primary  → action principale, états actifs, focus
+   *  --ikan-mid      → données, graphiques, illustrations
+   *  --ikan-lime     → accent PONCTUEL uniquement (badges, highlights)
+   *                    ⚠ jamais en texte sur fond clair (contraste insuffisant)
+   *                    ⚠ jamais en grande surface
+   * ────────────────────────────────────────────── */
+  --ikan-ink:     #02302D;
+  --ikan-primary: #3C7730;
+  --ikan-mid:     #75B72A;
+  --ikan-lime:    #BCCF00;
+  --ikan-white:   #FFFFFF;
+
+  /* ──────────────────────────────────────────────
+   * Déclinaisons dérivées autorisées
+   * ────────────────────────────────────────────── */
+  --ikan-primary-soft: #E8F1E3;   /* fonds teintés vert (états actifs, hovers) */
+  --ikan-lime-soft:    #F5F8DC;   /* fonds teintés lime (badges) */
+  --ikan-bg:           #F7F5EF;   /* fond crème des pages */
+  --ikan-border:       #E4E1D6;
+
+  /* ──────────────────────────────────────────────
+   * Texte
+   * ────────────────────────────────────────────── */
+  --ikan-text:      #1A2422;
+  --ikan-text-soft: #5A6B60;
+
+  /* ──────────────────────────────────────────────
+   * Sémantique
+   * Note : --ikan-primary est à la fois couleur marque ET success
+   * ────────────────────────────────────────────── */
+  --ikan-success:    #3C7730;
+  --ikan-success-bg: #E8F1E3;
+  --ikan-warning:    #D97E1F;
+  --ikan-warning-bg: #FBF1E4;
+  --ikan-danger:     #C43D2F;
+  --ikan-danger-bg:  #FBEFED;
+
+  /*
+   * Badges de criticité (dashboard) :
+   *   CRITIQUE → --ikan-danger   sur --ikan-danger-bg
+   *   ELEVEE   → --ikan-warning  sur --ikan-warning-bg
+   *   MOYENNE  → --ikan-ink      sur --ikan-lime-soft
+   *   FAIBLE   → --ikan-text-soft sur fond gris-crème
+   *
+   * Accessibilité WCAG :
+   *   ≥ 4.5:1 pour le texte normal, ≥ 3:1 pour le grand texte
+   *   Texte sur fond --ikan-lime → toujours --ikan-ink
+   *   Texte blanc INTERDIT sur --ikan-mid (#75B72A)
+   */
+
+  /* ──────────────────────────────────────────────
+   * Formes & ombres
+   * ────────────────────────────────────────────── */
+  --ikan-radius-lg:   28px;
+  --ikan-radius-md:   16px;
+  --ikan-radius-pill: 999px;
+  --ikan-shadow:      0 4px 20px rgba(2, 48, 45, 0.08);
+
+  /* ──────────────────────────────────────────────
+   * Typographie
+   * Police unique Inter (400/600/700) + fallback system-ui
+   * Chargée via Google Fonts avec font-display:swap
+   * ────────────────────────────────────────────── */
+  --ikan-font: 'Inter', system-ui, -apple-system, sans-serif;
+}

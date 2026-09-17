@@ -1,0 +1,1549 @@
+---
+/**
+ * Page de Feedback Client QR — IKAN AI
+ * URL : /feedback/{code}
+ */
+import FeedbackLayout from '../../layouts/FeedbackLayout.astro';
+
+const { code } = Astro.params;
+const DEFAULT_API_URL = 'https://ikanai-api.onrender.com/api/v1';
+const SSR_API_URL = import.meta.env.PUBLIC_API_URL || DEFAULT_API_URL;
+
+let agenceInfo = null;
+let erreur = null;
+
+try {
+  const cleanCode = (code || '').trim();
+  const res = await fetch(`${SSR_API_URL}/qr-codes/${encodeURIComponent(cleanCode)}/validate`);
+  if (res.ok) {
+    agenceInfo = await res.json();
+  }
+} catch (e) {
+  // L'hydratation côté client prendra le relais
+}
+---
+
+<FeedbackLayout
+  title={agenceInfo?.agence_nom ? `Avis — ${agenceInfo.agence_nom}` : 'IKAN AI — Donner votre avis'}
+  agenceNom={agenceInfo?.agence_nom}
+>
+  <div class="page-outer" data-api-url={SSR_API_URL}>
+  <div class="card-shell">
+
+    {erreur ? (
+      <div class="error-screen">
+        <div class="error-icon">⚠️</div>
+        <h2>QR Code invalide</h2>
+        <p>{erreur}</p>
+      </div>
+    ) : (
+      <>
+        <!-- ================= HERO ================= -->
+        <header class="hero">
+          <div class="hero-pattern" aria-hidden="true"></div>
+
+          <div class="hero-top">
+            <div class="hero-logo-box">
+              <img
+                src="/ikan-ai-logo.png"
+                alt="IKAN AI"
+                class="hero-brand-logo"
+                loading="eager"
+                decoding="sync"
+              />
+            </div>
+            <div class="agency-chip">
+              <span class="agency-live-dot" aria-hidden="true"></span>
+              <span id="agencyBadgeText">{agenceInfo?.agence_nom || 'AGENCE'}</span>
+            </div>
+          </div>
+
+          <div class="hero-copy">
+            <p class="hero-greeting">Bonjour !</p>
+            <h1 class="hero-title">Racontez-nous votre passage en agence</h1>
+            <p class="hero-sub">Une minute suffit pour nous aider à améliorer chaque visite.</p>
+          </div>
+        </header>
+
+        <main class="form-flow">
+
+          <!-- ================= ECRAN 1 : FORMULAIRE ================= -->
+          <section id="screen-sentiment" class="screen-view">
+
+            <!-- Sentiment : 3 emojis conformes à la maquette -->
+            <section class="card sentiment-section">
+              <p class="field-label">Comment s'est passée votre visite ?</p>
+              <div class="sentiment-grid" id="sentimentsGrid">
+                <button type="button" class="sentiment-tile tone-negatif" data-sentiment="negatif" aria-label="Avis Négatif">
+                  <div class="sentiment-icon">
+                    <svg viewBox="0 0 36 36" width="38" height="38">
+                      <circle cx="18" cy="18" r="18" fill="#DC2626"/>
+                      <circle cx="12" cy="14" r="2.2" fill="#FFFFFF"/>
+                      <circle cx="24" cy="14" r="2.2" fill="#FFFFFF"/>
+                      <path d="M12 25.5 C14.5 20.5, 21.5 20.5, 24 25.5" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+                    </svg>
+                  </div>
+                  <span class="tile-label">Négatif</span>
+                </button>
+
+                <button type="button" class="sentiment-tile tone-neutre" data-sentiment="neutre" aria-label="Avis Neutre">
+                  <div class="sentiment-icon">
+                    <svg viewBox="0 0 36 36" width="38" height="38">
+                      <circle cx="18" cy="18" r="18" fill="#F59E0B"/>
+                      <circle cx="12" cy="14" r="2.2" fill="#02302D"/>
+                      <circle cx="24" cy="14" r="2.2" fill="#02302D"/>
+                      <line x1="12" y1="23.5" x2="24" y2="23.5" stroke="#02302D" stroke-width="2.6" stroke-linecap="round"/>
+                    </svg>
+                  </div>
+                  <span class="tile-label">Neutre</span>
+                </button>
+
+                <button type="button" class="sentiment-tile tone-positif" data-sentiment="positif" aria-label="Avis Positif">
+                  <div class="sentiment-icon">
+                    <svg viewBox="0 0 36 36" width="38" height="38">
+                      <circle cx="18" cy="18" r="18" fill="#2E7D32"/>
+                      <circle cx="12" cy="14" r="2.2" fill="#FFFFFF"/>
+                      <circle cx="24" cy="14" r="2.2" fill="#FFFFFF"/>
+                      <path d="M11 20 C14.5 26.5, 21.5 26.5, 25 20" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+                    </svg>
+                  </div>
+                  <span class="tile-label">Positif</span>
+                </button>
+              </div>
+            </section>
+
+            <!-- Commentaire -->
+            <section class="card">
+              <label class="field-label" for="inputCommentaire">
+                Commentaire, explication ou idée
+              </label>
+              <div class="textarea-wrap">
+                <textarea
+                  id="inputCommentaire"
+                  class="styled-textarea"
+                  rows="3"
+                  maxlength="500"
+                  placeholder="Partagez votre ressenti, une remarque ou une suggestion..."
+                ></textarea>
+                <button type="button" class="mic-btn" id="micBtnCommentaire" aria-label="Dicter à la voix" title="Dicter à la voix">
+                  <svg class="mic-icon-on" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" y1="19" x2="12" y2="23"/>
+                    <line x1="8" y1="23" x2="16" y2="23"/>
+                  </svg>
+                  <svg class="mic-icon-off" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                    <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/>
+                    <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/>
+                    <line x1="12" y1="19" x2="12" y2="23"/>
+                    <line x1="8" y1="23" x2="16" y2="23"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="textarea-meta">
+                <p class="voice-status" id="voiceStatusCommentaire" style="display:none;"></p>
+                <span class="char-count" id="charCount">0 / 500</span>
+              </div>
+            </section>
+
+            <!-- Recontact (ligne compacte) -->
+            <section class="card card-recontact">
+              <div class="recontact-row">
+                <span class="field-label-inline">
+                  Être recontacté ? <span class="optional">(facultatif)</span>
+                </span>
+                <div class="segmented" role="group" aria-label="Être recontacté">
+                  <button type="button" class="segment is-active" id="recontactNo" data-value="non">Non</button>
+                  <button type="button" class="segment" id="recontactYes" data-value="oui">Oui</button>
+                </div>
+              </div>
+
+              <div class="reveal-panel" id="contactFieldsSentiment" hidden>
+                <div class="contact-grid">
+                  <div class="input-with-icon">
+                    <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                    </svg>
+                    <input
+                      type="tel"
+                      inputmode="tel"
+                      autocomplete="tel"
+                      id="contactTelSentiment"
+                      placeholder="Téléphone"
+                      class="styled-input with-icon"
+                    />
+                  </div>
+                  <div class="input-with-icon">
+                    <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                      <polyline points="22,6 12,13 2,6"/>
+                    </svg>
+                    <input
+                      type="email"
+                      inputmode="email"
+                      autocomplete="email"
+                      id="contactEmailSentiment"
+                      placeholder="Email"
+                      class="styled-input with-icon"
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <button type="button" id="btnSubmitSentiment" class="btn-submit">
+              <span class="btn-text">Envoyer mon avis</span>
+              <span class="arrow">›</span>
+            </button>
+
+            <p class="lock-note">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              <span>Réponse strictement anonyme et sécurisée</span>
+            </p>
+          </section>
+
+          <!-- ================= ECRAN 2 : SUCCÈS ================= -->
+          <section id="screen-success" class="screen-view" style="display:none;">
+            <div class="success-hero">
+              <div class="success-icon-badge">
+                <svg viewBox="0 0 56 56" width="56" height="56" fill="none">
+                  <circle cx="28" cy="28" r="28" fill="#EBF7EE"/>
+                  <circle cx="28" cy="28" r="21" fill="#3C7730"/>
+                  <path d="M20 28.5L25.5 34L36 22" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <h1 class="success-title">Merci pour votre retour !</h1>
+              <p class="success-sub">Votre avis a bien été enregistré et nous aide à améliorer la qualité de notre service en continu.</p>
+              <div class="success-chip">
+                <span class="success-dot"></span>
+                <span>Transmis en temps réel</span>
+              </div>
+              <button type="button" class="btn-reset" id="btnNewFeedback">
+                Donner un autre avis
+              </button>
+            </div>
+          </section>
+
+        </main>
+      </>
+    )}
+
+  </div>
+  </div>
+</FeedbackLayout>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
+  :global(*),
+  :global(*::before),
+  :global(*::after) {
+    box-sizing: border-box;
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  }
+
+  :global(:root) {
+    --ink: #02302D;
+    --forest: #3C7730;
+    --leaf: #75B72A;
+    --lime: #BCCF00;
+    --paper: #FFFFFF;
+    --paper-tint: #FAFCF9;
+    --text-muted: #64748B;
+    --border-color: #E2E8F0;
+
+    --font-display: 'Poppins', sans-serif;
+    --font-body: 'Poppins', sans-serif;
+  }
+
+  :global(html),
+  :global(body) {
+    margin: 0;
+    padding: 0;
+    background: #F1F5F2 !important;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* =========================================================
+     PAGE CONTENEUR — FLUIDE & RESPONSIVE
+     ========================================================= */
+  .page-outer {
+    position: relative;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 50% 15%, #F4F8F5 0%, #E8EFEA 100%);
+    padding: 24px 16px;
+    box-sizing: border-box;
+  }
+
+  .page-outer::before {
+    content: '';
+    position: absolute;
+    width: min(720px, calc(100% - 32px));
+    height: min(740px, calc(100% - 32px));
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.45);
+    border-radius: 32px;
+    box-shadow: 0 20px 45px -10px rgba(2, 48, 45, 0.08);
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .card-shell {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 490px;
+    margin: auto;
+    background: #FFFFFF;
+    border-radius: 24px;
+    box-shadow: 0 16px 40px -10px rgba(2, 48, 45, 0.12), 0 0 0 1px rgba(2, 48, 45, 0.05);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* =========================================================
+     HERO IKAN AI (COMPACT)
+     ========================================================= */
+  .hero {
+    position: relative;
+    background: linear-gradient(150deg, #02302D 0%, #053D38 60%, #084D46 100%);
+    color: #FFFFFF;
+    padding: clamp(8px, 1.3vh, 12px) clamp(14px, 2.5vw, 22px);
+    overflow: hidden;
+    border: none;
+    flex-shrink: 0;
+  }
+
+  .hero-pattern {
+    position: absolute;
+    width: 260px;
+    height: 260px;
+    right: -60px;
+    bottom: -70px;
+    pointer-events: none;
+    z-index: 0;
+    user-select: none;
+    background-image: url('/ikan-ai-logo.png');
+    background-size: 800px auto;
+    background-position: -30px center;
+    background-repeat: no-repeat;
+    opacity: 0.05;
+    filter: grayscale(1) brightness(3);
+  }
+
+  .hero-top {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: clamp(3px, 0.7vh, 6px);
+  }
+
+  .hero-logo-box {
+    background: #FFFFFF;
+    border-radius: 999px;
+    padding: 3px 12px;
+    height: clamp(26px, 3.4vh, 30px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+    position: relative;
+    z-index: 2;
+    flex-shrink: 0;
+  }
+
+  .hero-brand-logo {
+    height: 100%;
+    width: auto;
+    max-width: 125px;
+    display: block;
+    object-fit: contain;
+  }
+
+  .agency-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: clamp(0.66rem, 1.1vh, 0.72rem);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: #FFFFFF;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(8px);
+    text-transform: uppercase;
+  }
+
+  .agency-live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--lime);
+    box-shadow: 0 0 0 0 rgba(188, 207, 0, 0.7);
+    animation: live-pulse 2s infinite;
+  }
+
+  @keyframes live-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(188, 207, 0, 0.7); }
+    70% { box-shadow: 0 0 0 6px rgba(188, 207, 0, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(188, 207, 0, 0); }
+  }
+
+  .hero-copy {
+    position: relative;
+    z-index: 2;
+  }
+
+  .hero-greeting {
+    font-size: clamp(0.68rem, 1.1vh, 0.76rem);
+    font-weight: 600;
+    color: var(--lime);
+    margin: 0 0 1px;
+    letter-spacing: 0.02em;
+  }
+
+  .hero-title {
+    font-size: clamp(1rem, 1.9vh, 1.22rem);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    color: #FFFFFF;
+    margin: 0 0 2px;
+    max-width: 28ch;
+  }
+
+  .hero-sub {
+    font-size: clamp(0.68rem, 1.1vh, 0.75rem);
+    font-weight: 400;
+    line-height: 1.25;
+    color: rgba(255, 255, 255, 0.88);
+    max-width: 44ch;
+    margin: 0;
+  }
+
+  /* =========================================================
+     CORPS DU FORMULAIRE (FLUIDE & ACCESSIBLE)
+     ========================================================= */
+  .form-flow {
+    padding: 18px clamp(14px, 3vw, 22px) 22px;
+    background: #FFFFFF;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .screen-view {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
+  }
+
+  .card {
+    padding: 0;
+    background: #FFFFFF;
+  }
+
+  .field-label {
+    font-size: clamp(0.78rem, 1.3vh, 0.85rem);
+    font-weight: 600;
+    color: var(--ink);
+    margin: 0 0 clamp(3px, 0.6vh, 5px);
+    display: flex;
+    align-items: center;
+    letter-spacing: -0.01em;
+  }
+
+  .optional {
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: #94A3B8;
+    margin-left: 5px;
+  }
+
+  /* =========================================================
+     CARTES SENTIMENT EMOJIS (COMPACT)
+     ========================================================= */
+  .sentiment-grid {
+    display: flex;
+    gap: clamp(6px, 1.4vw, 10px);
+    margin-top: 1px;
+  }
+
+  .sentiment-tile {
+    flex: 1;
+    background: #F8FAFC;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 16px;
+    padding: clamp(6px, 1vh, 10px) 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    outline: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sentiment-tile:hover {
+    transform: translateY(-2px);
+    border-color: #CBD5E1;
+    background: #FFFFFF;
+    box-shadow: 0 6px 14px -3px rgba(0, 0, 0, 0.08);
+  }
+
+  .sentiment-tile:active {
+    transform: scale(0.96);
+  }
+
+  .sentiment-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: clamp(2px, 0.5vh, 4px);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .sentiment-icon svg {
+    display: block;
+    width: clamp(28px, 4.2vh, 36px);
+    height: clamp(28px, 4.2vh, 36px);
+  }
+
+  .tile-label {
+    font-size: clamp(0.72rem, 1.2vh, 0.8rem);
+    font-weight: 700;
+    color: var(--ink);
+    text-align: center;
+    letter-spacing: -0.01em;
+    transition: color 0.18s ease;
+  }
+
+  .sentiment-tile.selected {
+    transform: scale(1.02);
+  }
+
+  .sentiment-tile.selected .sentiment-icon {
+    transform: scale(1.08);
+  }
+
+  .sentiment-tile.selected.tone-negatif {
+    border-color: #DC2626;
+    background: #FEF2F2;
+    box-shadow: 0 6px 16px -3px rgba(220, 38, 38, 0.2);
+  }
+  .sentiment-tile.selected.tone-negatif .tile-label {
+    color: #DC2626;
+  }
+
+  .sentiment-tile.selected.tone-neutre {
+    border-color: #F59E0B;
+    background: #FFFBEB;
+    box-shadow: 0 6px 16px -3px rgba(245, 158, 11, 0.2);
+  }
+  .sentiment-tile.selected.tone-neutre .tile-label {
+    color: #D97706;
+  }
+
+  .sentiment-tile.selected.tone-positif {
+    border-color: #2E7D32;
+    background: #F0FDF4;
+    box-shadow: 0 6px 16px -3px rgba(46, 125, 50, 0.2);
+  }
+  .sentiment-tile.selected.tone-positif .tile-label {
+    color: #2E7D32;
+  }
+
+  /* =========================================================
+     CHAMP COMMENTAIRE & MICRO
+     ========================================================= */
+  .textarea-wrap {
+    position: relative;
+    width: 100%;
+  }
+
+  .styled-textarea {
+    width: 100%;
+    min-height: 82px;
+    padding: 10px 44px 10px 12px;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 12px;
+    font-size: 0.88rem;
+    font-weight: 400;
+    color: var(--ink);
+    background: var(--paper-tint);
+    resize: vertical;
+    outline: none;
+    box-sizing: border-box;
+    transition: all 0.18s ease;
+    line-height: 1.45;
+  }
+
+  .styled-textarea:focus {
+    border-color: var(--forest);
+    background: #FFFFFF;
+    box-shadow: 0 0 0 3px rgba(60, 119, 48, 0.12);
+  }
+
+  .styled-textarea::placeholder {
+    color: #94A3B8;
+    font-size: 0.82rem;
+  }
+
+  .textarea-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 4px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .char-count {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: #94A3B8;
+    margin-left: auto;
+  }
+
+  .mic-btn {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background-color: var(--ink);
+    color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    box-shadow: 0 2px 6px rgba(2, 48, 45, 0.2);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mic-btn:hover {
+    transform: scale(1.08);
+    background-color: #054842;
+  }
+
+  .mic-btn.recording {
+    background-color: #DC2626;
+    animation: mic-pulse 1.4s infinite;
+  }
+
+  .mic-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  @keyframes mic-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
+  }
+
+  .voice-status {
+    font-size: 0.76rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--forest);
+    margin: 2px 0 0;
+    line-height: 1.35;
+  }
+
+  .voice-status.is-error {
+    color: #DC2626;
+  }
+
+  .voice-status .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #DC2626;
+    animation: mic-pulse 1.2s infinite;
+  }
+
+  .voice-wave {
+    display: inline-flex;
+    align-items: center;
+    gap: 2.5px;
+    height: 14px;
+  }
+
+  .voice-wave span {
+    width: 2.5px;
+    height: 100%;
+    background: #DC2626;
+    border-radius: 2px;
+    animation: voice-bar 0.7s ease-in-out infinite alternate;
+  }
+
+  .voice-wave span:nth-child(2) { animation-delay: 0.2s; }
+  .voice-wave span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes voice-bar {
+    0% { height: 4px; }
+    100% { height: 14px; }
+  }
+
+  .voice-keyboard-hint {
+    margin-top: 4px;
+    font-size: 0.73rem;
+    color: #94A3B8;
+    line-height: 1.35;
+  }
+
+  .voice-open-browser {
+    display: inline-block;
+    margin-left: 4px;
+    color: var(--forest);
+    font-weight: 700;
+    text-decoration: underline;
+  }
+
+  /* =========================================================
+     RECONTACT EN LIGNE (ULTRA COMPACT)
+     ========================================================= */
+  .card-recontact {
+    padding: clamp(3px, 0.8vh, 6px) 0;
+  }
+
+  .recontact-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .field-label-inline {
+    font-size: clamp(0.78rem, 1.3vh, 0.85rem);
+    font-weight: 600;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    letter-spacing: -0.01em;
+  }
+
+  .segmented {
+    display: inline-flex;
+    background: #F1F5F0;
+    border-radius: 999px;
+    padding: 2px;
+    gap: 2px;
+    border: 1px solid #E2E8F0;
+    max-width: 130px;
+  }
+
+  .segment {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #64748B;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    text-align: center;
+  }
+
+  .segment.is-active {
+    background: var(--ink);
+    color: #FFFFFF;
+    box-shadow: 0 2px 6px rgba(2, 48, 45, 0.18);
+  }
+
+  .reveal-panel {
+    margin-top: 5px;
+  }
+
+  .contact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-bottom: 0;
+    width: 100%;
+  }
+
+  .field-icon {
+    position: absolute;
+    left: 9px;
+    width: 14px;
+    height: 14px;
+    color: #94A3B8;
+    pointer-events: none;
+    transition: color 0.18s ease;
+  }
+
+  .styled-input.with-icon {
+    width: 100%;
+    padding: 6px 8px 6px 28px;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: var(--ink);
+    background: var(--paper-tint);
+    outline: none;
+    box-sizing: border-box;
+    transition: all 0.18s ease;
+  }
+
+  .styled-input.with-icon:focus {
+    border-color: var(--forest);
+    background: #FFFFFF;
+    box-shadow: 0 0 0 2px rgba(60, 119, 48, 0.12);
+  }
+
+  .input-with-icon:focus-within .field-icon {
+    color: var(--forest);
+  }
+
+  /* =========================================================
+     BOUTON D'ENVOI
+     ========================================================= */
+  .btn-submit {
+    width: 100%;
+    margin: clamp(4px, 0.8vh, 8px) 0 2px;
+    background: linear-gradient(135deg, #02302D 0%, #06453F 100%);
+    color: #FFFFFF;
+    border: none;
+    border-radius: 12px;
+    padding: clamp(8px, 1.3vh, 11px) 16px;
+    font-size: clamp(0.82rem, 1.4vh, 0.9rem);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 6px 18px -3px rgba(2, 48, 45, 0.25);
+    flex-shrink: 0;
+  }
+
+  .btn-submit:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 22px -3px rgba(2, 48, 45, 0.35);
+    filter: brightness(1.08);
+  }
+
+  .btn-submit:active {
+    transform: scale(0.98);
+  }
+
+  .btn-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .arrow {
+    font-size: 1.15rem;
+    line-height: 1;
+    transition: transform 0.2s ease;
+  }
+
+  .btn-submit:hover .arrow {
+    transform: translateX(3px);
+  }
+
+  /* =========================================================
+     NOTE CONFIDENTIALITÉ
+     ========================================================= */
+  .lock-note {
+    position: relative;
+    z-index: 3;
+    margin: 1px 0 clamp(2px, 0.6vh, 4px);
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    flex-shrink: 0;
+  }
+
+  /* =========================================================
+     SUCCÈS / CONFIRMATION
+     ========================================================= */
+  .success-hero {
+    text-align: center;
+    padding: 32px 20px;
+    background: #FFFFFF;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+  }
+
+  .success-icon-badge {
+    margin-bottom: 12px;
+    animation: success-bounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes success-bounce {
+    0% { transform: scale(0.6); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .success-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 6px;
+    letter-spacing: -0.01em;
+  }
+
+  .success-sub {
+    font-size: 0.82rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    max-width: 36ch;
+    margin: 0 auto;
+    line-height: 1.45;
+  }
+
+  .success-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #EBF7EE;
+    color: #2E7D32;
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    margin-top: 14px;
+    border: 1px solid rgba(46, 125, 50, 0.15);
+  }
+
+  .success-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #2E7D32;
+  }
+
+  .btn-reset {
+    margin-top: 16px;
+    background: transparent;
+    color: var(--forest);
+    border: 1.5px solid var(--forest);
+    border-radius: 999px;
+    padding: 7px 18px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+  }
+
+  .btn-reset:hover {
+    background: #EBF7EE;
+    color: #2E7D32;
+    transform: translateY(-1px);
+  }
+
+  .btn-reset:active {
+    transform: scale(0.97);
+  }
+
+  .btn-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #FFFFFF;
+    border-radius: 50%;
+    animation: spin-loader 0.6s linear infinite;
+    display: inline-block;
+  }
+
+  @keyframes spin-loader {
+    to { transform: rotate(360deg); }
+  }
+
+  .error-screen {
+    text-align: center;
+    padding: 40px 20px;
+    background: #FFFFFF;
+  }
+
+  .error-icon {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+  }
+
+  /* =========================================================
+     RESPONSIVE MOBILE FLUIDE
+     ========================================================= */
+  @media (max-width: 580px) {
+    .page-outer {
+      padding: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      justify-content: flex-start;
+      background: #FFFFFF;
+    }
+
+    .page-outer::before {
+      display: none;
+    }
+
+    .card-shell {
+      width: 100%;
+      max-width: 100%;
+      min-height: 100vh;
+      min-height: 100dvh;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    .hero {
+      padding: 14px 16px;
+    }
+
+    .hero-top {
+      margin-bottom: 6px;
+    }
+
+    .hero-title {
+      font-size: 1.15rem;
+    }
+
+    .hero-sub {
+      font-size: 0.76rem;
+    }
+
+    .hero-logo-box {
+      height: 28px;
+      padding: 3px 12px;
+    }
+
+    .hero-brand-logo {
+      max-width: 110px;
+    }
+
+    .form-flow {
+      padding: 14px 16px 24px;
+      gap: 14px;
+    }
+
+    .card {
+      padding: 0;
+    }
+
+    .sentiment-grid {
+      gap: 8px;
+    }
+
+    .sentiment-tile {
+      padding: 10px 4px;
+      border-radius: 14px;
+      min-height: 80px;
+    }
+
+    .sentiment-icon svg {
+      width: 32px;
+      height: 32px;
+    }
+
+    .tile-label {
+      font-size: 0.78rem;
+    }
+
+    .contact-grid {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .btn-submit {
+      padding: 14px 18px;
+      font-size: 0.96rem;
+      min-height: 50px;
+      border-radius: 14px;
+    }
+
+    .lock-note {
+      padding: 4px 10px 8px;
+      padding-bottom: max(10px, env(safe-area-inset-bottom));
+      margin-top: 2px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sentiment-tile, .btn-submit, .mic-btn { transition: none; }
+    .mic-btn.recording, .voice-status .dot, .agency-live-dot { animation: none; }
+  }
+</style>
+
+<script>
+  // Navigation & Logic
+  const DEFAULT_API_URL = 'https://ikanai-api.onrender.com/api/v1';
+  const pageOuter = document.querySelector('.page-outer') as HTMLElement | null;
+  let API_URL = pageOuter?.dataset.apiUrl || DEFAULT_API_URL;
+
+  // Requête API résiliente avec bascule automatique vers Render en cas d'échec local
+  async function fetchAPI(endpoint: string, options: RequestInit = {}) {
+    try {
+      const res = await fetch(`${API_URL}${endpoint}`, options);
+      return res;
+    } catch (err) {
+      if (API_URL !== DEFAULT_API_URL) {
+        console.warn(`Serveur local injoignable, bascule automatique vers l'API Render (${DEFAULT_API_URL})`);
+        API_URL = DEFAULT_API_URL;
+        return await fetch(`${DEFAULT_API_URL}${endpoint}`, options);
+      }
+      throw err;
+    }
+  }
+
+  const pathParts = window.location.pathname.split('/').filter(Boolean);
+  const urlParams = new URLSearchParams(window.location.search);
+  let QR_CODE = urlParams.get('qr') || urlParams.get('code') || '';
+
+  if (!QR_CODE && pathParts.length >= 2 && pathParts[0] === 'feedback') {
+    QR_CODE = decodeURIComponent(pathParts[1]);
+  } else if (!QR_CODE && pathParts.length === 1 && pathParts[0] !== 'feedback') {
+    QR_CODE = decodeURIComponent(pathParts[0]);
+  }
+
+  if (!QR_CODE) {
+    QR_CODE = 'QR-ORANGE-BURKINA-01';
+  }
+
+  async function refreshAgency() {
+    try {
+      const res = await fetchAPI(`/qr-codes/${encodeURIComponent(QR_CODE)}/validate`);
+      if (res.ok) {
+        const data = await res.json();
+        const badgeEl = document.getElementById('agencyBadgeText');
+        if (badgeEl && data.agence_nom) {
+          badgeEl.textContent = data.agence_nom;
+        }
+        if (data.agence_nom) {
+          document.title = `Avis — ${data.agence_nom}`;
+        }
+      }
+    } catch (e) {
+      console.warn("Info agence:", e);
+    }
+  }
+  refreshAgency();
+
+  let sentimentSelectionne: 'negatif' | 'neutre' | 'positif' | null = null;
+
+  const screens = {
+    sentiment: document.getElementById('screen-sentiment')!,
+    success: document.getElementById('screen-success')!,
+  };
+
+  function switchScreen(target: 'sentiment' | 'success') {
+    Object.keys(screens).forEach(key => {
+      const el = screens[key as keyof typeof screens];
+      if (el) el.style.display = key === target ? 'flex' : 'none';
+    });
+  }
+
+  const sentimentPlaceholders: Record<string, string> = {
+    negatif: "Qu'est-ce qui n'a pas été à la hauteur lors de votre visite ?",
+    neutre: "Que pourrions-nous améliorer lors de vos prochains passages ?",
+    positif: "Qu'avez-vous particulièrement apprécié lors de votre passage ?",
+  };
+  const defaultPlaceholder = "Partagez votre ressenti, une remarque ou une suggestion...";
+
+  // Sélection des 3 Sentiments
+  const sentimentBtns = document.querySelectorAll<HTMLButtonElement>('.sentiment-tile');
+  sentimentBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const textarea = document.getElementById('inputCommentaire') as HTMLTextAreaElement | null;
+      if (btn.classList.contains('selected')) {
+        btn.classList.remove('selected');
+        sentimentSelectionne = null;
+        if (textarea && !textarea.value.trim()) {
+          textarea.placeholder = defaultPlaceholder;
+        }
+        return;
+      }
+      sentimentBtns.forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      sentimentSelectionne = (btn.dataset.sentiment as 'negatif' | 'neutre' | 'positif') || null;
+      if (textarea && !textarea.value.trim() && sentimentSelectionne) {
+        textarea.placeholder = sentimentPlaceholders[sentimentSelectionne] || defaultPlaceholder;
+      }
+    });
+  });
+
+  // Contrôle segmenté générique (Oui/Non)
+  function setupSegmented(yesId: string, noId: string, panelId: string) {
+    const yesBtn = document.getElementById(yesId) as HTMLButtonElement | null;
+    const noBtn = document.getElementById(noId) as HTMLButtonElement | null;
+    const panel = document.getElementById(panelId) as HTMLElement | null;
+    if (!yesBtn || !noBtn || !panel) return { isYes: () => false };
+
+    let isYes = false;
+
+    function setState(yes: boolean) {
+      isYes = yes;
+      yesBtn!.classList.toggle('is-active', yes);
+      noBtn!.classList.toggle('is-active', !yes);
+      panel!.hidden = !yes;
+    }
+
+    yesBtn.addEventListener('click', () => setState(true));
+    noBtn.addEventListener('click', () => setState(false));
+
+    return { isYes: () => isYes };
+  }
+
+  const recontactControl = setupSegmented('recontactYes', 'recontactNo', 'contactFieldsSentiment');
+
+  // ================= DICTÉE VOCALE ROBUSTE (Web Speech API) =================
+  const MAX_COMMENT_LENGTH = 500;
+
+  type VoiceFieldConfig = {
+    textarea: HTMLTextAreaElement;
+    micBtn: HTMLButtonElement;
+    statusEl: HTMLParagraphElement;
+  };
+
+  function setupVoiceField(config: VoiceFieldConfig) {
+    const { textarea, micBtn, statusEl } = config;
+
+    const SpeechRecognitionCtor =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition ||
+      (window as any).mozSpeechRecognition ||
+      (window as any).msSpeechRecognition;
+
+    const isSecure =
+      window.isSecureContext ||
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1';
+
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    let recognitionInstance: any = null;
+    let isRecording = false;
+    let baseComment = '';
+    let manualStop = false;
+
+    const iconOn = micBtn.querySelector('.mic-icon-on') as SVGElement | null;
+    const iconOff = micBtn.querySelector('.mic-icon-off') as SVGElement | null;
+
+    function setRecordingUI(recording: boolean) {
+      isRecording = recording;
+      micBtn.classList.toggle('recording', recording);
+      micBtn.setAttribute('aria-pressed', recording ? 'true' : 'false');
+
+      if (iconOn && iconOff) {
+        iconOn.style.display = recording ? 'none' : 'block';
+        iconOff.style.display = recording ? 'block' : 'none';
+      }
+
+      if (recording) {
+        statusEl.className = 'voice-status';
+        statusEl.innerHTML =
+          '<span class="voice-wave"><span></span><span></span><span></span></span> <span>Écoute en cours... Parlez maintenant</span>';
+        statusEl.style.display = 'flex';
+      } else {
+        if (!statusEl.classList.contains('is-error')) {
+          statusEl.style.display = 'none';
+        }
+      }
+    }
+
+    function showError(message: string) {
+      statusEl.className = 'voice-status is-error';
+      statusEl.innerHTML = `⚠️ <span>${message}</span>`;
+      statusEl.style.display = 'flex';
+    }
+
+    function showEmbeddedBrowserHint() {
+      textarea.focus();
+      statusEl.className = 'voice-status is-error';
+      statusEl.innerHTML = '';
+      statusEl.append('🎙️ ');
+
+      const message = document.createElement('span');
+      message.textContent = 'Utilisez le micro de votre clavier pour dicter';
+      statusEl.appendChild(message);
+
+      const openLink = document.createElement('a');
+      openLink.className = 'voice-open-browser';
+      openLink.href = window.location.href;
+      openLink.target = '_blank';
+      openLink.rel = 'noopener noreferrer';
+      openLink.textContent = 'ou ouvrir dans Safari';
+      statusEl.appendChild(openLink);
+      statusEl.style.display = 'flex';
+    }
+
+    function stopRecognition() {
+      manualStop = true;
+      if (recognitionInstance) {
+        try {
+          recognitionInstance.stop();
+        } catch {
+          try {
+            recognitionInstance.abort();
+          } catch {
+            // Ignorer
+          }
+        }
+        recognitionInstance = null;
+      }
+      setRecordingUI(false);
+    }
+
+    function startRecognition() {
+      // 1. Détection navigateur intégré (ex: WhatsApp, Instagram) où Apple désactive le SpeechRecognition
+      if (!SpeechRecognitionCtor) {
+        showEmbeddedBrowserHint();
+        return;
+      }
+
+      manualStop = false;
+      baseComment = textarea.value.trim();
+
+      try {
+        const recognition = new SpeechRecognitionCtor();
+        recognitionInstance = recognition;
+
+        // Safari iOS ne supporte pas continuous=true (provoque une erreur immédiate)
+        recognition.continuous = !isMobile;
+        recognition.interimResults = true;
+        recognition.lang = 'fr-FR';
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => {
+          setRecordingUI(true);
+        };
+
+        recognition.onresult = (event: any) => {
+          let finalTranscript = '';
+          let interimTranscript = '';
+
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const result = event.results[i];
+            const text = result[0]?.transcript || '';
+            if (result.isFinal) {
+              finalTranscript += text;
+            } else {
+              interimTranscript += text;
+            }
+          }
+
+          const prefix = baseComment ? `${baseComment} ` : '';
+          const currentTranscript = finalTranscript || interimTranscript;
+
+          if (currentTranscript) {
+            const newContent = `${prefix}${currentTranscript}`.slice(0, MAX_COMMENT_LENGTH);
+            textarea.value = newContent;
+
+            // Déclencher l'événement input pour mettre à jour en direct le compteur 0 / 500
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+
+            if (finalTranscript) {
+              baseComment = newContent;
+            }
+          }
+        };
+
+        recognition.onerror = (event: any) => {
+          console.warn('SpeechRecognition error:', event.error);
+          setRecordingUI(false);
+
+          if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+            textarea.focus();
+            if (!isSecure) {
+              showError("Micro web bloqué en HTTP local par la sécurité de votre téléphone. En HTTPS sur Render, le micro s'active directement. Vous pouvez dicter avec la touche micro 🎙️ du clavier.");
+            } else {
+              showError("Microphone refusé. Autorisez l'accès au micro dans les paramètres du navigateur.");
+            }
+          } else if (event.error === 'no-speech') {
+            showError("Aucune parole détectée. Réessayez en parlant distinctement.");
+          } else if (event.error === 'network') {
+            showError("Erreur réseau de reconnaissance vocale.");
+          } else if (event.error === 'service-not-allowed') {
+            showEmbeddedBrowserHint();
+          } else {
+            showError("Écoute interrompue. Réessayez.");
+          }
+        };
+
+        recognition.onend = () => {
+          recognitionInstance = null;
+          setRecordingUI(false);
+        };
+
+        recognition.start();
+      } catch (err) {
+        console.error('Erreur démarrage reconnaissance:', err);
+        setRecordingUI(false);
+        textarea.focus();
+        if (!isSecure) {
+          showError("Micro web bloqué en HTTP local. En HTTPS sur Render, le micro s'active directement.");
+        } else {
+          showError("Impossible d'activer le micro sur ce navigateur.");
+        }
+      }
+    }
+
+    micBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (isRecording) {
+        stopRecognition();
+      } else {
+        startRecognition();
+      }
+    });
+  }
+
+  function wireVoiceField(textareaId: string, micId: string, statusId: string) {
+    const textarea = document.getElementById(textareaId) as HTMLTextAreaElement | null;
+    const micBtn = document.getElementById(micId) as HTMLButtonElement | null;
+    const statusEl = document.getElementById(statusId) as HTMLParagraphElement | null;
+    if (textarea && micBtn && statusEl) {
+      setupVoiceField({ textarea, micBtn, statusEl });
+    }
+  }
+
+  wireVoiceField('inputCommentaire', 'micBtnCommentaire', 'voiceStatusCommentaire');
+
+  // Compteur de caractères dynamique en direct
+  const commentTextarea = document.getElementById('inputCommentaire') as HTMLTextAreaElement | null;
+  const charCountEl = document.getElementById('charCount');
+  const updateCharCount = () => {
+    if (commentTextarea && charCountEl) {
+      charCountEl.textContent = `${commentTextarea.value.length} / 500`;
+    }
+  };
+  if (commentTextarea && charCountEl) {
+    commentTextarea.addEventListener('input', updateCharCount);
+    updateCharCount();
+  }
+
+  // Envoi du Formulaire
+  document.getElementById('btnSubmitSentiment')?.addEventListener('click', async () => {
+    const commentaireTexte = (document.getElementById('inputCommentaire') as HTMLTextAreaElement).value.trim();
+
+    const isRecontact = recontactControl.isYes();
+
+    if (!sentimentSelectionne && !commentaireTexte) {
+      alert("Veuillez sélectionner un ressenti ou écrire un commentaire.");
+      return;
+    }
+
+    const contactTel = (document.getElementById('contactTelSentiment') as HTMLInputElement)?.value.trim() || null;
+    const contactEmail = (document.getElementById('contactEmailSentiment') as HTMLInputElement)?.value.trim() || null;
+
+    if (isRecontact && !contactTel && !contactEmail) {
+      alert("Veuillez renseigner votre numéro de téléphone ou votre adresse e-mail afin que nous puissions vous recontacter.");
+      return;
+    }
+
+    const btn = document.getElementById('btnSubmitSentiment') as HTMLButtonElement;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="btn-spinner"></span> <span class="btn-text">Envoi de votre avis...</span>';
+
+    const noteValeur = sentimentSelectionne === 'negatif' ? 1 : sentimentSelectionne === 'positif' ? 5 : 3;
+
+    const payload: any = {
+      sentiment: sentimentSelectionne || 'neutre',
+      note: noteValeur,
+      commentaire: commentaireTexte || null,
+      suggestion: null,
+      souhaite_etre_rappele: isRecontact,
+      contact_nom: null,
+      contact_telephone: isRecontact ? contactTel : null,
+      contact_email: isRecontact ? contactEmail : null,
+    };
+
+    try {
+      const res = await fetchAPI(`/feedbacks/?qr_code=${encodeURIComponent(QR_CODE)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        switchScreen('success');
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(`Erreur lors de l'envoi : ${errData.detail || 'Code QR invalide'}`);
+        btn.disabled = false;
+        btn.innerHTML = '<span class="btn-text">Envoyer mon avis</span><span class="arrow">›</span>';
+      }
+    } catch (e) {
+      console.error("Erreur d'envoi feedback:", e);
+      alert("Erreur de connexion avec le serveur API. Veuillez réessayer.");
+      btn.disabled = false;
+      btn.innerHTML = '<span class="btn-text">Envoyer mon avis</span><span class="arrow">›</span>';
+    }
+  });
+
+  // Réinitialiser pour un nouvel avis
+  document.getElementById('btnNewFeedback')?.addEventListener('click', () => {
+    sentimentBtns.forEach(b => b.classList.remove('selected'));
+    sentimentSelectionne = null;
+    if (commentTextarea) {
+      commentTextarea.value = '';
+      commentTextarea.placeholder = defaultPlaceholder;
+      updateCharCount();
+    }
+    const noBtn = document.getElementById('recontactNo');
+    noBtn?.click();
+    const contactTel = document.getElementById('contactTelSentiment') as HTMLInputElement;
+    const contactEmail = document.getElementById('contactEmailSentiment') as HTMLInputElement;
+    if (contactTel) contactTel.value = '';
+    if (contactEmail) contactEmail.value = '';
+    const btn = document.getElementById('btnSubmitSentiment') as HTMLButtonElement;
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<span class="btn-text">Envoyer mon avis</span><span class="arrow">›</span>';
+    }
+    switchScreen('sentiment');
+  });
+</script>

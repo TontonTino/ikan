@@ -1,0 +1,27 @@
+---
+import FeedbackLayout from '../layouts/FeedbackLayout.astro';
+import IkanLogo from '../components/IkanLogo.astro';
+---
+
+<FeedbackLayout title="IKAN AI — Redirection">
+  <div class="mobile-container" style="text-align: center; padding: 48px 24px;">
+    <div style="display: flex; justify-content: center; margin-bottom: 24px;">
+      <IkanLogo variant="dark" size={48} />
+    </div>
+    <div id="loading-spinner" style="font-size: 1.1rem; color: #475569;">
+      Chargement du formulaire...
+    </div>
+  </div>
+
+  <script>
+    // Si l'URL demandée est /feedback/CODE, intercepter le 404 static et charger la bonne page
+    const path = window.location.pathname;
+    if (path.includes('/feedback/')) {
+      const parts = path.split('/feedback/');
+      const code = parts[1]?.replace(/\/$/, '');
+      if (code) {
+        window.location.href = `/feedback/${code}`;
+      }
+    }
+  </script>
+</FeedbackLayout>

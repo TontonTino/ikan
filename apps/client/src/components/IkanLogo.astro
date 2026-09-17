@@ -1,0 +1,46 @@
+---
+export interface Props {
+  width?: number;
+  height?: number;
+  alt?: string;
+  class?: string;
+  size?: number;
+  variant?: string;
+}
+
+const {
+  width,
+  height,
+  size = 140,
+  alt = 'IKAN AI',
+  class: className = '',
+} = Astro.props;
+
+const targetWidth = width || size || 140;
+---
+
+<div class={`ikan-logo-official-container ${className}`} style={`width: ${targetWidth}px;`}>
+  <img
+    src="/ikan-ai-logo.png"
+    alt={alt}
+    class="ikan-logo-official-img"
+    loading="eager"
+    decoding="sync"
+  />
+</div>
+
+<style>
+  .ikan-logo-official-container {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+    position: relative;
+  }
+  .ikan-logo-official-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: contain;
+  }
+</style>
