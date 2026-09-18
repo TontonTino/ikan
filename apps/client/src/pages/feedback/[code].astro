@@ -70,6 +70,16 @@ try {
             <!-- ÉCRAN 1 : FORMULAIRE -->
             <section id="screen-sentiment" class="screen-view">
 
+              <!-- SECTION 0 : CATÉGORIE DE L'AVIS (obligatoire, définie par l'agence) -->
+              <div class="form-section categorie-section">
+                <div class="section-head">
+                  <label class="field-label">Quelle catégorie concerne votre avis ?</label>
+                </div>
+                <div class="themes-chips-container" id="categorieChipsContainer" role="radiogroup" aria-label="Catégorie de l'avis">
+                  <span class="categorie-loading">Chargement des catégories...</span>
+                </div>
+              </div>
+
               <!-- SECTION 1 : ÉVALUATION (5 EMOJIS) -->
               <div class="form-section sentiment-section">
                 <div class="section-head">
@@ -859,6 +869,16 @@ try {
     display: inline-block;
   }
 
+  .categorie-loading,
+  .categorie-error {
+    font-size: 0.78rem;
+    color: #94A3B8;
+  }
+
+  .categorie-error {
+    color: #DC2626;
+  }
+
   /* =========================================================
      COMMENTAIRE & MICRO
      ========================================================= */
@@ -1453,6 +1473,57 @@ try {
   let currentSector: SectorType = 'telecom';
   const selectedThemes = new Set<string>();
 
+  // ================= CATÉGORIE DE L'AVIS (définie par le CX Manager, par agence) =================
+  interface Categorie {
+    id: string;
+    nom: string;
+  }
+
+  let categoriesDisponibles: Categorie[] = [];
+  let selectedCategorieId: string | null = null;
+
+  const categorieChipsContainer = document.getElementById('categorieChipsContainer');
+
+  function renderCategorieChips() {
+    if (!categorieChipsContainer) return;
+    categorieChipsContainer.innerHTML = '';
+
+    categoriesDisponibles.forEach(cat => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      const isSelected = selectedCategorieId === cat.id;
+      chip.className = 'theme-chip' + (isSelected ? ' is-selected' : '');
+      chip.setAttribute('role', 'radio');
+      chip.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+      chip.innerHTML = `
+        <svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <span>${cat.nom}</span>
+      `;
+      chip.addEventListener('click', () => {
+        selectedCategorieId = cat.id;
+        renderCategorieChips();
+      });
+      categorieChipsContainer.appendChild(chip);
+    });
+  }
+
+  async function loadCategories() {
+    if (!categorieChipsContainer) return;
+    try {
+      const res = await fetchAPI(`/qr-codes/${encodeURIComponent(QR_CODE)}/categories`);
+      if (res.ok) {
+        categoriesDisponibles = await res.json();
+        renderCategorieChips();
+      } else {
+        categorieChipsContainer.innerHTML = '<span class="categorie-error">Impossible de charger les catégories. Réessayez plus tard.</span>';
+      }
+    } catch (e) {
+      categorieChipsContainer.innerHTML = '<span class="categorie-error">Impossible de charger les catégories. Réessayez plus tard.</span>';
+    }
+  }
+
   function detectSectorFromText(text: string): SectorType {
     const t = text.toLowerCase();
     if (t.includes('orange') || t.includes('telecom') || t.includes('moov') || t.includes('tel') || t.includes('mobile') || t.includes('mtn')) {
@@ -1784,6 +1855,11 @@ try {
     const commentaireTexte = commentInput?.value.trim() || '';
     const contactTel = (document.getElementById('contactTelInput') as HTMLInputElement)?.value.trim() || null;
 
+    if (!selectedCategorieId) {
+      alert("Merci de sélectionner une catégorie avant d'envoyer votre avis.");
+      return;
+    }
+
     if (wantsRecontact && !contactTel) {
       alert("Veuillez renseigner un numéro de téléphone pour être recontacté.");
       return;
@@ -1802,6 +1878,7 @@ try {
     }
 
     const payload = {
+      categorie_id: selectedCategorieId,
       sentiment: sentimentMeta.apiSentiment,
       note: sentimentMeta.note,
       commentaire: finalCommentaire || null,
@@ -1810,8 +1887,6 @@ try {
       contact_nom: null,
       contact_telephone: wantsRecontact ? contactTel : null,
       contact_email: null,
-      secteur: currentSector,
-      themes: themesArray,
     };
 
     try {
@@ -1858,6 +1933,9 @@ try {
     selectedThemes.clear();
     renderThemesChips();
 
+    selectedCategorieId = null;
+    renderCategorieChips();
+
     if (commentInput) {
       commentInput.value = '';
       commentInput.placeholder = sentimentDataMap.bien.placeholder;
@@ -1887,4 +1965,5 @@ try {
   // Initialisation
   setSector('telecom');
   hydrateAgency();
+  loadCategories();
 </script>
