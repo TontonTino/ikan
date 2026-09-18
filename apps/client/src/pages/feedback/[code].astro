@@ -82,10 +82,6 @@ try {
 
               <!-- SECTION 1 : ÉVALUATION (5 EMOJIS) -->
               <div class="form-section sentiment-section">
-                <div class="section-head">
-                  <label class="field-label">Comment s'est passée votre visite ?</label>
-                </div>
-
                 <div class="sentiment-grid" id="sentimentsGrid" role="radiogroup" aria-label="Niveau de satisfaction">
                   <!-- 1. Mauvais -->
                   <button type="button" class="sentiment-tile tone-mauvais" data-sentiment="mauvais" role="radio" aria-checked="false" aria-label="Mauvais">
@@ -161,15 +157,10 @@ try {
 
               <!-- SECTION 3 : COMMENTAIRE & DICTÉE VOCALE -->
               <div class="form-section comment-section">
-                <div class="section-head">
-                  <label class="field-label" for="inputCommentaire">
-                    Commentaire
-                  </label>
-                </div>
-
                 <div class="textarea-box">
                   <textarea
                     id="inputCommentaire"
+                    aria-label="Commentaire"
                     class="styled-textarea"
                     rows="3"
                     maxlength="500"
@@ -217,7 +208,6 @@ try {
                 </div>
 
                 <div class="reveal-panel" id="contactFieldsPanel" hidden>
-                  <p class="contact-panel-hint">Indiquez votre numéro de téléphone pour être recontacté :</p>
                   <div class="contact-inputs-grid">
                     <div class="input-with-icon">
                       <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -228,6 +218,7 @@ try {
                         inputmode="tel"
                         autocomplete="tel"
                         id="contactTelInput"
+                        aria-label="Numéro de téléphone pour être recontacté"
                         placeholder="Votre numéro de téléphone"
                         class="styled-input"
                       />
@@ -1087,12 +1078,6 @@ try {
   @keyframes slideDown {
     from { opacity: 0; transform: translateY(-6px); }
     to { opacity: 1; transform: translateY(0); }
-  }
-
-  .contact-panel-hint {
-    font-size: 0.72rem;
-    color: #64748B;
-    margin: 0 0 8px;
   }
 
   .contact-inputs-grid {
