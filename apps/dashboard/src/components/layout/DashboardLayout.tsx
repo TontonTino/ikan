@@ -20,7 +20,6 @@ import {
   LogOutIcon,
   SearchIcon,
   ChevronDownIcon,
-  SparklesIcon,
 } from '../common/Icons';
 
 interface NavItem {
@@ -56,20 +55,8 @@ const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
         { path: '/siege', label: "Vue d'ensemble", icon: <LayoutGridIcon size={18} /> },
         { path: '/statistiques', label: 'Statistiques & Analyses', icon: <BarChartIcon size={18} /> },
         { path: '/feedbacks', label: 'Feedbacks Réseau', icon: <MessageSquareIcon size={18} /> },
-        { path: '/agent-ia', label: 'Agent IA & Copilot', icon: <SparklesIcon size={18} color="#75B72A" /> },
-      ],
-    },
-    {
-      title: 'PILOTAGE',
-      items: [
         { path: '/pilotage', label: 'Pilotage', icon: <BellIcon size={18} /> },
-      ],
-    },
-    {
-      title: 'RÉSEAU',
-      items: [
         { path: '/admin/gestion-agences', label: 'Gestion des agences', icon: <StoreIcon size={18} /> },
-        { path: '/abonnements', label: 'Abonnements', icon: <SparklesIcon size={18} /> },
       ],
     },
   ],
@@ -290,36 +277,6 @@ export default function DashboardLayout() {
               </div>
             </div>
           ))}
-        </div>
-
-        {/* 4. Encart Statut / Pro en bas de Sidebar */}
-        <div
-          style={{
-            background: 'linear-gradient(135deg, #F5FBF5 0%, #EEF7ED 100%)',
-            border: '1px solid #E2EFE1',
-            borderRadius: '16px',
-            padding: '14px',
-            marginBottom: '14px',
-            position: 'relative',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <SparklesIcon size={16} color="#75B72A" />
-            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#02302D' }}>
-              IKAN AI Pro
-            </span>
-          </div>
-          <p
-            style={{
-              fontSize: '0.73rem',
-              color: '#64748B',
-              margin: 0,
-              lineHeight: 1.35,
-              fontWeight: 500,
-            }}
-          >
-            Analyse sémantique et détection de criticité actives en temps réel.
-          </p>
         </div>
 
         {/* 5. Bas de Sidebar : Info Utilisateur & Bouton Déconnexion */}

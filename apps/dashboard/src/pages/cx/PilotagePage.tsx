@@ -37,12 +37,12 @@ const NEXT_STATUS: Record<IdeaStatus, IdeaStatus | null> = {
   rejete: null,
 };
 
-type PilotageTab = 'alertes' | 'action' | 'idees';
+type PilotageTab = 'alertes_actions' | 'idees';
 
 /**
- * Page fusionnée "Pilotage" : regroupe Alertes, Action (recommandations IA
- * consolidées, déplacées depuis Statistiques & Analyses) et Boîte à idées
- * en une seule page à onglets, pour le CX Manager.
+ * Page fusionnée "Pilotage" : regroupe Alertes & Actions (alertes réseau +
+ * recommandations IA consolidées, déplacées depuis Statistiques & Analyses)
+ * et Boîte à idées en une seule page à 2 onglets, pour le CX Manager.
  */
 export default function PilotagePage() {
   const currentUser = useAuthStore((s) => s.user);
@@ -53,13 +53,15 @@ export default function PilotagePage() {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTab = searchParams.get('tab');
-  const initialTab: PilotageTab = requestedTab === 'action' ? 'action' : requestedTab === 'idees' ? 'idees' : 'alertes';
+  // Un ancien lien "?tab=action" (onglet désormais fusionné) retombe simplement
+  // sur l'onglet par défaut "Alertes & Actions".
+  const initialTab: PilotageTab = requestedTab === 'idees' ? 'idees' : 'alertes_actions';
   const [activeTab, setActiveTab] = useState<PilotageTab>(initialTab);
 
   const handleTabChange = (id: string) => {
     const tab = id as PilotageTab;
     setActiveTab(tab);
-    setSearchParams(tab === 'alertes' ? {} : { tab }, { replace: true });
+    setSearchParams(tab === 'alertes_actions' ? {} : { tab }, { replace: true });
   };
 
   const [toast, setToast] = useState('');
@@ -173,20 +175,19 @@ export default function PilotagePage() {
     { id: 'decisions', label: 'Décisions prises', icon: <CheckCircleIcon size={16} />, badge: decisionsCount },
   ];
 
+  // Badge combiné : total des éléments nécessitant une action dans cet onglet
+  // fusionné (alertes actives + recommandations en attente), plus lisible
+  // qu'un seul des deux compteurs isolément puisque le contenu des deux est
+  // désormais présenté ensemble.
+  const alertesActionsCount = alertes.length + recos.length;
+
   const tabsConfig: TabItem[] = [
     {
-      id: 'alertes',
-      label: 'Alertes',
+      id: 'alertes_actions',
+      label: 'Alertes & Actions',
       icon: <BellIcon size={16} />,
-      badge: alertes.length,
-      badgeColor: alertes.length > 0 ? 'red' : 'default',
-    },
-    {
-      id: 'action',
-      label: 'Action',
-      icon: <LightningIcon size={16} />,
-      badge: recos.length,
-      badgeColor: recos.length > 0 ? 'red' : 'default',
+      badge: alertesActionsCount,
+      badgeColor: alertesActionsCount > 0 ? 'red' : 'default',
     },
     { id: 'idees', label: 'Boîte à idées', icon: <LightbulbIcon size={16} />, badge: suggestions.length },
   ];
@@ -206,10 +207,18 @@ export default function PilotagePage() {
 
       <TabsNavigation tabs={tabsConfig} activeTab={activeTab} onChange={handleTabChange} />
 
-      {/* ── ONGLET ALERTES ── */}
-      {activeTab === 'alertes' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {alertesLoading ? (
+      {/* ── ONGLET ALERTES & ACTIONS (fusion : alertes réseau + recommandations IA) ── */}
+      {activeTab === 'alertes_actions' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+          {/* ── Sous-section : Alertes ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <AlertTriangleIcon size={18} color="#DC2626" />
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#02302D' }}>
+                Alertes ({alertes.length})
+              </h3>
+            </div>
+            {alertesLoading ? (
             <div style={{ color: '#64748B', padding: '32px', fontWeight: 600 }}>Chargement des alertes...</div>
           ) : alertes.length === 0 ? (
             <div
@@ -263,12 +272,16 @@ export default function PilotagePage() {
             </div>
           )}
         </div>
-      )}
 
-      {/* ── ONGLET ACTION (recommandations IA consolidées réseau) ── */}
-      {activeTab === 'action' && (
+        {/* ── Sous-section : Actions (recommandations IA consolidées réseau) ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <LightningIcon size={18} color="#75B72A" />
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#02302D' }}>
+                Actions ({recos.length})
+              </h3>
+            </div>
             <AgenceFilterSelect agences={agencesList} selectedId={selectedAgenceId} onChange={setSelectedAgenceId} />
           </div>
 
@@ -295,6 +308,7 @@ export default function PilotagePage() {
               ))}
             </div>
           )}
+        </div>
         </div>
       )}
 
