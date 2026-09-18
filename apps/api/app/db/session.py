@@ -3,6 +3,7 @@ Configuration de la session SQLAlchemy et connexion à PostgreSQL.
 """
 import logging
 from sqlalchemy import create_engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from fastapi import HTTPException, status
 
@@ -35,22 +36,30 @@ class Base(DeclarativeBase):
 
 
 def get_db():
-    """Dépendance FastAPI : fournit une session de base de données sécurisée."""
-    db = None
+    """
+    Dépendance FastAPI : fournit une session de base de données sécurisée.
+
+    Ne capture que les vraies erreurs SQLAlchemy/PostgreSQL (connexion, transaction).
+    Toute autre exception (ex: RequestValidationError levée par FastAPI quand un
+    payload Pydantic est invalide) doit remonter telle quelle : FastAPI ferme les
+    dépendances génératrices en renvoyant l'exception d'origine dans ce générateur
+    (via .throw() au point du yield), donc un `except Exception` ici masquerait à
+    tort une erreur 422 de validation derrière un faux 500 "Erreur de connexion
+    PostgreSQL".
+    """
+    db = SessionLocal()
     try:
-        db = SessionLocal()
         yield db
     except HTTPException:
         raise
-    except Exception as e:
+    except SQLAlchemyError as e:
         logger.error(f"[DB CONNECTION ERROR] {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erreur de connexion PostgreSQL: {str(e)}",
         )
     finally:
-        if db is not None:
-            try:
-                db.close()
-            except Exception:
-                pass
+        try:
+            db.close()
+        except Exception:
+            pass
