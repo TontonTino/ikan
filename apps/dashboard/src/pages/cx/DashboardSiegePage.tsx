@@ -231,7 +231,7 @@ export default function DashboardSiegePage() {
     : 9.0;
 
   // Top & Flop agences
-  const sortedAgences = [...data.agences].sort((a, b) => b.taux_satisfaction - a.taux_satisfaction);
+  const sortedAgences = [...data.agences].sort((a, b) => b.wilson_score - a.wilson_score);
   const topAgences = sortedAgences.slice(0, 3);
   const flopAgences = sortedAgences.slice(-3).reverse();
 

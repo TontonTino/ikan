@@ -14,6 +14,9 @@ class KPIAgence(BaseModel):
     nombre_feedbacks: int
     nombre_negatifs: int
     nombre_suggestions: int
+    # Borne inférieure de Wilson (0-1) : sert uniquement au classement côté
+    # client, à ne jamais afficher.
+    wilson_score: float = 0.0
     latitude: float | None = None
     longitude: float | None = None
 

@@ -174,6 +174,8 @@ export interface KPIAgence {
   nombre_feedbacks: number;
   nombre_negatifs: number;
   nombre_suggestions: number;
+  /** Borne inférieure de Wilson (0-1) : clé de tri uniquement, jamais affichée. */
+  wilson_score: number;
   latitude?: number;
   longitude?: number;
 }
