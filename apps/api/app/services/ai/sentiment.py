@@ -4,6 +4,7 @@ Approche lexicale avec dictionnaire de mots-clés pondérés, gestion des expres
 Moteur local rapide, précis et sans dépendance externe (BF-06).
 """
 import unicodedata
+from typing import Optional
 from app.models.enums import SentimentType
 
 
@@ -29,6 +30,9 @@ EXPRESSIONS_POSITIVES: dict[str, int] = {
     "tres efficace": 2,
     "rien a redire": 2,
     "au top": 2,
+    "gain de cause": 2,
+    "sans souci": 2,
+    "sans probleme": 2,
     "bonne continuation": 1,
     "bon courage": 1,
 }
@@ -70,6 +74,8 @@ MOTS_POSITIFS: dict[str, int] = {
     "impressionnant": 2, "impressionnante": 2,
     "formidable": 2, "formidables": 2,
     "adore": 2, "adoree": 2, "adores": 2, "adorees": 2, "adorons": 2,
+    "ravi": 2, "ravie": 2, "ravis": 2, "ravies": 2,
+    "enchante": 2, "enchantee": 2, "enchantes": 2, "enchantees": 2,
 
     # Positifs (poids 1)
     "content": 1, "contente": 1, "contents": 1, "contentes": 1,
@@ -77,8 +83,10 @@ MOTS_POSITIFS: dict[str, int] = {
     "bien": 1, "bon": 1, "bonne": 1, "bons": 1, "bonnes": 1,
     "satisfait": 1, "satisfaite": 1, "satisfaits": 1, "satisfaites": 1,
     "satisfaisant": 1, "satisfaisante": 1, "satisfaisants": 1, "satisfaisantes": 1,
-    "rapide": 1, "rapides": 1, "rapidite": 1,
+    "rapide": 1, "rapides": 1, "rapidite": 1, "rapidement": 1,
     "efficace": 1, "efficaces": 1, "efficacite": 1,
+    "regle": 1, "reglee": 1, "regles": 1, "reglees": 1,
+    "resolu": 1, "resolue": 1, "resolus": 1, "resolues": 1,
     "professionnel": 1, "professionnelle": 1, "professionnels": 1, "professionnelles": 1,
     "agreable": 1, "agreables": 1,
     "sympathique": 1, "sympathiques": 1, "sympa": 1,
@@ -155,9 +163,14 @@ MOTS_NEGATIFS: dict[str, int] = {
 NEGATIONS = {"ne", "pas", "jamais", "aucun", "aucune", "ni", "non", "sans", "guere", "point", "n"}
 
 
-def analyser_sentiment(texte: str) -> tuple[SentimentType, float]:
+def analyser_sentiment(texte: str, note: Optional[int] = None) -> tuple[SentimentType, float]:
     """
     Analyse le sentiment d'un texte en français avec gestion des expressions composées, négations et accents.
+
+    Args:
+        texte: le commentaire à analyser.
+        note: note déclarée par le client (1-5), utilisée uniquement comme filet
+            de sécurité quand le lexique ne trouve presque aucun signal (voir plus bas).
 
     Returns:
         (SentimentType, score) où score va de 0.0 (très négatif) à 1.0 (très positif)
@@ -205,11 +218,25 @@ def analyser_sentiment(texte: str) -> tuple[SentimentType, float]:
 
     total = score_positif + score_negatif
 
-    if total == 0:
-        # Analyse de secours par ponctuation
-        nb_exclamations = texte.count("!")
-        if nb_exclamations >= 2:
-            return SentimentType.POSITIF, 0.65
+    # Filet de sécurité heuristique : quand le lexique ne trouve presque aucun
+    # mot-clé (score total très faible ou nul), il n'a tout simplement pas assez
+    # de matière pour trancher — retomber sur "Neutre" par défaut ignorerait un
+    # signal fort et disponible : la note déclarée par le client (1-5). Ce n'est
+    # pas une compréhension du texte, seulement un compromis qui évite de
+    # contredire une note très tranchée (ex: 5/5 ou 1/5) sans aucune preuve
+    # lexicale contraire. Une note à 3, ou l'absence de note, ne donne aucun
+    # signal fiable : on garde alors le comportement historique (ponctuation
+    # puis Neutre par défaut).
+    if total < 1.5:
+        if note is not None and note >= 4:
+            return SentimentType.POSITIF, 0.6
+        if note is not None and note <= 2:
+            return SentimentType.NEGATIF, 0.4
+        if total == 0:
+            # Analyse de secours par ponctuation
+            nb_exclamations = texte.count("!")
+            if nb_exclamations >= 2:
+                return SentimentType.POSITIF, 0.65
         return SentimentType.NEUTRE, 0.5
 
     # Calculer le score normalisé (0 = très négatif, 1 = très positif)

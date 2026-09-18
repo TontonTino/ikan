@@ -210,10 +210,15 @@ class ClassificationResult(TypedDict):
     theme_confidence: float
 
 
-def classify(text: str) -> ClassificationResult:
+def classify(text: str, note: Optional[int] = None) -> ClassificationResult:
     """
     Classifie le sentiment et le thème principal d'un retour utilisateur selon les 15 catégories IKAN AI.
     Combine le modèle de Deep Learning XLM-RoBERTa et l'analyseur sémantique local pour une précision maximale.
+
+    Args:
+        text: le commentaire à analyser.
+        note: note déclarée par le client (1-5), transmise à l'analyseur de sentiment
+            comme filet de sécurité quand le lexique ne trouve presque aucun signal.
     """
     _ensure_models_loaded()
 
@@ -226,7 +231,7 @@ def classify(text: str) -> ClassificationResult:
         }
 
     # 1. Analyse de sentiment déterministe enrichie (rapide, sans latence réseau)
-    sent_enum, score_sent = analyser_sentiment(text)
+    sent_enum, score_sent = analyser_sentiment(text, note)
     sentiment_str = (
         "positive" if sent_enum == SentimentType.POSITIF
         else "negative" if sent_enum == SentimentType.NEGATIF

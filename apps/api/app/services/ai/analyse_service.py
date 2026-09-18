@@ -82,7 +82,7 @@ def analyser_feedback(feedback_id: uuid.UUID, db: Session | None = None) -> None
                 score_sentiment = 0.50
                 theme = "accueil"
         else:
-            resultats_ia = classify(texte)
+            resultats_ia = classify(texte, feedback.note)
             raw_sentiment = resultats_ia["sentiment"]
             score_sentiment = resultats_ia["score_sentiment"]
             theme = resultats_ia["theme"]

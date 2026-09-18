@@ -21,6 +21,24 @@ def test_theme_classification_15_categories():
         assert res["score_sentiment"] >= 0.0 and res["score_sentiment"] <= 1.0
 
 
+def test_sentiment_positif_malgre_mot_negatif_isole():
+    # "problème" est reconnu négatif seul, mais "gain de cause"/"rapidement"/"réglé"
+    # sont désormais reconnus positifs et l'emportent nettement.
+    res = classify("J'ai eu gain de cause. On a rapidement réglé mon problème de carte sim", note=5)
+    assert res["sentiment"] == "positive"
+
+
+def test_sentiment_positif_mot_hors_dictionnaire_original():
+    # "ravi(s)" est désormais dans le dictionnaire positif.
+    res = classify("Je suis ravis de mon experience", note=5)
+    assert res["sentiment"] == "positive"
+
+
+def test_sentiment_positif_expression_forte_sans_regression():
+    res = classify("L'accueil a été très bien, j'aime", note=4)
+    assert res["sentiment"] == "positive"
+
+
 def test_discordance_detection():
     # Note haute (5/5) mais sentiment négatif => Discordance
     assert detect_discordance(5, "negative") is True
