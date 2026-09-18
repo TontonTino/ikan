@@ -25,9 +25,9 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: PUBLIC_CLIENT_URL
-        value: https://ikanai-client.onrender.com
+        value: https://ikan-1.onrender.com
       - key: ALLOWED_ORIGINS
-        value: https://ikanai-client.onrender.com,https://ikanai-dashboard.onrender.com
+        value: https://ikan-1.onrender.com,https://ikanai-dashboard.onrender.com
 
   - type: web
     name: ikanai-client
