@@ -9,6 +9,7 @@ from app.models.enums import (
     IdeaStatus,
     PriorityLevel,
 )
+from app.models.plan import Plan, PlanFeature
 from app.models.organisation import Organisation
 from app.models.agence import Agence
 from app.models.utilisateur import Utilisateur
@@ -32,6 +33,8 @@ __all__ = [
     "IdeaStatus",
     "PriorityLevel",
     # Modèles
+    "Plan",
+    "PlanFeature",
     "Organisation",
     "Agence",
     "Utilisateur",

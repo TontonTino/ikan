@@ -15,6 +15,8 @@ from app.models.agence import Agence
 from app.models.feedback import Feedback
 from app.models.qr_code import QRCode
 from app.models.enums import UserRole
+from app.services.plan_catalog import FEATURE_ALERTES
+from app.services.plan_service import organisation_a_la_fonctionnalite
 
 router = APIRouter()
 
@@ -40,6 +42,11 @@ def list_alertes(
     Retourne les alertes actives (agences dont la satisfaction est sous le seuil).
     BF-12 — consultable par Agency Manager et CX Manager uniquement (Admin exclu).
     """
+    # Alertes de satisfaction = fonctionnalité Starter+. Liste vide (et non 403) pour
+    # un forfait Gratuit : plusieurs écrans chargent cet endpoint avec d'autres appels.
+    if not organisation_a_la_fonctionnalite(current_user.organisation_id, FEATURE_ALERTES, db):
+        return []
+
     date_debut = datetime.now(timezone.utc) - timedelta(days=7)
     alertes = []
 

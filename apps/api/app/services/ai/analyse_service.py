@@ -14,6 +14,8 @@ from app.models.enums import SentimentType, CriticiteType
 from app.services.ai.sentiment import analyser_sentiment
 from app.services.ai.classification_service import compute_criticite, detect_discordance
 from app.services.ai.recommandations import generer_recommandations
+from app.services.plan_catalog import FEATURE_DISCORDANCE
+from app.services.plan_service import organisation_a_la_fonctionnalite, organisation_du_feedback
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +97,15 @@ def analyser_feedback(feedback_id: uuid.UUID, db: Session | None = None) -> None
 
         # 3. Détection de discordance & calcul criticité
         raw_criticite = compute_criticite(feedback.note, raw_sentiment)
-        discordance = detect_discordance(feedback.note, raw_sentiment)
+        # Détection de discordance : fonctionnalité Pro+. Fail-open — en cas de doute
+        # ou d'erreur la détection s'exécute ; sinon le champ garde sa valeur par
+        # défaut (False). Le sentiment et la criticité, eux, sont TOUJOURS calculés.
+        if organisation_a_la_fonctionnalite(
+            organisation_du_feedback(feedback), FEATURE_DISCORDANCE, db
+        ):
+            discordance = detect_discordance(feedback.note, raw_sentiment)
+        else:
+            discordance = False
 
         # Conversion vers vos Enums de base de données
         sentiment_enum = SENTIMENT_MAP.get(raw_sentiment.lower(), SentimentType.NEUTRE)

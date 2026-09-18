@@ -18,8 +18,20 @@ from app.models.categorie import Categorie
 from app.models.enums import UserRole
 from app.schemas.agence import AgenceCreate, AgenceUpdate, AgenceResponse
 from app.schemas.categorie import CategorieCreate, CategorieUpdate, CategorieResponse
+from app.services.plan_catalog import FEATURE_CATEGORIES
+from app.services.plan_service import organisation_a_la_fonctionnalite
 
 router = APIRouter()
+
+
+def _exiger_categories_personnalisees(agence: Agence, db: Session) -> None:
+    """Gestion des catégories = fonctionnalité Starter+ (fail-open : jamais bloquant sur erreur)."""
+    if not organisation_a_la_fonctionnalite(agence.organisation_id, FEATURE_CATEGORIES, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Les catégories personnalisées sont disponibles à partir du forfait Starter. "
+                   "Votre formulaire utilise la catégorie « Général » par défaut.",
+        )
 
 
 def _check_cx_owns_agence(agence: Agence, current_user: Utilisateur) -> None:
@@ -220,6 +232,7 @@ def create_categorie(
         raise HTTPException(status_code=404, detail="Agence introuvable")
 
     _check_cx_owns_agence(agence, current_user)
+    _exiger_categories_personnalisees(agence, db)
 
     categorie = Categorie(agence_id=agence_id, nom=data.nom.strip(), active=True)
     db.add(categorie)
@@ -242,6 +255,7 @@ def update_categorie(
         raise HTTPException(status_code=404, detail="Agence introuvable")
 
     _check_cx_owns_agence(agence, current_user)
+    _exiger_categories_personnalisees(agence, db)
 
     categorie = db.query(Categorie).filter(
         Categorie.id == categorie_id, Categorie.agence_id == agence_id

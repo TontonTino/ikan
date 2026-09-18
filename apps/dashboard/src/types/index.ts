@@ -434,3 +434,24 @@ export interface StatsAdminResponse {
   utilisation_ia: Record<string, any>;
 }
 
+
+// ── Forfait & utilisation de l'organisation (informatif) ─────────────
+export interface QuotaUtilisation {
+  actuel: number;
+  /** null = illimité */
+  max: number | null;
+}
+
+export interface FonctionnaliteStatut {
+  code: string;
+  libelle: string;
+  actif: boolean;
+}
+
+export interface UtilisationOrganisation {
+  plan: { code: string; nom: string } | null;
+  cx_managers: QuotaUtilisation;
+  agences: QuotaUtilisation;
+  feedbacks_ce_mois: QuotaUtilisation;
+  fonctionnalites: FonctionnaliteStatut[];
+}

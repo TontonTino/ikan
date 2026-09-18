@@ -3,6 +3,7 @@ Schémas Pydantic pour les organisations (OrganisationCreate, OrganisationUpdate
 """
 import uuid
 from datetime import datetime
+from typing import List
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
 
@@ -72,3 +73,29 @@ class OrganisationRead(BaseModel):
 
 # Alias pour rétro-compatibilité
 OrganisationResponse = OrganisationRead
+
+
+class PlanInfo(BaseModel):
+    code: str
+    nom: str
+
+
+class QuotaUtilisation(BaseModel):
+    """Consommation actuelle et limite (max = None : illimité)."""
+    actuel: int
+    max: int | None = None
+
+
+class FonctionnaliteStatut(BaseModel):
+    code: str
+    libelle: str
+    actif: bool
+
+
+class UtilisationOrganisation(BaseModel):
+    """Forfait, quotas réels et fonctionnalités de l'organisation — purement informatif."""
+    plan: PlanInfo | None = None
+    cx_managers: QuotaUtilisation
+    agences: QuotaUtilisation
+    feedbacks_ce_mois: QuotaUtilisation
+    fonctionnalites: List[FonctionnaliteStatut]

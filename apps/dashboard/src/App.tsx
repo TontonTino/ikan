@@ -17,8 +17,6 @@ import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 import AdminPermissionsPage from './pages/admin/AdminPermissionsPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import StatistiquesPage from './pages/stats/StatistiquesPage';
-import AgentIAPage from './pages/cx/AgentIAPage';
-import AbonnementsPage from './pages/cx/AbonnementsPage';
 
 import { useParams } from 'react-router-dom';
 import { getFeedbackUrl } from './config';
@@ -90,8 +88,6 @@ export default function App() {
 
         {/* CX Manager — Vue siège */}
         <Route path="siege" element={<DashboardSiegePage />} />
-        <Route path="agent-ia" element={<AgentIAPage />} />
-        <Route path="abonnements" element={<AbonnementsPage />} />
 
         {/* Agency Manager & CX Manager */}
         <Route path="agence" element={<DashboardAgencePage />} />

@@ -59,6 +59,14 @@ def on_startup():
     except Exception as e:
         print(f"[STARTUP DB MIGRATION LOG] {e}")
 
+    # Filet forfaits (même SQL idempotent que la migration Alembic 006).
+    try:
+        from app.services.plan_bootstrap import appliquer_schema_plans
+        with engine.begin() as conn:
+            appliquer_schema_plans(conn)
+    except Exception as e:
+        print(f"[STARTUP PLANS LOG] {e}")
+
     # Auto-seeding si aucun QR Code n'existe en base
     try:
         db = SessionLocal()

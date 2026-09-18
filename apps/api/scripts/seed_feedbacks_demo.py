@@ -12,7 +12,9 @@ temporelle (le calcul de l'analyse, lui, reste 100% réel).
 
 Usage :
     cd apps/api
-    python scripts/seed_feedbacks_demo.py
+    python scripts/seed_feedbacks_demo.py               # Orange Burkina Faso (Entreprise)
+    python scripts/seed_feedbacks_demo.py --plans-demo  # 3 organisations de démo :
+                                                        # Gratuit / Starter / Pro
 """
 import os
 import sys
@@ -38,7 +40,13 @@ from app.models.historique_feedback import HistoriqueFeedback
 from app.models.analyse_ia import AnalyseIA
 from app.models.recommandation import Recommandation
 from app.models.demande_contact import DemandeContact
-from app.models.enums import CriticiteType
+from app.models.enums import CriticiteType, UserRole
+from app.models.organisation import Organisation
+from app.models.utilisateur import Utilisateur
+from app.core.config import settings
+from app.core.security import get_password_hash
+from app.services.categorie_service import get_or_create_categories_actives
+from app.services.plan_catalog import PLAN_GRATUIT_ID, PLAN_STARTER_ID, PLAN_PRO_ID
 from app.schemas.feedback import FeedbackCreate
 from app.api.v1.endpoints.feedbacks import submit_feedback
 
@@ -233,8 +241,30 @@ COMMENTAIRES = {
 }
 
 
+COMMENTAIRES_GENERIQUES = {
+    "pos": [
+        "Très bon accueil et service rapide, je recommande.",
+        "Personnel compétent et à l'écoute, tout s'est bien passé.",
+        "Expérience agréable, merci à toute l'équipe.",
+        "Efficace et courtois, je reviendrai avec plaisir.",
+    ],
+    "neu": [
+        "Service correct, sans plus.",
+        "Un peu d'attente mais le résultat est acceptable.",
+    ],
+    "neg": [
+        "Très déçu, mon problème n'a pas été résolu.",
+        "Attente interminable et personnel peu aimable.",
+    ],
+}
+
+# Commentaire clairement négatif : associé à une note 5/5 il provoque une
+# discordance (note haute + sentiment négatif) — détectée uniquement pour Pro+.
+COMMENTAIRE_DISCORDANT = "Service catastrophique, personnel impoli, très déçu et en colère."
+
+
 def pick_comment(categorie_nom: str, note: int) -> str:
-    bank = COMMENTAIRES[categorie_nom]
+    bank = COMMENTAIRES.get(categorie_nom, COMMENTAIRES_GENERIQUES)
     polarite = "pos" if note >= 4 else "neg" if note <= 2 else "neu"
     return random.choice(bank[polarite])
 
@@ -323,12 +353,15 @@ def random_dates(n: int, now: datetime) -> list[datetime]:
 # 6. GÉNÉRATION DES FEEDBACKS via le pipeline réel
 # ============================================================================
 
-def generer_feedbacks_agence(db, agence: Agence, categories: list[Categorie], notes: list[int], now: datetime, is_problem: bool) -> list[dict]:
+def generer_feedbacks_agence(db, agence: Agence, categories: list[Categorie], notes: list[int], now: datetime, is_problem: bool,
+                             dates: list[datetime] | None = None, commentaires_forces: dict[int, str] | None = None) -> list[dict]:
     qr = db.query(QRCode).filter(QRCode.agence_id == agence.id, QRCode.actif == True).first()
     if not qr:
         raise RuntimeError(f"Aucun QR code actif pour {agence.nom}")
 
-    dates = random_dates(len(notes), now)
+    if dates is None:
+        dates = random_dates(len(notes), now)
+    commentaires_forces = commentaires_forces or {}
     resultats = []
 
     # ~15-20% des notes basses (1-2) avec une demande de rappel
@@ -338,7 +371,7 @@ def generer_feedbacks_agence(db, agence: Agence, categories: list[Categorie], no
 
     for i, note in enumerate(notes):
         categorie = random.choice(categories)
-        commentaire = pick_comment(categorie.nom, note)
+        commentaire = commentaires_forces.get(i) or pick_comment(categorie.nom, note)
 
         payload = FeedbackCreate(
             categorie_id=categorie.id,
@@ -380,6 +413,7 @@ def generer_feedbacks_agence(db, agence: Agence, categories: list[Categorie], no
             "categorie": categorie.nom,
             "date": target_date,
             "sentiment": analyse.sentiment.value if analyse else None,
+            "discordance": analyse.discordance_detectee if analyse else None,
             "criticite": analyse.criticite.value if analyse else None,
             "recontact": i in indices_recontact,
             "recommandation": reco.contenu if reco else None,
@@ -401,7 +435,158 @@ def feedbacks_existants(db, agence: Agence) -> int:
     )
 
 
+# ============================================================================
+# 8. ORGANISATIONS DE DÉMO PAR FORFAIT (Gratuit / Starter / Pro)
+# ============================================================================
+
+MOT_DE_PASSE_DEMO = "Demo2026!"
+
+DEMO_ORGS = [
+    {
+        "nom": "Pharmacie Wend-Panga", "plan_id": PLAN_GRATUIT_ID, "plan": "Gratuit",
+        "secteur": "Santé / Pharmacie", "email_pro": "contact@wendpanga-demo.bf",
+        "cx": ("Aïcha", "Ouédraogo", "cx@wendpanga-demo.bf"),
+        # (nom_agence, ville, lat, lng)
+        "agences": [("Pharmacie Wend-Panga - Ouaga 2000", "Ouagadougou", 12.3320, -1.4930)],
+        # Gratuit : pas de catégories personnalisées -> catégorie "Général" auto-créée.
+        "categories": None,
+        # 9 avis ce mois-ci (< 20). Le dernier est le cas de discordance.
+        "notes": {0: [5, 4, 5, 3, 5, 2, 4, 5, 5]},
+        "discordants": {0: [8]},
+    },
+    {
+        "nom": "Sahel Distribution", "plan_id": PLAN_STARTER_ID, "plan": "Starter",
+        "secteur": "Commerce / Distribution", "email_pro": "contact@sahel-demo.bf",
+        "cx": ("Moussa", "Kaboré", "cx@sahel-demo.bf"),
+        "agences": [
+            ("Sahel Distribution - Ouaga Centre", "Ouagadougou", 12.3714, -1.5197),
+            ("Sahel Distribution - Bobo-Dioulasso", "Bobo-Dioulasso", 11.1771, -4.2979),
+            ("Sahel Distribution - Koudougou", "Koudougou", 12.2530, -2.3627),
+        ],
+        "categories": ["Accueil", "Rayons & Produits", "Caisse & Attente", "Propreté"],
+        "notes": {
+            0: [5, 4, 5, 5, 3, 4, 5, 2, 5],
+            1: [4, 5, 3, 5, 4, 5, 1, 5],
+            2: [5, 5, 4, 3, 5, 2, 4],
+        },
+        "discordants": {0: [8]},
+    },
+    {
+        "nom": "Banque Horizon Faso", "plan_id": PLAN_PRO_ID, "plan": "Pro",
+        "secteur": "Banque / Finance", "email_pro": "contact@horizon-demo.bf",
+        "cx": ("Salif", "Compaoré", "cx@horizon-demo.bf"),
+        "agences": [
+            ("Horizon - Ouaga 2000", "Ouagadougou", 12.3300, -1.4900),
+            ("Horizon - Zone du Bois", "Ouagadougou", 12.3520, -1.5060),
+            ("Horizon - Tanghin", "Ouagadougou", 12.4080, -1.5010),
+            ("Horizon - Bobo-Dioulasso", "Bobo-Dioulasso", 11.1850, -4.2900),
+            ("Horizon - Koudougou", "Koudougou", 12.2600, -2.3600),
+            ("Horizon - Ouahigouya", "Ouahigouya", 13.5800, -2.4200),
+            ("Horizon - Banfora", "Banfora", 10.6300, -4.7600),
+            ("Horizon - Fada N'Gourma", "Fada N'Gourma", 12.0600, 0.3500),
+        ],
+        "categories": ["Accueil", "Ouverture de compte", "Guichet & Attente", "Crédit", "Application mobile"],
+        "notes": {
+            0: [5, 4, 5, 5, 3, 4, 5, 5],
+            1: [5, 4, 4, 5, 3, 5],
+            2: [4, 5, 2, 5, 3, 4],
+            3: [5, 5, 4, 3, 5, 4, 5],
+            4: [4, 5, 5, 3, 4],
+            5: [5, 4, 5, 2, 5],
+            6: [4, 5, 5, 4, 3],
+            7: [5, 4, 5, 5],
+        },
+        "discordants": {0: [7], 3: [6]},
+    },
+]
+
+
+def dates_mois_courant(n: int, now: datetime) -> list[datetime]:
+    """n dates dans le mois calendaire courant (jamais dans le futur), pour que le
+    quota mensuel du forfait Gratuit reflète bien ces feedbacks."""
+    jours_max = max(now.day - 1, 0)
+    dates = []
+    for _ in range(n):
+        offset = random.randint(1, jours_max) if jours_max >= 1 else 0
+        d = now - timedelta(days=offset)
+        heure = random.randint(8, 19) if offset >= 1 else max(0, min(now.hour - 1, 19))
+        dates.append(d.replace(hour=heure, minute=random.randint(0, 59), second=random.randint(0, 59), microsecond=0))
+    return dates
+
+
+def creer_agence_avec_qr(db, org: Organisation, nom: str, ville: str, lat: float, lng: float) -> Agence:
+    """Même logique que POST /agences : agence + QR code actif."""
+    agence = Agence(organisation_id=org.id, nom=nom, ville=ville, adresse=ville, latitude=lat, longitude=lng, active=True)
+    db.add(agence)
+    db.flush()
+    base_url = settings.PUBLIC_CLIENT_URL.rstrip("/")
+    clean_name = agence.nom.upper().replace(" ", "-")[:12]
+    code = f"QR-{clean_name}-{uuid.uuid4().hex[:6].upper()}"
+    db.add(QRCode(id=uuid.uuid4(), agence_id=agence.id, code=code, url=f"{base_url}/feedback/{code}",
+                  label=f"Borne Accueil - {agence.nom}", actif=True))
+    db.commit()
+    db.refresh(agence)
+    return agence
+
+
+def seed_plans_demo():
+    """Crée les organisations de démo Gratuit / Starter / Pro (Entreprise = Orange Burkina Faso).
+    Chaque feedback passe par le pipeline réel (submit_feedback). Idempotent par organisation."""
+    db = SessionLocal()
+    now = datetime.now(timezone.utc)
+    random.seed(2026)
+    resume = []
+    try:
+        for cfg in DEMO_ORGS:
+            if db.query(Organisation).filter(Organisation.nom == cfg["nom"]).first():
+                print(f"[SKIP] {cfg['nom']} existe déjà.")
+                continue
+
+            org = Organisation(nom=cfg["nom"], secteur_activite=cfg["secteur"], pays_region="Burkina Faso",
+                               email_pro=cfg["email_pro"], plan_id=cfg["plan_id"])
+            db.add(org)
+            db.flush()
+            prenom, nom, email = cfg["cx"]
+            db.add(Utilisateur(organisation_id=org.id, nom=nom, prenom=prenom, email=email,
+                               mot_de_passe_hash=get_password_hash(MOT_DE_PASSE_DEMO),
+                               role=UserRole.CX_MANAGER, active=True))
+            db.commit()
+            db.refresh(org)
+
+            total, discordances = 0, 0
+            for idx, (nom_ag, ville, lat, lng) in enumerate(cfg["agences"]):
+                agence = creer_agence_avec_qr(db, org, nom_ag, ville, lat, lng)
+                if cfg["categories"]:
+                    categories = ensure_categories(db, agence, cfg["categories"])["categories"]
+                else:
+                    categories = get_or_create_categories_actives(agence.id, db)  # "Général"
+                notes = list(cfg["notes"][idx])
+                forces = {i: COMMENTAIRE_DISCORDANT for i in cfg["discordants"].get(idx, [])}
+                for i in forces:
+                    notes[i] = 5  # note 5/5 + commentaire négatif
+                res = generer_feedbacks_agence(db, agence, categories, notes, now, False,
+                                               dates=dates_mois_courant(len(notes), now),
+                                               commentaires_forces=forces)
+                total += len(res)
+                discordances += sum(1 for r in res if r["discordance"])
+            resume.append((cfg["nom"], cfg["plan"], len(cfg["agences"]), total, discordances, email))
+            print(f"[OK] {cfg['nom']} ({cfg['plan']}) : {len(cfg['agences'])} agence(s), {total} feedbacks, "
+                  f"{discordances} discordance(s) détectée(s)")
+    finally:
+        db.close()
+
+    print("\n" + "=" * 70)
+    print("ORGANISATIONS DE DÉMO CRÉÉES")
+    print("=" * 70)
+    for nom, plan, nb_ag, nb_fb, nb_d, email in resume:
+        print(f"{nom} | {plan} | {nb_ag} agence(s) | {nb_fb} feedbacks | discordances: {nb_d} | {email} / {MOT_DE_PASSE_DEMO}")
+
+
 def main():
+    if "--plans-demo" in sys.argv:
+        seed_plans_demo()
+        return
+
     db = SessionLocal()
     now = datetime.now(timezone.utc)
     force = "--force" in sys.argv

@@ -5,6 +5,7 @@ import { alertesApi } from '../../services/api';
 import type { UserRole } from '../../types';
 import IkanLogo from '../common/IkanLogo';
 import SidebarWorkspaceCard from './SidebarWorkspaceCard';
+import UserMenu from './UserMenu';
 import {
   LayoutGridIcon,
   BuildingIcon,
@@ -17,7 +18,6 @@ import {
   BellIcon,
   LightbulbIcon,
   TrendingUpIcon,
-  LogOutIcon,
   ChevronDownIcon,
 } from '../common/Icons';
 
@@ -101,8 +101,6 @@ export default function DashboardLayout() {
 
   // Fil d'Ariane dynamique
   const getBreadcrumb = () => {
-    if (location.pathname.includes('/agent-ia')) return 'Agent IA & Copilot';
-    if (location.pathname.includes('/abonnements')) return 'Forfait & Abonnements';
     if (location.pathname.includes('/statistiques')) return user?.role === 'admin' ? 'Statistiques de la plateforme' : 'Statistiques & Analyses';
     if (location.pathname.includes('/admin/organisations')) return 'Organisations';
     if (location.pathname.includes('/admin/gestion-agences')) return 'Gestion des agences';
@@ -127,8 +125,6 @@ export default function DashboardLayout() {
     location.pathname.includes('/admin/gestion-agences') ||
     (location.pathname.includes('/statistiques') && user?.role === 'cx_manager');
 
-  const initials = user ? `${user.prenom?.[0] || 'A'}${user.nom?.[0] || 'D'}`.toUpperCase() : 'AD';
-  const fullName = user ? `${user.prenom || ''} ${user.nom || ''}`.trim() || 'Amina Diallo' : 'Amina Diallo';
 
   const roleLabel =
     user?.role === 'admin'
@@ -287,88 +283,6 @@ export default function DashboardLayout() {
           ))}
         </div>
 
-        {/* 5. Bas de Sidebar : Info Utilisateur & Bouton Déconnexion */}
-        <div
-          style={{
-            paddingTop: '12px',
-            borderTop: '1px solid #DCE8DF',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 6px' }}>
-            <div
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                background: '#EAF5EC',
-                color: '#3C7730',
-                border: '1.5px solid #D5E8D3',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 800,
-                fontSize: '0.82rem',
-                flexShrink: 0,
-              }}
-            >
-              {initials}
-            </div>
-            <div style={{ overflow: 'hidden', flex: 1 }}>
-              <div
-                style={{
-                  fontWeight: 700,
-                  color: '#111827',
-                  fontSize: '0.84rem',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {fullName}
-              </div>
-              <div
-                style={{
-                  color: '#9CA3AF',
-                  fontSize: '0.72rem',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {user?.email || 'admin@ikanai.com'}
-              </div>
-            </div>
-          </div>
-
-          <button
-            onClick={handleLogout}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              background: '#FFFFFF',
-              border: '1px solid #DCE8DF',
-              borderRadius: '10px',
-              color: '#DC2626',
-              cursor: 'pointer',
-              fontSize: '0.78rem',
-              fontWeight: 700,
-              fontFamily: 'inherit',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              transition: 'background 0.15s',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = '#FEE2E2')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = '#FFFFFF')}
-          >
-            <LogOutIcon size={14} color="#DC2626" />
-            Déconnexion
-          </button>
-        </div>
       </aside>
 
       {/* ── Zone Contenu Principal ── */}
@@ -495,47 +409,8 @@ export default function DashboardLayout() {
               )}
             </button>
 
-            {/* Profil Utilisateur (Avatar Initiales + Nom Complet) */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '4px 8px',
-                borderRadius: '9999px',
-                background: '#FFFFFF',
-                border: '1px solid #E2E8F0',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-                cursor: 'pointer',
-              }}
-            >
-              <div
-                style={{
-                  width: '30px',
-                  height: '30px',
-                  borderRadius: '50%',
-                  background: '#EAF5EC',
-                  color: '#3C7730',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 800,
-                  fontSize: '0.78rem',
-                }}
-              >
-                {initials}
-              </div>
-              <span
-                style={{
-                  fontSize: '0.84rem',
-                  fontWeight: 700,
-                  color: '#1E293B',
-                  paddingRight: '6px',
-                }}
-              >
-                {fullName}
-              </span>
-            </div>
+            {/* Menu utilisateur : profil, utilisation du forfait, aide, déconnexion */}
+            <UserMenu user={user} onLogout={handleLogout} />
           </div>
         </header>
 

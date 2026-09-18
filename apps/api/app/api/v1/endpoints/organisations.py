@@ -7,12 +7,27 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_admin_user, get_db
+from app.api.deps import get_admin_user, get_cx_manager, get_db
 from app.models.utilisateur import Utilisateur
 from app.models.organisation import Organisation
-from app.schemas.organisation import OrganisationCreate, OrganisationUpdate, OrganisationRead
+from app.schemas.organisation import (
+    OrganisationCreate, OrganisationUpdate, OrganisationRead, UtilisationOrganisation,
+)
+from app.services.plan_service import utilisation_organisation
 
 router = APIRouter()
+
+
+@router.get("/moi/utilisation", response_model=UtilisationOrganisation)
+def utilisation_mon_organisation(
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_manager),
+):
+    """Forfait, quotas en temps réel et fonctionnalités de l'organisation du CX Manager connecté.
+    Purement informatif : ne bloque jamais la création d'une agence, d'un compte ou d'un feedback."""
+    if not current_user.organisation_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aucune organisation rattachée")
+    return utilisation_organisation(db, current_user.organisation_id)
 
 
 @router.get("/", response_model=List[OrganisationRead])

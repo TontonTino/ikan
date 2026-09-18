@@ -9,6 +9,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
+from app.services.plan_catalog import PLAN_GRATUIT_ID
 
 
 class Organisation(Base):
@@ -23,6 +24,15 @@ class Organisation(Base):
     pays_region: Mapped[str | None] = mapped_column(String(100), nullable=True, default="Tunisie / Afrique du Nord")
     email_pro: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True, index=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Forfait : toute nouvelle organisation démarre en Gratuit (les existantes
+    # ont été rattachées explicitement par la migration 006).
+    plan_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("plans.id"),
+        nullable=False,
+        default=PLAN_GRATUIT_ID,
+        server_default=str(PLAN_GRATUIT_ID),
+    )
     created_by_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("utilisateurs.id", ondelete="SET NULL"), nullable=True
     )
