@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { organisationsApi } from '../../services/api';
 import type { User, UtilisationOrganisation, QuotaUtilisation } from '../../types';
-import { ChevronDownIcon, SettingsIcon, LockIcon, CheckIcon, LogOutIcon } from '../common/Icons';
+import { ChevronDownIcon, SettingsIcon, LockIcon, CheckIcon, LogOutIcon, ClockIcon } from '../common/Icons';
 
 // À confirmer : adresse de support affichée dans « Obtenir de l'aide » et « Mettre le forfait à niveau ».
 const SUPPORT_EMAIL = 'support@ikanai.app';
@@ -222,17 +222,31 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
                       {utilisation.fonctionnalites.map((f) => (
                         <div key={f.code} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.80rem' }}>
-                          {f.actif ? <CheckIcon size={14} color="#3C7730" /> : <LockIcon size={14} color="#94A3B8" />}
-                          <span style={{ color: f.actif ? '#1E293B' : '#94A3B8', fontWeight: 600 }}>{f.libelle}</span>
-                          {f.actif ? (
+                          {f.statut === 'disponible' && <CheckIcon size={14} color="#3C7730" />}
+                          {f.statut === 'verrouille' && <LockIcon size={14} color="#94A3B8" />}
+                          {f.statut === 'a_venir' && <ClockIcon size={14} color="#6B7FA3" />}
+                          <span style={{ color: f.statut === 'disponible' ? '#1E293B' : '#94A3B8', fontWeight: 600 }}>{f.libelle}</span>
+                          {f.statut === 'disponible' && (
                             <span style={{ marginLeft: 'auto', color: '#3C7730', fontSize: '0.70rem', fontWeight: 700 }}>Disponible</span>
-                          ) : (
+                          )}
+                          {f.statut === 'verrouille' && (
                             <a
                               href={mailtoNiveau}
                               style={{ marginLeft: 'auto', color: '#D97706', fontSize: '0.70rem', fontWeight: 700, textDecoration: 'none' }}
                             >
                               Verrouillé · Mettre à niveau
                             </a>
+                          )}
+                          {/* À venir : aucun forfait ne la débloque, donc aucun lien d'upgrade. */}
+                          {f.statut === 'a_venir' && (
+                            <span
+                              style={{
+                                marginLeft: 'auto', color: '#4B5F86', background: '#EEF2F9', border: '1px solid #DCE4F2',
+                                fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: '9999px',
+                              }}
+                            >
+                              À venir
+                            </span>
                           )}
                         </div>
                       ))}

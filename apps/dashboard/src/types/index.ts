@@ -445,6 +445,8 @@ export interface QuotaUtilisation {
 export interface FonctionnaliteStatut {
   code: string;
   libelle: string;
+  /** a_venir : non implémentée, identique pour tous les forfaits */
+  statut: 'disponible' | 'verrouille' | 'a_venir';
   actif: boolean;
 }
 

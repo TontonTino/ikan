@@ -20,6 +20,7 @@ from app.services.plan_catalog import (
     FEATURES_GATEES,
     FEATURES_TOUJOURS_ACTIVES,
     FEATURE_LIBELLES,
+    FEATURE_LIBELLES_A_VENIR,
 )
 
 logger = logging.getLogger(__name__)
@@ -154,13 +155,27 @@ def utilisation_organisation(db, organisation_id: uuid.UUID) -> dict:
         "cx_managers": {"actuel": nb_cx, "max": plan.max_cx_managers if plan else None},
         "agences": {"actuel": nb_agences, "max": plan.max_agences if plan else None},
         "feedbacks_ce_mois": {"actuel": nb_feedbacks, "max": plan.max_feedbacks_mois if plan else None},
-        "fonctionnalites": [
-            {
-                "code": code,
-                "libelle": FEATURE_LIBELLES[code],
-                # Sans plan connu : tout apparaît actif (cohérent avec le fail-open).
-                "actif": True if plan is None else (code in FEATURES_TOUJOURS_ACTIVES or code in codes_actifs),
-            }
-            for code in FEATURES_GATEES
-        ],
+        "fonctionnalites": construire_fonctionnalites(plan is not None, codes_actifs),
     }
+
+
+def construire_fonctionnalites(plan_connu: bool, codes_actifs: set[str]) -> list[dict]:
+    """
+    Catalogue affiché dans le menu Utilisation. Trois statuts :
+    - "disponible" / "verrouille" : fonctionnalités réellement gatées, selon le forfait
+      (sans plan connu, tout est « disponible » : cohérent avec le fail-open) ;
+    - "a_venir" : les 4 fonctionnalités sans implémentation, identiques pour TOUS les
+      forfaits (aucun forfait ne les débloque, donc jamais « disponible » ni « verrouille »).
+    """
+    resultat = []
+    for code in FEATURES_GATEES:
+        actif = (not plan_connu) or code in FEATURES_TOUJOURS_ACTIVES or code in codes_actifs
+        resultat.append({
+            "code": code,
+            "libelle": FEATURE_LIBELLES[code],
+            "statut": "disponible" if actif else "verrouille",
+            "actif": actif,
+        })
+    for code, libelle in FEATURE_LIBELLES_A_VENIR.items():
+        resultat.append({"code": code, "libelle": libelle, "statut": "a_venir", "actif": False})
+    return resultat

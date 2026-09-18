@@ -45,6 +45,14 @@ FEATURES_GATEES = (
     FEATURE_DISCORDANCE,
 )
 
+# Affichés « À venir » pour TOUS les forfaits : aucune implémentation, jamais vérifiés.
+FEATURE_LIBELLES_A_VENIR = {
+    "agent_ia_conversationnel": "Agent IA conversationnel",
+    "analyse_predictive": "Analyse prédictive (IA)",
+    "crm_whatsapp": "Intégration CRM & WhatsApp",
+    "rapports_executifs": "Rapports IA exécutifs automatiques",
+}
+
 FEATURE_LIBELLES = {
     FEATURE_QR_FORMULAIRE: "QR code et formulaire client",
     FEATURE_ANALYSE_SENTIMENT: "Analyse du sentiment",

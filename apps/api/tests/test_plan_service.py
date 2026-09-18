@@ -233,3 +233,24 @@ def test_pipeline_traite_le_feedback_si_organisation_indeterminable(monkeypatch)
     analyses, S = _brancher_analyse(monkeypatch, plan_service.organisation_a_la_fonctionnalite)
     assert len(analyses) == 1
     assert analyses[0].discordance_detectee is True
+
+
+# ── Catalogue affiché : statut « a_venir » identique pour tous les forfaits ──
+
+@pytest.mark.parametrize("plan", list(PLANS))
+def test_a_venir_identique_pour_tous_les_forfaits(plan):
+    from app.services.plan_service import construire_fonctionnalites
+    fonctionnalites = construire_fonctionnalites(True, set(PLAN_FEATURES[plan]))
+    a_venir = [f for f in fonctionnalites if f["statut"] == "a_venir"]
+
+    assert [f["code"] for f in a_venir] == list(FEATURES_MARKETING)
+    assert all(f["actif"] is False for f in a_venir)
+    # Les gatées ne sont jamais « a_venir », les 4 marketing jamais « disponible »/« verrouille ».
+    assert all(f["statut"] in ("disponible", "verrouille") for f in fonctionnalites if f["code"] in FEATURES_GATEES)
+    assert not [f for f in fonctionnalites if f["code"] in FEATURES_MARKETING and f["statut"] != "a_venir"]
+
+
+def test_a_venir_meme_sans_plan_connu():
+    from app.services.plan_service import construire_fonctionnalites
+    fonctionnalites = construire_fonctionnalites(False, set())
+    assert [f["statut"] for f in fonctionnalites if f["code"] in FEATURES_MARKETING] == ["a_venir"] * 4

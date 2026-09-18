@@ -3,7 +3,7 @@ Schémas Pydantic pour les organisations (OrganisationCreate, OrganisationUpdate
 """
 import uuid
 from datetime import datetime
-from typing import List
+from typing import List, Literal
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
 
@@ -89,6 +89,8 @@ class QuotaUtilisation(BaseModel):
 class FonctionnaliteStatut(BaseModel):
     code: str
     libelle: str
+    # "disponible" | "verrouille" (gatées) | "a_venir" (non implémentées, identique pour tous)
+    statut: Literal["disponible", "verrouille", "a_venir"]
     actif: bool
 
 
