@@ -26,6 +26,7 @@ from app.models.demande_contact import DemandeContact
 from app.models.analyse_ia import AnalyseIA
 from app.models.suggestion import Suggestion
 from app.models.enums import UserRole, SentimentType, IdeaStatus
+from app.utils.stats import wilson_lower_bound
 from app.schemas.dashboard import (
     DashboardAgence,
     DashboardSiege,
@@ -141,6 +142,7 @@ def dashboard_siege(
     agences = query_agences.all()
 
     kpis = []
+    kpis_wilson: list[float] = []
     all_feedbacks = []
 
     for agence in agences:
@@ -155,7 +157,8 @@ def dashboard_siege(
         )
         all_feedbacks.extend(feedbacks)
         total = len(feedbacks)
-        taux = round(sum(1 for f in feedbacks if f.note >= 4) / total * 100, 1) if total else 0.0
+        positifs = sum(1 for f in feedbacks if f.note >= 4)
+        taux = round(positifs / total * 100, 1) if total else 0.0
         analyses_ids = [f.id for f in feedbacks]
         negatifs = db.query(AnalyseIA).filter(
             AnalyseIA.feedback_id.in_(analyses_ids),
@@ -175,6 +178,11 @@ def dashboard_siege(
             latitude=agence.latitude,
             longitude=agence.longitude,
         ))
+        # Score de Wilson : sert uniquement au tri (jamais exposé au frontend),
+        # pour classer par fiabilité statistique plutôt que par CSAT brut —
+        # une agence à 100% sur 2 avis ne doit pas dominer une agence à 90%
+        # sur 200 avis.
+        kpis_wilson.append(wilson_lower_bound(positifs, total))
 
     total_global = len(all_feedbacks)
     taux_global = (
@@ -254,6 +262,18 @@ def dashboard_siege(
     evol_satisfaction, evol_satisfaction_pos = _calc_kpi_trend(taux_global, taux_prev, is_pct_diff=True)
     evol_resolution, evol_resolution_pos = _calc_kpi_trend(taux_resolution_curr, taux_resolution_prev, is_pct_diff=True)
 
+    # Classement par score de Wilson décroissant (fiabilité statistique du
+    # taux de satisfaction), CSAT brut en second critère pour départager les
+    # égalités ou scores très proches — pas de score composite, un tri
+    # primaire/secondaire simple. Le score de Wilson n'est pas exposé dans
+    # KPIAgence : il ne sert qu'à ordonner cette liste.
+    agences_triees = [
+        kpi for kpi, _wilson in sorted(
+            zip(kpis, kpis_wilson),
+            key=lambda pair: (-pair[1], -pair[0].taux_satisfaction),
+        )
+    ]
+
     return DashboardSiege(
         organisation_id=current_user.organisation_id,
         periode=f"{jours} derniers jours",
@@ -261,7 +281,7 @@ def dashboard_siege(
         taux_satisfaction_global=taux_global,
         idees_en_attente=idees_attente,
         agences_actives=len(agences),
-        agences=sorted(kpis, key=lambda x: -x.taux_satisfaction),
+        agences=agences_triees,
         tendances=tendances,
         themes_globaux=themes_globaux,
         sentiments_globaux=sentiments_globaux,
