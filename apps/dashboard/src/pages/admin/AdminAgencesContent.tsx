@@ -18,13 +18,10 @@ import {
   ExternalLinkIcon,
   SearchIcon,
   CheckCircleIcon,
-  TrendingUpIcon,
   ThumbsUpIcon,
   ThumbsDownIcon,
   DownloadIcon,
   ClockIcon,
-  ArrowUpRightIcon,
-  ArrowDownRightIcon,
   TagIcon,
 } from '../../components/common/Icons';
 import { AgencyLocationPicker, LocationData } from '../../components/agency/AgencyLocationPicker';
@@ -54,9 +51,8 @@ const AGENCE_COLOR = (taux: number) =>
 // N'est monté que pour le CX Manager (le rôle Admin ne gère pas les agences directement).
 export default function AdminAgencesContent() {
   const currentUser = useAuthStore((s) => s.user);
-  const isCXManager = currentUser?.role === 'cx_manager';
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'repertoire' | 'qrcodes' | 'performance' | 'activite'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'repertoire' | 'qrcodes' | 'activite'>('overview');
   const [agences, setAgences] = useState<Agence[]>([]);
   const [agencesStats, setAgencesStats] = useState<AgenceStats[]>([]);
   const [loading, setLoading] = useState(true);
@@ -235,19 +231,6 @@ export default function AdminAgencesContent() {
     });
   }, [agencesEnrichies, search]);
 
-  // Calcul dynamique du Top 3 et Flop 3
-  const sortedAgences = useMemo(() => {
-    return [...agencesEnrichies].sort((a, b) => b.taux_satisfaction - a.taux_satisfaction);
-  }, [agencesEnrichies]);
-
-  const top3Agences = useMemo(() => sortedAgences.slice(0, 3), [sortedAgences]);
-  const flop3Agences = useMemo(() => {
-    if (sortedAgences.length <= 3) {
-      return [...sortedAgences].reverse();
-    }
-    return [...sortedAgences].slice(-3).reverse();
-  }, [sortedAgences]);
-
   // Calcul du centre de la carte
   const agencesAvecCoords = agencesEnrichies.filter((a) => a.latitude && a.longitude);
   const centerLat = agencesAvecCoords.length > 0
@@ -261,7 +244,6 @@ export default function AdminAgencesContent() {
     { id: 'overview', label: "Vue d'ensemble", icon: <StoreIcon size={16} /> },
     { id: 'repertoire', label: 'Répertoire', icon: <TargetIcon size={16} />, badge: agences.length },
     { id: 'qrcodes', label: 'QR Codes & Bornes', icon: <QrCodeIcon size={16} /> },
-    { id: 'performance', label: 'Performance Réseau', icon: <TrendingUpIcon size={16} /> },
     { id: 'activite', label: 'Activité', icon: <ClockIcon size={16} /> },
   ];
 
@@ -315,240 +297,72 @@ export default function AdminAgencesContent() {
         onChange={(id) => setActiveTab(id as any)}
       />
 
-      {/* ── 1. VUE D'ENSEMBLE (Carte Réseau + Classement Top/Flop côte à côte) ── */}
+      {/* ── 1. VUE D'ENSEMBLE (Carte Réseau) ── */}
       {activeTab === 'overview' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
-          {/* Disposition côte à côte : CARTE DU RÉSEAU + CLASSEMENT TOP/FLOP */}
           <div
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-              gap: '20px',
-              alignItems: 'stretch',
+              background: '#FFFFFF',
+              borderRadius: '24px',
+              padding: '24px 28px',
+              border: '1px solid #E8ECE6',
+              boxShadow: '0 2px 12px rgba(20, 60, 40, 0.03)',
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
-            {/* Bloc Gauche : CARTE DU RÉSEAU */}
-            <div
-              style={{
-                background: '#FFFFFF',
-                borderRadius: '24px',
-                padding: '24px 28px',
-                border: '1px solid #E8ECE6',
-                boxShadow: '0 2px 12px rgba(20, 60, 40, 0.03)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                flex: '1 1 420px',
-              }}
-            >
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#02302D' }}>
-                    Carte du Réseau
-                  </h3>
-                  <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#3C7730', background: '#EBF6ED', padding: '3px 8px', borderRadius: '9999px' }}>
-                    {agencesAvecCoords.length} localisées
-                  </span>
-                </div>
-                <p style={{ margin: '0 0 16px', fontSize: '0.80rem', color: '#64748B' }}>
-                  Visualisation géographique et répartition de la satisfaction
-                </p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#02302D' }}>
+                Carte du Réseau
+              </h3>
+              <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#3C7730', background: '#EBF6ED', padding: '3px 8px', borderRadius: '9999px' }}>
+                {agencesAvecCoords.length} localisées
+              </span>
+            </div>
+            <p style={{ margin: '0 0 16px', fontSize: '0.80rem', color: '#64748B' }}>
+              Visualisation géographique et répartition de la satisfaction
+            </p>
 
-                <div style={{ borderRadius: '16px', overflow: 'hidden', height: '340px', border: '1px solid #E2E8F0' }}>
-                  <MapContainer center={[centerLat, centerLng]} zoom={7} style={{ height: '100%', width: '100%' }}>
-                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
-                    {agencesAvecCoords.map((a) => (
-                      <CircleMarker
-                        key={a.id}
-                        center={[a.latitude!, a.longitude!]}
-                        radius={11}
-                        fillColor={AGENCE_COLOR(a.taux_satisfaction)}
-                        color="white"
-                        weight={2}
-                        fillOpacity={0.9}
-                      >
-                        <Popup>
-                          <div style={{ minWidth: '150px' }}>
-                            <strong style={{ color: '#02302D', fontSize: '0.88rem' }}>{a.nom}</strong>
-                            <div style={{ fontSize: '0.78rem', color: '#64748B' }}>{a.ville}</div>
-                            <div style={{ marginTop: '6px', fontSize: '0.82rem' }}>
-                              Satisfaction : <strong style={{ color: AGENCE_COLOR(a.taux_satisfaction) }}>{a.taux_satisfaction}%</strong>
-                            </div>
-                          </div>
-                        </Popup>
-                      </CircleMarker>
-                    ))}
-                  </MapContainer>
-                </div>
-              </div>
-
-              {/* Légende Carte */}
-              <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginTop: '14px', flexWrap: 'wrap' }}>
-                {[
-                  { color: '#3C7730', label: '≥ 80% — Excellent' },
-                  { color: '#F59E0B', label: '60-80% — À surveiller' },
-                  { color: '#DC2626', label: '< 60% — Critique' },
-                ].map(({ color, label }) => (
-                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 600 }}>
-                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: color }} />
-                    {label}
-                  </div>
+            <div style={{ borderRadius: '16px', overflow: 'hidden', height: '440px', border: '1px solid #E2E8F0' }}>
+              <MapContainer center={[centerLat, centerLng]} zoom={7} style={{ height: '100%', width: '100%' }}>
+                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
+                {agencesAvecCoords.map((a) => (
+                  <CircleMarker
+                    key={a.id}
+                    center={[a.latitude!, a.longitude!]}
+                    radius={11}
+                    fillColor={AGENCE_COLOR(a.taux_satisfaction)}
+                    color="white"
+                    weight={2}
+                    fillOpacity={0.9}
+                  >
+                    <Popup>
+                      <div style={{ minWidth: '150px' }}>
+                        <strong style={{ color: '#02302D', fontSize: '0.88rem' }}>{a.nom}</strong>
+                        <div style={{ fontSize: '0.78rem', color: '#64748B' }}>{a.ville}</div>
+                        <div style={{ marginTop: '6px', fontSize: '0.82rem' }}>
+                          Satisfaction : <strong style={{ color: AGENCE_COLOR(a.taux_satisfaction) }}>{a.taux_satisfaction}%</strong>
+                        </div>
+                      </div>
+                    </Popup>
+                  </CircleMarker>
                 ))}
-              </div>
+              </MapContainer>
             </div>
 
-            {/* Bloc Droit : CLASSEMENT TOP 3 / FLOP 3 (Réservé CX Manager) */}
-            {isCXManager && (
-              <div
-                style={{
-                  background: '#FFFFFF',
-                  borderRadius: '24px',
-                  padding: '24px 28px',
-                  border: '1px solid #E8ECE6',
-                  boxShadow: '0 2px 12px rgba(20, 60, 40, 0.03)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  gap: '20px',
-                  flex: '1 1 340px',
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#02302D' }}>
-                      Classement du Réseau
-                    </h3>
-                    <span style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>CSAT en direct</span>
-                  </div>
-                  <p style={{ margin: '0 0 16px', fontSize: '0.80rem', color: '#64748B' }}>
-                    Palmarès des meilleures performances et agences prioritaires
-                  </p>
-
-                  {/* ── TOP 3 ── */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '18px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.80rem', fontWeight: 800, color: '#3C7730', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      <ArrowUpRightIcon size={14} color="#3C7730" />
-                      <span>↑ Top 3 Agences</span>
-                    </div>
-
-                    {top3Agences.map((ag, idx) => (
-                      <div
-                        key={`top-${ag.id}`}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '10px 14px',
-                          background: '#F8FAF8',
-                          borderRadius: '12px',
-                          border: '1px solid #E2EFE1',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span
-                            style={{
-                              width: '22px',
-                              height: '22px',
-                              borderRadius: '6px',
-                              background: idx === 0 ? '#FEF3C7' : '#EBF6ED',
-                              color: idx === 0 ? '#B45309' : '#3C7730',
-                              fontSize: '0.74rem',
-                              fontWeight: 800,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
-                          >
-                            #{idx + 1}
-                          </span>
-                          <div>
-                            <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>{ag.nom}</div>
-                            <div style={{ fontSize: '0.72rem', color: '#64748B' }}>{ag.ville || '—'}</div>
-                          </div>
-                        </div>
-
-                        <span
-                          style={{
-                            background: '#EBF6ED',
-                            color: '#3C7730',
-                            padding: '3px 10px',
-                            borderRadius: '9999px',
-                            fontWeight: 800,
-                            fontSize: '0.84rem',
-                          }}
-                        >
-                          {ag.taux_satisfaction}%
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* ── FLOP 3 ── */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.80rem', fontWeight: 800, color: '#DC2626', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      <ArrowDownRightIcon size={14} color="#DC2626" />
-                      <span>↓ Flop 3 — À surveiller</span>
-                    </div>
-
-                    {flop3Agences.map((ag, idx) => (
-                      <div
-                        key={`flop-${ag.id}`}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '10px 14px',
-                          background: '#FFFBFB',
-                          borderRadius: '12px',
-                          border: '1px solid #FECACA',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span
-                            style={{
-                              width: '22px',
-                              height: '22px',
-                              borderRadius: '6px',
-                              background: '#FEE2E2',
-                              color: '#DC2626',
-                              fontSize: '0.74rem',
-                              fontWeight: 800,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
-                          >
-                            #{idx + 1}
-                          </span>
-                          <div>
-                            <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>{ag.nom}</div>
-                            <div style={{ fontSize: '0.72rem', color: '#64748B' }}>{ag.ville || '—'}</div>
-                          </div>
-                        </div>
-
-                        <span
-                          style={{
-                            background: '#FEE2E2',
-                            color: '#DC2626',
-                            padding: '3px 10px',
-                            borderRadius: '9999px',
-                            fontWeight: 800,
-                            fontSize: '0.84rem',
-                          }}
-                        >
-                          {ag.taux_satisfaction}%
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+            {/* Légende Carte */}
+            <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginTop: '14px', flexWrap: 'wrap' }}>
+              {[
+                { color: '#3C7730', label: '≥ 80% — Excellent' },
+                { color: '#F59E0B', label: '60-80% — À surveiller' },
+                { color: '#DC2626', label: '< 60% — Critique' },
+              ].map(({ color, label }) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 600 }}>
+                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: color }} />
+                  {label}
                 </div>
-
-                <div style={{ fontSize: '0.74rem', color: '#64748B', textAlign: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
-                  Calculé sur les 30 derniers jours de collecte
-                </div>
-              </div>
-            )}
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -853,53 +667,7 @@ export default function AdminAgencesContent() {
         </div>
       )}
 
-      {/* ── 4. PERFORMANCE ── */}
-      {activeTab === 'performance' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ background: '#FFFFFF', borderRadius: '20px', padding: '24px', border: '1px solid #E8ECE6' }}>
-            <h3 style={{ margin: '0 0 16px', fontSize: '1rem', fontWeight: 800, color: '#02302D' }}>
-              Comparatif de Performance des Agences
-            </h3>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid #E8ECE6', background: '#F8FAFB' }}>
-                  <th style={{ textAlign: 'left', padding: '10px 14px', color: '#64748B', fontWeight: 700 }}>Agence</th>
-                  <th style={{ textAlign: 'left', padding: '10px 14px', color: '#64748B', fontWeight: 700 }}>Ville</th>
-                  <th style={{ textAlign: 'center', padding: '10px 14px', color: '#64748B', fontWeight: 700 }}>Avis collectés</th>
-                  <th style={{ textAlign: 'center', padding: '10px 14px', color: '#64748B', fontWeight: 700 }}>Satisfaction CSAT</th>
-                  <th style={{ textAlign: 'center', padding: '10px 14px', color: '#64748B', fontWeight: 700 }}>Seuil Alerte</th>
-                </tr>
-              </thead>
-              <tbody>
-                {agencesEnrichies.map((a) => (
-                  <tr key={a.id} style={{ borderBottom: '1px solid #F1F4EE' }}>
-                    <td style={{ padding: '12px 14px', fontWeight: 700, color: '#02302D' }}>{a.nom}</td>
-                    <td style={{ padding: '12px 14px', color: '#64748B' }}>{a.ville || '—'}</td>
-                    <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700 }}>{a.nombre_feedbacks}</td>
-                    <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                      <span
-                        style={{
-                          background: `${AGENCE_COLOR(a.taux_satisfaction)}15`,
-                          color: AGENCE_COLOR(a.taux_satisfaction),
-                          padding: '3px 10px',
-                          borderRadius: '9999px',
-                          fontWeight: 800,
-                          fontSize: '0.80rem',
-                        }}
-                      >
-                        {a.taux_satisfaction}%
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#64748B' }}>{a.seuil_alerte || 80}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* ── 5. ACTIVITÉ ── */}
+      {/* ── 4. ACTIVITÉ ── */}
       {activeTab === 'activite' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ background: '#FFFFFF', borderRadius: '20px', padding: '24px', border: '1px solid #E8ECE6' }}>
