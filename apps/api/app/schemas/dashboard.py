@@ -65,6 +65,13 @@ class DashboardSiege(BaseModel):
     sentiments_globaux: List[SentimentStats] = []
     nombre_discordances: int = 0
     nombre_critiques: int = 0
+    # Tendances vs. période précédente (mêmes conventions que StatKPI / _calc_kpi_trend)
+    evolution_feedbacks_total: str | None = None
+    evolution_feedbacks_total_positive: bool = True
+    evolution_satisfaction: str | None = None
+    evolution_satisfaction_positive: bool = True
+    evolution_taux_resolution: str | None = None
+    evolution_taux_resolution_positive: bool = True
 
 
 class ActivityPoint(BaseModel):

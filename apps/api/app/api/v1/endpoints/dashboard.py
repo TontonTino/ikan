@@ -219,6 +219,41 @@ def dashboard_siege(
     nombre_discordances = sum(1 for a in all_analyses if a.discordance_detectee)
     nombre_critiques = sum(1 for a in all_analyses if a.criticite == CriticiteType.CRITIQUE)
 
+    # Tendances vs. période précédente (mêmes durée, réutilise _calc_kpi_trend
+    # comme pour /statistics/cx plutôt que de dupliquer la logique de calcul)
+    date_debut_prev = date_debut - timedelta(days=jours)
+    agence_ids = [a.id for a in agences]
+    prev_feedbacks = (
+        db.query(Feedback)
+        .join(QRCode, Feedback.qr_code_id == QRCode.id)
+        .filter(
+            QRCode.agence_id.in_(agence_ids),
+            Feedback.date_soumission >= date_debut_prev,
+            Feedback.date_soumission < date_debut,
+        )
+        .all()
+        if agence_ids else []
+    )
+    total_prev = len(prev_feedbacks)
+    taux_prev = (
+        round(sum(1 for f in prev_feedbacks if f.note >= 4) / total_prev * 100, 1)
+        if total_prev else 0.0
+    )
+    prev_fb_ids = [f.id for f in prev_feedbacks]
+    prev_analyses = db.query(AnalyseIA).filter(AnalyseIA.feedback_id.in_(prev_fb_ids)).all() if prev_fb_ids else []
+    nombre_critiques_prev = sum(1 for a in prev_analyses if a.criticite == CriticiteType.CRITIQUE)
+
+    taux_resolution_curr = (
+        round((total_global - nombre_critiques) / total_global * 100, 1) if total_global else 100.0
+    )
+    taux_resolution_prev = (
+        round((total_prev - nombre_critiques_prev) / total_prev * 100, 1) if total_prev else 100.0
+    )
+
+    evol_feedbacks, evol_feedbacks_pos = _calc_kpi_trend(total_global, total_prev)
+    evol_satisfaction, evol_satisfaction_pos = _calc_kpi_trend(taux_global, taux_prev, is_pct_diff=True)
+    evol_resolution, evol_resolution_pos = _calc_kpi_trend(taux_resolution_curr, taux_resolution_prev, is_pct_diff=True)
+
     return DashboardSiege(
         organisation_id=current_user.organisation_id,
         periode=f"{jours} derniers jours",
@@ -232,6 +267,12 @@ def dashboard_siege(
         sentiments_globaux=sentiments_globaux,
         nombre_discordances=nombre_discordances,
         nombre_critiques=nombre_critiques,
+        evolution_feedbacks_total=evol_feedbacks,
+        evolution_feedbacks_total_positive=evol_feedbacks_pos,
+        evolution_satisfaction=evol_satisfaction,
+        evolution_satisfaction_positive=evol_satisfaction_pos,
+        evolution_taux_resolution=evol_resolution,
+        evolution_taux_resolution_positive=evol_resolution_pos,
     )
 
 
