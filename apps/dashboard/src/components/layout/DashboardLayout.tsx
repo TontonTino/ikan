@@ -28,6 +28,7 @@ interface NavItem {
   label: string;
   icon: React.ReactNode;
   badge?: number | string;
+  badgeUrgent?: boolean;
 }
 
 interface NavSection {
@@ -61,14 +62,13 @@ const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
     {
       title: 'PILOTAGE',
       items: [
-        { path: '/alertes', label: 'Alertes & Actions', icon: <BellIcon size={18} /> },
+        { path: '/pilotage', label: 'Pilotage', icon: <BellIcon size={18} /> },
       ],
     },
     {
       title: 'RÉSEAU',
       items: [
         { path: '/admin/gestion-agences', label: 'Gestion des agences', icon: <StoreIcon size={18} /> },
-        { path: '/suggestions', label: 'Boîte à Idées', icon: <LightbulbIcon size={18} /> },
         { path: '/abonnements', label: 'Abonnements', icon: <SparklesIcon size={18} /> },
       ],
     },
@@ -111,7 +111,7 @@ export default function DashboardLayout() {
   };
 
   const navSections = user ? ROLE_NAV_SECTIONS[user.role] || [] : [];
-  const isAlertesActive = location.pathname === '/alertes';
+  const isAlertesActive = location.pathname === '/alertes' || location.pathname === '/pilotage';
 
   // Fil d'Ariane dynamique
   const getBreadcrumb = () => {
@@ -126,6 +126,7 @@ export default function DashboardLayout() {
     if (location.pathname.includes('/siege')) return 'Vue Siège';
     if (location.pathname.includes('/agence')) return 'Dashboard Agence';
     if (location.pathname.includes('/feedbacks')) return 'Feedbacks';
+    if (location.pathname.includes('/pilotage')) return 'Pilotage';
     if (location.pathname.includes('/suggestions')) return 'Boîte à idées';
     if (location.pathname.includes('/alertes')) return 'Alertes';
     return 'Dashboard';
@@ -231,56 +232,61 @@ export default function DashboardLayout() {
                 </div>
               )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                {section.items.map((item) => (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    style={({ isActive }) => ({
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '11px 14px',
-                      color: isActive ? '#022D2A' : '#64748B',
-                      textDecoration: 'none',
-                      background: isActive ? '#E2F2E5' : 'transparent',
-                      fontWeight: isActive ? 700 : 600,
-                      fontSize: '0.88rem',
-                      borderRadius: '12px',
-                      transition: 'all 0.15s ease',
-                    })}
-                  >
-                    {({ isActive }) => (
-                      <>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <span
-                            style={{
-                              color: isActive ? '#3C7730' : '#94A3B8',
-                              display: 'flex',
-                              alignItems: 'center',
-                            }}
-                          >
-                            {item.icon}
-                          </span>
-                          <span>{item.label}</span>
-                        </div>
-                        {item.badge && (
-                          <span
-                            style={{
-                              background: isActive ? '#D3EAD7' : '#EAF2EC',
-                              color: isActive ? '#022D2A' : '#64748B',
-                              fontSize: '0.72rem',
-                              fontWeight: 700,
-                              padding: '2px 8px',
-                              borderRadius: '9999px',
-                            }}
-                          >
-                            {item.badge}
-                          </span>
-                        )}
-                      </>
-                    )}
-                  </NavLink>
-                ))}
+                {section.items.map((item) => {
+                  // Le badge de "Pilotage" reflète le nombre d'alertes actives en temps réel
+                  const badgeValue = item.path === '/pilotage' ? alertCount : item.badge;
+                  const badgeUrgent = item.path === '/pilotage' ? alertCount > 0 : item.badgeUrgent;
+                  return (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      style={({ isActive }) => ({
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '11px 14px',
+                        color: isActive ? '#022D2A' : '#64748B',
+                        textDecoration: 'none',
+                        background: isActive ? '#E2F2E5' : 'transparent',
+                        fontWeight: isActive ? 700 : 600,
+                        fontSize: '0.88rem',
+                        borderRadius: '12px',
+                        transition: 'all 0.15s ease',
+                      })}
+                    >
+                      {({ isActive }) => (
+                        <>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <span
+                              style={{
+                                color: isActive ? '#3C7730' : '#94A3B8',
+                                display: 'flex',
+                                alignItems: 'center',
+                              }}
+                            >
+                              {item.icon}
+                            </span>
+                            <span>{item.label}</span>
+                          </div>
+                          {!!badgeValue && (
+                            <span
+                              style={{
+                                background: badgeUrgent ? '#FEE2E2' : (isActive ? '#D3EAD7' : '#EAF2EC'),
+                                color: badgeUrgent ? '#DC2626' : (isActive ? '#022D2A' : '#64748B'),
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                padding: '2px 8px',
+                                borderRadius: '9999px',
+                              }}
+                            >
+                              {badgeValue}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                  );
+                })}
               </div>
             </div>
           ))}

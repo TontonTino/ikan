@@ -10,6 +10,7 @@ import DashboardAgencePage from './pages/agency/DashboardAgencePage';
 import FeedbacksPage from './pages/agency/FeedbacksPage';
 import SuggestionsPage from './pages/agency/SuggestionsPage';
 import AlertesPage from './pages/agency/AlertesPage';
+import PilotagePage from './pages/cx/PilotagePage';
 import AdminOrgsPage from './pages/admin/AdminOrgsPage';
 import GestionAgencesPage from './pages/admin/GestionAgencesPage';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
@@ -48,6 +49,20 @@ function IndexRedirect() {
   return <Navigate to="/siege" replace />;
 }
 
+// /alertes et /suggestions restent les pages propres de l'Agency Manager ;
+// pour le CX Manager, elles sont fusionnées dans /pilotage (onglets dédiés).
+function AlertesRoute() {
+  const user = useAuthStore((s) => s.user);
+  if (user?.role === 'cx_manager') return <Navigate to="/pilotage" replace />;
+  return <AlertesPage />;
+}
+
+function SuggestionsRoute() {
+  const user = useAuthStore((s) => s.user);
+  if (user?.role === 'cx_manager') return <Navigate to="/pilotage?tab=idees" replace />;
+  return <SuggestionsPage />;
+}
+
 export default function App() {
   const fetchMe = useAuthStore((s) => s.fetchMe);
 
@@ -81,8 +96,11 @@ export default function App() {
         {/* Agency Manager & CX Manager */}
         <Route path="agence" element={<DashboardAgencePage />} />
         <Route path="feedbacks" element={<FeedbacksPage />} />
-        <Route path="suggestions" element={<SuggestionsPage />} />
-        <Route path="alertes" element={<AlertesPage />} />
+        <Route path="suggestions" element={<SuggestionsRoute />} />
+        <Route path="alertes" element={<AlertesRoute />} />
+
+        {/* CX Manager — Pilotage (Alertes + Action + Boîte à idées fusionnés) */}
+        <Route path="pilotage" element={<PilotagePage />} />
 
         {/* Admin */}
         <Route path="admin/dashboard" element={<AdminDashboardPage />} />
