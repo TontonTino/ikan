@@ -428,8 +428,12 @@ export default function DashboardSiegePage() {
               icon={<MessageSquareIcon size={18} />}
               label="Total Feedbacks"
               value={data.feedbacks_total.toLocaleString('fr-FR')}
-              trend={{ value: '+18,4%', isPositive: true }}
-              sparklineType="up"
+              trend={
+                data.evolution_feedbacks_total
+                  ? { value: data.evolution_feedbacks_total, isPositive: data.evolution_feedbacks_total_positive }
+                  : undefined
+              }
+              sparklineType={data.evolution_feedbacks_total_positive === false ? 'down' : 'up'}
               compact={true}
               subtitle={data.periode}
             />
@@ -438,8 +442,12 @@ export default function DashboardSiegePage() {
               icon={<SmileIcon size={18} />}
               label="CSAT Global Réseau"
               value={`${data.taux_satisfaction_global}%`}
-              trend={{ value: '+4,2%', isPositive: true }}
-              sparklineType="up"
+              trend={
+                data.evolution_satisfaction
+                  ? { value: data.evolution_satisfaction, isPositive: data.evolution_satisfaction_positive }
+                  : undefined
+              }
+              sparklineType={data.evolution_satisfaction_positive === false ? 'down' : 'up'}
               badgeColor={data.taux_satisfaction_global >= 60 ? 'green' : 'red'}
               compact={true}
               subtitle="Score moyen de satisfaction"
@@ -449,8 +457,12 @@ export default function DashboardSiegePage() {
               icon={<CheckCircleIcon size={18} />}
               label="Taux de Résolution"
               value={`${tauxResolution}%`}
-              trend={{ value: '+2,1%', isPositive: true }}
-              sparklineType="up"
+              trend={
+                data.evolution_taux_resolution
+                  ? { value: data.evolution_taux_resolution, isPositive: data.evolution_taux_resolution_positive }
+                  : undefined
+              }
+              sparklineType={data.evolution_taux_resolution_positive === false ? 'down' : 'up'}
               badgeColor="green"
               compact={true}
               subtitle="Avis traités & résolus"

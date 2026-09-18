@@ -211,6 +211,12 @@ export interface DashboardSiege {
   sentiments_globaux: { sentiment: string; count: number; pourcentage: number }[];
   nombre_discordances: number;
   nombre_critiques: number;
+  evolution_feedbacks_total?: string | null;
+  evolution_feedbacks_total_positive?: boolean;
+  evolution_satisfaction?: string | null;
+  evolution_satisfaction_positive?: boolean;
+  evolution_taux_resolution?: string | null;
+  evolution_taux_resolution_positive?: boolean;
 }
 
 export interface Alerte {
