@@ -485,26 +485,8 @@ export default function DashboardSiegePage() {
       ══════════════════════════════════════════════════════ */}
       {activeTab === 'performance' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Row 1: Évolution CSAT & Volume */}
+          {/* Row 1: Sentiments (l'évolution temporelle du CSAT est dans Statistiques & Analyses) */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '20px' }}>
-            <SectionCard
-              title="Évolution Temporelle du CSAT & Flux"
-              subtitle="Corrélation entre volume d'avis collectés et taux de satisfaction"
-            >
-              <div style={{ width: '100%', height: 260 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data.tendances}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EDF2EC" />
-                    <XAxis dataKey="date" tick={{ fill: '#94A3B8', fontSize: 11, fontWeight: 600 }} />
-                    <YAxis domain={[0, 100]} tick={{ fill: '#94A3B8', fontSize: 11, fontWeight: 600 }} tickFormatter={(v) => `${v}%`} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Line type="monotone" dataKey="taux" name="Satisfaction" stroke="#3C7730" strokeWidth={2.8} dot={{ r: 3.5, fill: '#3C7730' }} />
-                    <Line type="monotone" dataKey="nombre_feedbacks" name="Volume avis" stroke="#94A3B8" strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </SectionCard>
-
             {/* Répartition des Sentiments */}
             <SectionCard title="Distribution des Sentiments" subtitle="Classification émotionnelle par le modèle IA">
               {data.sentiments_globaux.length > 0 ? (
