@@ -1,10 +1,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Navigate } from 'react-router-dom';
 import { agencesApi, dashboardApi } from '../../services/api';
 import { CLIENT_URL, getFeedbackUrl } from '../../config';
 import { useAuthStore } from '../../stores/authStore';
 import type { Agence, AgenceStats, Categorie } from '../../types';
-import PageHeader from '../../components/ui/PageHeader';
 import TabsNavigation from '../../components/ui/TabsNavigation';
 import KpiCard from '../../components/ui/KpiCard';
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
@@ -54,18 +52,11 @@ const emptyForm: AgenceForm = {
 const AGENCE_COLOR = (taux: number) =>
   taux >= 80 ? '#3C7730' : taux >= 60 ? '#F59E0B' : '#DC2626';
 
-export default function AdminAgencesPage() {
+// Contenu de l'onglet "Agences & QR Codes" de la page Gestion des agences.
+// N'est monté que pour le CX Manager (le rôle Admin ne gère pas les agences directement).
+export default function AdminAgencesContent() {
   const currentUser = useAuthStore((s) => s.user);
   const isCXManager = currentUser?.role === 'cx_manager';
-  const isAdmin = currentUser?.role === 'admin';
-
-  if (isAdmin) {
-    return <Navigate to="/admin/organisations" replace />;
-  }
-
-  if (currentUser?.role === 'agency_manager') {
-    return <Navigate to="/agence" replace />;
-  }
 
   const [activeTab, setActiveTab] = useState<'overview' | 'repertoire' | 'qrcodes' | 'performance' | 'activite'>('overview');
   const [agences, setAgences] = useState<Agence[]>([]);
@@ -289,16 +280,38 @@ export default function AdminAgencesPage() {
         </div>
       )}
 
-      {/* Header */}
-      <PageHeader
-        title={`Agences & Points de Collecte (${agences.length})`}
-        subtitle="Gestion du parc d'agences physiques, des QR codes et du monitoring réseau"
-        primaryAction={{
-          label: 'Nouvelle Agence',
-          onClick: openCreate,
-          icon: <PlusIcon size={18} />,
-        }}
-      />
+      {/* Barre d'outils de l'onglet (titre + action, sans dupliquer le grand PageHeader de la page parente) */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#02302D' }}>
+            Agences & Points de Collecte ({agences.length})
+          </h2>
+          <p style={{ margin: '4px 0 0', fontSize: '0.84rem', color: '#64748B' }}>
+            Gestion du parc d'agences physiques, des QR codes et du monitoring réseau
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={openCreate}
+          style={{
+            background: '#3C7730',
+            color: '#FFFFFF',
+            border: 'none',
+            borderRadius: '12px',
+            padding: '10px 18px',
+            fontSize: '0.86rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '0 2px 8px rgba(60, 119, 48, 0.25)',
+          }}
+        >
+          <PlusIcon size={16} color="#FFFFFF" />
+          Nouvelle Agence
+        </button>
+      </div>
 
       {/* Navigation par 5 Onglets */}
       <TabsNavigation

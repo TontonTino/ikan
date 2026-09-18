@@ -569,7 +569,7 @@ export default function AdminOrganisationsTable({
                               <button
                                 onClick={() => {
                                   setActiveMenuId(null);
-                                  navigate('/admin/utilisateurs');
+                                  navigate('/admin/gestion-agences?tab=utilisateurs');
                                 }}
                                 style={{
                                   display: 'flex',

@@ -1,8 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Navigate } from 'react-router-dom';
 import { utilisateursApi, agencesApi, organisationsApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
-import PageHeader from '../../components/ui/PageHeader';
 import TabsNavigation from '../../components/ui/TabsNavigation';
 import {
   UsersIcon,
@@ -40,14 +38,12 @@ const ROLE_BADGES: Record<string, { bg: string; text: string; border: string }> 
   agency_manager: { bg: '#EBF5E9', text: '#3C7730', border: '#D5E8D3' },
 };
 
-export default function AdminUsersPage() {
+// Contenu de l'onglet "Utilisateurs" de la page Gestion des agences.
+// Adapté selon le rôle : CX Manager gère les Agency Managers, Admin gère les CX Managers.
+export default function AdminUsersContent() {
   const currentUser = useAuthStore((s) => s.user);
   const isCXManager = currentUser?.role === 'cx_manager';
   const isAdmin = currentUser?.role === 'admin';
-
-  if (currentUser?.role === 'agency_manager') {
-    return <Navigate to="/agence" replace />;
-  }
 
   const [activeTab, setActiveTab] = useState<'equipe' | 'activite'>('equipe');
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -202,23 +198,45 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      {/* Header */}
-      <PageHeader
-        title={isAdmin ? `CX Managers (${displayedUsers.length})` : `Chefs d'Agence (${displayedUsers.length})`}
-        subtitle={isAdmin ? 'Gérez les accès et les comptes des responsables CX.' : 'Gérez les comptes des responsables d’agences du réseau.'}
-        primaryAction={{
-          label: showForm ? 'Fermer' : (isAdmin ? 'Nouveau CX Manager' : "Nouveau Chef d'Agence"),
-          icon: <PlusIcon size={16} color="#FFFFFF" />,
-          onClick: () => {
+      {/* Barre d'outils de l'onglet (titre + action, sans dupliquer le grand PageHeader de la page parente) */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#02302D' }}>
+            {isAdmin ? `CX Managers (${displayedUsers.length})` : `Chefs d'Agence (${displayedUsers.length})`}
+          </h2>
+          <p style={{ margin: '4px 0 0', fontSize: '0.84rem', color: '#64748B' }}>
+            {isAdmin ? 'Gérez les accès et les comptes des responsables CX.' : 'Gérez les comptes des responsables d’agences du réseau.'}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
             if (showForm) {
               setShowForm(false);
               setEditingUser(null);
             } else {
               openCreate();
             }
-          },
-        }}
-      />
+          }}
+          style={{
+            background: '#3C7730',
+            color: '#FFFFFF',
+            border: 'none',
+            borderRadius: '12px',
+            padding: '10px 18px',
+            fontSize: '0.86rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '0 2px 8px rgba(60, 119, 48, 0.25)',
+          }}
+        >
+          <PlusIcon size={16} color="#FFFFFF" />
+          {showForm ? 'Fermer' : (isAdmin ? 'Nouveau CX Manager' : "Nouveau Chef d'Agence")}
+        </button>
+      </div>
 
       {/* Navigation par Onglets */}
       <TabsNavigation

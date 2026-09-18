@@ -11,8 +11,7 @@ import FeedbacksPage from './pages/agency/FeedbacksPage';
 import SuggestionsPage from './pages/agency/SuggestionsPage';
 import AlertesPage from './pages/agency/AlertesPage';
 import AdminOrgsPage from './pages/admin/AdminOrgsPage';
-import AdminAgencesPage from './pages/admin/AdminAgencesPage';
-import AdminUsersPage from './pages/admin/AdminUsersPage';
+import GestionAgencesPage from './pages/admin/GestionAgencesPage';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 import AdminPermissionsPage from './pages/admin/AdminPermissionsPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
@@ -89,8 +88,10 @@ export default function App() {
         <Route path="admin/dashboard" element={<AdminDashboardPage />} />
         <Route path="admin/statistiques" element={<StatistiquesPage />} />
         <Route path="admin/organisations" element={<AdminOrgsPage />} />
-        <Route path="admin/agences" element={<AdminAgencesPage />} />
-        <Route path="admin/utilisateurs" element={<AdminUsersPage />} />
+        <Route path="admin/gestion-agences" element={<GestionAgencesPage />} />
+        {/* Anciennes routes conservées en redirection pour ne pas casser les liens/favoris existants */}
+        <Route path="admin/agences" element={<Navigate to="/admin/gestion-agences" replace />} />
+        <Route path="admin/utilisateurs" element={<Navigate to="/admin/gestion-agences?tab=utilisateurs" replace />} />
         <Route path="admin/permissions" element={<AdminPermissionsPage />} />
         <Route path="admin/settings" element={<AdminSettingsPage />} />
       </Route>

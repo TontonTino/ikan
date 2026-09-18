@@ -124,7 +124,7 @@ export default function AdminKpiSidebar({
         }}
         sparklineType="up"
         compact={true}
-        onClick={() => navigate('/admin/utilisateurs')}
+        onClick={() => navigate('/admin/gestion-agences?tab=utilisateurs')}
       />
 
       {/* 3. Satisfaction globale */}
