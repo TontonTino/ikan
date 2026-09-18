@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import PageHeader from '../../components/ui/PageHeader';
 import TabsNavigation, { TabItem } from '../../components/ui/TabsNavigation';
 import { StoreIcon, UsersIcon } from '../../components/common/Icons';
 import AdminAgencesContent from './AdminAgencesContent';
@@ -45,11 +44,6 @@ export default function GestionAgencesPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-      <PageHeader
-        title="Gestion des agences"
-        subtitle="Agences, QR codes de collecte et comptes utilisateurs rattachés au réseau"
-      />
-
       {tabsConfig.length > 1 && (
         <TabsNavigation tabs={tabsConfig} activeTab={activeTab} onChange={handleTabChange} />
       )}

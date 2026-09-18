@@ -3,7 +3,6 @@ import { feedbacksApi, agencesApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import type { Feedback, Agence, StatutTraitement } from '../../types';
 import FeedbackTreatmentModal from '../../components/feedbacks/FeedbackTreatmentModal';
-import PageHeader from '../../components/ui/PageHeader';
 import KpiCard from '../../components/ui/KpiCard';
 import TabsNavigation from '../../components/ui/TabsNavigation';
 import {
@@ -96,7 +95,6 @@ export default function FeedbacksPage() {
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [agences, setAgences] = useState<Agence[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [toast, setToast] = useState('');
   const [selectedFeedbackForTreatment, setSelectedFeedbackForTreatment] = useState<Feedback | null>(null);
 
@@ -129,7 +127,7 @@ export default function FeedbacksPage() {
     }
     loadData();
     return () => { cancelled = true; };
-  }, [isCXOrAdmin, refreshTrigger]);
+  }, [isCXOrAdmin]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -247,13 +245,9 @@ export default function FeedbacksPage() {
         </div>
       )}
 
-      {/* Header */}
-      <PageHeader
-        title="Feedbacks Clients"
-        subtitle="Flux complet des avis clients collectés, analysés par l'IA et traités par les équipes"
-        onRefresh={() => setRefreshTrigger((p) => p + 1)}
-      >
-        {isCXOrAdmin && (
+      {/* Filtre agence */}
+      {isCXOrAdmin && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <select
             value={selectedAgenceId}
             onChange={(e) => setSelectedAgenceId(e.target.value)}
@@ -273,8 +267,8 @@ export default function FeedbacksPage() {
               <option key={a.id} value={a.id}>{a.nom}</option>
             ))}
           </select>
-        )}
-      </PageHeader>
+        </div>
+      )}
 
       {/* Navigation par Onglets */}
       <TabsNavigation

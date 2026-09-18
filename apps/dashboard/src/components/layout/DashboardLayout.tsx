@@ -118,6 +118,15 @@ export default function DashboardLayout() {
     return 'Dashboard';
   };
 
+  // Pages dont la bannière d'en-tête (et donc le fil d'Ariane) a été retirée :
+  // Feedbacks, Pilotage et Gestion des agences (tous rôles), Statistiques
+  // uniquement pour le CX Manager (les vues Admin/Agence gardent leur bannière).
+  const hideBreadcrumb =
+    location.pathname.includes('/feedbacks') ||
+    location.pathname.includes('/pilotage') ||
+    location.pathname.includes('/admin/gestion-agences') ||
+    (location.pathname.includes('/statistiques') && user?.role === 'cx_manager');
+
   const initials = user ? `${user.prenom?.[0] || 'A'}${user.nom?.[0] || 'D'}`.toUpperCase() : 'AD';
   const fullName = user ? `${user.prenom || ''} ${user.nom || ''}`.trim() || 'Amina Diallo' : 'Amina Diallo';
 
@@ -391,11 +400,15 @@ export default function DashboardLayout() {
           }}
         >
           {/* Fil d'Ariane */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem' }}>
-            <span style={{ color: '#94A3B8', fontWeight: 600 }}>IKAN AI</span>
-            <span style={{ color: '#CBD5E1' }}>/</span>
-            <span style={{ color: '#02302D', fontWeight: 700 }}>{getBreadcrumb()}</span>
-          </div>
+          {hideBreadcrumb ? (
+            <div />
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem' }}>
+              <span style={{ color: '#94A3B8', fontWeight: 600 }}>IKAN AI</span>
+              <span style={{ color: '#CBD5E1' }}>/</span>
+              <span style={{ color: '#02302D', fontWeight: 700 }}>{getBreadcrumb()}</span>
+            </div>
+          )}
 
           {/* Actions Droite Header */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>

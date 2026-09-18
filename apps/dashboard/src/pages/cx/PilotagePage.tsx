@@ -3,7 +3,6 @@ import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { alertesApi, suggestionsApi, recommandationsApi, agencesApi } from '../../services/api';
 import type { Alerte, Suggestion, IdeaStatus, RecommandationOrg, Agence } from '../../types';
-import PageHeader from '../../components/ui/PageHeader';
 import TabsNavigation, { TabItem } from '../../components/ui/TabsNavigation';
 import RecommandationCard from '../../components/stats/RecommandationCard';
 import AgenceFilterSelect from '../../components/stats/AgenceFilterSelect';
@@ -199,11 +198,6 @@ export default function PilotagePage() {
           {toast}
         </div>
       )}
-
-      <PageHeader
-        title="Pilotage"
-        subtitle="Alertes réseau, plan d'action IA et boîte à idées clients — tout ce qui nécessite votre attention, au même endroit."
-      />
 
       <TabsNavigation tabs={tabsConfig} activeTab={activeTab} onChange={handleTabChange} />
 

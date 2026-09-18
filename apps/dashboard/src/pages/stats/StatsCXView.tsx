@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { statisticsApi, agencesApi } from '../../services/api';
 import type { StatsCXResponse, Agence } from '../../types';
-import PageHeader from '../../components/ui/PageHeader';
 import KpiCard from '../../components/ui/KpiCard';
 import TabsNavigation from '../../components/ui/TabsNavigation';
 import PeriodSelector from '../../components/stats/PeriodSelector';
@@ -79,18 +78,6 @@ export default function StatsCXView() {
     fetchData();
   }, [fetchData]);
 
-  const handleExport = () => {
-    if (!data) return;
-    const jsonStr = JSON.stringify(data, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `ikanai_statistiques_cx_${jours}j_${new Date().toISOString().slice(0, 10)}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
   const kpis = data?.kpis || {};
 
   const tabsConfig = [
@@ -113,29 +100,18 @@ export default function StatsCXView() {
         boxSizing: 'border-box',
       }}
     >
-      {/* ── Header avec Filtres Globaux ── */}
-      <PageHeader
-        title="Statistiques & Analyses"
-        subtitle={
-          data?.agence_filtree_nom
-            ? `Analyse approfondie sur l'agence ${data.agence_filtree_nom} (${data.periode_label})`
-            : `Analyse macroscopique et benchmarking de la performance du réseau (${data?.periode_label || '30 derniers jours'})`
-        }
-        onRefresh={fetchData}
-        onExport={handleExport}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          {/* Sélecteur d'Agence */}
-          <AgenceFilterSelect
-            agences={agencesList}
-            selectedId={selectedAgenceId}
-            onChange={setSelectedAgenceId}
-          />
+      {/* ── Filtres Globaux (agence + période) ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
+        {/* Sélecteur d'Agence */}
+        <AgenceFilterSelect
+          agences={agencesList}
+          selectedId={selectedAgenceId}
+          onChange={setSelectedAgenceId}
+        />
 
-          {/* Sélecteur de Période */}
-          <PeriodSelector value={jours} onChange={setJours} />
-        </div>
-      </PageHeader>
+        {/* Sélecteur de Période */}
+        <PeriodSelector value={jours} onChange={setJours} />
+      </div>
 
       {/* ── Navigation par 7 Onglets Spécialisés ── */}
       <TabsNavigation
@@ -157,90 +133,6 @@ export default function StatsCXView() {
           ══════════════════════════════════════════════════════ */}
           {activeTab === 'overview' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {/* Grille 4 KPIs Essentiels */}
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                  gap: '16px',
-                }}
-              >
-                <KpiCard
-                  icon={<SmileIcon size={20} />}
-                  label="Satisfaction globale"
-                  value={kpis.satisfaction?.valeur ?? '0%'}
-                  trend={
-                    kpis.satisfaction?.evolution
-                      ? {
-                          value: kpis.satisfaction.evolution,
-                          isPositive: kpis.satisfaction.is_positive,
-                          period: 'vs. période préc.',
-                        }
-                      : undefined
-                  }
-                  sparklineType={kpis.satisfaction?.is_positive ? 'up' : 'down'}
-                  badgeColor={kpis.satisfaction?.is_positive ? 'green' : 'red'}
-                  compact={true}
-                  subtitle={kpis.satisfaction?.sous_titre || undefined}
-                />
-
-                <KpiCard
-                  icon={<MessageSquareIcon size={20} />}
-                  label="Feedbacks collectés"
-                  value={kpis.total_feedbacks?.valeur ?? 0}
-                  trend={
-                    kpis.total_feedbacks?.evolution
-                      ? {
-                          value: kpis.total_feedbacks.evolution,
-                          isPositive: kpis.total_feedbacks.is_positive,
-                          period: 'vs. période préc.',
-                        }
-                      : undefined
-                  }
-                  sparklineType="neutral"
-                  compact={true}
-                  subtitle={kpis.total_feedbacks?.sous_titre || undefined}
-                />
-
-                <KpiCard
-                  icon={<TrendingUpIcon size={20} />}
-                  label="Taux de traitement"
-                  value={kpis.taux_traitement?.valeur ?? '0%'}
-                  trend={
-                    kpis.taux_traitement?.evolution
-                      ? {
-                          value: kpis.taux_traitement.evolution,
-                          isPositive: kpis.taux_traitement.is_positive,
-                          period: 'vs. période préc.',
-                        }
-                      : undefined
-                  }
-                  sparklineType={kpis.taux_traitement?.is_positive ? 'up' : 'down'}
-                  badgeColor={kpis.taux_traitement?.is_positive ? 'green' : 'red'}
-                  compact={true}
-                  subtitle={kpis.taux_traitement?.sous_titre || undefined}
-                />
-
-                <KpiCard
-                  icon={<AlertTriangleIcon size={20} />}
-                  label="Alertes critiques"
-                  value={kpis.alertes_critiques?.valeur ?? 0}
-                  trend={
-                    kpis.alertes_critiques?.evolution
-                      ? {
-                          value: kpis.alertes_critiques.evolution,
-                          isPositive: kpis.alertes_critiques.is_positive,
-                          period: 'vs. période préc.',
-                        }
-                      : undefined
-                  }
-                  sparklineType={Number(kpis.alertes_critiques?.valeur_num || 0) > 0 ? 'down' : 'neutral'}
-                  badgeColor={Number(kpis.alertes_critiques?.valeur_num || 0) > 0 ? 'red' : 'green'}
-                  compact={true}
-                  subtitle={kpis.alertes_critiques?.sous_titre || undefined}
-                />
-              </div>
-
               {/* Résumé Exécutif Statistique */}
               <div
                 style={{
