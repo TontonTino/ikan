@@ -17,13 +17,13 @@ import type { DashboardAgence, Recommandation, Alerte } from '../../types';
 import PageHeader from '../../components/ui/PageHeader';
 import KpiCard from '../../components/ui/KpiCard';
 import EphemeralAlertsBanner from '../../components/alerts/EphemeralAlertsBanner';
+import RecommandationCard from '../../components/stats/RecommandationCard';
 import {
   MessageSquareIcon,
   TrendingUpIcon,
   AlertTriangleIcon,
   LightbulbIcon,
   CheckCircleIcon,
-  CheckIcon,
 } from '../../components/common/Icons';
 
 const THEME_COLORS = [
@@ -48,13 +48,6 @@ const THEME_LABELS: Record<string, string> = {
   securite_confidentialite: 'Sécurité & Confidentialité',
   disponibilite_produit: 'Disponibilité Stocks/Cartes',
   personnalisation_besoin: 'Écoute & Personnalisation',
-};
-
-const PRIORITE_STYLE: Record<string, { bg: string; border: string; text: string; label: string }> = {
-  critical: { bg: '#FEE2E2', border: '#DC2626', text: '#991B1B', label: 'CRITIQUE' },
-  high: { bg: '#FEF3C7', border: '#D97706', text: '#92400E', label: 'ÉLEVÉE' },
-  medium: { bg: '#E0F2FE', border: '#0284C7', text: '#075985', label: 'MOYENNE' },
-  low: { bg: '#EBF5E9', border: '#3C7730', text: '#166534', label: 'FAIBLE' },
 };
 
 export default function DashboardAgencePage() {
@@ -386,62 +379,9 @@ export default function DashboardAgencePage() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {recos.map((r) => {
-              const pStyle = PRIORITE_STYLE[r.priorite] || {
-                 bg: '#F8FAFB',
-                 border: '#E2E8F0',
-                 text: '#475569',
-                 label: r.priorite,
-              };
-              return (
-                <div
-                  key={r.id}
-                  style={{
-                    background: '#FFFFFF',
-                    border: '1px solid #E8ECE6',
-                    borderLeft: `5px solid ${pStyle.border}`,
-                    borderRadius: '16px',
-                    padding: '16px 20px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    gap: '16px',
-                    flexWrap: 'wrap',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                  }}
-                >
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span
-                        style={{
-                          background: pStyle.bg,
-                          color: pStyle.text,
-                          border: `1px solid ${pStyle.border}`,
-                          padding: '2px 8px',
-                          borderRadius: '9999px',
-                          fontSize: '0.7rem',
-                          fontWeight: 800,
-                        }}
-                      >
-                        PRIORITÉ {pStyle.label}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '0.9rem', color: '#1E293B', lineHeight: 1.5, fontWeight: 600 }}>
-                      {r.contenu}
-                    </span>
-                  </div>
-
-                  <button
-                    onClick={() => marquerTraitee(r.id)}
-                    className="btn-primary"
-                    style={{ fontSize: '0.8rem', padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                  >
-                    <CheckIcon size={14} />
-                    <span>Marquer comme traité</span>
-                  </button>
-                </div>
-              );
-            })}
+            {recos.map((r) => (
+              <RecommandationCard key={r.id} recommandation={r} onMarquerTraitee={marquerTraitee} />
+            ))}
           </div>
         )}
       </div>

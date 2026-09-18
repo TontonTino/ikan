@@ -161,6 +161,11 @@ export interface Recommandation {
   traitee: boolean;
 }
 
+export interface RecommandationOrg extends Recommandation {
+  agence_id: string;
+  agence_nom: string;
+}
+
 export interface KPIAgence {
   agence_id: string;
   agence_nom: string;

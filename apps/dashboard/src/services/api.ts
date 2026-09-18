@@ -101,6 +101,8 @@ export const suggestionsApi = {
 export const recommandationsApi = {
   listAgence: (agenceId: string) =>
     api.get(`/recommandations/agences/${agenceId}`),
+  listOrganisation: (traitee?: boolean) =>
+    api.get('/recommandations/organisation', { params: traitee !== undefined ? { traitee } : undefined }),
   marquerTraitee: (id: string) =>
     api.patch(`/recommandations/${id}/traiter`),
 };

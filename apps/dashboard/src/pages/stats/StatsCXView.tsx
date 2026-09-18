@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { statisticsApi, agencesApi } from '../../services/api';
-import type { StatsCXResponse, Agence } from '../../types';
+import { statisticsApi, agencesApi, recommandationsApi } from '../../services/api';
+import type { StatsCXResponse, Agence, RecommandationOrg } from '../../types';
 import PageHeader from '../../components/ui/PageHeader';
 import KpiCard from '../../components/ui/KpiCard';
 import TabsNavigation from '../../components/ui/TabsNavigation';
@@ -13,6 +13,7 @@ import ThemesBarList from '../../components/stats/ThemesBarList';
 import AgencesRankingTable from '../../components/stats/AgencesRankingTable';
 import AlertesSyntheseCard from '../../components/stats/AlertesSyntheseCard';
 import AiInsightsSummary from '../../components/stats/AiInsightsSummary';
+import RecommandationCard from '../../components/stats/RecommandationCard';
 import {
   StatsLoadingState,
   StatsErrorState,
@@ -32,11 +33,12 @@ import {
   TagIcon,
   StoreIcon,
   SparklesIcon,
+  LightbulbIcon,
 } from '../../components/common/Icons';
 
 export default function StatsCXView() {
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'satisfaction' | 'feedbacks' | 'sentiments' | 'thematiques' | 'agences' | 'tendances'
+    'overview' | 'satisfaction' | 'feedbacks' | 'sentiments' | 'thematiques' | 'agences' | 'tendances' | 'recommandations'
   >('overview');
 
   const [jours, setJours] = useState<number>(30);
@@ -45,6 +47,9 @@ export default function StatsCXView() {
   const [data, setData] = useState<StatsCXResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [recos, setRecos] = useState<RecommandationOrg[]>([]);
+  const [recosLoading, setRecosLoading] = useState<boolean>(true);
 
   // Charger la liste des agences pour le filtre
   useEffect(() => {
@@ -79,6 +84,37 @@ export default function StatsCXView() {
     fetchData();
   }, [fetchData]);
 
+  // Charger les recommandations IA non traitées de toutes les agences du réseau
+  const fetchRecos = useCallback(async () => {
+    setRecosLoading(true);
+    try {
+      const res = await recommandationsApi.listOrganisation();
+      setRecos(res.data || []);
+    } catch {
+      setRecos([]);
+    } finally {
+      setRecosLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRecos();
+  }, [fetchRecos]);
+
+  const marquerRecoTraitee = async (id: string) => {
+    try {
+      await recommandationsApi.marquerTraitee(id);
+      setRecos((prev) => prev.filter((r) => r.id !== id));
+    } catch {
+      // Silencieux : la recommandation reste visible, l'utilisateur peut réessayer
+    }
+  };
+
+  // Vue "Recommandations" filtrée par le sélecteur d'agence global de la page, si renseigné
+  const recosAffichees = useMemo(() => {
+    return selectedAgenceId ? recos.filter((r) => r.agence_id === selectedAgenceId) : recos;
+  }, [recos, selectedAgenceId]);
+
   const handleExport = () => {
     if (!data) return;
     const jsonStr = JSON.stringify(data, null, 2);
@@ -101,6 +137,13 @@ export default function StatsCXView() {
     { id: 'thematiques', label: 'Thématiques IA', icon: <TagIcon size={16} />, badge: data?.themes.length },
     { id: 'agences', label: 'Agences', icon: <StoreIcon size={16} />, badge: data?.agences_ranking.length },
     { id: 'tendances', label: 'Tendances & IA', icon: <SparklesIcon size={16} color="#75B72A" /> },
+    {
+      id: 'recommandations',
+      label: 'Recommandations',
+      icon: <LightbulbIcon size={16} />,
+      badge: recos.length,
+      badgeColor: recos.length > 0 ? ('red' as const) : ('default' as const),
+    },
   ];
 
   return (
@@ -540,6 +583,53 @@ export default function StatsCXView() {
                 {/* Synthèse IA & Recommandations */}
                 <AiInsightsSummary insights={data.insights_ia} />
               </div>
+            </div>
+          )}
+
+          {/* ══════════════════════════════════════════════════════
+              8. RECOMMANDATIONS (Plan d'action IA consolidé réseau)
+          ══════════════════════════════════════════════════════ */}
+          {activeTab === 'recommandations' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <StatsSectionCard
+                title={`Recommandations IA du réseau (${recosAffichees.length})`}
+                subtitle={
+                  selectedAgenceId
+                    ? "Actions suggérées par l'IA pour l'agence sélectionnée — utilisez le filtre d'agence en haut de page pour changer de périmètre"
+                    : "Actions concrètes suggérées automatiquement par l'IA sur l'ensemble des agences du réseau, triées par criticité puis par date"
+                }
+              >
+                {recosLoading ? (
+                  <div style={{ textAlign: 'center', color: '#94A3B8', padding: '40px 0' }}>
+                    Chargement des recommandations...
+                  </div>
+                ) : recosAffichees.length === 0 ? (
+                  <div
+                    style={{
+                      padding: '24px',
+                      textAlign: 'center',
+                      color: '#3C7730',
+                      background: '#EBF5E9',
+                      borderRadius: '16px',
+                      border: '1px solid #D5E8D3',
+                      fontWeight: 700,
+                    }}
+                  >
+                    Aucune recommandation en attente sur ce périmètre ! Toutes les actions suggérées ont été traitées.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {recosAffichees.map((r) => (
+                      <RecommandationCard
+                        key={r.id}
+                        recommandation={r}
+                        agenceNom={r.agence_nom}
+                        onMarquerTraitee={marquerRecoTraitee}
+                      />
+                    ))}
+                  </div>
+                )}
+              </StatsSectionCard>
             </div>
           )}
 
