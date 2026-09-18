@@ -19,12 +19,9 @@ import 'leaflet/dist/leaflet.css';
 import { dashboardApi, alertesApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import type { DashboardSiege, Alerte } from '../../types';
-import KpiCard from '../../components/ui/KpiCard';
 import TabsNavigation from '../../components/ui/TabsNavigation';
 import EphemeralAlertsBanner from '../../components/alerts/EphemeralAlertsBanner';
-import DashboardIllustration from '../../components/common/DashboardIllustration';
 import {
-  MessageSquareIcon,
   StoreIcon,
   LightbulbIcon,
   AlertTriangleIcon,
@@ -33,7 +30,6 @@ import {
   MapIcon,
   BarChartIcon,
   ClockIcon,
-  SmileIcon,
   ThumbsUpIcon,
   ThumbsDownIcon,
   ArrowUpRightIcon,
@@ -239,11 +235,6 @@ export default function DashboardSiegePage() {
   const topAgences = sortedAgences.slice(0, 3);
   const flopAgences = sortedAgences.slice(-3).reverse();
 
-  // Taux de résolution / traitement approximé
-  const tauxResolution = data.feedbacks_total > 0
-    ? Math.round(((data.feedbacks_total - data.nombre_critiques) / data.feedbacks_total) * 100)
-    : 100;
-
   const tabsConfig = [
     { id: 'overview', label: "Vue d'ensemble", icon: <TrendingUpIcon size={16} /> },
     { id: 'performance', label: 'Performance CX', icon: <BarChartIcon size={16} /> },
@@ -306,7 +297,7 @@ export default function DashboardSiegePage() {
                 lineHeight: 1.2,
               }}
             >
-              Bonjour {userName} 👋
+              Bonjour {userName}
             </h1>
           </div>
 
@@ -323,7 +314,7 @@ export default function DashboardSiegePage() {
           </p>
         </div>
 
-        {/* Côté Droit : Contrôles & Illustration */}
+        {/* Côté Droit : Contrôles */}
         <div
           style={{
             zIndex: 2,
@@ -396,8 +387,6 @@ export default function DashboardSiegePage() {
               ))}
             </div>
           </div>
-
-          <DashboardIllustration width={150} height={95} />
         </div>
       </div>
 
@@ -416,70 +405,6 @@ export default function DashboardSiegePage() {
       ══════════════════════════════════════════════════════ */}
       {activeTab === 'overview' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Grille 4 KPIs Essentiels */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              gap: '16px',
-            }}
-          >
-            <KpiCard
-              icon={<MessageSquareIcon size={18} />}
-              label="Total Feedbacks"
-              value={data.feedbacks_total.toLocaleString('fr-FR')}
-              trend={
-                data.evolution_feedbacks_total
-                  ? { value: data.evolution_feedbacks_total, isPositive: data.evolution_feedbacks_total_positive }
-                  : undefined
-              }
-              sparklineType={data.evolution_feedbacks_total_positive === false ? 'down' : 'up'}
-              compact={true}
-              subtitle={data.periode}
-            />
-
-            <KpiCard
-              icon={<SmileIcon size={18} />}
-              label="CSAT Global Réseau"
-              value={`${data.taux_satisfaction_global}%`}
-              trend={
-                data.evolution_satisfaction
-                  ? { value: data.evolution_satisfaction, isPositive: data.evolution_satisfaction_positive }
-                  : undefined
-              }
-              sparklineType={data.evolution_satisfaction_positive === false ? 'down' : 'up'}
-              badgeColor={data.taux_satisfaction_global >= 60 ? 'green' : 'red'}
-              compact={true}
-              subtitle="Score moyen de satisfaction"
-            />
-
-            <KpiCard
-              icon={<CheckCircleIcon size={18} />}
-              label="Taux de Résolution"
-              value={`${tauxResolution}%`}
-              trend={
-                data.evolution_taux_resolution
-                  ? { value: data.evolution_taux_resolution, isPositive: data.evolution_taux_resolution_positive }
-                  : undefined
-              }
-              sparklineType={data.evolution_taux_resolution_positive === false ? 'down' : 'up'}
-              badgeColor="green"
-              compact={true}
-              subtitle="Avis traités & résolus"
-            />
-
-            <KpiCard
-              icon={<AlertTriangleIcon size={18} />}
-              label="Alertes Actives"
-              value={data.nombre_critiques}
-              trend={{ value: `${alertes.length} en attente`, isPositive: false }}
-              badgeColor={data.nombre_critiques > 0 ? 'red' : 'green'}
-              sparklineType="down"
-              compact={true}
-              subtitle="Intervention prioritaire requise"
-            />
-          </div>
-
           {/* Graphique Unique d'Évolution CSAT */}
           <SectionCard
             title="Évolution du CSAT Réseau"

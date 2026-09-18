@@ -18,7 +18,6 @@ import {
   LightbulbIcon,
   TrendingUpIcon,
   LogOutIcon,
-  SearchIcon,
   ChevronDownIcon,
 } from '../common/Icons';
 
@@ -400,50 +399,6 @@ export default function DashboardLayout() {
 
           {/* Actions Droite Header */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-
-            {/* Search Input Pill */}
-            <div
-              style={{
-                background: '#FFFFFF',
-                border: '1px solid #E2E8F0',
-                borderRadius: '9999px',
-                padding: '7px 16px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                width: '280px',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-              }}
-            >
-              <SearchIcon size={16} color="#94A3B8" />
-              <input
-                type="text"
-                placeholder="Rechercher organisations, agences..."
-                style={{
-                  border: 'none',
-                  outline: 'none',
-                  background: 'transparent',
-                  fontSize: '0.82rem',
-                  color: '#1E293B',
-                  width: '100%',
-                  fontFamily: 'inherit',
-                }}
-              />
-              <span
-                style={{
-                  background: '#F1F5F9',
-                  color: '#64748B',
-                  fontSize: '0.68rem',
-                  fontWeight: 700,
-                  padding: '2px 6px',
-                  borderRadius: '6px',
-                  border: '1px solid #E2E8F0',
-                  lineHeight: 1,
-                }}
-              >
-                ⌘ K
-              </span>
-            </div>
 
             {/* Cloche Notifications / Alertes */}
             <button
