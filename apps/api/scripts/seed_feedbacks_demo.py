@@ -58,6 +58,7 @@ AGENCES_STANDARD = [
     "Agence Orange Pissy",
     "Agence Orange Bobo-Dioulasso",
     "Agence Orange Koupéla",
+    "Agence Ouahigouya",
 ]
 AGENCE_DIGITAL_CENTER = "Orange Digital Center (Cissin)"
 
@@ -89,6 +90,9 @@ NOTES_PAR_AGENCE = {
     "Agence Orange Pissy": [2, 1, 4, 2, 3, 5, 2],
     "Agence Orange Tanghin": [1, 2, 3, 2, 4, 5],
     "Agence Orange Koupéla": [2, 1, 3, 4],
+    # Ajoutée après coup (découverte en cours de seeding) : agence saine,
+    # on a déjà 3 agences en alerte (Pissy/Tanghin/Koupéla), pas besoin d'une 4e.
+    "Agence Ouahigouya": [5, 5, 4, 5, 5, 3, 5],
 }
 
 AGENCES_PROBLEME = {"Agence Orange Pissy", "Agence Orange Tanghin", "Agence Orange Koupéla"}
@@ -388,22 +392,27 @@ def generer_feedbacks_agence(db, agence: Agence, categories: list[Categorie], no
 # 7. MAIN
 # ============================================================================
 
+def feedbacks_existants(db, agence: Agence) -> int:
+    return (
+        db.query(Feedback)
+        .join(QRCode, Feedback.qr_code_id == QRCode.id)
+        .filter(QRCode.agence_id == agence.id)
+        .count()
+    )
+
+
 def main():
     db = SessionLocal()
     now = datetime.now(timezone.utc)
+    force = "--force" in sys.argv
 
     # Garde-fou : ce script n'est pas idempotent côté feedbacks (contrairement aux
-    # catégories) — le relancer sans nettoyer produirait des doublons. On bloque
-    # par défaut si des feedbacks existent déjà ; --force pour passer outre en
-    # connaissance de cause (ex: après un nettoyage manuel intentionnel).
-    if "--force" not in sys.argv:
-        existing = db.query(Feedback).count()
-        if existing > 0:
-            print(f"[ABANDON] {existing} feedback(s) déjà présent(s) en base. "
-                  f"Ce script n'est pas idempotent : le relancer créerait des doublons.")
-            print("Nettoyez la table feedbacks au préalable, ou relancez avec --force pour ignorer cette vérification.")
-            db.close()
-            return
+    # catégories) — le relancer sans nettoyer produirait des doublons. Vérifié
+    # PAR AGENCE (pas globalement) : une agence déjà peuplée est ignorée sans
+    # bloquer le traitement des autres — utile pour rattraper une agence ajoutée
+    # après coup sans retoucher aux données déjà générées ailleurs.
+    # --force ignore cette vérification et régénère tout (y compris les
+    # agences déjà peuplées, au risque de créer des doublons).
 
     rapport = {"categories": {}, "feedbacks": {}}
 
@@ -414,6 +423,13 @@ def main():
             if not agence:
                 print(f"[IGNOREE] Agence introuvable : {nom_agence}")
                 continue
+
+            if not force:
+                existing = feedbacks_existants(db, agence)
+                if existing > 0:
+                    print(f"[SKIP] {nom_agence} : {existing} feedback(s) déjà présent(s), agence ignorée "
+                          f"(relancer avec --force pour régénérer quand même).")
+                    continue
 
             target = CATEGORIES_DIGITAL_CENTER if nom_agence == AGENCE_DIGITAL_CENTER else CATEGORIES_STANDARD
             cat_result = ensure_categories(db, agence, target)
