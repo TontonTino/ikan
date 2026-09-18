@@ -42,6 +42,9 @@ class Agence(Base):
     utilisateurs: Mapped[list["Utilisateur"]] = relationship(
         "Utilisateur", back_populates="agence"
     )
+    categories: Mapped[list["Categorie"]] = relationship(
+        "Categorie", back_populates="agence", cascade="all, delete-orphan", passive_deletes=True
+    )
 
     def __repr__(self) -> str:
         return f"<Agence {self.nom} ({self.ville})>"

@@ -16,10 +16,75 @@ from app.models.utilisateur import Utilisateur
 from app.models.qr_code import QRCode
 from app.models.agence import Agence
 from app.core.config import settings
+from app.schemas.categorie import CategoriePublicResponse
+from app.services.categorie_service import get_or_create_categories_actives
 
 router = APIRouter()
 
 CLIENT_BASE_URL = settings.PUBLIC_CLIENT_URL.rstrip("/")
+
+
+def _resolve_qr(clean_code: str, db: Session) -> QRCode | None:
+    """
+    Résout un code QR à partir d'un code exact, d'un UUID d'agence, ou d'un
+    nom/ville d'agence. Crée le QR Code à la volée si l'agence existe mais n'en
+    a pas encore. Logique partagée par /validate et /categories.
+    """
+    from sqlalchemy import func
+
+    qr = db.query(QRCode).filter(
+        func.lower(QRCode.code) == clean_code.lower(),
+        QRCode.actif == True,
+    ).first()
+    if qr:
+        return qr
+
+    try:
+        possible_uuid = UUID(clean_code)
+        agence = db.query(Agence).filter(Agence.id == possible_uuid).first()
+        if agence:
+            qr = db.query(QRCode).filter(QRCode.agence_id == agence.id, QRCode.actif == True).first()
+            if not qr:
+                clean_name = agence.nom.upper().replace(" ", "-")[:12]
+                code_str = f"QR-{clean_name}-{uuid.uuid4().hex[:6].upper()}"
+                qr = QRCode(
+                    id=uuid.uuid4(),
+                    agence_id=agence.id,
+                    code=code_str,
+                    url=f"{CLIENT_BASE_URL}/feedback/{code_str}",
+                    label=f"Borne Accueil - {agence.nom}",
+                    actif=True
+                )
+                db.add(qr)
+                db.commit()
+                db.refresh(qr)
+            return qr
+    except ValueError:
+        pass
+
+    agence = db.query(Agence).filter(
+        (func.lower(Agence.nom).ilike(f"%{clean_code.lower()}%")) |
+        (func.lower(Agence.ville).ilike(f"%{clean_code.lower()}%"))
+    ).first()
+    if agence:
+        qr = db.query(QRCode).filter(QRCode.agence_id == agence.id, QRCode.actif == True).first()
+        if not qr:
+            clean_name = agence.nom.upper().replace(" ", "-")[:12]
+            code_str = f"QR-{clean_name}-{uuid.uuid4().hex[:6].upper()}"
+            qr = QRCode(
+                id=uuid.uuid4(),
+                agence_id=agence.id,
+                code=code_str,
+                url=f"{CLIENT_BASE_URL}/feedback/{code_str}",
+                label=f"Borne Accueil - {agence.nom}",
+                actif=True
+            )
+            db.add(qr)
+            db.commit()
+            db.refresh(qr)
+        return qr
+
+    return None
 
 
 @router.get("/ping")
@@ -134,61 +199,8 @@ def validate_qr_code(
     Endpoint public — appelé par la page Astro client.
     """
     try:
-        from sqlalchemy import func
         clean_code = code.strip()
-
-        # 1. Recherche par code exact ou insensible à la casse
-        qr = db.query(QRCode).filter(
-            func.lower(QRCode.code) == clean_code.lower(),
-            QRCode.actif == True,
-        ).first()
-
-        # 2. Si non trouvé, vérifier si clean_code est l'ID UUID d'une Agence ou d'un QRCode
-        if not qr:
-            try:
-                possible_uuid = UUID(clean_code)
-                agence = db.query(Agence).filter(Agence.id == possible_uuid).first()
-                if agence:
-                    qr = db.query(QRCode).filter(QRCode.agence_id == agence.id, QRCode.actif == True).first()
-                    if not qr:
-                        clean_name = agence.nom.upper().replace(" ", "-")[:12]
-                        code_str = f"QR-{clean_name}-{uuid.uuid4().hex[:6].upper()}"
-                        qr = QRCode(
-                            id=uuid.uuid4(),
-                            agence_id=agence.id,
-                            code=code_str,
-                            url=f"{CLIENT_BASE_URL}/feedback/{code_str}",
-                            label=f"Borne Accueil - {agence.nom}",
-                            actif=True
-                        )
-                        db.add(qr)
-                        db.commit()
-                        db.refresh(qr)
-            except ValueError:
-                pass
-
-        # 3. Si non trouvé, chercher si c'est un nom d'agence ou une ville
-        if not qr:
-            agence = db.query(Agence).filter(
-                (func.lower(Agence.nom).ilike(f"%{clean_code.lower()}%")) |
-                (func.lower(Agence.ville).ilike(f"%{clean_code.lower()}%"))
-            ).first()
-            if agence:
-                qr = db.query(QRCode).filter(QRCode.agence_id == agence.id, QRCode.actif == True).first()
-                if not qr:
-                    clean_name = agence.nom.upper().replace(" ", "-")[:12]
-                    code_str = f"QR-{clean_name}-{uuid.uuid4().hex[:6].upper()}"
-                    qr = QRCode(
-                        id=uuid.uuid4(),
-                        agence_id=agence.id,
-                        code=code_str,
-                        url=f"{CLIENT_BASE_URL}/feedback/{code_str}",
-                        label=f"Borne Accueil - {agence.nom}",
-                        actif=True
-                    )
-                    db.add(qr)
-                    db.commit()
-                    db.refresh(qr)
+        qr = _resolve_qr(clean_code, db)
 
         if not qr:
             raise HTTPException(status_code=404, detail=f"QR Code ou Agence '{clean_code}' introuvable ou inactif")
@@ -209,6 +221,25 @@ def validate_qr_code(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Erreur validation QR code: {str(e)}")
+
+
+@router.get("/{code}/categories", response_model=List[CategoriePublicResponse])
+def get_categories_for_qr(
+    code: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Retourne les catégories actives de l'agence rattachée à ce QR Code.
+    Endpoint public — appelé par le formulaire de feedback client (aucune authentification).
+    Si l'agence n'a encore aucune catégorie définie par son CX Manager, une
+    catégorie "Général" est créée à la volée pour ne jamais bloquer le formulaire.
+    """
+    clean_code = code.strip()
+    qr = _resolve_qr(clean_code, db)
+    if not qr:
+        raise HTTPException(status_code=404, detail=f"QR Code ou Agence '{clean_code}' introuvable ou inactif")
+
+    return get_or_create_categories_actives(qr.agence_id, db)
 
 
 @router.delete("/{qr_id}", status_code=status.HTTP_204_NO_CONTENT)

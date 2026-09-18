@@ -11,7 +11,8 @@ from app.models.feedback import Feedback
 from app.models.analyse_ia import AnalyseIA
 from app.models.recommandation import Recommandation
 from app.models.enums import SentimentType, CriticiteType
-from app.services.ai.classification_service import classify, compute_criticite, detect_discordance
+from app.services.ai.sentiment import analyser_sentiment
+from app.services.ai.classification_service import compute_criticite, detect_discordance
 from app.services.ai.recommandations import generer_recommandations
 
 logger = logging.getLogger(__name__)
@@ -37,10 +38,11 @@ CRITICITE_MAP = {
 def analyser_feedback(feedback_id: uuid.UUID, db: Session | None = None) -> None:
     """
     Analyse complète d'un feedback :
-    1. Analyse de sentiment & Classification thématique (Modèle XLM-RoBERTa 15 classes & pipeline sentiment)
-    2. Détection de discordance
-    3. Calcul de criticité
-    4. Génération de recommandations d'action
+    1. Analyse de sentiment (moteur lexical déterministe)
+    2. Thème = catégorie choisie par le client sur le formulaire (plus de devinette IA)
+    3. Détection de discordance
+    4. Calcul de criticité
+    5. Génération de recommandations d'action
     """
     close_db = False
     if db is None:
@@ -67,27 +69,31 @@ def analyser_feedback(feedback_id: uuid.UUID, db: Session | None = None) -> None
             if sugg and sugg.contenu:
                 texte = sugg.contenu.strip()
 
-        # 1. Inférence Sentiment + Thème via le modèle ou déduction par note
+        # 1. Le thème n'est plus deviné par l'IA : c'est la catégorie choisie par le
+        # client sur le formulaire (fallback "accueil" pour les rares feedbacks
+        # anciens sans catégorie rattachée).
+        theme = feedback.categorie.nom if feedback.categorie else "accueil"
+
+        # 2. Inférence du sentiment (moteur lexical déterministe, cf. sentiment.py)
         if not texte:
             if feedback.note >= 4:
                 raw_sentiment = "positive"
                 score_sentiment = 0.85
-                theme = "accueil"
             elif feedback.note <= 2:
                 raw_sentiment = "negative"
                 score_sentiment = 0.20
-                theme = "accueil"
             else:
                 raw_sentiment = "neutral"
                 score_sentiment = 0.50
-                theme = "accueil"
         else:
-            resultats_ia = classify(texte, feedback.note)
-            raw_sentiment = resultats_ia["sentiment"]
-            score_sentiment = resultats_ia["score_sentiment"]
-            theme = resultats_ia["theme"]
+            sent_enum, score_sentiment = analyser_sentiment(texte, feedback.note)
+            raw_sentiment = (
+                "positive" if sent_enum == SentimentType.POSITIF
+                else "negative" if sent_enum == SentimentType.NEGATIF
+                else "neutral"
+            )
 
-        # 2. Détection de discordance & calcul criticité
+        # 3. Détection de discordance & calcul criticité
         raw_criticite = compute_criticite(feedback.note, raw_sentiment)
         discordance = detect_discordance(feedback.note, raw_sentiment)
 
@@ -101,7 +107,7 @@ def analyser_feedback(feedback_id: uuid.UUID, db: Session | None = None) -> None
             f"criticite={criticite_enum.value}, discordance={discordance}"
         )
 
-        # 3. Persister l'analyse avec score_sentiment
+        # 4. Persister l'analyse avec score_sentiment
         analyse = AnalyseIA(
             feedback_id=feedback_id,
             sentiment=sentiment_enum,
@@ -113,7 +119,7 @@ def analyser_feedback(feedback_id: uuid.UUID, db: Session | None = None) -> None
         db.add(analyse)
         db.flush()
 
-        # 4. Générer les recommandations d'action
+        # 5. Générer les recommandations d'action
         recommandations = generer_recommandations(theme, criticite_enum, discordance)
         for contenu, priorite in recommandations:
             reco = Recommandation(

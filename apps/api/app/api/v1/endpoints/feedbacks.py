@@ -22,6 +22,7 @@ from app.models.utilisateur import Utilisateur
 from app.models.feedback import Feedback
 from app.models.qr_code import QRCode
 from app.models.agence import Agence
+from app.models.categorie import Categorie
 from app.models.suggestion import Suggestion
 from app.models.demande_contact import DemandeContact
 from app.models.historique_feedback import HistoriqueFeedback
@@ -49,6 +50,8 @@ def _format_feedback_response(f: Feedback) -> FeedbackResponse:
     if f.qr_code and f.qr_code.agence:
         res.agence_id = f.qr_code.agence_id
         res.agence_nom = f.qr_code.agence.nom
+    if f.categorie:
+        res.categorie_nom = f.categorie.nom
     if f.assigne_a:
         res.assigne_a_nom = f"{f.assigne_a.prenom} {f.assigne_a.nom}"
     return res
@@ -119,6 +122,14 @@ def submit_feedback(
         if not qr:
             raise HTTPException(status_code=404, detail=f"QR Code ou Agence '{clean_code}' invalide ou inactif")
 
+    categorie = db.query(Categorie).filter(
+        Categorie.id == data.categorie_id,
+        Categorie.agence_id == qr.agence_id,
+        Categorie.active == True,
+    ).first()
+    if not categorie:
+        raise HTTPException(status_code=400, detail="Catégorie invalide pour cette agence")
+
     try:
         note_val = data.note
         if note_val is None:
@@ -135,6 +146,7 @@ def submit_feedback(
 
         feedback = Feedback(
             qr_code_id=qr.id,
+            categorie_id=categorie.id,
             note=note_val,
             commentaire=data.commentaire,
             statut_traitement="nouveau",
@@ -218,6 +230,7 @@ def list_feedbacks(
             joinedload(Feedback.suggestion),
             joinedload(Feedback.assigne_a),
             joinedload(Feedback.qr_code).joinedload(QRCode.agence),
+            joinedload(Feedback.categorie),
         )
         .join(QRCode, Feedback.qr_code_id == QRCode.id)
     )
@@ -259,6 +272,7 @@ def get_feedback(
             joinedload(Feedback.suggestion),
             joinedload(Feedback.assigne_a),
             joinedload(Feedback.qr_code).joinedload(QRCode.agence),
+            joinedload(Feedback.categorie),
         )
         .filter(Feedback.id == feedback_id)
         .first()
@@ -295,6 +309,7 @@ def open_feedback(
             joinedload(Feedback.analyse_ia),
             joinedload(Feedback.demande_contact),
             joinedload(Feedback.qr_code).joinedload(QRCode.agence),
+            joinedload(Feedback.categorie),
             joinedload(Feedback.assigne_a),
         )
         .filter(Feedback.id == feedback_id)

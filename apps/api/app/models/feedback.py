@@ -21,6 +21,10 @@ class Feedback(Base):
     qr_code_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("qr_codes.id", ondelete="CASCADE"), nullable=False
     )
+    # Catégorie choisie par le client sur le formulaire (remplace la classification IA du thème)
+    categorie_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("categories_agence.id", ondelete="SET NULL"), nullable=True
+    )
     # Note de satisfaction (1 à 5 étoiles)
     note: Mapped[int] = mapped_column(Integer, nullable=False)
     # Commentaire libre (max 1000 caractères — BF-03)
@@ -52,6 +56,7 @@ class Feedback(Base):
 
     # Relations
     qr_code: Mapped["QRCode"] = relationship("QRCode", back_populates="feedbacks")
+    categorie: Mapped["Categorie | None"] = relationship("Categorie")
     assigne_a: Mapped["Utilisateur | None"] = relationship(
         "Utilisateur", foreign_keys=[assigne_a_id]
     )

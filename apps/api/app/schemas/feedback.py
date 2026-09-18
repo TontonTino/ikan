@@ -10,6 +10,7 @@ from typing import Optional, List
 
 class FeedbackCreate(BaseModel):
     """Payload envoyé par le formulaire client."""
+    categorie_id: uuid.UUID = Field(..., description="Catégorie choisie par le client parmi celles définies pour cette agence")
     note: Optional[int] = Field(None, ge=1, le=5, description="Note de satisfaction (1=Négatif, 3=Neutre, 5=Positif)")
     sentiment: Optional[str] = Field(None, description="Sentiment sélectionné (negatif, neutre, positif)")
     commentaire: Optional[str] = Field(None, max_length=1000)
@@ -95,6 +96,8 @@ class FeedbackResponse(BaseModel):
     qr_code_id: uuid.UUID
     agence_id: Optional[uuid.UUID] = None
     agence_nom: Optional[str] = None
+    categorie_id: Optional[uuid.UUID] = None
+    categorie_nom: Optional[str] = None
     note: int
     commentaire: Optional[str] = None
     date_soumission: datetime

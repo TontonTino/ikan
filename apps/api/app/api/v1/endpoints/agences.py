@@ -14,10 +14,24 @@ from app.api.deps import get_cx_or_admin, get_current_active_user, get_db
 from app.models.utilisateur import Utilisateur
 from app.models.agence import Agence
 from app.models.qr_code import QRCode
+from app.models.categorie import Categorie
 from app.models.enums import UserRole
 from app.schemas.agence import AgenceCreate, AgenceUpdate, AgenceResponse
+from app.schemas.categorie import CategorieCreate, CategorieUpdate, CategorieResponse
 
 router = APIRouter()
+
+
+def _check_cx_owns_agence(agence: Agence, current_user: Utilisateur) -> None:
+    """
+    Vérifie que l'utilisateur est le CX Manager propriétaire de l'organisation de cette agence.
+    Utilisé pour la gestion des catégories, réservée exclusivement au CX Manager (Agency Manager exclu).
+    """
+    if current_user.role != UserRole.CX_MANAGER or agence.organisation_id != current_user.organisation_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Accès refusé. La gestion des catégories est réservée au CX Manager propriétaire de cette agence.",
+        )
 
 
 def _check_agence_access(agence: Agence, current_user: Utilisateur):
@@ -163,4 +177,108 @@ def delete_agence(
     _check_agence_access(agence, current_user)
 
     db.delete(agence)
+    db.commit()
+
+
+# ============================================================================
+# Catégories de feedback (par agence) — définies par le CX Manager.
+# Remplacent la classification thématique IA : le client choisit lui-même
+# sa catégorie sur le formulaire, parmi celles actives de son agence.
+# ============================================================================
+
+@router.get("/{agence_id}/categories", response_model=List[CategorieResponse])
+def list_categories(
+    agence_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_active_user),
+):
+    """Liste les catégories d'une agence — réservé au CX Manager propriétaire."""
+    agence = db.query(Agence).filter(Agence.id == agence_id).first()
+    if not agence:
+        raise HTTPException(status_code=404, detail="Agence introuvable")
+
+    _check_cx_owns_agence(agence, current_user)
+
+    return (
+        db.query(Categorie)
+        .filter(Categorie.agence_id == agence_id)
+        .order_by(Categorie.created_at.asc())
+        .all()
+    )
+
+
+@router.post("/{agence_id}/categories", response_model=CategorieResponse, status_code=status.HTTP_201_CREATED)
+def create_categorie(
+    agence_id: UUID,
+    data: CategorieCreate,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_active_user),
+):
+    """Crée une catégorie pour une agence — réservé au CX Manager propriétaire."""
+    agence = db.query(Agence).filter(Agence.id == agence_id).first()
+    if not agence:
+        raise HTTPException(status_code=404, detail="Agence introuvable")
+
+    _check_cx_owns_agence(agence, current_user)
+
+    categorie = Categorie(agence_id=agence_id, nom=data.nom.strip(), active=True)
+    db.add(categorie)
+    db.commit()
+    db.refresh(categorie)
+    return categorie
+
+
+@router.patch("/{agence_id}/categories/{categorie_id}", response_model=CategorieResponse)
+def update_categorie(
+    agence_id: UUID,
+    categorie_id: UUID,
+    data: CategorieUpdate,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_active_user),
+):
+    """Modifie ou désactive une catégorie — réservé au CX Manager propriétaire."""
+    agence = db.query(Agence).filter(Agence.id == agence_id).first()
+    if not agence:
+        raise HTTPException(status_code=404, detail="Agence introuvable")
+
+    _check_cx_owns_agence(agence, current_user)
+
+    categorie = db.query(Categorie).filter(
+        Categorie.id == categorie_id, Categorie.agence_id == agence_id
+    ).first()
+    if not categorie:
+        raise HTTPException(status_code=404, detail="Catégorie introuvable")
+
+    updates = data.model_dump(exclude_unset=True)
+    if "nom" in updates and updates["nom"]:
+        updates["nom"] = updates["nom"].strip()
+    for field, value in updates.items():
+        setattr(categorie, field, value)
+
+    db.commit()
+    db.refresh(categorie)
+    return categorie
+
+
+@router.delete("/{agence_id}/categories/{categorie_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_categorie(
+    agence_id: UUID,
+    categorie_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_active_user),
+):
+    """Désactive une catégorie (soft delete) — réservé au CX Manager propriétaire."""
+    agence = db.query(Agence).filter(Agence.id == agence_id).first()
+    if not agence:
+        raise HTTPException(status_code=404, detail="Agence introuvable")
+
+    _check_cx_owns_agence(agence, current_user)
+
+    categorie = db.query(Categorie).filter(
+        Categorie.id == categorie_id, Categorie.agence_id == agence_id
+    ).first()
+    if not categorie:
+        raise HTTPException(status_code=404, detail="Catégorie introuvable")
+
+    categorie.active = False
     db.commit()

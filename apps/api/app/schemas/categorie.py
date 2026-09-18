@@ -1,0 +1,34 @@
+"""
+Schémas Pydantic pour les catégories de feedback définies par le CX Manager, par agence.
+"""
+import uuid
+from datetime import datetime
+from pydantic import BaseModel, Field
+from typing import Optional
+
+
+class CategorieCreate(BaseModel):
+    nom: str = Field(..., min_length=1, max_length=100)
+
+
+class CategorieUpdate(BaseModel):
+    nom: Optional[str] = Field(None, min_length=1, max_length=100)
+    active: Optional[bool] = None
+
+
+class CategorieResponse(BaseModel):
+    id: uuid.UUID
+    agence_id: uuid.UUID
+    nom: str
+    active: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class CategoriePublicResponse(BaseModel):
+    """Réponse allégée pour le formulaire client public (pas d'authentification)."""
+    id: uuid.UUID
+    nom: str
+
+    model_config = {"from_attributes": True}

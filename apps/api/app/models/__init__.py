@@ -22,6 +22,7 @@ from app.models.demande_contact import DemandeContact
 from app.models.system_settings import SystemSettings
 from app.models.historique_feedback import HistoriqueFeedback
 from app.models.reponse_client import ReponseClient
+from app.models.categorie import Categorie
 
 __all__ = [
     # Enums
@@ -45,4 +46,5 @@ __all__ = [
     "SystemSettings",
     "HistoriqueFeedback",
     "ReponseClient",
+    "Categorie",
 ]
