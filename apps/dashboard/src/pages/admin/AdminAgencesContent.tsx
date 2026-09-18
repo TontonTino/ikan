@@ -4,7 +4,6 @@ import { CLIENT_URL, getFeedbackUrl } from '../../config';
 import { useAuthStore } from '../../stores/authStore';
 import type { Agence, AgenceStats, Categorie } from '../../types';
 import TabsNavigation from '../../components/ui/TabsNavigation';
-import KpiCard from '../../components/ui/KpiCard';
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
@@ -19,7 +18,6 @@ import {
   ExternalLinkIcon,
   SearchIcon,
   CheckCircleIcon,
-  AlertTriangleIcon,
   TrendingUpIcon,
   ThumbsUpIcon,
   ThumbsDownIcon,
@@ -250,9 +248,6 @@ export default function AdminAgencesContent() {
     return [...sortedAgences].slice(-3).reverse();
   }, [sortedAgences]);
 
-  const agencesActives = agencesEnrichies.filter((a) => a.active !== false).length;
-  const agencesSurveillance = agencesEnrichies.filter((a) => (a.taux_satisfaction || 75) < 70).length;
-
   // Calcul du centre de la carte
   const agencesAvecCoords = agencesEnrichies.filter((a) => a.latitude && a.longitude);
   const centerLat = agencesAvecCoords.length > 0
@@ -323,45 +318,6 @@ export default function AdminAgencesContent() {
       {/* ── 1. VUE D'ENSEMBLE (Carte Réseau + Classement Top/Flop côte à côte) ── */}
       {activeTab === 'overview' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
-          {/* Grille des 4 KPIs Réseau */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-            <KpiCard
-              icon={<StoreIcon size={18} />}
-              label="Total Agences"
-              value={agences.length}
-              sparklineType="up"
-              compact={true}
-              subtitle="Points de contact physiques"
-            />
-            <KpiCard
-              icon={<CheckCircleIcon size={18} />}
-              label="Agences Actives"
-              value={agencesActives}
-              badgeColor="green"
-              sparklineType="up"
-              compact={true}
-              subtitle="Bornes QR en service"
-            />
-            <KpiCard
-              icon={<AlertTriangleIcon size={18} />}
-              label="Sous Surveillance"
-              value={agencesSurveillance}
-              badgeColor={agencesSurveillance > 0 ? 'red' : 'green'}
-              sparklineType="down"
-              compact={true}
-              subtitle="Score sous le seuil d'alerte"
-            />
-            <KpiCard
-              icon={<QrCodeIcon size={18} />}
-              label="QR Codes Déployés"
-              value={agences.length}
-              badgeColor="neutral"
-              sparklineType="neutral"
-              compact={true}
-              subtitle="1 borne de collecte active"
-            />
-          </div>
 
           {/* Disposition côte à côte : CARTE DU RÉSEAU + CLASSEMENT TOP/FLOP */}
           <div
@@ -1022,13 +978,14 @@ export default function AdminAgencesContent() {
               <div>
                 <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>Géolocalisation</label>
                 <AgencyLocationPicker
-                  initialLocation={{
+                  agencyName={form.nom}
+                  value={{
                     latitude: form.latitude,
                     longitude: form.longitude,
                     adresse: form.adresse,
                     ville: form.ville,
                   }}
-                  onLocationChange={(loc) => setForm({ ...form, latitude: loc.latitude, longitude: loc.longitude, adresse: loc.adresse || form.adresse, ville: loc.ville || form.ville })}
+                  onChange={(loc: LocationData) => setForm({ ...form, latitude: loc.latitude, longitude: loc.longitude, adresse: loc.adresse || form.adresse, ville: loc.ville || form.ville })}
                 />
               </div>
             </div>
