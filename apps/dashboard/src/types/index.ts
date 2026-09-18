@@ -49,6 +49,14 @@ export interface Agence {
   qr_code_url?: string;
 }
 
+export interface Categorie {
+  id: string;
+  agence_id: string;
+  nom: string;
+  active: boolean;
+  created_at: string;
+}
+
 export type StatutTraitement = 'nouveau' | 'en_traitement' | 'en_cours' | 'resolu';
 
 export interface HistoriqueFeedback {

@@ -185,24 +185,35 @@ export default function FeedbacksPage() {
     }).length;
   }, [feedbacks]);
 
-  // Agrégation des 15 Thématiques IA
+  // Thèmes réellement présents dans les feedbacks : catégories libres définies par le
+  // CX Manager par agence (plus les anciennes clés IA à 15 thèmes pour les feedbacks legacy).
+  const themeLabel = (theme: string) => THEME_LABELS[theme] || theme;
+
+  const themesDisponibles = useMemo(() => {
+    const set = new Set<string>();
+    feedbacks.forEach((f) => {
+      if (f.analyse_ia?.theme_principal) set.add(f.analyse_ia.theme_principal);
+    });
+    return Array.from(set).sort((a, b) => themeLabel(a).localeCompare(themeLabel(b)));
+  }, [feedbacks]);
+
+  // Agrégation dynamique par catégorie/thème (plus de liste figée à 15 entrées)
   const themesAggregated = useMemo(() => {
     const map: Record<string, { theme: string; label: string; count: number; positifs: number; negatifs: number; agences: Set<string>; verbatims: string[] }> = {};
-    Object.keys(THEME_LABELS).forEach((t) => {
-      map[t] = { theme: t, label: THEME_LABELS[t], count: 0, positifs: 0, negatifs: 0, agences: new Set(), verbatims: [] };
-    });
 
     feedbacks.forEach((f) => {
       const tKey = f.analyse_ia?.theme_principal;
-      if (tKey && map[tKey]) {
-        map[tKey].count += 1;
-        const s = normalizeSentiment(f.analyse_ia?.sentiment);
-        if (s === 'positif') map[tKey].positifs += 1;
-        if (s === 'negatif') map[tKey].negatifs += 1;
-        if (f.agence_nom) map[tKey].agences.add(f.agence_nom);
-        if (f.commentaire && map[tKey].verbatims.length < 3) {
-          map[tKey].verbatims.push(f.commentaire);
-        }
+      if (!tKey) return;
+      if (!map[tKey]) {
+        map[tKey] = { theme: tKey, label: themeLabel(tKey), count: 0, positifs: 0, negatifs: 0, agences: new Set(), verbatims: [] };
+      }
+      map[tKey].count += 1;
+      const s = normalizeSentiment(f.analyse_ia?.sentiment);
+      if (s === 'positif') map[tKey].positifs += 1;
+      if (s === 'negatif') map[tKey].negatifs += 1;
+      if (f.agence_nom) map[tKey].agences.add(f.agence_nom);
+      if (f.commentaire && map[tKey].verbatims.length < 3) {
+        map[tKey].verbatims.push(f.commentaire);
       }
     });
 
@@ -343,8 +354,8 @@ export default function FeedbacksPage() {
                 }}
               >
                 <option value="all">Tous thèmes</option>
-                {Object.entries(THEME_LABELS).map(([k, l]) => (
-                  <option key={k} value={k}>{l}</option>
+                {themesDisponibles.map((t) => (
+                  <option key={t} value={t}>{themeLabel(t)}</option>
                 ))}
               </select>
             </div>
@@ -439,7 +450,7 @@ export default function FeedbacksPage() {
                               fontWeight: 700,
                             }}
                           >
-                            {THEME_LABELS[f.analyse_ia?.theme_principal || ''] || THEME_LABELS['accueil']}
+                            {f.analyse_ia?.theme_principal ? themeLabel(f.analyse_ia.theme_principal) : 'Non catégorisé'}
                           </span>
                         </td>
 

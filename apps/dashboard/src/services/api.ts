@@ -127,6 +127,12 @@ export const agencesApi = {
   update: (id: string, data: object) => api.patch(`/agences/${id}`, data),
   delete: (id: string) => api.delete(`/agences/${id}`),
   updateSeuil: (id: string, seuil: number) => api.patch(`/agences/${id}`, { seuil_alerte: seuil }),
+  listCategories: (agenceId: string) => api.get(`/agences/${agenceId}/categories`),
+  createCategorie: (agenceId: string, data: { nom: string }) => api.post(`/agences/${agenceId}/categories`, data),
+  updateCategorie: (agenceId: string, categorieId: string, data: object) =>
+    api.patch(`/agences/${agenceId}/categories/${categorieId}`, data),
+  deleteCategorie: (agenceId: string, categorieId: string) =>
+    api.delete(`/agences/${agenceId}/categories/${categorieId}`),
 };
 
 // ── Utilisateurs ──────────────────────────────────────
