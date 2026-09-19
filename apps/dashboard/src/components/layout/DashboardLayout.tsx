@@ -6,6 +6,8 @@ import type { UserRole } from '../../types';
 import IkanLogo from '../common/IkanLogo';
 import SidebarWorkspaceCard from './SidebarWorkspaceCard';
 import UserMenu from './UserMenu';
+import YamChatPanel, { YAM_PANEL_ID } from '../agent/YamChatPanel';
+import YamAvatar from '../agent/YamAvatar';
 import {
   LayoutGridIcon,
   BuildingIcon,
@@ -72,11 +74,29 @@ const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
   ],
 };
 
+// Un bug d'affichage du chat ne doit jamais casser le reste du dashboard :
+// en cas d'erreur de rendu, le panneau disparaît et le reste de l'application continue.
+class YamErrorBoundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(error: unknown) {
+    console.error('[YAM] panneau de chat désactivé suite à une erreur :', error);
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
 export default function DashboardLayout() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [alertCount, setAlertCount] = useState<number>(0);
+  const [yamOpen, setYamOpen] = useState(false);
+  // YAM : CX Manager et Agency Manager uniquement (l'Admin n'est jamais proposé, même si l'API le refuse aussi).
+  const canUseYam = user?.role === 'cx_manager' || user?.role === 'agency_manager';
 
   useEffect(() => {
     if (user?.role === 'cx_manager' || user?.role === 'agency_manager') {
@@ -283,6 +303,38 @@ export default function DashboardLayout() {
           ))}
         </div>
 
+        {/* 4. Assistant IA YAM (ouvre le panneau de chat, ne change pas de page) */}
+        {canUseYam && (
+          <button
+            type="button"
+            onClick={() => setYamOpen((o) => !o)}
+            aria-expanded={yamOpen}
+            aria-controls={YAM_PANEL_ID}
+            title="Discuter avec YAM, l'assistant IA"
+            style={{
+              marginTop: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              width: '100%',
+              padding: '11px 12px',
+              borderRadius: '14px',
+              border: `1px solid ${yamOpen ? '#3C7730' : '#CFE3D2'}`,
+              background: yamOpen ? '#E2F2E5' : '#FFFFFF',
+              cursor: 'pointer',
+              textAlign: 'left',
+              fontFamily: 'inherit',
+              boxShadow: '0 1px 3px rgba(2, 45, 42, 0.05)',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <YamAvatar size={34} />
+            <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25, minWidth: 0 }}>
+              <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#022D2A' }}>Demander à YAM</span>
+              <span style={{ fontWeight: 600, fontSize: '0.72rem', color: '#64748B' }}>Assistant IA</span>
+            </span>
+          </button>
+        )}
       </aside>
 
       {/* ── Zone Contenu Principal ── */}
@@ -428,6 +480,13 @@ export default function DashboardLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Panneau de chat YAM : fixé par-dessus la page (hors flux), une conversation par utilisateur */}
+      {canUseYam && user && (
+        <YamErrorBoundary>
+          <YamChatPanel key={user.id} open={yamOpen} onClose={() => setYamOpen(false)} />
+        </YamErrorBoundary>
+      )}
     </div>
   );
 }

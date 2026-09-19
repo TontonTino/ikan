@@ -103,3 +103,5 @@ services:
         value: https://ikan-772d.onrender.com/api/v1
       - key: VITE_CLIENT_URL
         value: https://ikan-1.onrender.com
+      - key: VITE_AGENT_URL
+        value: https://yam-tpip.onrender.com

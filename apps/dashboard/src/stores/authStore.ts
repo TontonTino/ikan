@@ -5,6 +5,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User } from '../types';
 import { authApi } from '../services/api';
+import { clearAgentSession } from '../services/agent';
 
 interface AuthState {
   user: User | null;
@@ -35,6 +36,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: async () => {
+        clearAgentSession();
         await authApi.logout();
         set({ user: null });
       },

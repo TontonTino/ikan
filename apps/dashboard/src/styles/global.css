@@ -225,3 +225,113 @@ body {
     box-shadow: 0 0 0 0 rgba(117, 183, 42, 0);
   }
 }
+
+/* ── Panneau de chat YAM (assistant IA) ─────────────────────────────── */
+.yam-panel {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  bottom: 16px;
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  z-index: 60; /* au-dessus de la sidebar (30) et du contenu */
+  display: flex;
+  flex-direction: column;
+  background: #FFFFFF;
+  border: 1px solid #DCE8DF;
+  border-radius: 20px;
+  box-shadow: 0 12px 40px rgba(2, 45, 42, 0.18);
+  overflow: hidden;
+  transform: translateX(calc(100% + 40px));
+  visibility: hidden;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.3s;
+}
+.yam-panel-open {
+  transform: translateX(0);
+  visibility: visible;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s;
+}
+@media (max-width: 640px) {
+  .yam-panel { top: 0; right: 0; bottom: 0; width: 100vw; max-width: 100vw; border-radius: 0; border: none; }
+}
+.yam-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 16px 14px 18px;
+  background: #F3F8F4;
+  border-bottom: 1px solid #DCE8DF;
+}
+.yam-title { font-size: 1.02rem; font-weight: 800; color: #022D2A; line-height: 1.2; }
+.yam-subtitle { font-size: 0.74rem; color: #64748B; font-weight: 600; }
+.yam-icon-btn {
+  width: 34px; height: 34px; border-radius: 10px; border: 1px solid #DCE8DF; background: #FFFFFF;
+  color: #64748B; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+  transition: all 0.15s ease;
+}
+.yam-icon-btn:hover:not(:disabled) { color: #3C7730; border-color: #3C7730; background: #EAF5EC; }
+.yam-icon-btn:disabled { opacity: 0.4; cursor: default; }
+.yam-messages {
+  flex: 1; overflow-y: auto; padding: 18px 16px; display: flex; flex-direction: column; gap: 14px;
+  background: #FBFDFB;
+}
+.yam-row { display: flex; align-items: flex-end; gap: 8px; }
+.yam-row-user { justify-content: flex-end; }
+.yam-row-assistant { justify-content: flex-start; }
+.yam-bubble {
+  max-width: 86%; padding: 10px 14px; border-radius: 16px; font-size: 0.88rem; line-height: 1.5;
+  overflow-wrap: anywhere; word-break: break-word;
+}
+.yam-bubble-user { background: #3C7730; color: #FFFFFF; border-bottom-right-radius: 5px; white-space: pre-wrap; }
+.yam-bubble-assistant { background: #EEF5EF; color: #1E293B; border-bottom-left-radius: 5px; }
+.yam-bubble-error { background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; border-bottom-left-radius: 5px; }
+.yam-paragraph { margin: 0 0 8px; }
+.yam-paragraph:last-child, .yam-list:last-child, .yam-heading:last-child { margin-bottom: 0; }
+.yam-heading { margin: 4px 0 6px; font-weight: 800; color: #022D2A; }
+.yam-list { margin: 0 0 8px; padding-left: 20px; }
+.yam-list li { margin-bottom: 3px; }
+.yam-table-wrap { overflow-x: auto; margin: 4px 0 10px; border-radius: 10px; border: 1px solid #D5E8D3; background: #FFFFFF; }
+.yam-table { border-collapse: collapse; width: 100%; font-size: 0.78rem; }
+.yam-table th { background: #E2F2E5; color: #022D2A; text-align: left; font-weight: 700; }
+.yam-table th, .yam-table td { padding: 6px 9px; border-bottom: 1px solid #E8F0EA; vertical-align: top; }
+.yam-table tr:last-child td { border-bottom: none; }
+.yam-suggestions { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.yam-chip {
+  text-align: left; padding: 8px 12px; border-radius: 12px; border: 1px solid #C9DFCC; background: #FFFFFF;
+  color: #2F5F26; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease;
+}
+.yam-chip:hover:not(:disabled) { background: #E2F2E5; border-color: #3C7730; }
+.yam-chip:disabled { opacity: 0.5; cursor: default; }
+.yam-retry {
+  margin-top: 8px; padding: 5px 12px; border-radius: 9999px; border: 1px solid #DC2626; background: #FFFFFF;
+  color: #DC2626; font-weight: 700; font-size: 0.78rem; cursor: pointer;
+}
+.yam-retry:hover:not(:disabled) { background: #FEE2E2; }
+.yam-retry:disabled { opacity: 0.5; cursor: default; }
+.yam-thinking { display: inline-flex; align-items: center; gap: 4px; color: #3C7730; font-weight: 700; }
+.yam-dots { display: inline-flex; gap: 3px; margin-left: 2px; }
+.yam-dot { width: 5px; height: 5px; border-radius: 50%; background: #3C7730; animation: yam-bounce 1.2s infinite ease-in-out; }
+.yam-dot:nth-child(2) { animation-delay: 0.15s; }
+.yam-dot:nth-child(3) { animation-delay: 0.3s; }
+@keyframes yam-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.45; } 30% { transform: translateY(-4px); opacity: 1; } }
+.yam-slow-hint { margin-top: 6px; font-size: 0.76rem; color: #64748B; }
+.yam-composer {
+  display: flex; align-items: flex-end; gap: 10px; padding: 12px 14px 14px;
+  border-top: 1px solid #DCE8DF; background: #FFFFFF;
+}
+.yam-input {
+  flex: 1; resize: none; max-height: 120px; min-height: 40px; padding: 10px 14px; border-radius: 14px;
+  border: 1px solid #D5E0D8; background: #F8FAF8; font: inherit; font-size: 0.88rem; color: #1E293B;
+  outline: none; transition: border-color 0.15s ease, box-shadow 0.15s ease; field-sizing: content;
+}
+.yam-input:focus { border-color: #3C7730; box-shadow: 0 0 0 3px rgba(60, 119, 48, 0.15); background: #FFFFFF; }
+.yam-send {
+  width: 40px; height: 40px; border-radius: 12px; border: none; background: #3C7730; color: #FFFFFF;
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+.yam-send:hover:not(:disabled) { background: #2F5F26; }
+.yam-send:disabled { opacity: 0.4; cursor: default; }
+.yam-panel :focus-visible { outline: 2px solid #3C7730; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .yam-panel, .yam-panel-open { transition: none; }
+  .yam-dot { animation: none; opacity: 0.8; }
+}
