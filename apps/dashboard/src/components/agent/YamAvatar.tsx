@@ -1,32 +1,26 @@
 import React from 'react';
 
-/** Avatar de YAM : pastille verte IKAN avec une étincelle (assistant IA). */
-export default function YamAvatar({ size = 36 }: { size?: number }) {
+export const YAM_AVATAR_SRC = '/yam-avatar-icon.png';
+
+interface Props {
+  size?: number;
+  /** Légère pulsation en boucle (état « YAM réfléchit… »). */
+  pulsing?: boolean;
+}
+
+/**
+ * Avatar de YAM : le visage de la mascotte dans un conteneur rond.
+ * Seul point d'affichage de l'avatar dans le dashboard (bouton de la sidebar,
+ * en-tête du panneau, bulles de chat, indicateur d'attente).
+ */
+export default function YamAvatar({ size = 36, pulsing = false }: Props) {
   return (
     <span
       aria-hidden="true"
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        background: 'linear-gradient(135deg, #3C7730 0%, #75B72A 100%)',
-        color: '#FFFFFF',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
-        boxShadow: '0 2px 6px rgba(60, 119, 48, 0.25)',
-      }}
+      className={pulsing ? 'yam-avatar yam-avatar-pulse' : 'yam-avatar'}
+      style={{ width: size, height: size }}
     >
-      <svg
-        width={Math.round(size * 0.56)}
-        height={Math.round(size * 0.56)}
-        viewBox="0 0 24 24"
-        fill="currentColor"
-      >
-        <path d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2z" />
-        <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z" opacity="0.85" />
-      </svg>
+      <img src={YAM_AVATAR_SRC} alt="" width={size} height={size} draggable={false} />
     </span>
   );
 }

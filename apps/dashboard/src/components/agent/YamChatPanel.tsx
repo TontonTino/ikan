@@ -23,7 +23,7 @@ function ThinkingBubble() {
   }, []);
   return (
     <div className="yam-row yam-row-assistant" role="status" aria-live="polite">
-      <YamAvatar size={28} />
+      <YamAvatar size={28} pulsing />
       <div className="yam-bubble yam-bubble-assistant">
         <span className="yam-thinking">
           YAM réfléchit
