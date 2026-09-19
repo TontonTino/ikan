@@ -595,3 +595,11 @@ def test_erreurs_de_validation_restent_des_422_et_non_des_500(client, orgs):
     h = token_for(orgs.a.cx)
     assert client.post("/agent/ask", json={}, headers=h).status_code == 422
     assert client.post("/agent/ask", json={"question": "x", "agence_id": ""}, headers=h).status_code == 422
+
+
+def test_migrations_de_l_agent_ont_leur_propre_table_de_version(db):
+    """Base partagée avec apps/api : l'agent ne doit jamais utiliser/écraser « alembic_version »."""
+    from sqlalchemy import text
+
+    assert db.execute(text("select version_num from alembic_version_agent")).scalars().all() == ["002_conversations"]
+    assert db.execute(text("select to_regclass('public.alembic_version')")).scalar() is None

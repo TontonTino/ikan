@@ -29,6 +29,49 @@ services:
       - key: ALLOWED_ORIGINS
         value: https://ikan-1.onrender.com,https://ikanai-dashboard.onrender.com
 
+  # Agent IA « YAM » (FastAPI, apps/agent). Se connecte à la MÊME base PostgreSQL
+  # qu'ikanai-api et vérifie les JWT émis par ikanai-api (même SECRET_KEY).
+  # Les variables `sync: false` n'ont AUCUNE valeur dans ce fichier : à saisir
+  # dans le dashboard Render, jamais dans git.
+  - type: web
+    name: ikanai-agent
+    runtime: python
+    rootDir: apps/agent
+    buildCommand: pip install -r requirements.txt
+    # Les migrations (tables actions_agent, conversations, conversation_turns) sont
+    # idempotentes et suivies dans leur propre table alembic_version_agent
+    # (indépendante de celle d'ikanai-api). Le plan free n'a pas de preDeployCommand.
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: GROQ_MODEL
+        value: groq/compound-mini
+      # MÊME valeur que la base d'ikanai-api (lecture des feedbacks, écriture des tables de l'agent).
+      - key: DATABASE_URL
+        sync: false
+      # IDENTIQUE à SECRET_KEY d'ikanai-api : l'agent vérifie ses JWT, il n'en émet jamais.
+      # Ne pas utiliser generateValue (les deux services divergeraient).
+      - key: SECRET_KEY
+        sync: false
+      # Clé Groq : https://console.groq.com/keys
+      - key: GROQ_API_KEY
+        sync: false
+      # Secret partagé du webhook ; IDENTIQUE à WEBHOOK_SECRET d'ikanai-api.
+      - key: WEBHOOK_SECRET
+        sync: false
+      # Origines autorisées à appeler l'agent depuis le navigateur (ex. l'URL du dashboard).
+      - key: ALLOWED_ORIGINS
+        sync: false
+      # Optionnel (envoi WhatsApp) : WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID,
+      # WHATSAPP_TEMPLATE_NAME, WHATSAPP_TEMPLATE_LANG — à ajouter dans le dashboard si besoin.
+
   - type: web
     name: ikanai-client
     runtime: node

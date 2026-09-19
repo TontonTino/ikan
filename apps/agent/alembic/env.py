@@ -39,6 +39,12 @@ target_metadata = Base.metadata
 # pour autre chose que actions_agent.
 _TABLES_GEREES = {"actions_agent", "conversations", "conversation_turns"}
 
+# Table de suivi des révisions DÉDIÉE à l'agent. L'agent et apps/api partagent
+# la même base : avec la table par défaut « alembic_version », chaque service
+# verrait les révisions de l'autre (« Can't locate revision ») ou écraserait
+# la révision de l'autre. Ne jamais la renommer une fois déployée.
+VERSION_TABLE = "alembic_version_agent"
+
 
 def include_object(object, name, type_, reflected, compare_to):
     if type_ == "table":
@@ -51,6 +57,7 @@ def run_migrations_offline() -> None:
     context.configure(
         url=url,
         target_metadata=target_metadata,
+        version_table=VERSION_TABLE,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         include_object=include_object,
@@ -69,6 +76,7 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
+            version_table=VERSION_TABLE,
             include_object=include_object,
         )
         with context.begin_transaction():
