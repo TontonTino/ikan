@@ -23,6 +23,7 @@ from .conftest import token_for
 
 # Une question par intention, toutes vérifiées comme classées vers l'intention visée.
 QUESTIONS = {
+    "classement_agences": "Quelle agence a la satisfaction la plus faible ce mois-ci ?",
     "alertes_critiques": "Y a-t-il des alertes critiques ?",
     "statistiques_theme": "Quelle est la répartition par thème ?",
     "a_verifier": "Quels feedbacks faut-il vérifier ?",
@@ -419,7 +420,7 @@ def test_agency_manager_ne_voit_que_son_agence(client, orgs, fake_llm, moi, autr
     tout = r.text + fake_llm.everything_sent()
     assert "-Nord" not in tout and f"accueil_{mon.tag}" not in tout, "données de l'autre agence de la même organisation"
     # contre-test : SES données sont bien présentes (agence ou thème de « Centre ») quand l'intention les expose
-    if intention in {"alertes_critiques", "a_verifier", "statistiques_theme", "resume_periode"}:
+    if intention in {"classement_agences", "alertes_critiques", "a_verifier", "statistiques_theme", "resume_periode"}:
         assert "Centre" in tout or f"reseau_{mon.tag}" in tout
 
 

@@ -1,4 +1,5 @@
 intentions:
+  - classement_agences
   - alertes_critiques
   - statistiques_theme
   - a_verifier
@@ -11,6 +12,7 @@ intentions:
   - autre
 
 descriptions:
+  classement_agences: "Classer les agences par satisfaction et nommer la ou les plus/moins performantes, avec leurs chiffres"
   alertes_critiques: "Lister et prioriser les feedbacks de criticité élevée ou critique nécessitant une intervention"
   statistiques_theme: "Répartition des feedbacks par thème sur une période"
   a_verifier: "Lister les feedbacks signalés à vérification manuelle"

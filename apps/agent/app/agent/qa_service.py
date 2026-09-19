@@ -56,6 +56,33 @@ _PATTERN_IDENTITE = re.compile(
     re.IGNORECASE,
 )
 
+_SYSTEM_PROMPT_CLASSEMENT = """
+Tu es YAM, l'assistant d'analyse business d'IKAN AI pour un opérateur télécom.
+Le manager te demande de COMPARER SES AGENCES : ta réponse doit NOMMER les agences.
+
+RÈGLES ABSOLUES :
+- Tu réponds UNIQUEMENT à partir du JSON fourni ; tu n'inventes aucun chiffre ni aucune agence.
+- Commence par le verdict, en nommant explicitement l'agence : « L'agence X a la
+  satisfaction la plus faible : 32,5 % sur 40 feedbacks. » Ne réponds JAMAIS par
+  thème ou de façon générale à la place d'une agence.
+- Selon la question : « la plus faible / la pire / la moins performante / en difficulté »
+  → utilise `plus_faibles` ; « la meilleure / la plus haute / en tête / top » → utilise
+  `meilleures`. Si la question ne précise pas le sens, donne les deux extrémités.
+- Nomme les 2 ou 3 premières agences du classement demandé (pas seulement la première),
+  avec pour chacune : `satisfaction_pct`, `nb_feedbacks`, `nb_alertes_elevees_ou_critiques`.
+- Si `volume_faible` est vrai pour une agence, précise que son taux repose sur très peu de
+  feedbacks (fiabilité limitée) ; ne la présente pas comme un constat solide.
+- Si `perimetre_restreint_a_une_agence` est vrai ou `nb_agences_classees` vaut 1, tu n'as
+  accès qu'à UNE agence : dis-le, ne prétends pas la comparer à d'autres, donne sa situation.
+- Si `agences_actives_sans_feedback` n'est pas vide, mentionne-les en une phrase
+  (non classables faute de feedback sur la période).
+- Rappelle la période (`periode_jours` jours) et le volume total analysé.
+- « Satisfaction » = part des clients ayant noté 4 ou 5 sur 5.
+- Distingue FAIT (chiffres) et HYPOTHÈSE ; ne propose aucune cause qui ne soit pas dans les données.
+- Termine par UNE recommandation concrète et ciblée sur l'agence nommée.
+- Réponds en français, de façon concise (une courte liste ou un tableau des 2-3 agences).
+"""
+
 _SYSTEM_PROMPT_BASE = """
 Tu es YAM, l'assistant d'analyse business d'IKAN AI pour un opérateur télécom.
 Tu travailles aux côtés du manager comme un analyste business expert.
@@ -90,6 +117,24 @@ Concentre-toi sur ce que le manager veut savoir maintenant.
 Si tu ne peux pas répondre à partir des données disponibles,
 dis-le clairement plutôt que d'improviser.
 """
+
+
+def _jours_pour_classement(question: str, jours: int) -> int:
+    """
+    Période d'un classement d'agences. Un classement sur quelques jours est trop
+    bruité : par défaut au moins 30 jours ; la question peut préciser
+    (« cette semaine » = 7, « ce trimestre » = 90, « cette année » = 365, « ce mois » = 30).
+    """
+    q = _strip_accents(question.lower())
+    if "semaine" in q:
+        return 7
+    if "trimestre" in q:
+        return 90
+    if re.search(r"\b(annee|an)\b", q):
+        return 365
+    if "mois" in q:
+        return 30
+    return max(jours, 30)
 
 
 def _resume_agregats(feedbacks: list[dict[str, Any]]) -> dict[str, Any]:
@@ -279,6 +324,36 @@ def repondre_question(
         return _finaliser_tour(
             db, conversation, conversation_id_effectif, question, "autre",
             MESSAGE_HORS_PERIMETRE, None, agence_id, jours,
+        )
+
+    if intention == "classement_agences":
+        # Toujours recalculé (même en relance : « et la meilleure ? » change le sens
+        # de la question) et rédigé avec son propre prompt système, qui impose de
+        # NOMMER les agences avec leurs chiffres.
+        jours_classement = _jours_pour_classement(question, jours)
+        donnees = queries.query_classement_agences(
+            db, organisation_id, agence_id=agence_id, jours=jours_classement
+        )
+        user_prompt = (
+            f"Question du manager : « {question} »\n\n"
+            "Voici le classement des agences (rang 1 = la moins satisfaisante) sur la période, "
+            f"au format JSON :\n{json.dumps(donnees, ensure_ascii=False)}"
+        )
+        if est_relance_avec_contexte:
+            user_prompt = (
+                "[CONTEXTE : relance dans une conversation ; l'historique est disponible ci-dessus.]\n\n"
+                + user_prompt
+            )
+        messages_classement = conversation_manager.build_messages_history(
+            turns_precedents, _SYSTEM_PROMPT_CLASSEMENT, user_prompt
+        )
+        reponse_classement = llm_provider.generate_text(
+            _SYSTEM_PROMPT_CLASSEMENT, user_prompt,
+            messages_history=messages_classement, max_tokens=600,
+        )
+        return _finaliser_tour(
+            db, conversation, conversation_id_effectif, question, intention,
+            reponse_classement, donnees, agence_id, jours_classement,
         )
 
     # Relance confirmée : même intention que le tour précédent, avec de

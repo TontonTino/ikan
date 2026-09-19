@@ -58,6 +58,37 @@ def _load_intentions_config() -> dict[str, str]:
 # Mots-clés / expressions par intention (formes sans accents). L'ordre des
 # entrées sert de départage en cas d'égalité de score.
 MOTS_CLES_INTENTIONS: dict[str, list[str]] = {
+    # Placée EN PREMIER : en cas d'égalité de score, l'ordre du dictionnaire
+    # départage — une question qui nomme des agences ("quelle agence a le plus
+    # d'alertes ?") est mieux servie par le classement (qui inclut aussi le
+    # nombre d'alertes par agence) que par la liste brute des alertes.
+    # Expressions multi-mots (2 points) : le mot « agence » seul est trop
+    # fréquent dans les autres intentions pour être un déclencheur.
+    "classement_agences": [
+        "quelle agence", "quelles agences", "quel agence", "laquelle des agences",
+        "lesquelles des agences", "quelle est la meilleure agence",
+        "meilleure agence", "meilleures agences", "meilleur agence",
+        "pire agence", "pires agences", "plus mauvaise agence", "mauvaise agence",
+        "classement des agences", "classement agences", "classement de mes agences",
+        "classer les agences", "classe les agences", "classez les agences",
+        "top agences", "top 3 des agences", "top 3 agences", "top 5 des agences",
+        "flop agences", "agence la plus", "agences les plus", "agence la moins",
+        "agences les moins", "agence le plus", "agence le moins",
+        "moins performante", "plus performante", "moins performantes",
+        "plus performantes", "moins performant", "plus performant",
+        "satisfaction la plus", "satisfaction la moins", "satisfaction le plus",
+        "satisfaction le moins", "score le plus", "score la plus",
+        "pire score", "meilleur score", "meilleure note", "pire note",
+        "agence qui a", "agences qui ont", "agence a la", "agence a le",
+        "comparer les agences", "comparer mes agences", "compare les agences",
+        "compare mes agences", "compare-moi les agences", "compare moi les agences",
+        "comparaison des agences", "comparaison entre agences",
+        "performance des agences", "performances des agences", "agences performantes",
+        "agence en difficulte", "agences en difficulte",
+        "va le moins bien", "va le mieux", "vont le moins bien", "vont le mieux",
+        # Mots seuls (1 point) : suffisamment spécifiques au classement.
+        "classement", "palmares", "podium", "ranking",
+    ],
     "alertes_critiques": [
         "alerte", "alertes", "critique", "critiques", "urgent", "urgente", "urgents",
         "urgence", "urgences", "prioritaire", "prioritaires", "a traiter en urgence",

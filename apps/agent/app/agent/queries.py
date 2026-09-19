@@ -572,6 +572,95 @@ def _tendance_globale(comparaison: dict[str, Any]) -> str:
     return "stable"
 
 
+_SEUIL_VOLUME_FAIBLE = 5  # en dessous, le taux de satisfaction d'une agence est peu fiable
+_NOTE_SATISFAIT = 4       # « client satisfait » = note 4 ou 5 (même définition que le dashboard)
+
+
+def query_classement_agences(
+    db: Session,
+    organisation_id: uuid.UUID,
+    agence_id: Optional[uuid.UUID] = None,
+    jours: int = 30,
+) -> dict[str, Any]:
+    """
+    Classement des agences de l'organisation par taux de satisfaction sur les
+    `jours` derniers jours : rang 1 = agence la MOINS satisfaisante.
+
+    Satisfaction = part des feedbacks notés 4 ou 5 (taux de clients satisfaits,
+    même définition que les tableaux de bord — pas de score de Wilson ici).
+    `volume_faible` signale les agences avec trop peu de feedbacks pour que le
+    taux soit fiable. Comptent TOUS les feedbacks de la période (analysés ou non).
+
+    ISOLATION : uniquement les agences de `organisation_id` ; `agence_id`
+    (Agency Manager, ou filtre explicite) restreint à cette seule agence.
+    """
+    _exiger_organisation(organisation_id)
+    maintenant = datetime.now(timezone.utc)
+    debut = maintenant - timedelta(days=jours)
+
+    filtre_agences = [Agence.organisation_id == organisation_id]
+    if agence_id is not None:
+        filtre_agences.append(Agence.id == agence_id)
+
+    agences = db.query(Agence.id, Agence.nom, Agence.active).filter(*filtre_agences).all()
+
+    lignes = (
+        db.query(Agence.id, Feedback.note, AnalyseIA.criticite)
+        .join(QRCode, QRCode.agence_id == Agence.id)
+        .join(Feedback, Feedback.qr_code_id == QRCode.id)
+        .outerjoin(AnalyseIA, AnalyseIA.feedback_id == Feedback.id)
+        .filter(*filtre_agences, Feedback.date_soumission >= debut, Feedback.date_soumission < maintenant)
+        .all()
+    )
+
+    stats: dict[uuid.UUID, dict[str, Any]] = {}
+    for ag_id, note, criticite in lignes:
+        s = stats.setdefault(ag_id, {"notes": [], "alertes": 0})
+        s["notes"].append(note)
+        if criticite is not None and criticite.value in _CRITICITES_ALERTE:
+            s["alertes"] += 1
+
+    classement: list[dict[str, Any]] = []
+    satisfaits_total = 0
+    for ag in agences:
+        s = stats.get(ag.id)
+        if not s:
+            continue
+        notes = s["notes"]
+        satisfaits = sum(1 for n in notes if n >= _NOTE_SATISFAIT)
+        satisfaits_total += satisfaits
+        classement.append({
+            "agence_id": str(ag.id),
+            "agence_nom": ag.nom,
+            "satisfaction_pct": round(satisfaits / len(notes) * 100, 1),
+            "nb_feedbacks": len(notes),
+            "note_moyenne": round(sum(notes) / len(notes), 2),
+            "nb_alertes_elevees_ou_critiques": s["alertes"],
+            "volume_faible": len(notes) < _SEUIL_VOLUME_FAIBLE,
+        })
+
+    # Pire d'abord ; à satisfaction égale, l'agence au plus gros volume d'abord (plus significatif).
+    classement.sort(key=lambda a: (a["satisfaction_pct"], -a["nb_feedbacks"], a["agence_nom"]))
+    for rang, item in enumerate(classement, start=1):
+        item["rang_du_moins_au_plus_satisfaisant"] = rang
+
+    total = sum(a["nb_feedbacks"] for a in classement)
+    meilleures = sorted(classement, key=lambda a: (-a["satisfaction_pct"], -a["nb_feedbacks"], a["agence_nom"]))
+
+    return {
+        "periode_jours": jours,
+        "perimetre_restreint_a_une_agence": agence_id is not None,
+        "nb_agences_classees": len(classement),
+        "total_feedbacks": total,
+        "satisfaction_globale_pct": round(satisfaits_total / total * 100, 1) if total else None,
+        "seuil_volume_faible": _SEUIL_VOLUME_FAIBLE,
+        "plus_faibles": classement[:3],
+        "meilleures": meilleures[:3],
+        "classement_complet": classement,
+        "agences_actives_sans_feedback": sorted(ag.nom for ag in agences if ag.active and ag.id not in stats),
+    }
+
+
 def query_recommandations(
     db: Session, organisation_id: uuid.UUID, agence_id: Optional[uuid.UUID] = None, jours: int = 7
 ) -> dict[str, Any]:
