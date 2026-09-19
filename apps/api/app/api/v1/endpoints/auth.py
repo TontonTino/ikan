@@ -15,8 +15,9 @@ from app.core.security import (
     decode_token,
 )
 from app.db.session import get_db
+from app.models.enums import UserRole
 from app.models.utilisateur import Utilisateur
-from app.schemas.auth import LoginRequest, TokenResponse, UserPublic
+from app.schemas.auth import AgentTokenResponse, LoginRequest, TokenResponse, UserPublic
 
 router = APIRouter()
 
@@ -151,3 +152,26 @@ def refresh_token(
 def get_me(current_user: Utilisateur = Depends(get_current_active_user)):
     """Retourne le profil de l'utilisateur connecté."""
     return UserPublic.model_validate(current_user)
+
+
+@router.get("/agent-token", response_model=AgentTokenResponse)
+def get_agent_token(current_user: Utilisateur = Depends(get_current_active_user)):
+    """
+    Jeton d'accès court pour l'agent IA YAM (service séparé, autre domaine).
+
+    Le cookie de session HTTP-only n'est pas envoyé à l'agent (autre site) et
+    n'est pas lisible par le JavaScript du dashboard : le dashboard demande donc
+    ici, session cookie à l'appui, un jeton d'accès qu'il garde UNIQUEMENT en
+    mémoire et présente en Bearer à l'agent. Même format, même durée de vie
+    (ACCESS_TOKEN_EXPIRE_MINUTES) et même contrôle d'organisation que le jeton
+    de session. Réservé aux rôles qui ont accès à YAM.
+    """
+    if current_user.role not in (UserRole.CX_MANAGER, UserRole.AGENCY_MANAGER):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="L'assistant YAM est réservé aux CX Managers et Agency Managers.",
+        )
+    return AgentTokenResponse(
+        access_token=create_access_token(subject=str(current_user.id)),
+        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
