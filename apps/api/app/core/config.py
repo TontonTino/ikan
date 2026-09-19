@@ -41,6 +41,12 @@ class Settings(BaseSettings):
     def allowed_origins_list(self) -> List[str]:
         return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
 
+    # Agent IA YAM (optionnel — service séparé, port 8001). Vide = notification désactivée.
+    # AGENT_WEBHOOK_URL = URL de BASE du service (ex. http://localhost:8001) ;
+    # WEBHOOK_SECRET doit être IDENTIQUE à celui de apps/agent/.env.
+    AGENT_WEBHOOK_URL: str = ""
+    WEBHOOK_SECRET: str = ""
+
     # Email (optionnel — pour les alertes)
     MAIL_USERNAME: str = ""
     MAIL_PASSWORD: str = ""

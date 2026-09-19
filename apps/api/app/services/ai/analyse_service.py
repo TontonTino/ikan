@@ -6,6 +6,7 @@ import uuid
 import logging
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models.feedback import Feedback
 from app.models.analyse_ia import AnalyseIA
@@ -35,6 +36,36 @@ CRITICITE_MAP = {
     "moyenne": CriticiteType.MOYENNE,
     "faible": CriticiteType.FAIBLE,
 }
+
+
+def _notifier_agent(feedback_id: uuid.UUID, criticite: str) -> None:
+    """
+    Prévient l'agent IA YAM (service séparé) qu'une analyse vient d'être
+    enregistrée, pour qu'il prépare un brouillon d'action sur les feedbacks
+    de criticité élevée/critique.
+
+    FAIL-SAFE : n'échoue JAMAIS et ne lève jamais d'exception — l'agent est un
+    service auxiliaire, son indisponibilité (ou une mauvaise configuration) ne
+    doit en aucun cas faire échouer ni annuler l'analyse déjà enregistrée.
+    Désactivée tant qu'AGENT_WEBHOOK_URL / WEBHOOK_SECRET ne sont pas définis.
+    """
+    try:
+        if criticite not in ("elevee", "critique"):
+            return
+        if not settings.AGENT_WEBHOOK_URL or not settings.WEBHOOK_SECRET:
+            return
+        import httpx
+
+        response = httpx.post(
+            f"{settings.AGENT_WEBHOOK_URL.rstrip('/')}/webhook/analyse-complete",
+            json={"feedback_id": str(feedback_id), "criticite": criticite},
+            headers={"X-Webhook-Secret": settings.WEBHOOK_SECRET},
+            timeout=3,
+        )
+        if response.status_code >= 400:
+            logger.warning(f"Webhook agent refusé ({response.status_code}) pour feedback {feedback_id}")
+    except Exception as exc:
+        logger.warning(f"Webhook agent indisponible pour feedback {feedback_id} : {exc}")
 
 
 def analyser_feedback(feedback_id: uuid.UUID, db: Session | None = None) -> None:
@@ -141,6 +172,9 @@ def analyser_feedback(feedback_id: uuid.UUID, db: Session | None = None) -> None
 
         db.commit()
         logger.info(f"Analyse et recommandations sauvegardées pour feedback {feedback_id}")
+
+        # Notification de l'agent APRÈS le commit : jamais bloquante (voir _notifier_agent).
+        _notifier_agent(feedback_id, criticite_enum.value)
 
     except Exception as e:
         logger.error(f"Erreur lors de l'analyse du feedback {feedback_id}: {e}")
