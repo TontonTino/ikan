@@ -48,6 +48,33 @@ def test_discordance_detection():
     assert detect_discordance(1, "positive") is True
 
 
+def test_criticite_renfort_signal_urgence_seul():
+    # Note neutre, sentiment neutre -> "moyenne" de base, un signal d'urgence -> "elevee"
+    assert compute_criticite(3, "neutral", "toujours pas de reponse de votre part") == "elevee"
+
+
+def test_criticite_renfort_signal_prejudice_seul():
+    # Note haute, sentiment positif -> "faible" de base, un signal de prejudice -> "elevee"
+    assert compute_criticite(5, "positive", "je viens de voir que j'ai ete debite deux fois") == "elevee"
+
+
+def test_criticite_renfort_urgence_et_prejudice_ensemble():
+    # Les deux types de signaux presents -> escalade jusqu'a "critique"
+    texte = "C'est urgent, j'ai ete debite et personne ne repond depuis des semaines"
+    assert compute_criticite(5, "positive", texte) == "critique"
+
+
+def test_criticite_renfort_ne_redescend_jamais():
+    # Le renfort ne peut que monter le niveau, jamais le baisser
+    assert compute_criticite(1, "negative", "texte sans aucun signal particulier") == "critique"
+
+
+def test_criticite_sans_texte_comportement_inchange():
+    # Appel sans texte (comme avant l'ajout du renfort) -> comportement identique a avant
+    assert compute_criticite(1, "negative") == "critique"
+    assert compute_criticite(5, "positive") == "faible"
+
+
 def test_recommendations_generation():
     recos = generer_recommandations("reseau", CriticiteType.CRITIQUE, discordance=False)
     assert len(recos) >= 1

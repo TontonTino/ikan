@@ -127,7 +127,7 @@ def analyser_feedback(feedback_id: uuid.UUID, db: Session | None = None) -> None
             )
 
         # 3. Détection de discordance & calcul criticité
-        raw_criticite = compute_criticite(feedback.note, raw_sentiment)
+        raw_criticite = compute_criticite(feedback.note, raw_sentiment, texte)
         # Détection de discordance : fonctionnalité Pro+. Fail-open — en cas de doute
         # ou d'erreur la détection s'exécute ; sinon le champ garde sa valeur par
         # défaut (False). Le sentiment et la criticité, eux, sont TOUJOURS calculés.

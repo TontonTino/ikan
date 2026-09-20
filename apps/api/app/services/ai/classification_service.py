@@ -289,16 +289,59 @@ def classify(text: str, note: Optional[int] = None) -> ClassificationResult:
     }
 
 
-def compute_criticite(note: int, sentiment: str) -> str:
-    """Calcule le niveau de criticité basé sur le sentiment déclaré (1=Négatif, 3=Neutre, 5=Positif) et le sentiment détecté."""
+NIVEAUX_CRITICITE = ["faible", "moyenne", "elevee", "critique"]
+
+# Signaux d'urgence et de préjudice (mots-clés normalisés sans accents) : renfort de
+# la criticité de base (note + sentiment) quand le texte indique une situation qui
+# ne peut pas attendre ou un dommage concret pour le client. Ne peut que FAIRE MONTER
+# le niveau, jamais le baisser — la note et le sentiment restent le signal principal.
+# NB: "argent" et "facture" (seuls, sans accent) ont été volontairement exclus de la
+# liste préjudice d'origine : trop génériques, ils apparaissent aussi dans des avis
+# neutres/positifs ("bon rapport qualité prix", "facture reçue à temps") et
+# déclencheraient des faux positifs.
+SIGNAUX_URGENCE = [
+    "urgent", "immediatement", "tout de suite", "depuis plusieurs jours",
+    "depuis des semaines", "toujours pas", "aucune reponse", "personne ne repond",
+]
+SIGNAUX_PREJUDICE = [
+    "debite", "rembourser", "remboursement", "paye deux fois", "double debit",
+    "perdu", "vol", "securite", "danger", "blesse",
+]
+
+
+def detecter_signaux(texte: str) -> tuple[list[str], list[str]]:
+    """Détecte les mots-clés d'urgence et de préjudice présents dans le texte (comparaison sans accents)."""
+    if not texte:
+        return [], []
+    texte_clean = _strip_accents(texte.lower())
+    urgence = [m for m in SIGNAUX_URGENCE if m in texte_clean]
+    prejudice = [m for m in SIGNAUX_PREJUDICE if m in texte_clean]
+    return urgence, prejudice
+
+
+def compute_criticite(note: int, sentiment: str, texte: str = "") -> str:
+    """
+    Calcule le niveau de criticité basé sur le sentiment déclaré (1=Négatif, 3=Neutre, 5=Positif)
+    et le sentiment détecté, puis applique un renfort par mots-clés d'urgence/préjudice qui ne
+    peut que faire monter le niveau (jamais le baisser).
+    """
     sent = sentiment.lower()
     if sent in ("negative", "negatif") and note <= 2:
-        return "critique"
-    if sent in ("negative", "negatif") or note <= 2:
-        return "elevee"
-    if sent in ("neutral", "neutre") or note == 3:
-        return "moyenne"
-    return "faible"
+        niveau = "critique"
+    elif sent in ("negative", "negatif") or note <= 2:
+        niveau = "elevee"
+    elif sent in ("neutral", "neutre") or note == 3:
+        niveau = "moyenne"
+    else:
+        niveau = "faible"
+
+    urgence, prejudice = detecter_signaux(texte)
+    if (urgence or prejudice) and NIVEAUX_CRITICITE.index(niveau) < NIVEAUX_CRITICITE.index("elevee"):
+        niveau = "elevee"
+    if urgence and prejudice and niveau != "critique":
+        niveau = "critique"
+
+    return niveau
 
 
 def detect_discordance(note: int, sentiment: str) -> bool:
