@@ -67,6 +67,14 @@ def on_startup():
     except Exception as e:
         print(f"[STARTUP PLANS LOG] {e}")
 
+    # Filet Stripe/facturation (même SQL idempotent que la migration Alembic 007).
+    try:
+        from app.services.stripe_billing_bootstrap import appliquer_schema_stripe
+        with engine.begin() as conn:
+            appliquer_schema_stripe(conn)
+    except Exception as e:
+        print(f"[STARTUP STRIPE LOG] {e}")
+
     # Auto-seeding si aucun QR Code n'existe en base
     try:
         db = SessionLocal()

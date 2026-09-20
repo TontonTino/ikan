@@ -101,3 +101,13 @@ class UtilisationOrganisation(BaseModel):
     agences: QuotaUtilisation
     feedbacks_ce_mois: QuotaUtilisation
     fonctionnalites: List[FonctionnaliteStatut]
+
+
+class UpgradeCheckoutRequest(BaseModel):
+    """Forfait payant demandé pour la mise à niveau en libre-service (Entreprise reste sur devis)."""
+    plan_code: Literal["starter", "pro"]
+
+
+class UpgradeCheckoutResponse(BaseModel):
+    """URL de redirection vers Stripe Checkout."""
+    checkout_url: str

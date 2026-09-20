@@ -4,8 +4,20 @@ import { organisationsApi } from '../../services/api';
 import type { User, UtilisationOrganisation, QuotaUtilisation } from '../../types';
 import { ChevronDownIcon, SettingsIcon, LockIcon, CheckIcon, LogOutIcon, ClockIcon } from '../common/Icons';
 
-// À confirmer : adresse de support affichée dans « Obtenir de l'aide » et « Mettre le forfait à niveau ».
+// À confirmer : adresse de support affichée dans « Obtenir de l'aide » et pour la mise à niveau vers Entreprise (devis).
 const SUPPORT_EMAIL = 'support@ikanai.app';
+
+// Ordre des forfaits : détermine la prochaine mise à niveau depuis le forfait actuel.
+// Starter et Pro se paient en libre-service (Stripe Checkout) ; Entreprise reste sur
+// devis (mailto) ; au-delà d'Entreprise, il n'y a rien à proposer.
+const ORDRE_FORFAITS = ['gratuit', 'starter', 'pro', 'entreprise'] as const;
+
+function prochainForfait(planCode: string | undefined): 'starter' | 'pro' | 'entreprise' | null {
+  if (!planCode) return null;
+  const idx = ORDRE_FORFAITS.indexOf(planCode as (typeof ORDRE_FORFAITS)[number]);
+  if (idx === -1 || idx === ORDRE_FORFAITS.length - 1) return null;
+  return ORDRE_FORFAITS[idx + 1] as 'starter' | 'pro' | 'entreprise';
+}
 
 interface UserMenuProps {
   user: User | null;
@@ -66,6 +78,7 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const [utilisation, setUtilisation] = useState<UtilisationOrganisation | null>(null);
   const [utilisationErreur, setUtilisationErreur] = useState(false);
+  const [checkoutEnCours, setCheckoutEnCours] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   const isCX = user?.role === 'cx_manager';
@@ -117,7 +130,23 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
     `Mise à niveau du forfait${utilisation?.plan ? ` (actuel : ${utilisation.plan.nom})` : ''}${user.organisation_nom ? ` - ${user.organisation_nom}` : ''}`
   );
   const mailtoAide = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Demande d\'aide - IKAN AI')}`;
+  // Conservé uniquement pour la mise à niveau vers Entreprise (sur devis, pas de Stripe).
   const mailtoNiveau = `mailto:${SUPPORT_EMAIL}?subject=${sujetMiseANiveau}`;
+
+  // Prochain forfait accessible depuis le forfait actuel : "starter"/"pro" -> Stripe
+  // Checkout en libre-service ; "entreprise" -> devis (mailto) ; null -> rien à proposer.
+  const prochain = prochainForfait(utilisation?.plan?.code);
+
+  const lancerCheckout = async () => {
+    if (prochain !== 'starter' && prochain !== 'pro') return;
+    setCheckoutEnCours(true);
+    try {
+      const res = await organisationsApi.upgradeCheckout(prochain);
+      window.location.href = res.data.checkout_url;
+    } catch {
+      setCheckoutEnCours(false);
+    }
+  };
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
@@ -229,14 +258,27 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
                           {f.statut === 'disponible' && (
                             <span style={{ marginLeft: 'auto', color: '#3C7730', fontSize: '0.70rem', fontWeight: 700 }}>Disponible</span>
                           )}
-                          {f.statut === 'verrouille' && (
+                          {f.statut === 'verrouille' && (prochain === 'starter' || prochain === 'pro' ? (
+                            <button
+                              type="button"
+                              disabled={checkoutEnCours}
+                              onClick={lancerCheckout}
+                              style={{
+                                marginLeft: 'auto', color: '#D97706', fontSize: '0.70rem', fontWeight: 700,
+                                background: 'transparent', border: 'none', padding: 0, cursor: checkoutEnCours ? 'default' : 'pointer',
+                                fontFamily: 'inherit',
+                              }}
+                            >
+                              {checkoutEnCours ? 'Redirection…' : 'Verrouillé · Mettre à niveau'}
+                            </button>
+                          ) : (
                             <a
                               href={mailtoNiveau}
                               style={{ marginLeft: 'auto', color: '#D97706', fontSize: '0.70rem', fontWeight: 700, textDecoration: 'none' }}
                             >
                               Verrouillé · Mettre à niveau
                             </a>
-                          )}
+                          ))}
                           {/* À venir : aucun forfait ne la débloque, donc aucun lien d'upgrade. */}
                           {f.statut === 'a_venir' && (
                             <span
@@ -266,11 +308,21 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
           <a role="menuitem" href={mailtoAide} style={itemStyle}>
             Obtenir de l'aide
           </a>
-          {isCX && (
+          {isCX && (prochain === 'starter' || prochain === 'pro' ? (
+            <button
+              role="menuitem"
+              type="button"
+              disabled={checkoutEnCours}
+              onClick={lancerCheckout}
+              style={{ ...itemStyle, color: '#3C7730', fontWeight: 700, cursor: checkoutEnCours ? 'default' : 'pointer' }}
+            >
+              {checkoutEnCours ? 'Redirection vers le paiement…' : `Mettre à niveau vers ${prochain === 'starter' ? 'Starter' : 'Pro'}`}
+            </button>
+          ) : prochain === 'entreprise' ? (
             <a role="menuitem" href={mailtoNiveau} style={{ ...itemStyle, color: '#3C7730', fontWeight: 700 }}>
-              Mettre le forfait à niveau
+              Passer à Entreprise (devis)
             </a>
-          )}
+          ) : null)}
 
           <Separator />
 

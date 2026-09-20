@@ -40,6 +40,12 @@ class Organisation(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=True
     )
 
+    # Facturation Stripe (mode test tant que STRIPE_SECRET_KEY est une clé sk_test_...).
+    stripe_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    stripe_subscription_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    payment_failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     # Colonnes héritées (legacy) pour compatibilité
     secteur: Mapped[str | None] = mapped_column(String(100), nullable=True)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)

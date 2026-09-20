@@ -8,11 +8,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_admin_user, get_cx_manager, get_db
+from app.core.config import settings
 from app.models.utilisateur import Utilisateur
 from app.models.organisation import Organisation
 from app.schemas.organisation import (
     OrganisationCreate, OrganisationUpdate, OrganisationRead, UtilisationOrganisation,
+    UpgradeCheckoutRequest, UpgradeCheckoutResponse,
 )
+from app.services.plan_catalog import STRIPE_PRICE_IDS
 from app.services.plan_service import utilisation_organisation
 
 router = APIRouter()
@@ -28,6 +31,62 @@ def utilisation_mon_organisation(
     if not current_user.organisation_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aucune organisation rattachée")
     return utilisation_organisation(db, current_user.organisation_id)
+
+
+@router.post("/moi/upgrade-checkout", response_model=UpgradeCheckoutResponse)
+def creer_session_checkout(
+    data: UpgradeCheckoutRequest,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_manager),
+):
+    """
+    Crée une session Stripe Checkout en libre-service pour passer au forfait Starter ou Pro
+    (Entreprise reste sur devis manuel, non exposé ici). Récupère ou crée le Customer Stripe
+    de l'organisation au passage. Ne modifie jamais plan_id directement — c'est le webhook
+    Stripe (Phase 2) qui le fera après confirmation réelle du paiement.
+    """
+    if not current_user.organisation_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aucune organisation rattachée")
+
+    price_id = STRIPE_PRICE_IDS.get(data.plan_code)
+    if not settings.STRIPE_SECRET_KEY or not price_id:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Le paiement en ligne n'est pas configuré pour le moment. Contactez le support.",
+        )
+
+    org = db.query(Organisation).filter(Organisation.id == current_user.organisation_id).first()
+    if not org:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organisation introuvable")
+
+    import stripe
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+
+    try:
+        if not org.stripe_customer_id:
+            customer = stripe.Customer.create(
+                email=org.email_pro,
+                name=org.nom,
+                metadata={"organisation_id": str(org.id)},
+            )
+            org.stripe_customer_id = customer.id
+            db.commit()
+
+        session = stripe.checkout.Session.create(
+            mode="subscription",
+            customer=org.stripe_customer_id,
+            line_items=[{"price": price_id, "quantity": 1}],
+            success_url=f"{settings.PUBLIC_DASHBOARD_URL}/?checkout=success",
+            cancel_url=f"{settings.PUBLIC_DASHBOARD_URL}/?checkout=cancel",
+            metadata={"organisation_id": str(org.id), "plan_code": data.plan_code},
+        )
+    except stripe.error.StripeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Erreur Stripe : {getattr(exc, 'user_message', None) or str(exc)}",
+        )
+
+    return {"checkout_url": session.url}
 
 
 @router.get("/", response_model=List[OrganisationRead])

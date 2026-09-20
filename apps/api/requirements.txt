@@ -30,6 +30,9 @@ langdetect>=1.0.9
 # Tasks
 apscheduler>=3.10.4
 
+# Facturation (Stripe)
+stripe>=11.0.0
+
 # Email
 fastapi-mail>=1.4.1
 

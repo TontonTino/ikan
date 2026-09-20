@@ -56,6 +56,18 @@ class Settings(BaseSettings):
     MAIL_STARTTLS: bool = True
     MAIL_SSL_TLS: bool = False
 
+    # Stripe (facturation en libre-service). Vide = paiement en ligne désactivé
+    # (l'endpoint checkout répond 503 plutôt que de planter). AUCUNE distinction
+    # test/production n'est stockée en base : le préfixe de la clé (sk_test_...
+    # vs sk_live_...) suffit à lui seul — Stripe cloisonne strictement les
+    # données test et live côté serveur, une clé de test ne peut techniquement
+    # déclencher aucune transaction réelle.
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_PUBLISHABLE_KEY: str = ""
+
+    # URL de base du dashboard, utilisée pour les redirections success/cancel de Stripe Checkout.
+    PUBLIC_DASHBOARD_URL: str = "http://localhost:5173"
+
     model_config = SettingsConfigDict(
         env_file=ENV_PATH,
         env_file_encoding="utf-8",

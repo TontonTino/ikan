@@ -81,3 +81,11 @@ PLAN_FEATURES = {
     "pro": _PRO,
     "entreprise": _ENTREPRISE,
 }
+
+# Correspondance forfait payant -> Price Stripe (mode test tant que STRIPE_SECRET_KEY
+# est une clé sk_test_...). Gratuit n'a pas de Price (pas de Stripe), Entreprise reste
+# sur devis manuel (pas de Price non plus). Créés/rejoués via scripts/create_stripe_products.py.
+STRIPE_PRICE_IDS = {
+    "starter": "price_1UHq6tRNRfbHByow6doEMM8I",
+    "pro": "price_1UHq6uRNRfbHByowlQbEYfoD",
+}

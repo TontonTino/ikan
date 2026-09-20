@@ -26,8 +26,17 @@ services:
         generateValue: true
       - key: PUBLIC_CLIENT_URL
         value: https://ikan-1.onrender.com
+      - key: PUBLIC_DASHBOARD_URL
+        value: https://ikanai-dashboard.onrender.com
       - key: ALLOWED_ORIGINS
         value: https://ikan-1.onrender.com,https://ikanai-dashboard.onrender.com
+      # Facturation Stripe : clés sk_test_.../pk_test_... tant que le mode test est actif.
+      # Basculer en production = remplacer ces deux valeurs par des clés sk_live_/pk_live_,
+      # aucun autre changement (code ou base) n'est nécessaire.
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
 
   # Agent IA « YAM » (FastAPI, apps/agent). Se connecte à la MÊME base PostgreSQL
   # qu'ikanai-api et vérifie les JWT émis par ikanai-api (même SECRET_KEY).

@@ -122,6 +122,8 @@ export const organisationsApi = {
   delete: (id: string) => api.delete(`/organisations/${id}`),
   utilisation: () =>
     api.get<import('../types').UtilisationOrganisation>('/organisations/moi/utilisation'),
+  upgradeCheckout: (planCode: 'starter' | 'pro') =>
+    api.post<{ checkout_url: string }>('/organisations/moi/upgrade-checkout', { plan_code: planCode }),
 };
 
 // ── Agences ───────────────────────────────────────────
