@@ -64,6 +64,9 @@ class Settings(BaseSettings):
     # déclencher aucune transaction réelle.
     STRIPE_SECRET_KEY: str = ""
     STRIPE_PUBLISHABLE_KEY: str = ""
+    # Secret de signature du webhook (Stripe Dashboard > Webhooks > Signing secret,
+    # ou `stripe listen` en local). Vide = webhook refusé (400), jamais traité en clair.
+    STRIPE_WEBHOOK_SECRET: str = ""
 
     # URL de base du dashboard, utilisée pour les redirections success/cancel de Stripe Checkout.
     PUBLIC_DASHBOARD_URL: str = "http://localhost:5173"

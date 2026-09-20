@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.core.config import settings
 from app.api.v1.router import api_router
@@ -28,6 +29,9 @@ app = FastAPI(
     docs_url=f"{settings.API_V1_STR}/docs",
     redoc_url=f"{settings.API_V1_STR}/redoc",
 )
+
+scheduler = BackgroundScheduler()
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -75,6 +79,14 @@ def on_startup():
     except Exception as e:
         print(f"[STARTUP STRIPE LOG] {e}")
 
+    # Filet idempotence webhook Stripe (même SQL idempotent que la migration Alembic 008).
+    try:
+        from app.services.stripe_billing_bootstrap import appliquer_schema_webhook_events
+        with engine.begin() as conn:
+            appliquer_schema_webhook_events(conn)
+    except Exception as e:
+        print(f"[STARTUP STRIPE WEBHOOK LOG] {e}")
+
     # Auto-seeding si aucun QR Code n'existe en base
     try:
         db = SessionLocal()
@@ -89,6 +101,23 @@ def on_startup():
     except Exception as e:
         print(f"[STARTUP SEED LOG ERROR] {e}")
 
+    # Job quotidien de dégradation automatique (échecs de paiement en grâce expirée).
+    # Ne bloque jamais le démarrage de l'API : une erreur ici est journalisée, le
+    # scheduler reste simplement inactif jusqu'au prochain redémarrage.
+    try:
+        from apscheduler.triggers.cron import CronTrigger
+        from app.services.stripe_downgrade_job import degrader_organisations_en_echec_de_paiement
+        scheduler.add_job(
+            degrader_organisations_en_echec_de_paiement,
+            CronTrigger(hour=3, minute=0),
+            id="degradation_paiement_echoue",
+            replace_existing=True,
+        )
+        scheduler.start()
+        print("[STARTUP SCHEDULER] Job de dégradation automatique planifié (tous les jours à 3h).")
+    except Exception as e:
+        print(f"[STARTUP SCHEDULER LOG ERROR] {e}")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=r"https?://.*",
@@ -99,6 +128,17 @@ app.add_middleware(
 
 # Inclusion des routes
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Webhook Stripe — hors /api/v1 (URL fixe à enregistrer telle quelle dans Stripe),
+# public, authentifié uniquement par la signature Stripe (voir app/api/webhooks_stripe.py).
+from app.api.webhooks_stripe import router as webhooks_stripe_router
+app.include_router(webhooks_stripe_router, prefix="/webhooks", tags=["Webhooks"])
+
+
+@app.on_event("shutdown")
+def arreter_scheduler():
+    if scheduler.running:
+        scheduler.shutdown(wait=False)
 
 
 @app.get("/")

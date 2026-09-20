@@ -55,3 +55,18 @@ def appliquer_schema_stripe(conn) -> None:
         "CREATE INDEX IF NOT EXISTS ix_changements_plan_organisation_id "
         "ON changements_plan (organisation_id)"
     ))
+
+
+def appliquer_schema_webhook_events(conn) -> None:
+    """
+    Table d'idempotence des événements webhook Stripe déjà traités — Stripe
+    documente explicitement pouvoir renvoyer le même événement plusieurs fois
+    (au moins une livraison, jamais garanti exactement une seule).
+    """
+    conn.execute(text("SET LOCAL lock_timeout = '5s'"))
+    conn.execute(text("""
+        CREATE TABLE IF NOT EXISTS stripe_events_traites (
+            event_id VARCHAR(255) PRIMARY KEY,
+            traite_le TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+    """))
