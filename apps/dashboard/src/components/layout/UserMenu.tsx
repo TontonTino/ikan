@@ -231,26 +231,19 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
           </div>
           <Separator />
 
-          {/* Paramètres */}
-          {isAdmin ? (
-            <button
-              role="menuitem"
-              style={itemStyle}
-              onClick={() => {
-                setOpen(false);
-                navigate('/admin/settings');
-              }}
-            >
-              <SettingsIcon size={16} color="#64748B" />
-              Paramètres
-            </button>
-          ) : (
-            <div style={{ ...itemStyle, color: '#94A3B8', cursor: 'default' }} aria-disabled="true">
-              <SettingsIcon size={16} color="#CBD5E1" />
-              Paramètres
-              <span style={{ marginLeft: 'auto', fontSize: '0.70rem', fontWeight: 600 }}>Bientôt disponible</span>
-            </div>
-          )}
+          {/* Paramètres — Admin : configuration système globale ; CX Manager/Agency
+              Manager : paramètres de leur propre compte (nom, email, mot de passe). */}
+          <button
+            role="menuitem"
+            style={itemStyle}
+            onClick={() => {
+              setOpen(false);
+              navigate(isAdmin ? '/admin/settings' : '/parametres');
+            }}
+          >
+            <SettingsIcon size={16} color="#64748B" />
+            Paramètres
+          </button>
 
           {/* Utilisation (CX Manager : l'admin et l'agency manager n'ont pas de quotas d'organisation)
               Repliée par défaut : seul le titre est visible à l'ouverture du menu, le contenu

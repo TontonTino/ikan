@@ -18,6 +18,7 @@ import AdminPermissionsPage from './pages/admin/AdminPermissionsPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminFacturationPage from './pages/admin/AdminFacturationPage';
 import StatistiquesPage from './pages/stats/StatistiquesPage';
+import ParametresPage from './pages/ParametresPage';
 
 import { useParams } from 'react-router-dom';
 import { getFeedbackUrl } from './config';
@@ -83,7 +84,10 @@ export default function App() {
         }
       >
         <Route index element={<IndexRedirect />} />
-        
+
+        {/* Paramètres de compte personnel — CX Manager & Agency Manager (l'Admin garde /admin/settings) */}
+        <Route path="parametres" element={<ParametresPage />} />
+
         {/* Statistiques & Analyses (Multi-profils : CX, Agence, Admin) */}
         <Route path="statistiques" element={<StatistiquesPage />} />
 

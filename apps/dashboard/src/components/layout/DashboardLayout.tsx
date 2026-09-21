@@ -129,6 +129,7 @@ export default function DashboardLayout() {
     if (location.pathname.includes('/admin/gestion-agences')) return 'Gestion des agences';
     if (location.pathname.includes('/admin/permissions')) return 'Permissions';
     if (location.pathname.includes('/admin/settings')) return 'Paramètres';
+    if (location.pathname.includes('/parametres')) return 'Paramètres';
     if (location.pathname.includes('/admin/dashboard')) return 'Dashboard';
     if (location.pathname.includes('/siege')) return 'Vue Siège';
     if (location.pathname.includes('/agence')) return 'Dashboard Agence';

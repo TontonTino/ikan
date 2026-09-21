@@ -40,6 +40,13 @@ export const authApi = {
     api.post('/auth/login', { email, password }),
   logout: () => api.post('/auth/logout'),
   me: () => api.get('/auth/me'),
+  updateMe: (data: { nom?: string; prenom?: string; email?: string }) =>
+    api.patch<import('../types').User>('/auth/me', data),
+  changerMotDePasse: (ancienMotDePasse: string, nouveauMotDePasse: string) =>
+    api.post('/auth/me/mot-de-passe', {
+      ancien_mot_de_passe: ancienMotDePasse,
+      nouveau_mot_de_passe: nouveauMotDePasse,
+    }),
 };
 
 // ── Dashboard ─────────────────────────────────────────
