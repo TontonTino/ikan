@@ -41,6 +41,23 @@ services:
       # https://ikan-772d.onrender.com/webhooks/stripe enregistré côté Stripe).
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
+      # Alertes de quota par email (Brevo SMTP relay — smtp-relay.brevo.com:587).
+      # MAIL_USERNAME = login SMTP Brevo (page SMTP du compte, PAS l'email de contact
+      # forcément), MAIL_PASSWORD = clé SMTP (commence par xsmtpsib-...).
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        value: noreply@ikanai.app
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_SERVER
+        value: smtp-relay.brevo.com
+      - key: MAIL_STARTTLS
+        value: "true"
+      - key: MAIL_SSL_TLS
+        value: "false"
 
   # Agent IA « YAM » (FastAPI, apps/agent). Se connecte à la MÊME base PostgreSQL
   # qu'ikanai-api et vérifie les JWT émis par ikanai-api (même SECRET_KEY).

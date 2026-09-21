@@ -87,6 +87,14 @@ def on_startup():
     except Exception as e:
         print(f"[STARTUP STRIPE WEBHOOK LOG] {e}")
 
+    # Filet alertes de quota (même SQL idempotent que la migration Alembic 009).
+    try:
+        from app.services.quota_alert_bootstrap import appliquer_schema_alertes_quota
+        with engine.begin() as conn:
+            appliquer_schema_alertes_quota(conn)
+    except Exception as e:
+        print(f"[STARTUP QUOTA ALERTS LOG] {e}")
+
     # Auto-seeding si aucun QR Code n'existe en base
     try:
         db = SessionLocal()
@@ -101,11 +109,12 @@ def on_startup():
     except Exception as e:
         print(f"[STARTUP SEED LOG ERROR] {e}")
 
-    # Job quotidien de dégradation automatique (échecs de paiement en grâce expirée).
-    # Ne bloque jamais le démarrage de l'API : une erreur ici est journalisée, le
-    # scheduler reste simplement inactif jusqu'au prochain redémarrage.
+    # Jobs quotidiens — même scheduler pour tous (pas d'instance séparée par job).
+    # Chaque enregistrement est indépendant : l'échec de l'un n'empêche jamais
+    # les autres d'être planifiés.
+    from apscheduler.triggers.cron import CronTrigger
+
     try:
-        from apscheduler.triggers.cron import CronTrigger
         from app.services.stripe_downgrade_job import degrader_organisations_en_echec_de_paiement
         scheduler.add_job(
             degrader_organisations_en_echec_de_paiement,
@@ -113,8 +122,25 @@ def on_startup():
             id="degradation_paiement_echoue",
             replace_existing=True,
         )
-        scheduler.start()
         print("[STARTUP SCHEDULER] Job de dégradation automatique planifié (tous les jours à 3h).")
+    except Exception as e:
+        print(f"[STARTUP SCHEDULER LOG ERROR] {e}")
+
+    try:
+        from app.services.quota_alert_job import envoyer_alertes_quota
+        scheduler.add_job(
+            envoyer_alertes_quota,
+            CronTrigger(hour=4, minute=0),
+            id="alertes_quota",
+            replace_existing=True,
+        )
+        print("[STARTUP SCHEDULER] Job d'alertes de quota planifié (tous les jours à 4h).")
+    except Exception as e:
+        print(f"[STARTUP SCHEDULER LOG ERROR] {e}")
+
+    try:
+        if not scheduler.running:
+            scheduler.start()
     except Exception as e:
         print(f"[STARTUP SCHEDULER LOG ERROR] {e}")
 
