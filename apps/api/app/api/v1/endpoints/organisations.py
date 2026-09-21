@@ -9,11 +9,13 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_admin_user, get_cx_manager, get_db
 from app.core.config import settings
+from app.models.changement_plan import ChangementPlan
+from app.models.plan import Plan
 from app.models.utilisateur import Utilisateur
 from app.models.organisation import Organisation
 from app.schemas.organisation import (
     OrganisationCreate, OrganisationUpdate, OrganisationRead, UtilisationOrganisation,
-    UpgradeCheckoutRequest, UpgradeCheckoutResponse,
+    UpgradeCheckoutRequest, UpgradeCheckoutResponse, ChangementPlanRequest,
 )
 from app.services.plan_catalog import STRIPE_PRICE_IDS
 from app.services.plan_service import utilisation_organisation
@@ -190,6 +192,48 @@ def update_organisation(
 
     for field, value in update_dict.items():
         setattr(org, field, value)
+
+    db.commit()
+    db.refresh(org)
+    return org
+
+
+@router.patch("/{org_id}/plan", response_model=OrganisationRead)
+def changer_plan_organisation(
+    org_id: UUID,
+    data: ChangementPlanRequest,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_admin_user),
+):
+    """
+    Override manuel du forfait (Réservé au rôle Admin créateur, réservé aux cas
+    exceptionnels — partenariat négocié, etc.). Raison obligatoire (min. 10
+    caractères), tracée dans changements_plan avec source="admin_override" et
+    l'identité de l'Admin qui a fait le changement.
+    """
+    org = db.query(Organisation).filter(
+        Organisation.id == org_id,
+        (Organisation.created_by_id == current_user.id) | (Organisation.created_by_id.is_(None))
+    ).first()
+    if not org:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organisation introuvable")
+
+    plan = db.query(Plan).filter(Plan.id == data.plan_id).first()
+    if not plan:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Forfait introuvable")
+
+    ancien_plan_id = org.plan_id
+    org.plan_id = data.plan_id
+
+    if ancien_plan_id != data.plan_id:
+        db.add(ChangementPlan(
+            organisation_id=org.id,
+            ancien_plan_id=ancien_plan_id,
+            nouveau_plan_id=data.plan_id,
+            raison=data.raison,
+            modifie_par_id=current_user.id,
+            source="admin_override",
+        ))
 
     db.commit()
     db.refresh(org)

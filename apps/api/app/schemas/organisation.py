@@ -15,6 +15,13 @@ class OrganisationBase(BaseModel):
     email_pro: str | None = Field(default=None, description="Adresse email professionnelle unique")
 
 
+class PlanInfo(BaseModel):
+    code: str
+    nom: str
+
+    model_config = {"from_attributes": True}
+
+
 class OrganisationCreate(BaseModel):
     """Schéma de création d'une nouvelle organisation."""
     nom: str = Field(..., min_length=2, max_length=255)
@@ -44,6 +51,7 @@ class OrganisationRead(BaseModel):
     email_pro: str | None = None
     active: bool = True
     created_at: datetime | None = None
+    plan: PlanInfo | None = None
 
     @model_validator(mode='before')
     @classmethod
@@ -73,11 +81,6 @@ class OrganisationRead(BaseModel):
 
 # Alias pour rétro-compatibilité
 OrganisationResponse = OrganisationRead
-
-
-class PlanInfo(BaseModel):
-    code: str
-    nom: str
 
 
 class QuotaUtilisation(BaseModel):
@@ -111,3 +114,9 @@ class UpgradeCheckoutRequest(BaseModel):
 class UpgradeCheckoutResponse(BaseModel):
     """URL de redirection vers Stripe Checkout."""
     checkout_url: str
+
+
+class ChangementPlanRequest(BaseModel):
+    """Override manuel du forfait par un Admin — réservé aux cas exceptionnels, raison obligatoire."""
+    plan_id: uuid.UUID
+    raison: str = Field(..., min_length=10, description="Motif de l'override, tracé dans changements_plan")

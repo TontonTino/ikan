@@ -65,6 +65,9 @@ class Organisation(Base):
     utilisateurs: Mapped[list["Utilisateur"]] = relationship(
         "Utilisateur", back_populates="organisation", foreign_keys="[Utilisateur.organisation_id]", cascade="all, delete-orphan", passive_deletes=True
     )
+    # Lecture seule (aucun back_populates côté Plan) : uniquement pour exposer le
+    # forfait courant dans OrganisationRead sans requête séparée.
+    plan: Mapped["Plan"] = relationship("Plan", foreign_keys=[plan_id], viewonly=True)
 
     def __repr__(self) -> str:
         return f"<Organisation {self.nom} ({self.email_pro})>"
