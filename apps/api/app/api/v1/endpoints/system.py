@@ -69,7 +69,7 @@ def get_roles_permissions(
                 "Créer, modifier et désactiver des comptes utilisateurs",
                 "Configurer les seuils d'alerte de satisfaction par agence",
                 "Modifier les paramètres généraux et techniques du système",
-                "Consulter tous les dashboards et exporter l'ensemble des données"
+                "Consulter la vue structurelle de la plateforme (organisations, agences, comptes, forfaits) — aucun accès aux données clients ni aux statistiques de satisfaction"
             ]
         },
         {

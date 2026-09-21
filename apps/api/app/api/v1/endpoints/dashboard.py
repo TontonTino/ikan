@@ -35,7 +35,7 @@ from app.schemas.dashboard import (
     ThemeStats,
     SentimentStats,
     DashboardAdminStats,
-    ActivityPoint,
+    RepartitionForfaitItem,
     AdminOrganisationHierarchy,
     AdminUserItem,
     AdminAgenceItem,
@@ -46,7 +46,8 @@ from app.schemas.dashboard import (
     AgenceImpacteeItem,
     AlerteSyntheseDetail,
     InsightIADetail,
-    OrganisationRankDetail,
+    OrganisationStructure,
+    CompteurStructurel,
     StatsCXResponse,
     StatsAgenceResponse,
     StatsAdminResponse,
@@ -293,287 +294,83 @@ def dashboard_siege(
     )
 
 
+def _repartition_forfaits(db: Session, organisations: list) -> list[RepartitionForfaitItem]:
+    """Nombre d'organisations par forfait (les 4 forfaits sont toujours listés, même à 0)."""
+    from collections import Counter
+    from app.models.plan import Plan
+
+    plans = db.query(Plan).order_by(Plan.ordre).all()
+    compteur = Counter(o.plan_id for o in organisations)
+    return [RepartitionForfaitItem(code=p.code, nom=p.nom, nombre=compteur.get(p.id, 0)) for p in plans]
+
+
+def _compter_utilisateurs_actifs(db: Session, role: UserRole | None = None) -> int:
+    requete = db.query(func.count(Utilisateur.id)).filter(Utilisateur.active == True)  # noqa: E712
+    if role is not None:
+        requete = requete.filter(Utilisateur.role == role)
+    return requete.scalar() or 0
+
+
 @router.get("/admin", response_model=DashboardAdminStats)
 def dashboard_admin(
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_admin_user),
 ):
     """
-    Dashboard agrégé pour l'Administrateur Système.
-    Retourne UNIQUEMENT des compteurs et pourcentages — aucune donnée individuelle.
+    Dashboard de l'Administrateur Système — STRICTEMENT STRUCTUREL.
+    Comptes, organisations, agences, forfaits : jamais de donnée dérivée des
+    feedbacks (volume, satisfaction, traitement, alertes, tendances, sentiments),
+    à aucun niveau d'agrégation (principe RBAC fondateur du projet).
     """
-    from collections import defaultdict
-    from app.models.enums import CriticiteType
+    from app.models.plan import Plan
 
-    now = datetime.now(timezone.utc)
-
-    # ── Bornes temporelles ──
-    debut_mois_courant = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    debut_mois_precedent = (debut_mois_courant - timedelta(days=1)).replace(day=1)
-
-    # ── Compteurs globaux (toutes périodes confondues) ──
-    total_feedbacks = db.query(func.count(Feedback.id)).scalar() or 0
-    processed_feedbacks = db.query(func.count(AnalyseIA.id)).scalar() or 0
-
-    # ── Satisfaction globale ──
-    if total_feedbacks > 0:
-        positifs = db.query(func.count(Feedback.id)).filter(Feedback.note >= 4).scalar() or 0
-        satisfaction_pct = round(positifs / total_feedbacks * 100, 1)
-    else:
-        satisfaction_pct = 0.0
-    satisfaction_globale = f"{satisfaction_pct}%"
-
-    # ── Organisations & utilisateurs ──
-    total_organisations = db.query(func.count(Organisation.id)).filter(Organisation.active == True).scalar() or 0
-    total_cx_managers = db.query(func.count(Utilisateur.id)).filter(Utilisateur.active == True).scalar() or 0
-
-    # ── Alertes critiques (feedbacks avec criticité CRITIQUE) ──
-    total_alertes = (
-        db.query(func.count(AnalyseIA.id))
-        .filter(AnalyseIA.criticite == CriticiteType.CRITIQUE)
-        .scalar() or 0
-    )
-
-    # ── Fonction utilitaire : calcul de trend mois courant vs mois précédent ──
-    def _compute_trend(current_count: int, previous_count: int) -> tuple[str | None, bool]:
-        if previous_count == 0:
-            if current_count > 0:
-                return ("+100%", True)
-            return (None, True)  # Pas de données historiques → "—"
-        diff_pct = round((current_count - previous_count) / previous_count * 100, 1)
-        sign = "+" if diff_pct >= 0 else ""
-        return (f"{sign}{diff_pct}%", diff_pct >= 0)
-
-    # ── Feedbacks du mois courant et précédent ──
-    fb_mois_courant = (
-        db.query(func.count(Feedback.id))
-        .filter(Feedback.date_soumission >= debut_mois_courant)
-        .scalar() or 0
-    )
-    fb_mois_precedent = (
-        db.query(func.count(Feedback.id))
-        .filter(
-            Feedback.date_soumission >= debut_mois_precedent,
-            Feedback.date_soumission < debut_mois_courant,
-        )
-        .scalar() or 0
-    )
-    feedbacks_trend, feedbacks_trend_positive = _compute_trend(fb_mois_courant, fb_mois_precedent)
-
-    # ── Feedbacks traités du mois courant et précédent ──
-    proc_mois_courant = (
-        db.query(func.count(AnalyseIA.id))
-        .join(Feedback, AnalyseIA.feedback_id == Feedback.id)
-        .filter(Feedback.date_soumission >= debut_mois_courant)
-        .scalar() or 0
-    )
-    proc_mois_precedent = (
-        db.query(func.count(AnalyseIA.id))
-        .join(Feedback, AnalyseIA.feedback_id == Feedback.id)
-        .filter(
-            Feedback.date_soumission >= debut_mois_precedent,
-            Feedback.date_soumission < debut_mois_courant,
-        )
-        .scalar() or 0
-    )
-    processed_trend, processed_trend_positive = _compute_trend(proc_mois_courant, proc_mois_precedent)
-
-    # ── Satisfaction trend ──
-    def _satisfaction_for_period(start: datetime, end: datetime) -> float | None:
-        total = (
-            db.query(func.count(Feedback.id))
-            .filter(Feedback.date_soumission >= start, Feedback.date_soumission < end)
-            .scalar() or 0
-        )
-        if total == 0:
-            return None
-        pos = (
-            db.query(func.count(Feedback.id))
-            .filter(Feedback.date_soumission >= start, Feedback.date_soumission < end, Feedback.note >= 4)
-            .scalar() or 0
-        )
-        return round(pos / total * 100, 1)
-
-    sat_courant = _satisfaction_for_period(debut_mois_courant, now)
-    sat_precedent = _satisfaction_for_period(debut_mois_precedent, debut_mois_courant)
-    if sat_courant is not None and sat_precedent is not None and sat_precedent > 0:
-        diff = round(sat_courant - sat_precedent, 1)
-        sign = "+" if diff >= 0 else ""
-        satisfaction_trend = f"{sign}{diff}%"
-        satisfaction_trend_positive = diff >= 0
-    else:
-        satisfaction_trend = None
-        satisfaction_trend_positive = True
-
-    # ── Organisations trend ──
-    orgs_trend, orgs_trend_positive = (None, True)  # Pas de date de création trackée de façon fiable
-
-    # ── CX Managers trend ──
-    cx_trend, cx_trend_positive = (None, True)
-
-    # ── Alertes trend ──
-    alertes_courant = (
-        db.query(func.count(AnalyseIA.id))
-        .join(Feedback, AnalyseIA.feedback_id == Feedback.id)
-        .filter(AnalyseIA.criticite == CriticiteType.CRITIQUE, Feedback.date_soumission >= debut_mois_courant)
-        .scalar() or 0
-    )
-    alertes_precedent = (
-        db.query(func.count(AnalyseIA.id))
-        .join(Feedback, AnalyseIA.feedback_id == Feedback.id)
-        .filter(
-            AnalyseIA.criticite == CriticiteType.CRITIQUE,
-            Feedback.date_soumission >= debut_mois_precedent,
-            Feedback.date_soumission < debut_mois_courant,
-        )
-        .scalar() or 0
-    )
-    alertes_trend, alertes_trend_positive = _compute_trend(alertes_courant, alertes_precedent)
-    # Pour les alertes, une baisse est positive
-    alertes_trend_positive = not alertes_trend_positive if alertes_trend is not None else False
-
-    # ── Données d'activité pour les graphiques (compteurs agrégés uniquement) ──
-    def _build_activity(days: int, group_label_fn, group_key_fn) -> list[ActivityPoint]:
-        start = now - timedelta(days=days)
-        # Feedbacks par groupe
-        fb_rows = (
-            db.query(
-                func.date_trunc(group_key_fn, Feedback.date_soumission).label("bucket"),
-                func.count(Feedback.id).label("cnt"),
-            )
-            .filter(Feedback.date_soumission >= start)
-            .group_by("bucket")
-            .order_by("bucket")
-            .all()
-        )
-        points = []
-        for row in fb_rows:
-            label = group_label_fn(row.bucket) if row.bucket else "?"
-            points.append(ActivityPoint(date=label, feedbacks=row.cnt, users=0))
-        return points
-
-    # Libellés français pour les jours de la semaine
-    _JOURS_FR = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
-
-    activity_7d = _build_activity(
-        7,
-        lambda dt: f"{_JOURS_FR[dt.weekday()]} {dt.day}",
-        "day",
-    )
-    activity_30d = _build_activity(
-        30,
-        lambda dt: f"Sem {dt.isocalendar()[1]}",
-        "week",
-    )
-    activity_90d = _build_activity(
-        90,
-        lambda dt: dt.strftime("%B")[:4].capitalize(),
-        "month",
-    )
-
-    # ── Construction du détail des organisations pour le centre de supervision Admin ──
     orgs = db.query(Organisation).order_by(Organisation.nom.asc()).all()
-    orgs_overview: list[AdminOrganisationHierarchy] = []
+    orgs_actives = [o for o in orgs if o.active]
+    plans_par_id = {p.id: p for p in db.query(Plan).all()}
 
+    total_agences = db.query(func.count(Agence.id)).filter(Agence.active == True).scalar() or 0  # noqa: E712
+
+    def _item(u: Utilisateur, libelle_role: str, agence_nom: str | None, agences_count: int) -> AdminUserItem:
+        return AdminUserItem(
+            id=u.id,
+            nom=u.nom,
+            prenom=u.prenom,
+            email=u.email,
+            role=libelle_role,
+            agence_nom=agence_nom,
+            agences_count=agences_count,
+            active=u.active,
+            derniere_connexion=u.derniere_connexion.isoformat() if u.derniere_connexion else None,
+        )
+
+    orgs_overview: list[AdminOrganisationHierarchy] = []
     for o in orgs:
-        # Utilisateurs de l'organisation
         org_users = db.query(Utilisateur).filter(Utilisateur.organisation_id == o.id).all()
         cx_users = [u for u in org_users if u.role == UserRole.CX_MANAGER]
         agency_users = [u for u in org_users if u.role == UserRole.AGENCY_MANAGER]
 
-        # Agences de l'organisation
         org_agences = db.query(Agence).filter(Agence.organisation_id == o.id).all()
         agences_map = {a.id: a for a in org_agences}
 
-        # QR Codes et Feedbacks rattachés aux agences de l'organisation
-        ag_ids = list(agences_map.keys())
-        if ag_ids:
-            qr_codes_list = db.query(QRCode).filter(QRCode.agence_id.in_(ag_ids)).all()
-            qr_ids = [q.id for q in qr_codes_list]
-            qr_map = {q.id: q.agence_id for q in qr_codes_list}
-            org_fbs = db.query(Feedback).filter(Feedback.qr_code_id.in_(qr_ids)).all() if qr_ids else []
-        else:
-            qr_ids = []
-            qr_map = {}
-            org_fbs = []
+        cx_items = [_item(cx, "CX Manager", None, len(org_agences)) for cx in cx_users]
+        agency_items = []
+        for am in agency_users:
+            am_ag = agences_map.get(am.agence_id) if am.agence_id else None
+            agency_items.append(_item(am, "Agency Manager", am_ag.nom if am_ag else "—", 1 if am_ag else 0))
 
-        org_fb_ids = [f.id for f in org_fbs]
-        org_analyses = db.query(AnalyseIA).filter(AnalyseIA.feedback_id.in_(org_fb_ids)).all() if org_fb_ids else []
-        analyzed_fb_ids = set(a.feedback_id for a in org_analyses)
-
-        # Map feedbacks par agence
-        fb_by_agence: dict[UUID, list[Feedback]] = defaultdict(list)
-        for f in org_fbs:
-            ag_id = qr_map.get(f.qr_code_id)
-            if ag_id:
-                fb_by_agence[ag_id].append(f)
-
-        total_org_recus = len(org_fbs)
-        total_org_traites = len(org_analyses)
-        if total_org_traites > total_org_recus:
-            total_org_traites = total_org_recus
-        taux_org_traitement = round((total_org_traites / total_org_recus * 100), 1) if total_org_recus > 0 else 0.0
-
-        # Liste des CX Managers formatée
-        cx_items: list[AdminUserItem] = []
-        for cx in cx_users:
-            cx_items.append(AdminUserItem(
-                id=cx.id,
-                nom=cx.nom,
-                prenom=cx.prenom,
-                email=cx.email,
-                role="CX Manager",
-                agence_nom=None,
-                agences_count=len(org_agences),
-                feedbacks_recus=total_org_recus,
-                feedbacks_traites=total_org_traites,
-                active=cx.active,
-                derniere_connexion=cx.derniere_connexion.isoformat() if cx.derniere_connexion else None,
-            ))
-
-        # Liste des Agences formatée
-        agence_items: list[AdminAgenceItem] = []
-        for ag in org_agences:
-            ag_fbs = fb_by_agence.get(ag.id, [])
-            ag_recus = len(ag_fbs)
-            ag_traites = sum(1 for f in ag_fbs if f.id in analyzed_fb_ids)
-            ag_pos = sum(1 for f in ag_fbs if f.note >= 4)
-            ag_sat = round((ag_pos / ag_recus * 100), 1) if ag_recus > 0 else 0.0
-            agence_items.append(AdminAgenceItem(
+        agence_items = [
+            AdminAgenceItem(
                 id=ag.id,
                 nom=ag.nom,
                 ville=ag.ville,
                 adresse=ag.adresse,
                 active=ag.active,
                 seuil_alerte=ag.seuil_alerte,
-                feedbacks_recus=ag_recus,
-                feedbacks_traites=ag_traites,
-                taux_satisfaction=ag_sat,
-            ))
+            )
+            for ag in org_agences
+        ]
 
-        # Liste des Agency Managers formatée
-        agency_items: list[AdminUserItem] = []
-        for am in agency_users:
-            am_ag = agences_map.get(am.agence_id) if am.agence_id else None
-            am_fbs = fb_by_agence.get(am.agence_id, []) if am.agence_id else []
-            am_recus = len(am_fbs)
-            am_traites = sum(1 for f in am_fbs if f.id in analyzed_fb_ids)
-            agency_items.append(AdminUserItem(
-                id=am.id,
-                nom=am.nom,
-                prenom=am.prenom,
-                email=am.email,
-                role="Agency Manager",
-                agence_nom=am_ag.nom if am_ag else "—",
-                agences_count=1 if am_ag else 0,
-                feedbacks_recus=am_recus,
-                feedbacks_traites=am_traites,
-                active=am.active,
-                derniere_connexion=am.derniere_connexion.isoformat() if am.derniere_connexion else None,
-            ))
-
-        all_user_items = cx_items + agency_items
-
+        plan = plans_par_id.get(o.plan_id)
         orgs_overview.append(AdminOrganisationHierarchy(
             id=o.id,
             nom=o.nom,
@@ -583,40 +380,24 @@ def dashboard_admin(
             email_pro=o.email_pro or o.email or "",
             active=o.active,
             created_at=o.created_at.isoformat() if o.created_at else None,
+            plan_code=plan.code if plan else None,
+            plan_nom=plan.nom if plan else None,
             cx_managers_count=len(cx_users),
             agency_managers_count=len(agency_users),
             agences_count=len(org_agences),
-            feedbacks_recus=total_org_recus,
-            feedbacks_traites=total_org_traites,
-            taux_traitement=taux_org_traitement,
             cx_managers=cx_items,
             agency_managers=agency_items,
             agences=agence_items,
-            users=all_user_items,
+            users=cx_items + agency_items,
         ))
 
     return DashboardAdminStats(
-        total_feedbacks=total_feedbacks,
-        processed_feedbacks=processed_feedbacks,
-        feedbacks_trend=feedbacks_trend,
-        feedbacks_trend_positive=feedbacks_trend_positive,
-        processed_trend=processed_trend,
-        processed_trend_positive=processed_trend_positive,
-        satisfaction_globale=satisfaction_globale,
-        satisfaction_trend=satisfaction_trend,
-        satisfaction_trend_positive=satisfaction_trend_positive,
-        total_organisations=total_organisations,
-        organisations_trend=orgs_trend,
-        organisations_trend_positive=orgs_trend_positive,
-        total_cx_managers=total_cx_managers,
-        cx_managers_trend=cx_trend,
-        cx_managers_trend_positive=cx_trend_positive,
-        total_alertes=total_alertes,
-        alertes_trend=alertes_trend,
-        alertes_trend_positive=alertes_trend_positive,
-        activity_7d=activity_7d,
-        activity_30d=activity_30d,
-        activity_90d=activity_90d,
+        total_organisations=len(orgs_actives),
+        total_agences=total_agences,
+        total_cx_managers=_compter_utilisateurs_actifs(db, UserRole.CX_MANAGER),
+        total_agency_managers=_compter_utilisateurs_actifs(db, UserRole.AGENCY_MANAGER),
+        total_utilisateurs_actifs=_compter_utilisateurs_actifs(db),
+        repartition_forfaits=_repartition_forfaits(db, orgs_actives),
         organisations_overview=orgs_overview,
     )
 
@@ -1473,263 +1254,65 @@ def get_statistics_agency(
 
 @router.get("/statistics/admin", response_model=StatsAdminResponse)
 def get_statistics_admin(
-    jours: int = Query(30, ge=1, le=365),
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_admin_user),
 ):
     """
-    Interface Statistiques de la Plateforme pour le Super Admin IKAN.
-    STRICTEMENT AUCUNE DONNÉE INDIVIDUELLE OU PII — Uniquement des agrégats globaux et inter-organisations.
+    Statistiques de la plateforme pour l'Administrateur — STRICTEMENT STRUCTURELLES.
+    Comptes, organisations, agences, forfaits. Aucune donnée dérivée des feedbacks
+    (volume, satisfaction, traitement, alertes, sentiments, usage IA), à aucun niveau
+    d'agrégation : l'Admin n'a aucun accès aux données clients (principe RBAC fondateur).
     """
-    from collections import defaultdict
-    from app.models.enums import CriticiteType
+    from app.models.plan import Plan
 
-    now = datetime.now(timezone.utc)
-    current_start = now - timedelta(days=jours)
-    previous_start = current_start - timedelta(days=jours)
-    previous_end = current_start
+    orgs = db.query(Organisation).filter(Organisation.active == True).all()  # noqa: E712
+    plans_par_id = {p.id: p for p in db.query(Plan).all()}
 
-    # 1. Total Global
-    orgs = db.query(Organisation).filter(Organisation.active == True).all()
-    total_orgs_count = len(orgs)
+    agences_par_org = dict(
+        db.query(Agence.organisation_id, func.count(Agence.id))
+        .filter(Agence.active == True)  # noqa: E712
+        .group_by(Agence.organisation_id)
+        .all()
+    )
+    utilisateurs_par_org = dict(
+        db.query(Utilisateur.organisation_id, func.count(Utilisateur.id))
+        .filter(Utilisateur.active == True)  # noqa: E712
+        .group_by(Utilisateur.organisation_id)
+        .all()
+    )
 
-    total_agences_count = db.query(func.count(Agence.id)).filter(Agence.active == True).scalar() or 0
-    total_users_count = db.query(func.count(Utilisateur.id)).filter(Utilisateur.active == True).scalar() or 0
-
-    # Feedbacks globaux
-    fbs_curr = db.query(Feedback).filter(Feedback.date_soumission >= current_start, Feedback.date_soumission <= now).all()
-    fbs_prev = db.query(Feedback).filter(Feedback.date_soumission >= previous_start, Feedback.date_soumission < previous_end).all()
-
-    cur_fb_ids = [f.id for f in fbs_curr]
-    prev_fb_ids = [f.id for f in fbs_prev]
-
-    analyses_curr = db.query(AnalyseIA).filter(AnalyseIA.feedback_id.in_(cur_fb_ids)).all() if cur_fb_ids else []
-    analyses_prev = db.query(AnalyseIA).filter(AnalyseIA.feedback_id.in_(prev_fb_ids)).all() if prev_fb_ids else []
-
-    total_curr = len(fbs_curr)
-    total_prev = len(fbs_prev)
-
-    traites_curr = len(analyses_curr)
-    traites_prev = len(analyses_prev)
-    attente_curr = max(0, total_curr - traites_curr)
-
-    taux_trait_curr = round(traites_curr / total_curr * 100, 1) if total_curr > 0 else 0.0
-    taux_trait_prev = round(traites_prev / total_prev * 100, 1) if total_prev > 0 else 0.0
-
-    pos_curr = sum(1 for f in fbs_curr if f.note >= 4)
-    pos_prev = sum(1 for f in fbs_prev if f.note >= 4)
-    sat_curr = round(pos_curr / total_curr * 100, 1) if total_curr > 0 else 0.0
-    sat_prev = round(pos_prev / total_prev * 100, 1) if total_prev > 0 else 0.0
-
-    critiques_curr = sum(1 for a in analyses_curr if a.criticite == CriticiteType.CRITIQUE)
-    critiques_prev = sum(1 for a in analyses_prev if a.criticite == CriticiteType.CRITIQUE)
-
-    total_ai_requests = db.query(func.count(AnalyseIA.id)).scalar() or 0
-
-    tot_ev, tot_pos = _calc_kpi_trend(total_curr, total_prev)
-    trt_ev, trt_pos = _calc_kpi_trend(traites_curr, traites_prev)
-    tx_ev, tx_pos = _calc_kpi_trend(taux_trait_curr, taux_trait_prev, is_pct_diff=True)
-    crit_ev, crit_p_pos = _calc_kpi_trend(critiques_curr, critiques_prev, invert_positive=True)
+    total_agences = sum(agences_par_org.values())
+    total_utilisateurs = _compter_utilisateurs_actifs(db)
+    total_cx = _compter_utilisateurs_actifs(db, UserRole.CX_MANAGER)
+    total_agency = _compter_utilisateurs_actifs(db, UserRole.AGENCY_MANAGER)
 
     kpis = {
-        "organisations_actives": StatKPI(
-            valeur=total_orgs_count,
-            valeur_num=float(total_orgs_count),
-            sous_titre="Comptes entreprises déployés",
+        "organisations_actives": CompteurStructurel(valeur=len(orgs), sous_titre="Comptes entreprises déployés"),
+        "total_agences": CompteurStructurel(valeur=total_agences, sous_titre="Points de vente et bornes connectées"),
+        "utilisateurs_actifs": CompteurStructurel(
+            valeur=total_utilisateurs, sous_titre="Comptes actifs (Admin, CX Managers, Agency Managers)"
         ),
-        "total_agences": StatKPI(
-            valeur=total_agences_count,
-            valeur_num=float(total_agences_count),
-            sous_titre="Points de vente et bornes connectées",
-        ),
-        "feedbacks_collectes": StatKPI(
-            valeur=total_curr,
-            valeur_num=float(total_curr),
-            valeur_precedente=total_prev,
-            evolution=tot_ev,
-            is_positive=tot_pos,
-            sous_titre="Volume global collecté sur la période",
-        ),
-        "feedbacks_traites": StatKPI(
-            valeur=traites_curr,
-            valeur_num=float(traites_curr),
-            valeur_precedente=traites_prev,
-            evolution=trt_ev,
-            is_positive=trt_pos,
-            sous_titre="Avis analysés par les modèles NLP",
-        ),
-        "feedbacks_attente": StatKPI(
-            valeur=attente_curr,
-            valeur_num=float(attente_curr),
-            is_positive=attente_curr == 0,
-            sous_titre="En attente de traitement réseau",
-        ),
-        "taux_traitement": StatKPI(
-            valeur=f"{taux_trait_curr}%",
-            valeur_num=taux_trait_curr,
-            valeur_precedente=taux_trait_prev,
-            evolution=tx_ev,
-            is_positive=tx_pos,
-            sous_titre="Taux moyen de couverture sémantique",
-        ),
-        "requetes_ia": StatKPI(
-            valeur=total_ai_requests,
-            valeur_num=float(total_ai_requests),
-            sous_titre="Analyses & inférences IKAN AI exécutées",
-        ),
-        "utilisateurs_actifs": StatKPI(
-            valeur=total_users_count,
-            valeur_num=float(total_users_count),
-            sous_titre="Gestionnaires CX et agences habilités",
-        ),
-        "alertes_generees": StatKPI(
-            valeur=critiques_curr,
-            valeur_num=float(critiques_curr),
-            valeur_precedente=critiques_prev,
-            evolution=crit_ev,
-            is_positive=crit_p_pos,
-            sous_titre="Alertes de criticité haute émises",
-        ),
+        "cx_managers": CompteurStructurel(valeur=total_cx, sous_titre="Responsables expérience client (siège)"),
+        "agency_managers": CompteurStructurel(valeur=total_agency, sous_titre="Responsables d'agence"),
     }
 
-    # Timeline globale
-    _JOURS_FR = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
-    timeline_map: dict[str, dict] = defaultdict(lambda: {
-        "feedbacks": 0,
-        "traites": 0,
-        "notes": [],
-        "positifs": 0,
-        "neutres": 0,
-        "negatifs": 0,
-        "label": "",
-    })
-
-    analyses_set = set(a.feedback_id for a in analyses_curr)
-
-    for f in fbs_curr:
-        dt = f.date_soumission
-        if jours <= 1:
-            key = dt.strftime("%Hh")
-            label = key
-        elif jours <= 14:
-            key = dt.strftime("%Y-%m-%d")
-            label = f"{_JOURS_FR[dt.weekday()]} {dt.day}"
-        elif jours <= 60:
-            key = dt.strftime("%Y-%m-%d")
-            label = dt.strftime("%d/%m")
-        else:
-            key = f"S{dt.isocalendar()[1]}-{dt.year}"
-            label = f"Sem {dt.isocalendar()[1]}"
-
-        timeline_map[key]["feedbacks"] += 1
-        timeline_map[key]["notes"].append(f.note)
-        timeline_map[key]["label"] = label
-        if f.id in analyses_set:
-            timeline_map[key]["traites"] += 1
-
-        if f.note >= 4:
-            timeline_map[key]["positifs"] += 1
-        elif f.note == 3:
-            timeline_map[key]["neutres"] += 1
-        else:
-            timeline_map[key]["negatifs"] += 1
-
-    evolution_volume: list[EvolutionPoint] = []
-    evolution_traitement: list[EvolutionPoint] = []
-
-    for k, data in sorted(timeline_map.items()):
-        notes = data["notes"]
-        sat_pct = round(sum(1 for n in notes if n >= 4) / len(notes) * 100, 1) if notes else 0.0
-        pt = EvolutionPoint(
-            date=k,
-            label=data["label"],
-            feedbacks=data["feedbacks"],
-            traites=data["traites"],
-            satisfaction=sat_pct,
-            positifs=data["positifs"],
-            neutres=data["neutres"],
-            negatifs=data["negatifs"],
-        )
-        evolution_volume.append(pt)
-        evolution_traitement.append(pt)
-
-    # Performance comparative des Organisations
-    organisations_ranking: list[OrganisationRankDetail] = []
+    organisations = []
     for o in orgs:
-        o_agences = db.query(Agence).filter(Agence.organisation_id == o.id).all()
-        o_ag_ids = [a.id for a in o_agences]
-
-        if o_ag_ids:
-            o_qr_codes = db.query(QRCode).filter(QRCode.agence_id.in_(o_ag_ids)).all()
-            o_qr_ids = [q.id for q in o_qr_codes]
-            o_fbs = db.query(Feedback).filter(Feedback.qr_code_id.in_(o_qr_ids), Feedback.date_soumission >= current_start).all() if o_qr_ids else []
-            o_fbs_prev = db.query(Feedback).filter(Feedback.qr_code_id.in_(o_qr_ids), Feedback.date_soumission >= previous_start, Feedback.date_soumission < previous_end).all() if o_qr_ids else []
-        else:
-            o_fbs = []
-            o_fbs_prev = []
-
-        o_f_ids = [f.id for f in o_fbs]
-        o_analyses = db.query(AnalyseIA).filter(AnalyseIA.feedback_id.in_(o_f_ids)).all() if o_f_ids else []
-
-        o_tot = len(o_fbs)
-        o_traites = len(o_analyses)
-        o_tx = round(o_traites / o_tot * 100, 1) if o_tot > 0 else 0.0
-
-        o_pos = sum(1 for f in o_fbs if f.note >= 4)
-        o_prev_pos = sum(1 for f in o_fbs_prev if f.note >= 4)
-        o_sat = round(o_pos / o_tot * 100, 1) if o_tot > 0 else 0.0
-        o_prev_sat = round(o_prev_pos / len(o_fbs_prev) * 100, 1) if o_fbs_prev else 0.0
-
-        o_crit = sum(1 for a in o_analyses if a.criticite == CriticiteType.CRITIQUE)
-
-        o_tend_str, o_tend_pos = _calc_kpi_trend(o_sat, o_prev_sat, is_pct_diff=True)
-
-        organisations_ranking.append(OrganisationRankDetail(
+        plan = plans_par_id.get(o.plan_id)
+        organisations.append(OrganisationStructure(
             organisation_id=o.id,
             nom=o.nom,
             logo=o.logo,
             secteur=o.secteur_activite or o.secteur or "Général",
-            agences_count=len(o_agences),
-            feedbacks_collectes=o_tot,
-            feedbacks_traites=o_traites,
-            taux_traitement=o_tx,
-            satisfaction_globale=o_sat,
-            alertes_critiques=o_crit,
-            tendance_val=o_tend_str,
-            tendance_positive=o_tend_pos,
+            agences_count=agences_par_org.get(o.id, 0),
+            utilisateurs_count=utilisateurs_par_org.get(o.id, 0),
+            plan_code=plan.code if plan else None,
+            plan_nom=plan.nom if plan else None,
         ))
-
-    organisations_ranking.sort(key=lambda x: -x.feedbacks_collectes)
-
-    # Activité & IA metrics
-    discordances_count = sum(1 for a in analyses_curr if a.discordance_detectee)
-    suggestions_count = db.query(func.count(Suggestion.id)).scalar() or 0
-
-    activite_plateforme = {
-        "organisations_actives": total_orgs_count,
-        "agences_actives": total_agences_count,
-        "utilisateurs_actifs": total_users_count,
-        "suggestions_soumises": suggestions_count,
-        "derniere_analyse_utc": now.isoformat(),
-    }
-
-    utilisation_ia = {
-        "moteur": "IKAN AI Core + HuggingFace Transformer",
-        "analyses_total": total_ai_requests,
-        "analyses_periode": traites_curr,
-        "discordances_signalees": discordances_count,
-        "taux_couverture_nlp": f"{taux_trait_curr}%",
-        "statut_modele": "Opérationnel (Inférence synchrone & asynchrone)",
-    }
+    organisations.sort(key=lambda x: (-x.agences_count, x.nom.lower()))
 
     return StatsAdminResponse(
-        periode_jours=jours,
-        periode_label=_period_label(jours),
         kpis=kpis,
-        evolution_volume=evolution_volume,
-        evolution_traitement=evolution_traitement,
-        organisations_ranking=organisations_ranking,
-        activite_plateforme=activite_plateforme,
-        utilisation_ia=utilisation_ia,
+        repartition_forfaits=_repartition_forfaits(db, orgs),
+        organisations=organisations,
     )
-

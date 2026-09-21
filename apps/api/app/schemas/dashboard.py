@@ -77,10 +77,18 @@ class DashboardSiege(BaseModel):
     evolution_taux_resolution_positive: bool = True
 
 
-class ActivityPoint(BaseModel):
-    date: str
-    feedbacks: int
-    users: int
+# ==============================================================================
+# VUE ADMIN — STRICTEMENT STRUCTURELLE
+# Principe RBAC fondateur : l'Admin n'a aucun accès aux données clients ni aux
+# statistiques de satisfaction. Aucun champ de ces schémas ne doit dériver des
+# feedbacks (volume, satisfaction, traitement, alertes, tendances, sentiments...).
+# Un test (test_admin_stats_structurelles.py) le vérifie sur la réponse JSON.
+# ==============================================================================
+
+class RepartitionForfaitItem(BaseModel):
+    code: str
+    nom: str
+    nombre: int
 
 
 class AdminUserItem(BaseModel):
@@ -91,8 +99,6 @@ class AdminUserItem(BaseModel):
     role: str
     agence_nom: str | None = None
     agences_count: int = 0
-    feedbacks_recus: int = 0
-    feedbacks_traites: int = 0
     active: bool = True
     derniere_connexion: str | None = None
 
@@ -103,10 +109,7 @@ class AdminAgenceItem(BaseModel):
     ville: str | None = None
     adresse: str | None = None
     active: bool = True
-    seuil_alerte: float = 80.0
-    feedbacks_recus: int = 0
-    feedbacks_traites: int = 0
-    taux_satisfaction: float = 0.0
+    seuil_alerte: float = 80.0  # réglage configuré (droit structurel de l'Admin), pas une donnée dérivée
 
 
 class AdminOrganisationHierarchy(BaseModel):
@@ -118,12 +121,11 @@ class AdminOrganisationHierarchy(BaseModel):
     email_pro: str | None = None
     active: bool = True
     created_at: str | None = None
+    plan_code: str | None = None
+    plan_nom: str | None = None
     cx_managers_count: int = 0
     agency_managers_count: int = 0
     agences_count: int = 0
-    feedbacks_recus: int = 0
-    feedbacks_traites: int = 0
-    taux_traitement: float = 0.0
     cx_managers: List[AdminUserItem] = []
     agency_managers: List[AdminUserItem] = []
     agences: List[AdminAgenceItem] = []
@@ -131,28 +133,13 @@ class AdminOrganisationHierarchy(BaseModel):
 
 
 class DashboardAdminStats(BaseModel):
-    """Vue dashboard pour l'Administrateur Système."""
-    total_feedbacks: int
-    processed_feedbacks: int
-    feedbacks_trend: str | None = None
-    feedbacks_trend_positive: bool = True
-    processed_trend: str | None = None
-    processed_trend_positive: bool = True
-    satisfaction_globale: str
-    satisfaction_trend: str | None = None
-    satisfaction_trend_positive: bool = True
+    """Vue dashboard de l'Administrateur Système : compteurs structurels uniquement."""
     total_organisations: int
-    organisations_trend: str | None = None
-    organisations_trend_positive: bool = True
+    total_agences: int
     total_cx_managers: int
-    cx_managers_trend: str | None = None
-    cx_managers_trend_positive: bool = True
-    total_alertes: int
-    alertes_trend: str | None = None
-    alertes_trend_positive: bool = False
-    activity_7d: List[ActivityPoint]
-    activity_30d: List[ActivityPoint]
-    activity_90d: List[ActivityPoint]
+    total_agency_managers: int
+    total_utilisateurs_actifs: int
+    repartition_forfaits: List[RepartitionForfaitItem] = []
     organisations_overview: List[AdminOrganisationHierarchy] = []
 
 
@@ -227,19 +214,16 @@ class InsightIADetail(BaseModel):
     date: str | None = None
 
 
-class OrganisationRankDetail(BaseModel):
+class OrganisationStructure(BaseModel):
+    """Organisation vue par l'Admin : structure uniquement (aucune donnée dérivée des feedbacks)."""
     organisation_id: uuid.UUID
     nom: str
     logo: str | None = None
     secteur: str | None = None
     agences_count: int = 0
-    feedbacks_collectes: int = 0
-    feedbacks_traites: int = 0
-    taux_traitement: float = 0.0
-    satisfaction_globale: float = 0.0
-    alertes_critiques: int = 0
-    tendance_val: str | None = None
-    tendance_positive: bool = True
+    utilisateurs_count: int = 0
+    plan_code: str | None = None
+    plan_nom: str | None = None
 
 
 class StatsCXResponse(BaseModel):
@@ -275,12 +259,14 @@ class StatsAgenceResponse(BaseModel):
     insights_ia: List[InsightIADetail]
 
 
+class CompteurStructurel(BaseModel):
+    """Compteur structurel (nombre de comptes, d'agences...) — volontairement sans tendance ni période."""
+    valeur: int
+    sous_titre: str | None = None
+
+
 class StatsAdminResponse(BaseModel):
-    periode_jours: int
-    periode_label: str
-    kpis: dict[str, StatKPI]
-    evolution_volume: List[EvolutionPoint]
-    evolution_traitement: List[EvolutionPoint]
-    organisations_ranking: List[OrganisationRankDetail]
-    activite_plateforme: dict[str, Any]
-    utilisation_ia: dict[str, Any]
+    """Statistiques de la plateforme pour l'Admin : compteurs structurels uniquement."""
+    kpis: dict[str, CompteurStructurel]
+    repartition_forfaits: List[RepartitionForfaitItem]
+    organisations: List[OrganisationStructure]
