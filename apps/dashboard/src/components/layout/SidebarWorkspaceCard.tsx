@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { User } from '../../types';
 import { ChevronDownIcon } from '../common/Icons';
 
@@ -105,6 +105,8 @@ const AdminProfessionalAvatar: React.FC = () => (
 
 export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps) {
   const [imgError, setImgError] = useState(false);
+  const logoUrl = user?.organisation_logo;
+  useEffect(() => setImgError(false), [logoUrl]);
 
   if (!user) return null;
 
@@ -167,7 +169,7 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
           fontWeight: 800,
           flexShrink: 0,
           overflow: 'hidden',
-          padding: 0,
+          padding: orgLogo ? '6px' : 0,
           boxSizing: 'border-box',
         }}
       >
@@ -183,7 +185,6 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
               height: '100%',
               objectFit: 'contain',
               display: 'block',
-              padding: '3px',
             }}
           />
         ) : (
@@ -198,10 +199,12 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
             fontSize: '0.88rem',
             color: '#111827',
             fontWeight: 700,
-            lineHeight: 1.2,
-            whiteSpace: 'nowrap',
+            lineHeight: 1.25,
             overflow: 'hidden',
-            textOverflow: 'ellipsis',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflowWrap: 'anywhere',
           }}
         >
           {orgName}
@@ -211,18 +214,20 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
             fontSize: '0.72rem',
             color: '#64748B',
             fontWeight: 500,
-            lineHeight: 1.2,
+            lineHeight: 1.25,
             marginTop: '2px',
-            whiteSpace: 'nowrap',
             overflow: 'hidden',
-            textOverflow: 'ellipsis',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflowWrap: 'anywhere',
           }}
         >
           {spaceSub}
         </div>
       </div>
 
-      <ChevronDownIcon size={16} color="#9CA3AF" />
+      <ChevronDownIcon size={16} color="#9CA3AF" style={{ flexShrink: 0 }} />
     </div>
   );
 }
