@@ -15,7 +15,6 @@ from app.api.deps import (
     get_current_active_user,
     get_cx_manager,
     get_cx_or_agency_manager,
-    get_cx_or_admin,
     get_db,
 )
 from app.models.utilisateur import Utilisateur
@@ -131,10 +130,10 @@ def dashboard_agence(
 @router.get("/siege", response_model=DashboardSiege)
 def dashboard_siege(
     db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(get_cx_or_admin),
+    current_user: Utilisateur = Depends(get_cx_manager),
     jours: int = Query(30, ge=1, le=365),
 ):
-    """Dashboard vue siège pour CX Manager et Admin."""
+    """Dashboard vue siège — CX Manager UNIQUEMENT (données clients : l'Admin reçoit 403)."""
     date_debut = datetime.now(timezone.utc) - timedelta(days=jours)
 
     query_agences = db.query(Agence).filter(Agence.active == True)
@@ -716,10 +715,11 @@ def get_statistics_cx(
     jours: int = Query(30, ge=1, le=365),
     agence_id: Optional[UUID] = Query(None),
     db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(get_cx_or_admin),
+    current_user: Utilisateur = Depends(get_cx_manager),
 ):
     """
     Interface Statistiques & Analyses pour le CX Manager (Vue Réseau / Organisation).
+    CX Manager UNIQUEMENT : données clients, l'Admin reçoit 403.
     Données 100% dynamiques et agrégées issues de PostgreSQL.
     """
     from collections import defaultdict

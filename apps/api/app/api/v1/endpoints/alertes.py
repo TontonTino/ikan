@@ -15,6 +15,7 @@ from app.models.agence import Agence
 from app.models.feedback import Feedback
 from app.models.qr_code import QRCode
 from app.models.enums import UserRole
+from app.services.acces_agence import verifier_acces_agence
 from app.services.plan_catalog import FEATURE_ALERTES
 from app.services.plan_service import organisation_a_la_fonctionnalite
 
@@ -97,6 +98,9 @@ def update_seuil_alerte(
     if not agence:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Agence introuvable")
+    # Un CX Manager ne configure que les agences de SON organisation (l'Admin, lui,
+    # configure les seuils d'alerte par droit structurel — matrice des permissions).
+    verifier_acces_agence(db, current_user, agence_id)
     agence.seuil_alerte = data.seuil_alerte
     db.commit()
     return {"message": f"Seuil mis à jour : {data.seuil_alerte}%"}

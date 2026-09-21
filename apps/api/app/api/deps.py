@@ -123,30 +123,28 @@ def get_cx_manager(
     return current_user
 
 
+MESSAGE_ADMIN_EXCLU = (
+    "Accès interdit : l'Administrateur n'a aucun accès aux données clients "
+    "(feedbacks, suggestions, alertes, recommandations, analyses) — uniquement à la vue structurelle."
+)
+
+
 def get_cx_or_agency_manager(
     current_user: Utilisateur = Depends(get_current_active_user),
 ) -> Utilisateur:
-    """Exige le rôle CX Manager, Agency Manager ou Admin."""
-    if current_user.role not in (UserRole.CX_MANAGER, UserRole.AGENCY_MANAGER, UserRole.ADMIN):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Accès refusé.",
-        )
+    """
+    Exige le rôle CX Manager ou Agency Manager. Exclut STRICTEMENT l'Administrateur
+    (403) : principe RBAC fondateur, l'Admin ne voit JAMAIS les données clients.
+    À utiliser sur TOUT endpoint qui lit ou modifie feedbacks, suggestions, alertes,
+    recommandations, analyses IA ou demandes de contact.
+    """
+    if current_user.role not in (UserRole.CX_MANAGER, UserRole.AGENCY_MANAGER):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=MESSAGE_ADMIN_EXCLU)
     return current_user
 
 
 def get_feedback_viewer_user(
-    current_user: Utilisateur = Depends(get_current_active_user),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ) -> Utilisateur:
-    """
-    Exige le rôle CX Manager ou Agency Manager.
-    Exclut STRICTEMENT le rôle Administrateur IKAN pour garantir la confidentialité absolue
-    des feedbacks clients individuels et des données personnelles (PII).
-    """
-    if current_user.role not in (UserRole.CX_MANAGER, UserRole.AGENCY_MANAGER):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Accès interdit: le rôle Super Admin ne peut pas accéder aux données détaillées des feedbacks clients pour préserver la confidentialité.",
-        )
+    """Alias historique de get_cx_or_agency_manager (même règle, une seule définition)."""
     return current_user
-
