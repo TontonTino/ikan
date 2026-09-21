@@ -11,13 +11,17 @@ from app.core.config import settings
 from app.core.security import (
     create_access_token,
     create_refresh_token,
+    get_password_hash,
     verify_password,
     decode_token,
 )
 from app.db.session import get_db
 from app.models.enums import UserRole
 from app.models.utilisateur import Utilisateur
-from app.schemas.auth import AgentTokenResponse, LoginRequest, TokenResponse, UserPublic
+from app.schemas.auth import (
+    AgentTokenResponse, ChangerMotDePasseRequest, LoginRequest, TokenResponse,
+    UpdateMeRequest, UserPublic,
+)
 
 router = APIRouter()
 
@@ -152,6 +156,63 @@ def refresh_token(
 def get_me(current_user: Utilisateur = Depends(get_current_active_user)):
     """Retourne le profil de l'utilisateur connecté."""
     return UserPublic.model_validate(current_user)
+
+
+@router.patch("/me", response_model=UserPublic)
+def update_me(
+    data: UpdateMeRequest,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_active_user),
+):
+    """
+    Modifie SON PROPRE nom/prénom/email — accessible à tout utilisateur authentifié
+    (CX Manager, Agency Manager, Admin). role/organisation_id/agence_id n'existent
+    pas dans UpdateMeRequest : impossibles à modifier via cet endpoint, même en
+    les ajoutant manuellement au payload (Pydantic les ignore silencieusement).
+
+    Le JWT encode l'identité par id (jamais par email, voir create_access_token) :
+    changer son email ne casse donc jamais la session en cours.
+    """
+    updates = data.model_dump(exclude_unset=True)
+
+    if updates.get("email"):
+        nouvel_email = updates["email"].strip().lower()
+        if nouvel_email != current_user.email.lower():
+            existing = db.query(Utilisateur).filter(
+                Utilisateur.email.ilike(nouvel_email),
+                Utilisateur.id != current_user.id,
+            ).first()
+            if existing:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Cet email est déjà utilisé par un autre compte.",
+                )
+        updates["email"] = nouvel_email
+
+    for field, value in updates.items():
+        setattr(current_user, field, value)
+
+    db.commit()
+    db.refresh(current_user)
+    return UserPublic.model_validate(current_user)
+
+
+@router.post("/me/mot-de-passe")
+def changer_mot_de_passe(
+    data: ChangerMotDePasseRequest,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_active_user),
+):
+    """Change son propre mot de passe — exige l'ancien mot de passe."""
+    if not verify_password(data.ancien_mot_de_passe, current_user.mot_de_passe_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ancien mot de passe incorrect.",
+        )
+
+    current_user.mot_de_passe_hash = get_password_hash(data.nouveau_mot_de_passe)
+    db.commit()
+    return {"message": "Mot de passe mis à jour."}
 
 
 @router.get("/agent-token", response_model=AgentTokenResponse)
