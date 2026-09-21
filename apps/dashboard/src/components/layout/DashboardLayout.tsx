@@ -18,7 +18,6 @@ import {
   MessageSquareIcon,
   StoreIcon,
   BellIcon,
-  LightbulbIcon,
   TrendingUpIcon,
   ChevronDownIcon,
   LandmarkIcon,
@@ -70,7 +69,8 @@ const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
         { path: '/agence', label: 'Dashboard Agence', icon: <LayoutGridIcon size={18} /> },
         { path: '/statistiques', label: 'Statistiques & Analyses', icon: <BarChartIcon size={18} /> },
         { path: '/feedbacks', label: 'Feedbacks Clients', icon: <MessageSquareIcon size={18} /> },
-        { path: '/suggestions', label: 'Boîte à Idées', icon: <LightbulbIcon size={18} /> },
+        { path: '/pilotage', label: 'Pilotage', icon: <BellIcon size={18} /> },
+        { path: '/mon-agence', label: 'Mon agence', icon: <StoreIcon size={18} /> },
       ],
     },
   ],
@@ -130,6 +130,7 @@ export default function DashboardLayout() {
     if (location.pathname.includes('/admin/permissions')) return 'Permissions';
     if (location.pathname.includes('/admin/settings')) return 'Paramètres';
     if (location.pathname.includes('/parametres')) return 'Paramètres';
+    if (location.pathname.includes('/mon-agence')) return 'Mon agence';
     if (location.pathname.includes('/admin/dashboard')) return 'Dashboard';
     if (location.pathname.includes('/siege')) return 'Vue Siège';
     if (location.pathname.includes('/agence')) return 'Dashboard Agence';

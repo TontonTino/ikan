@@ -19,6 +19,7 @@ import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminFacturationPage from './pages/admin/AdminFacturationPage';
 import StatistiquesPage from './pages/stats/StatistiquesPage';
 import ParametresPage from './pages/ParametresPage';
+import MonAgencePage from './pages/agency/MonAgencePage';
 
 import { useParams } from 'react-router-dom';
 import { getFeedbackUrl } from './config';
@@ -49,17 +50,20 @@ function IndexRedirect() {
   return <Navigate to="/siege" replace />;
 }
 
-// /alertes et /suggestions restent les pages propres de l'Agency Manager ;
-// pour le CX Manager, elles sont fusionnées dans /pilotage (onglets dédiés).
+// /alertes et /suggestions sont fusionnées dans /pilotage (onglets dédiés) pour le
+// CX Manager ET l'Agency Manager (même page, données déjà scopées par rôle côté API).
+// Les anciens liens (cloche de notifications, bannière d'alertes, favoris) redirigent.
+const ROLES_PILOTAGE = ['cx_manager', 'agency_manager'];
+
 function AlertesRoute() {
   const user = useAuthStore((s) => s.user);
-  if (user?.role === 'cx_manager') return <Navigate to="/pilotage" replace />;
+  if (user && ROLES_PILOTAGE.includes(user.role)) return <Navigate to="/pilotage" replace />;
   return <AlertesPage />;
 }
 
 function SuggestionsRoute() {
   const user = useAuthStore((s) => s.user);
-  if (user?.role === 'cx_manager') return <Navigate to="/pilotage?tab=idees" replace />;
+  if (user && ROLES_PILOTAGE.includes(user.role)) return <Navigate to="/pilotage?tab=idees" replace />;
   return <SuggestionsPage />;
 }
 
@@ -96,11 +100,13 @@ export default function App() {
 
         {/* Agency Manager & CX Manager */}
         <Route path="agence" element={<DashboardAgencePage />} />
+        {/* Agency Manager — QR code + catégories de SA agence (lecture seule) */}
+        <Route path="mon-agence" element={<MonAgencePage />} />
         <Route path="feedbacks" element={<FeedbacksPage />} />
         <Route path="suggestions" element={<SuggestionsRoute />} />
         <Route path="alertes" element={<AlertesRoute />} />
 
-        {/* CX Manager — Pilotage (Alertes + Action + Boîte à idées fusionnés) */}
+        {/* Pilotage CX Manager & Agency Manager (Alertes + Actions + Boîte à idées fusionnés) */}
         <Route path="pilotage" element={<PilotagePage />} />
 
         {/* Admin */}

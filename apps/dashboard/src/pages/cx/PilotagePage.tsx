@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Navigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { alertesApi, suggestionsApi, recommandationsApi, agencesApi } from '../../services/api';
 import type { Alerte, Suggestion, IdeaStatus, RecommandationOrg, Agence } from '../../types';
@@ -41,14 +41,12 @@ type PilotageTab = 'alertes_actions' | 'idees';
 /**
  * Page fusionnée "Pilotage" : regroupe Alertes & Actions (alertes réseau +
  * recommandations IA consolidées, déplacées depuis Statistiques & Analyses)
- * et Boîte à idées en une seule page à 2 onglets, pour le CX Manager.
+ * et Boîte à idées en une seule page à 2 onglets, pour le CX Manager (réseau)
+ * et l'Agency Manager (limité à sa seule agence — le scoping est fait par l'API).
  */
 export default function PilotagePage() {
   const currentUser = useAuthStore((s) => s.user);
-
-  if (currentUser?.role === 'agency_manager') {
-    return <Navigate to="/agence" replace />;
-  }
+  const isAgencyManager = currentUser?.role === 'agency_manager';
 
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTab = searchParams.get('tab');
@@ -88,6 +86,8 @@ export default function PilotagePage() {
   const [selectedAgenceId, setSelectedAgenceId] = useState<string | null>(null);
 
   useEffect(() => {
+    // Le filtre par agence n'a de sens que pour le CX Manager (réseau multi-agences).
+    if (isAgencyManager) return;
     agencesApi
       .list()
       .then((res) => {
@@ -233,7 +233,9 @@ export default function PilotagePage() {
               <div>
                 <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#02302D' }}>Aucune alerte critique active</div>
                 <p style={{ margin: '4px 0 0', fontSize: '0.88rem', color: '#166534' }}>
-                  Toutes les agences du réseau maintiennent un taux de satisfaction supérieur à leurs seuils d'alerte.
+                  {isAgencyManager
+                    ? "Votre agence maintient un taux de satisfaction supérieur à son seuil d'alerte."
+                    : "Toutes les agences du réseau maintiennent un taux de satisfaction supérieur à leurs seuils d'alerte."}
                 </p>
               </div>
             </div>
@@ -267,7 +269,7 @@ export default function PilotagePage() {
           )}
         </div>
 
-        {/* ── Sous-section : Actions (recommandations IA consolidées réseau) ── */}
+        {/* ── Sous-section : Actions (recommandations IA — réseau pour le CX Manager, agence pour l'Agency Manager) ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -276,7 +278,9 @@ export default function PilotagePage() {
                 Actions ({recos.length})
               </h3>
             </div>
-            <AgenceFilterSelect agences={agencesList} selectedId={selectedAgenceId} onChange={setSelectedAgenceId} />
+            {!isAgencyManager && (
+              <AgenceFilterSelect agences={agencesList} selectedId={selectedAgenceId} onChange={setSelectedAgenceId} />
+            )}
           </div>
 
           {recosLoading ? (
