@@ -1,9 +1,9 @@
 import React from 'react';
-import type { OrganisationRankDetail } from '../../types';
-import { ArrowUpRightIcon, ArrowDownRightIcon, BuildingIcon } from '../common/Icons';
+import type { OrganisationStructure } from '../../types';
+import { BuildingIcon } from '../common/Icons';
 
 interface OrganisationsStatsTableProps {
-  organisations: OrganisationRankDetail[];
+  organisations: OrganisationStructure[];
 }
 
 export default function OrganisationsStatsTable({
@@ -42,20 +42,12 @@ export default function OrganisationsStatsTable({
             <th style={{ textAlign: 'left', padding: '8px 14px', fontWeight: 700 }}>Organisation</th>
             <th style={{ textAlign: 'left', padding: '8px 14px', fontWeight: 700 }}>Secteur</th>
             <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Agences</th>
-            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Feedbacks collectés</th>
-            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Feedbacks traités</th>
-            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Taux traitement</th>
-            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Satisfaction</th>
-            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Tendance</th>
+            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Utilisateurs</th>
+            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Forfait</th>
           </tr>
         </thead>
         <tbody>
           {organisations.map((org, idx) => {
-            const satColor =
-              org.satisfaction_globale >= 80 ? '#3C7730' : org.satisfaction_globale >= 60 ? '#D97706' : '#DC2626';
-            const satBg =
-              org.satisfaction_globale >= 80 ? '#EBF6ED' : org.satisfaction_globale >= 60 ? '#FEF3C7' : '#FEE2E2';
-
             return (
               <tr
                 key={org.organisation_id}
@@ -109,61 +101,16 @@ export default function OrganisationsStatsTable({
                   {org.agences_count}
                 </td>
 
-                {/* Feedbacks collectés */}
-                <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#02302D' }}>
-                  {org.feedbacks_collectes}
+                {/* Utilisateurs actifs */}
+                <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 600, color: '#0F172A' }}>
+                  {org.utilisateurs_count}
                 </td>
 
-                {/* Feedbacks traités */}
-                <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 600, color: '#64748B' }}>
-                  {org.feedbacks_traites}
-                </td>
-
-                {/* Taux de traitement */}
-                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                  <span style={{ fontWeight: 800, color: '#02302D' }}>{org.taux_traitement}%</span>
-                </td>
-
-                {/* Satisfaction */}
-                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                  <span
-                    style={{
-                      background: satBg,
-                      color: satColor,
-                      padding: '3px 10px',
-                      borderRadius: '9999px',
-                      fontWeight: 800,
-                      fontSize: '0.80rem',
-                      display: 'inline-block',
-                    }}
-                  >
-                    {org.satisfaction_globale}%
-                  </span>
-                </td>
-
-                {/* Tendance */}
+                {/* Forfait */}
                 <td style={{ padding: '12px 14px', textAlign: 'center', borderRadius: '0 12px 12px 0' }}>
-                  {org.tendance_val ? (
-                    <div
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '2px',
-                        color: org.tendance_positive ? '#3C7730' : '#DC2626',
-                        fontWeight: 700,
-                        fontSize: '0.76rem',
-                      }}
-                    >
-                      {org.tendance_positive ? (
-                        <ArrowUpRightIcon size={12} color="#3C7730" />
-                      ) : (
-                        <ArrowDownRightIcon size={12} color="#DC2626" />
-                      )}
-                      <span>{org.tendance_val}</span>
-                    </div>
-                  ) : (
-                    <span style={{ color: '#CBD5E1' }}>—</span>
-                  )}
+                  <span style={{ background: '#EBF6ED', color: '#3C7730', padding: '3px 10px', borderRadius: '9999px', fontWeight: 800, fontSize: '0.78rem', display: 'inline-block' }}>
+                    {org.plan_nom || '—'}
+                  </span>
                 </td>
               </tr>
             );

@@ -143,7 +143,7 @@ export default function AdminOrganisationsTable({
               fontWeight: 500,
             }}
           >
-            Supervision hiérarchique : CX Managers, Agency Managers, Agences et Traitement
+            Supervision hiérarchique : CX Managers, Agency Managers, Agences et Forfaits
           </p>
         </div>
 
@@ -241,9 +241,7 @@ export default function AdminOrganisationsTable({
                 { label: 'CX Managers', align: 'center' },
                 { label: 'Agency Managers', align: 'center' },
                 { label: 'Agences', align: 'center' },
-                { label: 'Feedbacks reçus', align: 'center' },
-                { label: 'Feedbacks traités', align: 'center' },
-                { label: 'Taux de traitement', align: 'left' },
+                { label: 'Forfait', align: 'center' },
                 { label: 'Statut', align: 'center' },
                 { label: 'Actions', align: 'right' },
               ].map((col, idx) => (
@@ -268,13 +266,13 @@ export default function AdminOrganisationsTable({
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={9} style={{ padding: '40px', textAlign: 'center', color: '#64748B' }}>
+                <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#64748B' }}>
                   Chargement des données...
                 </td>
               </tr>
             ) : filteredOrganisations.length === 0 ? (
               <tr>
-                <td colSpan={9} style={{ padding: '40px', textAlign: 'center', color: '#64748B' }}>
+                <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#64748B' }}>
                   Aucune organisation trouvée.
                 </td>
               </tr>
@@ -423,56 +421,21 @@ export default function AdminOrganisationsTable({
                         </span>
                       </td>
 
-                      {/* Colonne 5 : Feedbacks reçus */}
-                      <td style={{ textAlign: 'center', padding: '16px 18px', fontWeight: 700, color: '#02302D' }}>
-                        {org.feedbacks_recus.toLocaleString('fr-FR')}
-                      </td>
-
-                      {/* Colonne 6 : Feedbacks traités */}
-                      <td style={{ textAlign: 'center', padding: '16px 18px', fontWeight: 700, color: '#3C7730' }}>
-                        {org.feedbacks_traites.toLocaleString('fr-FR')}
-                      </td>
-
-                      {/* Colonne 7 : Taux de traitement (Jauge visuelle) */}
-                      <td style={{ padding: '16px 18px', minWidth: '150px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div
-                            style={{
-                              flex: 1,
-                              height: '7px',
-                              background: '#EDF2EC',
-                              borderRadius: '9999px',
-                              overflow: 'hidden',
-                              position: 'relative',
-                            }}
-                          >
-                            <div
-                              style={{
-                                width: `${Math.min(100, Math.max(0, org.taux_traitement))}%`,
-                                height: '100%',
-                                background:
-                                  org.taux_traitement >= 80
-                                    ? 'linear-gradient(90deg, #75B72A 0%, #3C7730 100%)'
-                                    : org.taux_traitement >= 50
-                                      ? 'linear-gradient(90deg, #F59E0B 0%, #D97706 100%)'
-                                      : 'linear-gradient(90deg, #EF4444 0%, #DC2626 100%)',
-                                borderRadius: '9999px',
-                                transition: 'width 0.3s ease',
-                              }}
-                            />
-                          </div>
-                          <span
-                            style={{
-                              fontSize: '0.82rem',
-                              fontWeight: 800,
-                              color: '#02302D',
-                              minWidth: '42px',
-                              textAlign: 'right',
-                            }}
-                          >
-                            {org.taux_traitement}%
-                          </span>
-                        </div>
+                      {/* Colonne 5 : Forfait */}
+                      <td style={{ textAlign: 'center', padding: '16px 18px' }}>
+                        <span
+                          style={{
+                            background: '#EBF5E9',
+                            color: '#3C7730',
+                            padding: '3px 10px',
+                            borderRadius: '9999px',
+                            fontSize: '0.76rem',
+                            fontWeight: 800,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {org.plan_nom || '—'}
+                        </span>
                       </td>
 
                       {/* Colonne 8 : Statut */}
@@ -619,7 +582,7 @@ export default function AdminOrganisationsTable({
                                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                               >
                                 <BarChartIcon size={14} color="#3C7730" />
-                                <span>Voir statistiques</span>
+                                <span>Voir le détail</span>
                               </button>
 
                               <div style={{ height: '1px', background: '#F1F5F2', margin: '4px 0' }} />
@@ -660,7 +623,7 @@ export default function AdminOrganisationsTable({
                     {/* ── Zone Expandable : Détail & Hiérarchie de l'organisation ── */}
                     {isExpanded && (
                       <tr style={{ background: '#F8FBF9', borderBottom: '1px solid #E8ECE6' }}>
-                        <td colSpan={9} style={{ padding: '0 24px 24px 24px' }}>
+                        <td colSpan={7} style={{ padding: '0 24px 24px 24px' }}>
                           <div
                             style={{
                               background: '#FFFFFF',
@@ -793,8 +756,6 @@ export default function AdminOrganisationsTable({
                                         <th style={{ textAlign: 'left', padding: '10px 14px', color: '#475569', fontWeight: 700 }}>Email</th>
                                         <th style={{ textAlign: 'left', padding: '10px 14px', color: '#475569', fontWeight: 700 }}>Rôle</th>
                                         <th style={{ textAlign: 'left', padding: '10px 14px', color: '#475569', fontWeight: 700 }}>Agences</th>
-                                        <th style={{ textAlign: 'center', padding: '10px 14px', color: '#475569', fontWeight: 700 }}>Feedbacks reçus</th>
-                                        <th style={{ textAlign: 'center', padding: '10px 14px', color: '#475569', fontWeight: 700 }}>Feedbacks traités</th>
                                         <th style={{ textAlign: 'center', padding: '10px 14px', color: '#475569', fontWeight: 700 }}>Statut</th>
                                         <th style={{ textAlign: 'right', padding: '10px 14px', color: '#475569', fontWeight: 700, borderRadius: '0 8px 8px 0' }}>Dernière activité</th>
                                       </tr>
@@ -827,12 +788,6 @@ export default function AdminOrganisationsTable({
                                             </td>
                                             <td style={{ padding: '10px 14px', color: '#475569', fontWeight: 600 }}>
                                               {isCX ? `${u.agences_count} agences` : u.agence_nom || '—'}
-                                            </td>
-                                            <td style={{ textAlign: 'center', padding: '10px 14px', fontWeight: 700, color: '#02302D' }}>
-                                              {u.feedbacks_recus}
-                                            </td>
-                                            <td style={{ textAlign: 'center', padding: '10px 14px', fontWeight: 700, color: '#3C7730' }}>
-                                              {u.feedbacks_traites}
                                             </td>
                                             <td style={{ textAlign: 'center', padding: '10px 14px' }}>
                                               <span

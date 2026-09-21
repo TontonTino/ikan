@@ -65,8 +65,8 @@ export const statisticsApi = {
     api.get<import('../types').StatsCXResponse>('/dashboard/statistics/cx', { params }),
   agency: (params?: { jours?: number }) =>
     api.get<import('../types').StatsAgenceResponse>('/dashboard/statistics/agency', { params }),
-  admin: (params?: { jours?: number }) =>
-    api.get<import('../types').StatsAdminResponse>('/dashboard/statistics/admin', { params }),
+  admin: () =>
+    api.get<import('../types').StatsAdminResponse>('/dashboard/statistics/admin'),
 };
 
 // ── Feedbacks ─────────────────────────────────────────

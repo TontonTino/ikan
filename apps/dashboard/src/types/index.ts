@@ -230,12 +230,6 @@ export interface Alerte {
   message: string;
 }
 
-export interface ActivityPoint {
-  date: string;
-  feedbacks: number;
-  users: number;
-}
-
 export interface AdminUserItem {
   id: string;
   nom: string;
@@ -244,8 +238,6 @@ export interface AdminUserItem {
   role: string;
   agence_nom?: string | null;
   agences_count: number;
-  feedbacks_recus: number;
-  feedbacks_traites: number;
   active: boolean;
   derniere_connexion?: string | null;
 }
@@ -257,9 +249,6 @@ export interface AdminAgenceItem {
   adresse?: string | null;
   active: boolean;
   seuil_alerte: number;
-  feedbacks_recus: number;
-  feedbacks_traites: number;
-  taux_satisfaction: number;
 }
 
 export interface AdminOrganisationHierarchy {
@@ -274,37 +263,28 @@ export interface AdminOrganisationHierarchy {
   cx_managers_count: number;
   agency_managers_count: number;
   agences_count: number;
-  feedbacks_recus: number;
-  feedbacks_traites: number;
-  taux_traitement: number;
+  plan_code?: string | null;
+  plan_nom?: string | null;
   cx_managers: AdminUserItem[];
   agency_managers: AdminUserItem[];
   agences: AdminAgenceItem[];
   users: AdminUserItem[];
 }
 
+export interface RepartitionForfaitItem {
+  code: string;
+  nom: string;
+  nombre: number;
+}
+
+/** Vue STRICTEMENT structurelle : aucune donnée dérivée des feedbacks. */
 export interface DashboardAdminStats {
-  total_feedbacks: number;
-  processed_feedbacks: number;
-  feedbacks_trend: string | null;
-  feedbacks_trend_positive: boolean;
-  processed_trend: string | null;
-  processed_trend_positive: boolean;
-  satisfaction_globale: string;
-  satisfaction_trend: string | null;
-  satisfaction_trend_positive: boolean;
   total_organisations: number;
-  organisations_trend: string | null;
-  organisations_trend_positive: boolean;
+  total_agences: number;
   total_cx_managers: number;
-  cx_managers_trend: string | null;
-  cx_managers_trend_positive: boolean;
-  total_alertes: number;
-  alertes_trend: string | null;
-  alertes_trend_positive: boolean;
-  activity_7d: ActivityPoint[];
-  activity_30d: ActivityPoint[];
-  activity_90d: ActivityPoint[];
+  total_agency_managers: number;
+  total_utilisateurs_actifs: number;
+  repartition_forfaits: RepartitionForfaitItem[];
   organisations_overview: AdminOrganisationHierarchy[];
 }
 
@@ -376,19 +356,15 @@ export interface InsightIADetail {
   date?: string | null;
 }
 
-export interface OrganisationRankDetail {
+export interface OrganisationStructure {
   organisation_id: string;
   nom: string;
   logo?: string | null;
   secteur?: string | null;
   agences_count: number;
-  feedbacks_collectes: number;
-  feedbacks_traites: number;
-  taux_traitement: number;
-  satisfaction_globale: number;
-  alertes_critiques: number;
-  tendance_val?: string | null;
-  tendance_positive: boolean;
+  utilisateurs_count: number;
+  plan_code?: string | null;
+  plan_nom?: string | null;
 }
 
 export interface StatsCXResponse {
@@ -424,15 +400,15 @@ export interface StatsAgenceResponse {
   insights_ia: InsightIADetail[];
 }
 
+export interface CompteurStructurel {
+  valeur: number;
+  sous_titre?: string | null;
+}
+
 export interface StatsAdminResponse {
-  periode_jours: number;
-  periode_label: string;
-  kpis: Record<string, StatKPI>;
-  evolution_volume: EvolutionPoint[];
-  evolution_traitement: EvolutionPoint[];
-  organisations_ranking: OrganisationRankDetail[];
-  activite_plateforme: Record<string, any>;
-  utilisation_ia: Record<string, any>;
+  kpis: Record<string, CompteurStructurel>;
+  repartition_forfaits: RepartitionForfaitItem[];
+  organisations: OrganisationStructure[];
 }
 
 
