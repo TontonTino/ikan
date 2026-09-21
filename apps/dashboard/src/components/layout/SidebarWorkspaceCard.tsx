@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import type { User } from '../../types';
-import { ChevronDownIcon } from '../common/Icons';
 
 interface SidebarWorkspaceCardProps {
   user: User | null;
@@ -134,30 +133,27 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
   const palette = getPalette(orgName);
   const initial = orgName.trim().charAt(0).toUpperCase() || 'O';
 
+  // Carte purement informative : aucun comportement de bouton, texte toujours affiché en entier.
   return (
     <div
       style={{
         background: '#FFFFFF',
-        border: '1px solid #E5E7EB',
+        border: '1px solid #EEF0F2',
         borderRadius: '16px',
-        padding: '10px 12px',
+        padding: '12px',
         display: 'flex',
         alignItems: 'center',
-        gap: '10px',
+        gap: '12px',
         marginBottom: '24px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-        cursor: 'pointer',
-        transition: 'border-color 0.15s ease',
+        cursor: 'default',
+        userSelect: 'none',
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#D1D5DB')}
-      onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#E5E7EB')}
-      title={`${orgName} — ${spaceSub}`}
     >
       {/* Logo ou Avatar */}
       <div
         style={{
-          width: '48px',
-          height: '48px',
+          width: '44px',
+          height: '44px',
           borderRadius: '12px',
           background: isAdmin ? 'transparent' : (orgLogo ? '#FFFFFF' : palette.bg),
           border: isAdmin ? 'none' : `1px solid ${orgLogo ? '#E5E7EB' : palette.border}`,
@@ -165,7 +161,7 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '0.88rem',
+          fontSize: '0.95rem',
           fontWeight: 800,
           flexShrink: 0,
           overflow: 'hidden',
@@ -178,56 +174,43 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
         ) : orgLogo ? (
           <img
             src={orgLogo}
-            alt={orgName}
+            alt=""
             onError={() => setImgError(true)}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-              display: 'block',
-            }}
+            style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
           />
         ) : (
           initial
         )}
       </div>
 
-      {/* Titre & Sous-titre */}
+      {/* Titre & Sous-titre : retour à la ligne libre, la carte grandit en hauteur */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
             fontSize: '0.88rem',
             color: '#111827',
             fontWeight: 700,
-            lineHeight: 1.25,
-            overflow: 'hidden',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflowWrap: 'anywhere',
+            lineHeight: 1.3,
+            whiteSpace: 'normal',
+            overflowWrap: 'break-word',
           }}
         >
           {orgName}
         </div>
         <div
           style={{
-            fontSize: '0.72rem',
+            fontSize: '0.74rem',
             color: '#64748B',
             fontWeight: 500,
-            lineHeight: 1.25,
+            lineHeight: 1.3,
             marginTop: '2px',
-            overflow: 'hidden',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflowWrap: 'anywhere',
+            whiteSpace: 'normal',
+            overflowWrap: 'break-word',
           }}
         >
           {spaceSub}
         </div>
       </div>
-
-      <ChevronDownIcon size={16} color="#9CA3AF" style={{ flexShrink: 0 }} />
     </div>
   );
 }
