@@ -124,6 +124,18 @@ export const organisationsApi = {
     api.get<import('../types').UtilisationOrganisation>('/organisations/moi/utilisation'),
   upgradeCheckout: (planCode: 'starter' | 'pro') =>
     api.post<{ checkout_url: string }>('/organisations/moi/upgrade-checkout', { plan_code: planCode }),
+  changerPlan: (id: string, planId: string, raison: string) =>
+    api.patch(`/organisations/${id}/plan`, { plan_id: planId, raison }),
+};
+
+// ── Admin — Supervision facturation ────────────────────
+export const adminFacturationApi = {
+  vueEnsemble: () =>
+    api.get<import('../types').VueEnsembleFacturation>('/admin/facturation/vue-ensemble'),
+  paiementsEchoues: () =>
+    api.get<import('../types').OrganisationPaiementEchoue[]>('/admin/facturation/paiements-echoues'),
+  historique: (organisationId: string) =>
+    api.get<import('../types').ChangementPlanHistoriqueItem[]>(`/admin/facturation/historique/${organisationId}`),
 };
 
 // ── Agences ───────────────────────────────────────────

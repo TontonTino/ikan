@@ -32,6 +32,7 @@ export interface Organisation {
   active: boolean;
   created_at: string;
   date_creation?: string;
+  plan?: { code: string; nom: string } | null;
 }
 
 export interface Agence {
@@ -456,4 +457,42 @@ export interface UtilisationOrganisation {
   agences: QuotaUtilisation;
   feedbacks_ce_mois: QuotaUtilisation;
   fonctionnalites: FonctionnaliteStatut[];
+}
+
+// ── Supervision Admin de la facturation ───────────────────────────────
+export interface RepartitionForfait {
+  id: string;
+  code: string;
+  nom: string;
+  nombre: number;
+}
+
+export interface VueEnsembleFacturation {
+  repartition: RepartitionForfait[];
+  nb_conversions_30j: number;
+  nb_base_calcul_30j: number;
+  /** null si nb_base_calcul_30j == 0 (rien a mesurer sur la fenetre) */
+  taux_conversion_30j: number | null;
+}
+
+export interface OrganisationPaiementEchoue {
+  organisation_id: string;
+  organisation_nom: string;
+  plan_code: string;
+  plan_nom: string;
+  payment_failed_at: string;
+  /** peut etre negatif si le job de degradation n'est pas encore passe */
+  jours_restants_avant_degradation: number;
+}
+
+export interface ChangementPlanHistoriqueItem {
+  id: string;
+  ancien_plan_code: string | null;
+  ancien_plan_nom: string | null;
+  nouveau_plan_code: string;
+  nouveau_plan_nom: string;
+  raison: string | null;
+  source: 'stripe' | 'admin_override' | 'auto_downgrade';
+  modifie_par_nom: string | null;
+  created_at: string;
 }

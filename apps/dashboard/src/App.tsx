@@ -16,6 +16,7 @@ import GestionAgencesPage from './pages/admin/GestionAgencesPage';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 import AdminPermissionsPage from './pages/admin/AdminPermissionsPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import AdminFacturationPage from './pages/admin/AdminFacturationPage';
 import StatistiquesPage from './pages/stats/StatistiquesPage';
 
 import { useParams } from 'react-router-dom';
@@ -102,6 +103,7 @@ export default function App() {
         <Route path="admin/dashboard" element={<AdminDashboardPage />} />
         <Route path="admin/statistiques" element={<StatistiquesPage />} />
         <Route path="admin/organisations" element={<AdminOrgsPage />} />
+        <Route path="admin/facturation" element={<AdminFacturationPage />} />
         <Route path="admin/gestion-agences" element={<GestionAgencesPage />} />
         {/* Anciennes routes conservées en redirection pour ne pas casser les liens/favoris existants */}
         <Route path="admin/agences" element={<Navigate to="/admin/gestion-agences" replace />} />

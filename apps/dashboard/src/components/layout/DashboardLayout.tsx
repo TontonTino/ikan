@@ -21,6 +21,7 @@ import {
   LightbulbIcon,
   TrendingUpIcon,
   ChevronDownIcon,
+  LandmarkIcon,
 } from '../common/Icons';
 
 interface NavItem {
@@ -44,6 +45,7 @@ const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
         { path: '/admin/dashboard', label: 'Dashboard', icon: <LayoutGridIcon size={18} /> },
         { path: '/admin/statistiques', label: 'Statistiques Plateforme', icon: <BarChartIcon size={18} /> },
         { path: '/admin/organisations', label: 'Organisations', icon: <BuildingIcon size={18} /> },
+        { path: '/admin/facturation', label: 'Facturation', icon: <LandmarkIcon size={18} /> },
         { path: '/admin/gestion-agences', label: 'Gestion des agences', icon: <UsersIcon size={18} /> },
         { path: '/admin/settings', label: 'Paramètres', icon: <SettingsIcon size={18} /> },
       ],
@@ -123,6 +125,7 @@ export default function DashboardLayout() {
   const getBreadcrumb = () => {
     if (location.pathname.includes('/statistiques')) return user?.role === 'admin' ? 'Statistiques de la plateforme' : 'Statistiques & Analyses';
     if (location.pathname.includes('/admin/organisations')) return 'Organisations';
+    if (location.pathname.includes('/admin/facturation')) return 'Facturation';
     if (location.pathname.includes('/admin/gestion-agences')) return 'Gestion des agences';
     if (location.pathname.includes('/admin/permissions')) return 'Permissions';
     if (location.pathname.includes('/admin/settings')) return 'Paramètres';
