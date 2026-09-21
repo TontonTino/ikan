@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
+from app.services.acces_agence import verifier_acces_agence
 from app.api.deps import (
     get_admin_user,
     get_current_active_user,
@@ -62,7 +63,8 @@ def dashboard_agence(
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
     jours: int = Query(30, ge=1, le=365),
 ):
-    """Dashboard complet pour un Agency Manager ou CX Manager."""
+    """Dashboard complet pour un Agency Manager (sa seule agence) ou un CX Manager (agences de son organisation)."""
+    verifier_acces_agence(db, current_user, agence_id)
     agence = db.query(Agence).filter(Agence.id == agence_id).first()
     date_debut = datetime.now(timezone.utc) - timedelta(days=jours)
 

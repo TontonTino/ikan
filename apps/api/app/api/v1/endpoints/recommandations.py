@@ -10,10 +10,11 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from datetime import datetime
 
-from app.api.deps import get_cx_or_agency_manager, get_cx_or_admin, get_db
+from app.api.deps import get_cx_or_agency_manager, get_db
 from app.models.utilisateur import Utilisateur
 from app.models.recommandation import Recommandation
-from app.models.enums import PriorityLevel
+from app.models.enums import PriorityLevel, UserRole
+from app.services.acces_agence import verifier_acces_agence
 
 router = APIRouter()
 
@@ -50,6 +51,8 @@ def list_recommandations_agence(
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ):
     """Liste les recommandations non traitées pour une agence (CX Manager / Agency Manager)."""
+    verifier_acces_agence(db, current_user, agence_id)
+
     from app.models.analyse_ia import AnalyseIA
     from app.models.feedback import Feedback
     from app.models.qr_code import QRCode
@@ -74,11 +77,12 @@ def list_recommandations_organisation(
         None, description="Filtre par statut : true=traitées, false ou absent=non traitées (défaut)"
     ),
     db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(get_cx_or_admin),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ):
     """
     Vue consolidée des recommandations IA de toutes les agences de l'organisation
-    du CX Manager connecté (aide à la décision stratégique réseau).
+    du CX Manager connecté (aide à la décision stratégique réseau). Pour un Agency
+    Manager, la même vue est restreinte à SA seule agence.
     Triée par criticité décroissante puis par date la plus récente.
     Par défaut, ne montre que les recommandations non traitées.
     """
@@ -97,6 +101,8 @@ def list_recommandations_organisation(
     )
     if current_user.organisation_id:
         query = query.filter(Agence.organisation_id == current_user.organisation_id)
+    if current_user.role == UserRole.AGENCY_MANAGER:
+        query = query.filter(Agence.id == current_user.agence_id)
 
     query = query.filter(Recommandation.traitee == (traitee if traitee is not None else False))
 
@@ -124,9 +130,23 @@ def marquer_traitee(
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ):
+    from app.models.analyse_ia import AnalyseIA
+    from app.models.feedback import Feedback
+    from app.models.qr_code import QRCode
+
     reco = db.query(Recommandation).filter(Recommandation.id == recommandation_id).first()
     if not reco:
         raise HTTPException(status_code=404, detail="Recommandation introuvable")
+
+    agence_id = (
+        db.query(QRCode.agence_id)
+        .join(Feedback, Feedback.qr_code_id == QRCode.id)
+        .join(AnalyseIA, AnalyseIA.feedback_id == Feedback.id)
+        .filter(AnalyseIA.id == reco.analyse_ia_id)
+        .scalar()
+    )
+    verifier_acces_agence(db, current_user, agence_id)
+
     reco.traitee = True
     db.commit()
     return {"message": "Recommandation marquée comme traitée"}

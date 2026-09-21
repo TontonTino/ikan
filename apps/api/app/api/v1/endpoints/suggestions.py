@@ -13,6 +13,20 @@ from app.models.utilisateur import Utilisateur
 from app.models.suggestion import Suggestion, HistoriqueSuggestion
 from app.models.enums import UserRole, IdeaStatus
 from app.schemas.suggestion import SuggestionResponse, SuggestionStatusUpdate
+from app.services.acces_agence import verifier_acces_agence
+
+
+def _agence_de_la_suggestion(db: Session, suggestion: Suggestion):
+    """Agence d'origine d'une suggestion (suggestion -> feedback -> QR code -> agence)."""
+    from app.models.feedback import Feedback
+    from app.models.qr_code import QRCode
+
+    return (
+        db.query(QRCode.agence_id)
+        .join(Feedback, Feedback.qr_code_id == QRCode.id)
+        .filter(Feedback.id == suggestion.feedback_id)
+        .scalar()
+    )
 
 router = APIRouter()
 
@@ -59,6 +73,7 @@ def get_suggestion(
     suggestion = db.query(Suggestion).filter(Suggestion.id == suggestion_id).first()
     if not suggestion:
         raise HTTPException(status_code=404, detail="Suggestion introuvable")
+    verifier_acces_agence(db, current_user, _agence_de_la_suggestion(db, suggestion))
     return suggestion
 
 
@@ -75,6 +90,7 @@ def update_suggestion_statut(
     suggestion = db.query(Suggestion).filter(Suggestion.id == suggestion_id).first()
     if not suggestion:
         raise HTTPException(status_code=404, detail="Suggestion introuvable")
+    verifier_acces_agence(db, current_user, _agence_de_la_suggestion(db, suggestion))
 
     ancien_statut = suggestion.statut
 

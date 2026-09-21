@@ -204,19 +204,29 @@ def list_categories(
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_current_active_user),
 ):
-    """Liste les catégories d'une agence — réservé au CX Manager propriétaire."""
+    """
+    Liste les catégories d'une agence.
+    - CX Manager propriétaire : toutes (actives et désactivées), pour la gestion.
+    - Agency Manager : LECTURE SEULE, uniquement les catégories ACTIVES de SA propre
+      agence (les créations/modifications/désactivations restent exclusivement CX Manager).
+    """
     agence = db.query(Agence).filter(Agence.id == agence_id).first()
     if not agence:
         raise HTTPException(status_code=404, detail="Agence introuvable")
 
-    _check_cx_owns_agence(agence, current_user)
+    requete = db.query(Categorie).filter(Categorie.agence_id == agence_id)
 
-    return (
-        db.query(Categorie)
-        .filter(Categorie.agence_id == agence_id)
-        .order_by(Categorie.created_at.asc())
-        .all()
-    )
+    if current_user.role == UserRole.AGENCY_MANAGER:
+        if agence.id != current_user.agence_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Accès refusé : vous ne pouvez consulter que les catégories de votre agence.",
+            )
+        requete = requete.filter(Categorie.active == True)  # noqa: E712
+    else:
+        _check_cx_owns_agence(agence, current_user)
+
+    return requete.order_by(Categorie.created_at.asc()).all()
 
 
 @router.post("/{agence_id}/categories", response_model=CategorieResponse, status_code=status.HTTP_201_CREATED)
