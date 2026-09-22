@@ -121,7 +121,7 @@ export default function MonAgencePage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '760px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
       <PageHeader
         title="Mon agence"
         subtitle={`${agence.nom}${agence.ville ? ` — ${agence.ville}` : ''} : QR code de collecte et catégories du formulaire.`}
@@ -134,60 +134,72 @@ export default function MonAgencePage() {
         </div>
       )}
 
-      {/* ── QR code ── */}
-      <div style={cardStyle}>
-        <h3 style={{ margin: '0 0 4px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D' }}>QR code de l'agence</h3>
-        <p style={{ margin: '0 0 18px', fontSize: '0.82rem', color: '#64748B' }}>
-          Vos clients le scannent pour laisser leur avis. Lecture seule : il est géré par votre CX Manager.
-        </p>
-        <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <img
-            src={qrImageUrl(lien, 220)}
-            alt={`QR code de ${agence.nom}`}
-            width={180}
-            height={180}
-            style={{ borderRadius: '12px', border: '1px solid #E8ECE6', padding: '8px', background: '#FFFFFF' }}
-          />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: '0.78rem', color: '#64748B', wordBreak: 'break-all' }}>{lien}</div>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              <button type="button" onClick={copierLien} style={boutonStyle}>
-                <CopyIcon size={16} /> Copier le lien
-              </button>
-              <button type="button" onClick={telechargerImage} style={boutonStyle}>
-                <DownloadIcon size={16} /> Télécharger l'image
-              </button>
+      {/* ── QR code + Catégories actives, côte à côte pour tenir sur une page ── */}
+      <div className="mon-agence-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(340px, 1fr) minmax(320px, 1fr)', gap: '18px', alignItems: 'start' }}>
+        {/* QR code */}
+        <div style={cardStyle}>
+          <h3 style={{ margin: '0 0 4px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D' }}>QR code de l'agence</h3>
+          <p style={{ margin: '0 0 16px', fontSize: '0.82rem', color: '#64748B' }}>
+            Vos clients le scannent pour laisser leur avis. Lecture seule : il est géré par votre CX Manager.
+          </p>
+          <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <img
+              src={qrImageUrl(lien, 220)}
+              alt={`QR code de ${agence.nom}`}
+              width={150}
+              height={150}
+              style={{ borderRadius: '12px', border: '1px solid #E8ECE6', padding: '8px', background: '#FFFFFF', flexShrink: 0 }}
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: '0.78rem', color: '#64748B', wordBreak: 'break-all' }}>{lien}</div>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button type="button" onClick={copierLien} style={boutonStyle}>
+                  <CopyIcon size={16} /> Copier le lien
+                </button>
+                <button type="button" onClick={telechargerImage} style={boutonStyle}>
+                  <DownloadIcon size={16} /> Télécharger l'image
+                </button>
+              </div>
             </div>
           </div>
         </div>
+
+        {/* Catégories actives (lecture seule) */}
+        <div style={cardStyle}>
+          <h3 style={{ margin: '0 0 4px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <TagIcon size={18} color="#3C7730" />
+            Catégories actives ({categories.length})
+          </h3>
+          <p style={{ margin: '0 0 14px', fontSize: '0.82rem', color: '#64748B' }}>
+            Les thèmes proposés à vos clients dans le formulaire. Lecture seule : gérées par votre CX Manager.
+          </p>
+          {categories.length === 0 ? (
+            <div style={{ color: '#64748B', fontSize: '0.86rem', fontWeight: 600 }}>
+              Aucune catégorie personnalisée : le formulaire utilise la catégorie « Général » par défaut.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {categories.map((c) => (
+                <span
+                  key={c.id}
+                  style={{ background: '#EAF5EC', color: '#3C7730', border: '1px solid #CFE3D3', borderRadius: '9999px', padding: '5px 14px', fontSize: '0.82rem', fontWeight: 700 }}
+                >
+                  {c.nom}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* ── Catégories actives (lecture seule) ── */}
-      <div style={cardStyle}>
-        <h3 style={{ margin: '0 0 4px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <TagIcon size={18} color="#3C7730" />
-          Catégories actives ({categories.length})
-        </h3>
-        <p style={{ margin: '0 0 16px', fontSize: '0.82rem', color: '#64748B' }}>
-          Les thèmes proposés à vos clients dans le formulaire. Lecture seule : gérées par votre CX Manager.
-        </p>
-        {categories.length === 0 ? (
-          <div style={{ color: '#64748B', fontSize: '0.86rem', fontWeight: 600 }}>
-            Aucune catégorie personnalisée : le formulaire utilise la catégorie « Général » par défaut.
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {categories.map((c) => (
-              <span
-                key={c.id}
-                style={{ background: '#EAF5EC', color: '#3C7730', border: '1px solid #CFE3D3', borderRadius: '9999px', padding: '5px 14px', fontSize: '0.82rem', fontWeight: 700 }}
-              >
-                {c.nom}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* En dessous de 900px, les deux blocs reprennent l'empilement vertical */}
+      <style>{`
+        @media (max-width: 900px) {
+          .mon-agence-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -143,12 +143,14 @@ export default function DashboardLayout() {
 
   // Pages dont la bannière d'en-tête (et donc le fil d'Ariane) a été retirée :
   // Feedbacks, Pilotage et Gestion des agences (tous rôles), Statistiques
-  // uniquement pour le CX Manager (les vues Admin/Agence gardent leur bannière).
+  // uniquement pour le CX Manager (les vues Admin/Agence gardent leur bannière),
+  // et l'ensemble des pages de l'Agency Manager (fil d'Ariane jugé superflu pour ce rôle).
   const hideBreadcrumb =
     location.pathname.includes('/feedbacks') ||
     location.pathname.includes('/pilotage') ||
     location.pathname.includes('/admin/gestion-agences') ||
-    (location.pathname.includes('/statistiques') && user?.role === 'cx_manager');
+    (location.pathname.includes('/statistiques') && user?.role === 'cx_manager') ||
+    user?.role === 'agency_manager';
 
 
   const roleLabel =

@@ -32,24 +32,6 @@ const THEME_COLORS = [
   '#10B981', '#6366F1', '#D97706', '#14B8A6', '#64748B',
 ];
 
-const THEME_LABELS: Record<string, string> = {
-  attente: 'Attente & Délais',
-  accueil: 'Accueil & Conseillers',
-  disponibilite_accessibilite: 'Accessibilité & Horaires',
-  tarifs: 'Tarifs & Frais',
-  qualite_produit: 'Qualité Produit & Forfaits',
-  proprete_cadre: 'Propreté & Cadre',
-  application_mobile: 'Application Mobile',
-  reseau: 'Réseau & Connexion',
-  facturation: 'Facturation & Prélèvements',
-  communication_information: 'Communication & Info',
-  livraison_logistique: 'Livraison & Suivi',
-  resolution_probleme: 'SAV & Résolution',
-  securite_confidentialite: 'Sécurité & Confidentialité',
-  disponibilite_produit: 'Disponibilité Stocks/Cartes',
-  personnalisation_besoin: 'Écoute & Personnalisation',
-};
-
 export default function DashboardAgencePage() {
   const user = useAuthStore((s) => s.user);
   const [data, setData] = useState<DashboardAgence | null>(null);
@@ -178,59 +160,65 @@ export default function DashboardAgencePage() {
       {/* ── 2. Alertes Agence Éphémères (Nouvelles alertes non vues — 15s) ── */}
       <EphemeralAlertsBanner alerts={alertes} userId={user?.id} />
 
-      {/* ── 2. Grille des 5 KPIs Agence (Style KpiCard) ── */}
+      {/* ── 2. Grille des 5 KPIs Agence — même gabarit compact que les vues Statistiques ── */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '20px',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '16px',
         }}
       >
         <KpiCard
-          icon={<MessageSquareIcon size={22} />}
+          icon={<MessageSquareIcon size={20} />}
           label="Feedbacks reçus"
           value={data.nombre_feedbacks}
           trend={{ value: '+14%', isPositive: true }}
           sparklineType="up"
           subtitle={data.periode}
+          compact
         />
 
         <KpiCard
-          icon={<TrendingUpIcon size={22} />}
+          icon={<TrendingUpIcon size={20} />}
           label="Taux de satisfaction"
           value={`${data.taux_satisfaction}%`}
           trend={{ value: data.taux_satisfaction >= 80 ? 'Excellent' : 'À surveiller', isPositive: data.taux_satisfaction >= 70 }}
           sparklineType={data.taux_satisfaction >= 70 ? 'up' : 'down'}
           badgeColor={data.taux_satisfaction < 70 ? 'red' : 'green'}
           subtitle="Score moyen de l'agence"
+          compact
         />
 
         <KpiCard
-          icon={<AlertTriangleIcon size={22} />}
+          icon={<AlertTriangleIcon size={20} />}
           label="Avis négatifs"
           value={data.nombre_negatifs}
           trend={{ value: data.nombre_negatifs > 0 ? 'À traiter' : 'Parfait', isPositive: data.nombre_negatifs === 0 }}
           badgeColor={data.nombre_negatifs > 0 ? 'red' : 'green'}
           sparklineType={data.nombre_negatifs > 0 ? 'down' : 'up'}
           subtitle="Sentiment négatif détecté"
+          compact
         />
 
         <KpiCard
-          icon={<CheckCircleIcon size={22} />}
+          icon={<CheckCircleIcon size={20} />}
           label="Discordances"
           value={data.discordances}
-          trend={{ value: 'Alerte IA', isPositive: true }}
-          sparklineType="neutral"
+          trend={{ value: data.discordances > 0 ? 'À vérifier' : 'Aucune', isPositive: data.discordances === 0 }}
+          badgeColor={data.discordances > 0 ? 'red' : 'green'}
+          sparklineType={data.discordances > 0 ? 'down' : 'neutral'}
           subtitle="Ressenti Positif / Commentaire critique"
+          compact
         />
 
         <KpiCard
-          icon={<LightbulbIcon size={22} />}
+          icon={<LightbulbIcon size={20} />}
           label="Idées clients"
           value={data.nombre_suggestions}
           trend={{ value: 'Boîte à idées', isPositive: true }}
           sparklineType="up"
           subtitle="Suggestions soumises"
+          compact
         />
       </div>
 
@@ -308,26 +296,55 @@ export default function DashboardAgencePage() {
             Répartition des Thèmes
           </h3>
           {data.themes.length > 0 ? (
-            <div style={{ width: '100%', height: 230 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={data.themes}
-                    dataKey="count"
-                    nameKey="theme"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={45}
-                    outerRadius={75}
-                    paddingAngle={3}
+            <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+              {/* Donut */}
+              <div style={{ flex: '0 0 auto', width: '160px', height: '160px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={data.themes}
+                      dataKey="count"
+                      nameKey="theme"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={42}
+                      outerRadius={70}
+                      paddingAngle={3}
+                    >
+                      {data.themes.map((_, i) => (
+                        <Cell key={i} fill={THEME_COLORS[i % THEME_COLORS.length]} stroke="#FFFFFF" strokeWidth={2} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v: number, name: string) => [`${v} avis`, name]} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Légende : pastille + catégorie (choisie par le client) + pourcentage */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, minWidth: '140px', maxHeight: '210px', overflowY: 'auto' }}>
+                {data.themes.map((t, i) => (
+                  <div
+                    key={t.theme}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', padding: '5px 10px', background: '#F8FAFC', borderRadius: '9px' }}
                   >
-                    {data.themes.map((_, i) => (
-                      <Cell key={i} fill={THEME_COLORS[i % THEME_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(v: number, name: string) => [`${v} avis`, THEME_LABELS[name] || name]} />
-                </PieChart>
-              </ResponsiveContainer>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                      <span
+                        style={{
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          background: THEME_COLORS[i % THEME_COLORS.length],
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {t.theme}
+                      </span>
+                    </div>
+                    <strong style={{ fontSize: '0.8rem', color: '#02302D', flexShrink: 0 }}>{t.pourcentage}%</strong>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <div style={{ textAlign: 'center', color: '#64748B', paddingTop: '60px', fontSize: '0.88rem' }}>
