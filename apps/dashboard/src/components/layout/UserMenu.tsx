@@ -342,7 +342,7 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
 
           <Separator />
 
-          <a role="menuitem" href={mailtoAide} style={itemStyle}>
+          <a role="menuitem" href={mailtoAide} style={itemStyle} onClick={() => setOpen(false)}>
             Obtenir de l'aide
           </a>
 
