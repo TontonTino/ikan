@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCwIcon, AlertTriangleIcon, SparklesIcon } from '../common/Icons';
+import { RefreshCwIcon, AlertTriangleIcon, BarChartIcon } from '../common/Icons';
 
 export function StatsLoadingState({ message = 'Calcul des statistiques en cours...' }: { message?: string }) {
   return (
@@ -139,7 +139,7 @@ export function StatsEmptyState({
           justifyContent: 'center',
         }}
       >
-        <SparklesIcon size={22} color="#3C7730" />
+        <BarChartIcon size={22} color="#3C7730" />
       </div>
       <div style={{ fontSize: '0.96rem', fontWeight: 800, color: '#02302D' }}>{title}</div>
       <p style={{ fontSize: '0.84rem', color: '#64748B', maxWidth: '420px', margin: 0 }}>

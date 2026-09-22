@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { statisticsApi, agencesApi } from '../../services/api';
 import type { StatsCXResponse, Agence } from '../../types';
-import KpiCard from '../../components/ui/KpiCard';
 import TabsNavigation from '../../components/ui/TabsNavigation';
 import PeriodSelector from '../../components/stats/PeriodSelector';
 import AgenceFilterSelect from '../../components/stats/AgenceFilterSelect';
@@ -21,16 +20,12 @@ import {
 import {
   SmileIcon,
   MessageSquareIcon,
-  CheckCircleIcon,
-  ClockIcon,
   TrendingUpIcon,
   ThumbsUpIcon,
-  ThumbsDownIcon,
   AlertTriangleIcon,
   BarChartIcon,
   TagIcon,
   StoreIcon,
-  SparklesIcon,
 } from '../../components/common/Icons';
 
 export default function StatsCXView() {
@@ -87,7 +82,7 @@ export default function StatsCXView() {
     { id: 'sentiments', label: 'Sentiments', icon: <ThumbsUpIcon size={16} /> },
     { id: 'thematiques', label: 'Thématiques IA', icon: <TagIcon size={16} />, badge: data?.themes.length },
     { id: 'agences', label: 'Agences', icon: <StoreIcon size={16} />, badge: data?.agences_ranking.length },
-    { id: 'tendances', label: 'Tendances & IA', icon: <SparklesIcon size={16} color="#75B72A" /> },
+    { id: 'tendances', label: 'Tendances & IA' },
   ];
 
   return (
@@ -163,68 +158,6 @@ export default function StatsCXView() {
           ══════════════════════════════════════════════════════ */}
           {activeTab === 'satisfaction' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                  gap: '16px',
-                }}
-              >
-                <KpiCard
-                  icon={<SmileIcon size={20} />}
-                  label="Score CSAT Moyen"
-                  value={kpis.satisfaction?.valeur ?? '0%'}
-                  trend={
-                    kpis.satisfaction?.evolution
-                      ? {
-                          value: kpis.satisfaction.evolution,
-                          isPositive: kpis.satisfaction.is_positive,
-                          period: 'vs. période préc.',
-                        }
-                      : undefined
-                  }
-                  sparklineType={kpis.satisfaction?.is_positive ? 'up' : 'down'}
-                  badgeColor={kpis.satisfaction?.is_positive ? 'green' : 'red'}
-                  compact={true}
-                />
-
-                <KpiCard
-                  icon={<ThumbsUpIcon size={20} />}
-                  label="Feedbacks positifs"
-                  value={kpis.feedbacks_positifs?.valeur ?? 0}
-                  trend={
-                    kpis.feedbacks_positifs?.evolution
-                      ? {
-                          value: kpis.feedbacks_positifs.evolution,
-                          isPositive: kpis.feedbacks_positifs.is_positive,
-                          period: 'vs. période préc.',
-                        }
-                      : undefined
-                  }
-                  sparklineType="up"
-                  badgeColor="green"
-                  compact={true}
-                />
-
-                <KpiCard
-                  icon={<ThumbsDownIcon size={20} />}
-                  label="Feedbacks négatifs"
-                  value={kpis.feedbacks_negatifs?.valeur ?? 0}
-                  trend={
-                    kpis.feedbacks_negatifs?.evolution
-                      ? {
-                          value: kpis.feedbacks_negatifs.evolution,
-                          isPositive: kpis.feedbacks_negatifs.is_positive,
-                          period: 'vs. période préc.',
-                        }
-                      : undefined
-                  }
-                  sparklineType="down"
-                  badgeColor={Number(kpis.feedbacks_negatifs?.valeur_num || 0) > 0 ? 'red' : 'green'}
-                  compact={true}
-                />
-              </div>
-
               <StatsSectionCard
                 title="Courbe Détaillée de Satisfaction Client"
                 subtitle="Calcul dynamique au fil de l'eau avec variations et points d'inflexion"
@@ -239,74 +172,6 @@ export default function StatsCXView() {
           ══════════════════════════════════════════════════════ */}
           {activeTab === 'feedbacks' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                  gap: '16px',
-                }}
-              >
-                <KpiCard
-                  icon={<MessageSquareIcon size={20} />}
-                  label="Total Reçus"
-                  value={kpis.total_feedbacks?.valeur ?? 0}
-                  trend={
-                    kpis.total_feedbacks?.evolution
-                      ? {
-                          value: kpis.total_feedbacks.evolution,
-                          isPositive: kpis.total_feedbacks.is_positive,
-                          period: 'vs. période préc.',
-                        }
-                      : undefined
-                  }
-                  sparklineType="neutral"
-                  compact={true}
-                />
-
-                <KpiCard
-                  icon={<CheckCircleIcon size={20} />}
-                  label="Feedbacks Traités"
-                  value={kpis.feedbacks_traites?.valeur ?? 0}
-                  trend={
-                    kpis.feedbacks_traites?.evolution
-                      ? {
-                          value: kpis.feedbacks_traites.evolution,
-                          isPositive: kpis.feedbacks_traites.is_positive,
-                          period: 'vs. période préc.',
-                        }
-                      : undefined
-                  }
-                  sparklineType="up"
-                  compact={true}
-                />
-
-                <KpiCard
-                  icon={<ClockIcon size={20} />}
-                  label="En attente"
-                  value={kpis.feedbacks_attente?.valeur ?? 0}
-                  badgeColor={Number(kpis.feedbacks_attente?.valeur_num || 0) > 0 ? 'neutral' : 'green'}
-                  compact={true}
-                />
-
-                <KpiCard
-                  icon={<TrendingUpIcon size={20} />}
-                  label="Taux de Traitement"
-                  value={kpis.taux_traitement?.valeur ?? '0%'}
-                  trend={
-                    kpis.taux_traitement?.evolution
-                      ? {
-                          value: kpis.taux_traitement.evolution,
-                          isPositive: kpis.taux_traitement.is_positive,
-                          period: 'vs. période préc.',
-                        }
-                      : undefined
-                  }
-                  sparklineType="up"
-                  badgeColor="green"
-                  compact={true}
-                />
-              </div>
-
               <StatsSectionCard
                 title="Flux des Avis : Collecte vs Traitement"
                 subtitle="Comparatif quotidien entre flux d'avis entrants et volume pris en charge"

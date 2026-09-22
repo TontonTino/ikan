@@ -1,6 +1,5 @@
 import React from 'react';
 import DashboardIllustration from '../common/DashboardIllustration';
-import { SparklesIcon } from '../common/Icons';
 
 interface AdminWelcomeBannerProps {
   userName?: string;
@@ -78,7 +77,6 @@ export default function AdminWelcomeBanner({
           >
             Bonjour {userName}
           </h1>
-          <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>✨</span>
         </div>
 
         <p

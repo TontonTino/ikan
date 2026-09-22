@@ -1,6 +1,6 @@
 import React from 'react';
 import type { InsightIADetail } from '../../types';
-import { SparklesIcon, CheckCircleIcon, AlertTriangleIcon, LightbulbIcon } from '../common/Icons';
+import { FileTextIcon, CheckCircleIcon, AlertTriangleIcon, LightbulbIcon } from '../common/Icons';
 
 interface AiInsightsSummaryProps {
   insights: InsightIADetail[];
@@ -60,7 +60,7 @@ export default function AiInsightsSummary({ insights }: AiInsightsSummaryProps) 
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px' }}>
-        <SparklesIcon size={20} color="#75B72A" />
+        <FileTextIcon size={20} color="#75B72A" />
         <div>
           <div style={{ fontSize: '1rem', fontWeight: 800, color: '#02302D' }}>
             Synthèse & Recommandations IA

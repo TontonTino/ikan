@@ -112,7 +112,6 @@ export default function DashboardAgencePage() {
       <PageHeader
         title={data.agence_nom}
         subtitle={`Pilotage opérationnel de votre point de vente — ${jours} derniers jours.`}
-        showSparkle={false}
       >
         <div
           style={{

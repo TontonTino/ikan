@@ -1,5 +1,5 @@
 import React from 'react';
-import { SparklesIcon, ClockIcon, DownloadIcon, LightningIcon } from '../common/Icons';
+import { ClockIcon, DownloadIcon, LightningIcon } from '../common/Icons';
 
 export interface PageHeaderProps {
   title?: string;
@@ -13,8 +13,6 @@ export interface PageHeaderProps {
     onClick: () => void;
     icon?: React.ReactNode;
   };
-  /** Icône étoile scintillante à côté du titre. Affichée par défaut ; certaines pages la retirent. */
-  showSparkle?: boolean;
   children?: React.ReactNode;
 }
 
@@ -26,7 +24,6 @@ export default function PageHeader({
   onRefresh,
   onExport,
   primaryAction,
-  showSparkle = true,
   children,
 }: PageHeaderProps) {
   // Format standard date en français si non fournie (ex: SAMEDI, 22 AOÛT 2026)
@@ -96,7 +93,6 @@ export default function PageHeader({
           >
             {greetingUser ? `Bonjour ${greetingUser}` : title}
           </h1>
-          {showSparkle && <SparklesIcon size={24} color="#75B72A" />}
         </div>
 
         <p

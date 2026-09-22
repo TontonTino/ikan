@@ -25,7 +25,6 @@ import {
   AlertTriangleIcon,
   ThumbsUpIcon,
   TagIcon,
-  SparklesIcon,
 } from '../../components/common/Icons';
 
 export default function StatsAgencyView() {
@@ -73,7 +72,6 @@ export default function StatsAgencyView() {
     {
       id: 'alertes',
       label: 'Alertes & Conseils IA',
-      icon: <SparklesIcon size={16} color="#75B72A" />,
       badge: data?.alertes_synthese.total_critiques,
       badgeColor: (data?.alertes_synthese.total_critiques || 0) > 0 ? ('red' as const) : ('default' as const),
     },
