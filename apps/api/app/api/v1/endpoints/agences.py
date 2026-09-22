@@ -35,15 +35,49 @@ def _exiger_categories_personnalisees(agence: Agence, db: Session) -> None:
 
 
 def _check_cx_owns_agence(agence: Agence, current_user: Utilisateur) -> None:
-    """
-    Vérifie que l'utilisateur est le CX Manager propriétaire de l'organisation de cette agence.
-    Utilisé pour la gestion des catégories, réservée exclusivement au CX Manager (Agency Manager exclu).
-    """
+    """Vérifie que l'utilisateur est le CX Manager propriétaire de l'organisation de cette agence."""
     if current_user.role != UserRole.CX_MANAGER or agence.organisation_id != current_user.organisation_id:
         raise HTTPException(
             status_code=403,
-            detail="Accès refusé. La gestion des catégories est réservée au CX Manager propriétaire de cette agence.",
+            detail="Accès refusé. Cette action est réservée au CX Manager propriétaire de cette agence.",
         )
+
+
+def _check_can_create_categorie(agence: Agence, current_user: Utilisateur) -> None:
+    """
+    Création d'une catégorie : le CX Manager de l'organisation, ou l'Agency Manager
+    de SA PROPRE agence uniquement (jamais celle d'une autre agence).
+    """
+    if current_user.role == UserRole.CX_MANAGER and agence.organisation_id == current_user.organisation_id:
+        return
+    if current_user.role == UserRole.AGENCY_MANAGER and agence.id == current_user.agence_id:
+        return
+    raise HTTPException(
+        status_code=403,
+        detail="Accès refusé. Seuls le CX Manager de votre organisation et l'Agency Manager de cette agence "
+               "peuvent créer une catégorie.",
+    )
+
+
+def _check_can_modify_categorie(agence: Agence, categorie: Categorie, current_user: Utilisateur) -> None:
+    """
+    Modification/désactivation d'une catégorie : le CX Manager garde tous les droits sur les
+    agences de son organisation (catégories créées par lui ou par un Agency Manager, sans
+    régression). L'Agency Manager ne peut agir QUE sur les catégories qu'il a lui-même créées,
+    sur sa propre agence — jamais sur celles créées par le CX Manager.
+    """
+    if current_user.role == UserRole.CX_MANAGER and agence.organisation_id == current_user.organisation_id:
+        return
+    if (
+        current_user.role == UserRole.AGENCY_MANAGER
+        and agence.id == current_user.agence_id
+        and categorie.cree_par_id == current_user.id
+    ):
+        return
+    raise HTTPException(
+        status_code=403,
+        detail="Accès refusé. Vous ne pouvez modifier ou désactiver que les catégories que vous avez créées.",
+    )
 
 
 def _check_agence_access(agence: Agence, current_user: Utilisateur):
@@ -236,15 +270,25 @@ def create_categorie(
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_current_active_user),
 ):
-    """Crée une catégorie pour une agence — réservé au CX Manager propriétaire."""
+    """
+    Crée une catégorie pour une agence.
+    - CX Manager : sur n'importe quelle agence de son organisation.
+    - Agency Manager : uniquement sur SA PROPRE agence.
+    """
     agence = db.query(Agence).filter(Agence.id == agence_id).first()
     if not agence:
         raise HTTPException(status_code=404, detail="Agence introuvable")
 
-    _check_cx_owns_agence(agence, current_user)
+    _check_can_create_categorie(agence, current_user)
     _exiger_categories_personnalisees(agence, db)
 
-    categorie = Categorie(agence_id=agence_id, nom=data.nom.strip(), active=True)
+    categorie = Categorie(
+        agence_id=agence_id,
+        nom=data.nom.strip(),
+        active=True,
+        cree_par_id=current_user.id,
+        cree_par_role=current_user.role.value,
+    )
     db.add(categorie)
     db.commit()
     db.refresh(categorie)
@@ -259,19 +303,23 @@ def update_categorie(
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_current_active_user),
 ):
-    """Modifie ou désactive une catégorie — réservé au CX Manager propriétaire."""
+    """
+    Modifie ou désactive une catégorie.
+    - CX Manager : toutes les catégories des agences de son organisation, quel que soit le créateur.
+    - Agency Manager : uniquement les catégories qu'il a lui-même créées, sur sa propre agence.
+    """
     agence = db.query(Agence).filter(Agence.id == agence_id).first()
     if not agence:
         raise HTTPException(status_code=404, detail="Agence introuvable")
-
-    _check_cx_owns_agence(agence, current_user)
-    _exiger_categories_personnalisees(agence, db)
 
     categorie = db.query(Categorie).filter(
         Categorie.id == categorie_id, Categorie.agence_id == agence_id
     ).first()
     if not categorie:
         raise HTTPException(status_code=404, detail="Catégorie introuvable")
+
+    _check_can_modify_categorie(agence, categorie, current_user)
+    _exiger_categories_personnalisees(agence, db)
 
     updates = data.model_dump(exclude_unset=True)
     if "nom" in updates and updates["nom"]:
@@ -291,18 +339,22 @@ def delete_categorie(
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_current_active_user),
 ):
-    """Désactive une catégorie (soft delete) — réservé au CX Manager propriétaire."""
+    """
+    Désactive une catégorie (soft delete).
+    - CX Manager : toutes les catégories des agences de son organisation, quel que soit le créateur.
+    - Agency Manager : uniquement les catégories qu'il a lui-même créées, sur sa propre agence.
+    """
     agence = db.query(Agence).filter(Agence.id == agence_id).first()
     if not agence:
         raise HTTPException(status_code=404, detail="Agence introuvable")
-
-    _check_cx_owns_agence(agence, current_user)
 
     categorie = db.query(Categorie).filter(
         Categorie.id == categorie_id, Categorie.agence_id == agence_id
     ).first()
     if not categorie:
         raise HTTPException(status_code=404, detail="Catégorie introuvable")
+
+    _check_can_modify_categorie(agence, categorie, current_user)
 
     categorie.active = False
     db.commit()

@@ -22,6 +22,9 @@ class CategorieResponse(BaseModel):
     nom: str
     active: bool
     created_at: datetime
+    cree_par_id: Optional[uuid.UUID] = None
+    # 'cx_manager' | 'agency_manager' | None (catégorie antérieure à cette fonctionnalité)
+    cree_par_role: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

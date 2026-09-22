@@ -27,6 +27,13 @@ class Categorie(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+    # Traçabilité du créateur (CX Manager ou Agency Manager) : détermine qui peut
+    # modifier/désactiver la catégorie. NULL = catégorie créée avant cette fonctionnalité
+    # (toujours par un CX Manager, seul rôle habilité à l'époque).
+    cree_par_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("utilisateurs.id", ondelete="SET NULL"), nullable=True
+    )
+    cree_par_role: Mapped[str | None] = mapped_column(String(30), nullable=True)
 
     # Relations
     agence: Mapped["Agence"] = relationship("Agence", back_populates="categories")

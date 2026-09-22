@@ -121,11 +121,16 @@ def test_categories_lecture_agency_manager_refuse_autre_agence():
     assert client.get(f"/agences/{autre.id}/categories").status_code == 403
 
 
-def test_categories_ecriture_agency_manager_toujours_interdite_meme_sur_sa_agence():
-    mon_agence = uuid4()
-    user = _agency_manager(mon_agence)
-    ma = SimpleNamespace(id=mon_agence, organisation_id=user.organisation_id)
-    client = _client(agences.router, "/agences", user, _Db(ma))
-    assert client.post(f"/agences/{mon_agence}/categories", json={"nom": "Nouvelle"}).status_code == 403
-    assert client.patch(f"/agences/{mon_agence}/categories/{uuid4()}", json={"active": False}).status_code == 403
-    assert client.delete(f"/agences/{mon_agence}/categories/{uuid4()}").status_code == 403
+def test_categories_creation_agency_manager_interdite_hors_de_sa_propre_agence():
+    """
+    L'Agency Manager peut désormais créer ses propres catégories, mais UNIQUEMENT sur SA
+    PROPRE agence : un identifiant d'agence manipulé dans l'URL (une autre agence que la
+    sienne) reste refusé — 403, comme pour tous les autres endpoints agence de ce fichier.
+    La matrice complète des permissions par créateur (qui peut modifier/désactiver quoi)
+    est testée avec une vraie base dans test_categories_permissions.py.
+    """
+    autre_agence = uuid4()
+    user = _agency_manager(uuid4())  # rattaché à une agence différente de `autre_agence`
+    cible = SimpleNamespace(id=autre_agence, organisation_id=uuid4())
+    client = _client(agences.router, "/agences", user, _Db(cible))
+    assert client.post(f"/agences/{autre_agence}/categories", json={"nom": "Intrusion"}).status_code == 403
