@@ -54,7 +54,7 @@ const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
     {
       title: 'WORKSPACE',
       items: [
-        { path: '/siege', label: "Vue d'ensemble", icon: <LayoutGridIcon size={18} /> },
+        { path: '/siege', label: 'Dashboard', icon: <LayoutGridIcon size={18} /> },
         { path: '/statistiques', label: 'Statistiques & Analyses', icon: <BarChartIcon size={18} /> },
         { path: '/feedbacks', label: 'Feedbacks Réseau', icon: <MessageSquareIcon size={18} /> },
         { path: '/pilotage', label: 'Pilotage', icon: <BellIcon size={18} /> },

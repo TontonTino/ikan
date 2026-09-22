@@ -1,26 +1,21 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { agencesApi, dashboardApi } from '../../services/api';
-import { CLIENT_URL, getFeedbackUrl } from '../../config';
+import { getFeedbackUrl } from '../../config';
 import { useAuthStore } from '../../stores/authStore';
 import type { Agence, AgenceStats, Categorie } from '../../types';
 import TabsNavigation from '../../components/ui/TabsNavigation';
-import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
 import {
-  StoreIcon,
   PlusIcon,
   MapPinIcon,
   TargetIcon,
   QrCodeIcon,
   EditIcon,
   TrashIcon,
-  CopyIcon,
   ExternalLinkIcon,
   SearchIcon,
   CheckCircleIcon,
   ThumbsUpIcon,
   ThumbsDownIcon,
-  DownloadIcon,
   ClockIcon,
   TagIcon,
 } from '../../components/common/Icons';
@@ -44,15 +39,12 @@ const emptyForm: AgenceForm = {
   seuil_alerte: 80,
 };
 
-const AGENCE_COLOR = (taux: number) =>
-  taux >= 80 ? '#3C7730' : taux >= 60 ? '#F59E0B' : '#DC2626';
-
 // Contenu de l'onglet "Agences & QR Codes" de la page Gestion des agences.
 // N'est monté que pour le CX Manager (le rôle Admin ne gère pas les agences directement).
 export default function AdminAgencesContent() {
   const currentUser = useAuthStore((s) => s.user);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'repertoire' | 'qrcodes' | 'activite'>('overview');
+  const [activeTab, setActiveTab] = useState<'repertoire' | 'activite'>('repertoire');
   const [agences, setAgences] = useState<Agence[]>([]);
   const [agencesStats, setAgencesStats] = useState<AgenceStats[]>([]);
   const [loading, setLoading] = useState(true);
@@ -231,19 +223,8 @@ export default function AdminAgencesContent() {
     });
   }, [agencesEnrichies, search]);
 
-  // Calcul du centre de la carte
-  const agencesAvecCoords = agencesEnrichies.filter((a) => a.latitude && a.longitude);
-  const centerLat = agencesAvecCoords.length > 0
-    ? agencesAvecCoords.reduce((s, a) => s + (a.latitude || 0), 0) / agencesAvecCoords.length
-    : 34.0;
-  const centerLng = agencesAvecCoords.length > 0
-    ? agencesAvecCoords.reduce((s, a) => s + (a.longitude || 0), 0) / agencesAvecCoords.length
-    : 9.0;
-
   const tabsConfig = [
-    { id: 'overview', label: "Vue d'ensemble", icon: <StoreIcon size={16} /> },
     { id: 'repertoire', label: 'Répertoire', icon: <TargetIcon size={16} />, badge: agences.length },
-    { id: 'qrcodes', label: 'QR Codes & Bornes', icon: <QrCodeIcon size={16} /> },
     { id: 'activite', label: 'Activité', icon: <ClockIcon size={16} /> },
   ];
 
@@ -290,84 +271,14 @@ export default function AdminAgencesContent() {
         </button>
       </div>
 
-      {/* Navigation par 5 Onglets */}
+      {/* Navigation par 2 Onglets */}
       <TabsNavigation
         tabs={tabsConfig}
         activeTab={activeTab}
         onChange={(id) => setActiveTab(id as any)}
       />
 
-      {/* ── 1. VUE D'ENSEMBLE (Carte Réseau) ── */}
-      {activeTab === 'overview' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div
-            style={{
-              background: '#FFFFFF',
-              borderRadius: '24px',
-              padding: '24px 28px',
-              border: '1px solid #E8ECE6',
-              boxShadow: '0 2px 12px rgba(20, 60, 40, 0.03)',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#02302D' }}>
-                Carte du Réseau
-              </h3>
-              <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#3C7730', background: '#EBF6ED', padding: '3px 8px', borderRadius: '9999px' }}>
-                {agencesAvecCoords.length} localisées
-              </span>
-            </div>
-            <p style={{ margin: '0 0 16px', fontSize: '0.80rem', color: '#64748B' }}>
-              Visualisation géographique et répartition de la satisfaction
-            </p>
-
-            <div style={{ borderRadius: '16px', overflow: 'hidden', height: '440px', border: '1px solid #E2E8F0' }}>
-              <MapContainer center={[centerLat, centerLng]} zoom={7} style={{ height: '100%', width: '100%' }}>
-                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
-                {agencesAvecCoords.map((a) => (
-                  <CircleMarker
-                    key={a.id}
-                    center={[a.latitude!, a.longitude!]}
-                    radius={11}
-                    fillColor={AGENCE_COLOR(a.taux_satisfaction)}
-                    color="white"
-                    weight={2}
-                    fillOpacity={0.9}
-                  >
-                    <Popup>
-                      <div style={{ minWidth: '150px' }}>
-                        <strong style={{ color: '#02302D', fontSize: '0.88rem' }}>{a.nom}</strong>
-                        <div style={{ fontSize: '0.78rem', color: '#64748B' }}>{a.ville}</div>
-                        <div style={{ marginTop: '6px', fontSize: '0.82rem' }}>
-                          Satisfaction : <strong style={{ color: AGENCE_COLOR(a.taux_satisfaction) }}>{a.taux_satisfaction}%</strong>
-                        </div>
-                      </div>
-                    </Popup>
-                  </CircleMarker>
-                ))}
-              </MapContainer>
-            </div>
-
-            {/* Légende Carte */}
-            <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginTop: '14px', flexWrap: 'wrap' }}>
-              {[
-                { color: '#3C7730', label: '≥ 80% — Excellent' },
-                { color: '#F59E0B', label: '60-80% — À surveiller' },
-                { color: '#DC2626', label: '< 60% — Critique' },
-              ].map(({ color, label }) => (
-                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 600 }}>
-                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: color }} />
-                  {label}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── 2. RÉPERTOIRE (Gestion, Création, Modification) ── */}
+      {/* ── 1. RÉPERTOIRE (Gestion, Création, Modification) ── */}
       {activeTab === 'repertoire' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Recherche */}
@@ -468,206 +379,7 @@ export default function AdminAgencesContent() {
         </div>
       )}
 
-      {/* ── 3. QR CODES & BORNES ── */}
-      {activeTab === 'qrcodes' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Bannière de sélection de mode Cloud / Local */}
-          <div
-            style={{
-              background: '#FFFFFF',
-              border: '1px solid #E2E8F0',
-              borderRadius: '20px',
-              padding: '16px 20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '16px',
-              flexWrap: 'wrap',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div
-                style={{
-                  width: '42px',
-                  height: '42px',
-                  borderRadius: '12px',
-                  background: qrMode === 'render' ? '#EBF6ED' : '#EFF6FF',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1.2rem',
-                }}
-              >
-                {qrMode === 'render' ? '🌐' : '🏠'}
-              </div>
-              <div>
-                <div style={{ fontSize: '0.90rem', fontWeight: 800, color: '#02302D' }}>
-                  {qrMode === 'render' ? 'Cible : Serveur Cloud Render (Public)' : 'Cible : Réseau Local (Wi-Fi)'}
-                </div>
-                <div style={{ fontSize: '0.76rem', color: '#64748B' }}>
-                  {qrMode === 'render'
-                    ? `Scannable depuis n'importe quel smartphone en 4G/5G ou autre réseau (${CLIENT_URL}).`
-                    : `Scannable par les smartphones connectés sur votre même réseau Wi-Fi (${qrHost || '192.168.1.117'}).`}
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              <div
-                style={{
-                  display: 'inline-flex',
-                  background: '#F1F5F9',
-                  padding: '4px',
-                  borderRadius: '12px',
-                  gap: '4px',
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setQrMode('render')}
-                  style={{
-                    background: qrMode === 'render' ? '#02302D' : 'transparent',
-                    color: qrMode === 'render' ? '#FFFFFF' : '#64748B',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '6px 14px',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  🌐 Cloud Render (Recommandé)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setQrMode('local')}
-                  style={{
-                    background: qrMode === 'local' ? '#02302D' : 'transparent',
-                    color: qrMode === 'local' ? '#FFFFFF' : '#64748B',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '6px 14px',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  🏠 Réseau Local (Wi-Fi)
-                </button>
-              </div>
-
-              {qrMode === 'local' && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#475569' }}>IP :</span>
-                  <input
-                    type="text"
-                    value={qrHost}
-                    onChange={(e) => setQrHost(e.target.value.trim())}
-                    placeholder="192.168.1.117"
-                    style={{
-                      background: '#FFFFFF',
-                      border: '1px solid #CBD5E1',
-                      borderRadius: '8px',
-                      padding: '5px 10px',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
-                      color: '#02302D',
-                      width: '125px',
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-            {agencesEnrichies.map((a) => {
-              const effectiveHost = qrHost || window.location.hostname;
-              const qrUrl = qrMode === 'render'
-                ? getFeedbackUrl(a.qr_code_token || a.id)
-                : `http://${effectiveHost}:4321/feedback/${a.qr_code_token || a.id}`;
-              return (
-                <div
-                  key={a.id}
-                  style={{
-                    background: '#FFFFFF',
-                    borderRadius: '20px',
-                    padding: '20px',
-                    border: '1px solid #E8ECE6',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    textAlign: 'center',
-                    gap: '12px',
-                  }}
-                >
-                  <div style={{ fontWeight: 800, fontSize: '0.90rem', color: '#02302D' }}>{a.nom}</div>
-                  <div style={{ fontSize: '0.74rem', color: '#64748B' }}>{a.ville}</div>
-
-                  <div style={{ padding: '12px', background: '#F8FAFC', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(qrUrl)}`}
-                      alt={`QR Code ${a.nom}`}
-                      style={{ width: '130px', height: '130px', display: 'block' }}
-                    />
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '8px', width: '100%', marginTop: '6px' }}>
-                    <button
-                      type="button"
-                      onClick={() => copyQrUrl(qrUrl)}
-                      style={{
-                        flex: 1,
-                        background: '#F1F5F9',
-                        border: 'none',
-                        borderRadius: '10px',
-                        padding: '8px',
-                        fontSize: '0.76rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <CopyIcon size={12} /> Copier URL
-                    </button>
-                    <a
-                      href={`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrUrl)}`}
-                      download={`QR_${a.nom}.png`}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{
-                        flex: 1,
-                        background: '#02302D',
-                        color: '#FFFFFF',
-                        textDecoration: 'none',
-                        borderRadius: '10px',
-                        padding: '8px',
-                        fontSize: '0.76rem',
-                        fontWeight: 700,
-                        textAlign: 'center',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <DownloadIcon size={12} /> PNG HD
-                    </a>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── 4. ACTIVITÉ ── */}
+      {/* ── 2. ACTIVITÉ ── */}
       {activeTab === 'activite' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ background: '#FFFFFF', borderRadius: '20px', padding: '24px', border: '1px solid #E8ECE6' }}>
