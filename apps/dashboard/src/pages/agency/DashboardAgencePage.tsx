@@ -15,16 +15,9 @@ import { dashboardApi, recommandationsApi, alertesApi } from '../../services/api
 import { useAuthStore } from '../../stores/authStore';
 import type { DashboardAgence, Recommandation, Alerte } from '../../types';
 import PageHeader from '../../components/ui/PageHeader';
-import KpiCard from '../../components/ui/KpiCard';
 import EphemeralAlertsBanner from '../../components/alerts/EphemeralAlertsBanner';
 import RecommandationCard from '../../components/stats/RecommandationCard';
-import {
-  MessageSquareIcon,
-  TrendingUpIcon,
-  AlertTriangleIcon,
-  LightbulbIcon,
-  CheckCircleIcon,
-} from '../../components/common/Icons';
+import { CheckCircleIcon } from '../../components/common/Icons';
 
 const THEME_COLORS = [
   '#02302D', '#3C7730', '#75B72A', '#BCCF00', '#0284C7',
@@ -119,6 +112,7 @@ export default function DashboardAgencePage() {
       <PageHeader
         title={data.agence_nom}
         subtitle={`Pilotage opérationnel de votre point de vente — ${jours} derniers jours.`}
+        showSparkle={false}
       >
         <div
           style={{
@@ -159,68 +153,6 @@ export default function DashboardAgencePage() {
 
       {/* ── 2. Alertes Agence Éphémères (Nouvelles alertes non vues — 15s) ── */}
       <EphemeralAlertsBanner alerts={alertes} userId={user?.id} />
-
-      {/* ── 2. Grille des 5 KPIs Agence — même gabarit compact que les vues Statistiques ── */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '16px',
-        }}
-      >
-        <KpiCard
-          icon={<MessageSquareIcon size={20} />}
-          label="Feedbacks reçus"
-          value={data.nombre_feedbacks}
-          trend={{ value: '+14%', isPositive: true }}
-          sparklineType="up"
-          subtitle={data.periode}
-          compact
-        />
-
-        <KpiCard
-          icon={<TrendingUpIcon size={20} />}
-          label="Taux de satisfaction"
-          value={`${data.taux_satisfaction}%`}
-          trend={{ value: data.taux_satisfaction >= 80 ? 'Excellent' : 'À surveiller', isPositive: data.taux_satisfaction >= 70 }}
-          sparklineType={data.taux_satisfaction >= 70 ? 'up' : 'down'}
-          badgeColor={data.taux_satisfaction < 70 ? 'red' : 'green'}
-          subtitle="Score moyen de l'agence"
-          compact
-        />
-
-        <KpiCard
-          icon={<AlertTriangleIcon size={20} />}
-          label="Avis négatifs"
-          value={data.nombre_negatifs}
-          trend={{ value: data.nombre_negatifs > 0 ? 'À traiter' : 'Parfait', isPositive: data.nombre_negatifs === 0 }}
-          badgeColor={data.nombre_negatifs > 0 ? 'red' : 'green'}
-          sparklineType={data.nombre_negatifs > 0 ? 'down' : 'up'}
-          subtitle="Sentiment négatif détecté"
-          compact
-        />
-
-        <KpiCard
-          icon={<CheckCircleIcon size={20} />}
-          label="Discordances"
-          value={data.discordances}
-          trend={{ value: data.discordances > 0 ? 'À vérifier' : 'Aucune', isPositive: data.discordances === 0 }}
-          badgeColor={data.discordances > 0 ? 'red' : 'green'}
-          sparklineType={data.discordances > 0 ? 'down' : 'neutral'}
-          subtitle="Ressenti Positif / Commentaire critique"
-          compact
-        />
-
-        <KpiCard
-          icon={<LightbulbIcon size={20} />}
-          label="Idées clients"
-          value={data.nombre_suggestions}
-          trend={{ value: 'Boîte à idées', isPositive: true }}
-          sparklineType="up"
-          subtitle="Suggestions soumises"
-          compact
-        />
-      </div>
 
       {/* ── 3. Graphiques d'Évolution & Thèmes ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
