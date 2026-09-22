@@ -362,6 +362,7 @@ export default function AdminOrgsPage() {
           overflow: 'hidden',
         }}
       >
+        <div style={{ width: '100%', overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
           <thead style={{ background: '#F8FAFB', borderBottom: '1px solid #E8ECE6' }}>
             <tr>
@@ -473,6 +474,7 @@ export default function AdminOrgsPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

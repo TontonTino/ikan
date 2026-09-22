@@ -46,6 +46,7 @@ export default function PageHeader({
 
   return (
     <div
+      className="page-header-shell"
       style={{
         background: 'linear-gradient(135deg, #F4FAF5 0%, #EBF6ED 100%)',
         borderRadius: '24px',
@@ -109,7 +110,7 @@ export default function PageHeader({
       </div>
 
       {/* Right side: Action buttons */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+      <div className="page-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
         {/* Status Pill : Mis à jour à l'instant */}
         <div
           onClick={onRefresh}
@@ -198,6 +199,22 @@ export default function PageHeader({
 
         {children}
       </div>
+
+      <style>{`
+        @media (max-width: 640px) {
+          .page-header-shell {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            padding: 18px !important;
+          }
+          .page-header-actions {
+            width: 100%;
+          }
+          .page-header-actions > * {
+            flex: 1 1 auto;
+          }
+        }
+      `}</style>
     </div>
   );
 }

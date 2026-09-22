@@ -21,6 +21,7 @@ import {
   TrendingUpIcon,
   ChevronDownIcon,
   LandmarkIcon,
+  XCloseIcon,
 } from '../common/Icons';
 
 interface NavItem {
@@ -97,8 +98,25 @@ export default function DashboardLayout() {
   const location = useLocation();
   const [alertCount, setAlertCount] = useState<number>(0);
   const [yamOpen, setYamOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // YAM : CX Manager et Agency Manager uniquement (l'Admin n'est jamais proposé, même si l'API le refuse aussi).
   const canUseYam = user?.role === 'cx_manager' || user?.role === 'agency_manager';
+
+  // La sidebar mobile (tiroir) se ferme dès qu'on change de page — couvre le
+  // clic sur un lien de nav sans avoir besoin d'un handler par lien.
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  // Fermeture au clavier (Échap), comme les autres panneaux du dashboard.
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileMenuOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     if (user?.role === 'cx_manager' || user?.role === 'agency_manager') {
@@ -173,8 +191,16 @@ export default function DashboardLayout() {
         position: 'relative',
       }}
     >
+      {/* Voile derrière le tiroir mobile : ferme la sidebar au clic extérieur (mobile/tablette uniquement). */}
+      <div
+        className={`dashboard-sidebar-overlay${mobileMenuOpen ? ' is-open' : ''}`}
+        onClick={() => setMobileMenuOpen(false)}
+        aria-hidden="true"
+      />
+
       {/* ── Sidebar Latérale (Style SaaS Épuré Bolt.new) ── */}
       <aside
+        className={`dashboard-sidebar${mobileMenuOpen ? ' dashboard-sidebar--open' : ''}`}
         style={{
           width: '270px',
           background: '#F3F8F4',
@@ -346,6 +372,7 @@ export default function DashboardLayout() {
 
       {/* ── Zone Contenu Principal ── */}
       <div
+        className="dashboard-content"
         style={{
           flex: 1,
           marginLeft: '302px',
@@ -360,6 +387,7 @@ export default function DashboardLayout() {
       >
         {/* ── Top Bar Header (Breadcrumb + Search + Quick Actions) ── */}
         <header
+          className="dashboard-header-inner"
           style={{
             height: '70px',
             padding: '0 36px',
@@ -372,16 +400,49 @@ export default function DashboardLayout() {
             boxSizing: 'border-box',
           }}
         >
-          {/* Fil d'Ariane */}
-          {hideBreadcrumb ? (
-            <div />
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem' }}>
-              <span style={{ color: '#94A3B8', fontWeight: 600 }}>IKAN AI</span>
-              <span style={{ color: '#CBD5E1' }}>/</span>
-              <span style={{ color: '#02302D', fontWeight: 700 }}>{getBreadcrumb()}</span>
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+            {/* Bouton hamburger : caché sur desktop, visible ≤768px (voir <style> plus bas). */}
+            <button
+              type="button"
+              className="dashboard-hamburger"
+              onClick={() => setMobileMenuOpen((o) => !o)}
+              aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+              aria-expanded={mobileMenuOpen}
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '10px',
+                background: '#FFFFFF',
+                border: '1px solid #E2E8F0',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                flexShrink: 0,
+                padding: 0,
+              }}
+            >
+              {mobileMenuOpen ? (
+                <XCloseIcon size={18} color="#02302D" />
+              ) : (
+                <span style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '16px' }}>
+                  <span style={{ height: '2px', borderRadius: '1px', background: '#02302D' }} />
+                  <span style={{ height: '2px', borderRadius: '1px', background: '#02302D' }} />
+                  <span style={{ height: '2px', borderRadius: '1px', background: '#02302D' }} />
+                </span>
+              )}
+            </button>
+
+            {/* Fil d'Ariane */}
+            {hideBreadcrumb ? (
+              <div />
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', minWidth: 0, overflow: 'hidden' }}>
+                <span style={{ color: '#94A3B8', fontWeight: 600, whiteSpace: 'nowrap' }}>IKAN AI</span>
+                <span style={{ color: '#CBD5E1' }}>/</span>
+                <span style={{ color: '#02302D', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getBreadcrumb()}</span>
+              </div>
+            )}
+          </div>
 
           {/* Actions Droite Header */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -475,6 +536,7 @@ export default function DashboardLayout() {
 
         {/* Contenu de la Page */}
         <main
+          className="dashboard-main-inner"
           style={{
             flex: 1,
             padding: '12px 36px 40px',
@@ -494,6 +556,52 @@ export default function DashboardLayout() {
           <YamChatPanel key={user.id} open={yamOpen} onClose={() => setYamOpen(false)} />
         </YamErrorBoundary>
       )}
+
+      {/* ── Sidebar en tiroir sur mobile/tablette ──
+          La sidebar reste en CSS pur (position fixed) sur desktop. En dessous de 768px,
+          elle devient un tiroir plein écran caché par défaut (translateX hors champ),
+          ouvert par le bouton hamburger, fermé par le voile, Échap ou un lien de nav.
+          Les !important ne visent que des propriétés déjà fixées en style inline plus
+          haut (seul moyen de les surcharger depuis une media query), pattern déjà utilisé
+          ailleurs dans le dashboard (AdminDashboardPage, MonAgencePage, ParametresPage). */}
+      <style>{`
+        .dashboard-hamburger { display: none; }
+        .dashboard-sidebar-overlay { display: none; }
+
+        @media (max-width: 768px) {
+          .dashboard-hamburger { display: flex !important; }
+
+          .dashboard-sidebar {
+            left: 0 !important;
+            top: 0 !important;
+            height: 100vh !important;
+            width: min(280px, 82vw) !important;
+            border-radius: 0 !important;
+            transform: translateX(-100%);
+            transition: transform 0.25s ease;
+          }
+          .dashboard-sidebar--open { transform: translateX(0); }
+
+          .dashboard-sidebar-overlay.is-open {
+            display: block;
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 48, 45, 0.4);
+            z-index: 25;
+          }
+
+          .dashboard-content {
+            margin-left: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .dashboard-header-inner { padding: 0 16px !important; }
+          .dashboard-main-inner { padding: 12px 16px 28px !important; }
+        }
+      `}</style>
     </div>
   );
 }

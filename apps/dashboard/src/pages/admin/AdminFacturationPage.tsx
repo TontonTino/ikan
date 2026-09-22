@@ -327,6 +327,7 @@ export default function AdminFacturationPage() {
         <h3 style={{ margin: 0, padding: '18px 20px 4px', fontSize: '0.95rem', fontWeight: 800, color: '#02302D' }}>
           Organisations
         </h3>
+        <div style={{ width: '100%', overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.86rem' }}>
           <thead style={{ background: '#F8FAFB', borderBottom: '1px solid #E8ECE6' }}>
             <tr>
@@ -366,6 +367,7 @@ export default function AdminFacturationPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {orgPourChangement && vueEnsemble && (
