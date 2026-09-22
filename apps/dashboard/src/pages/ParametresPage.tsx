@@ -10,7 +10,7 @@ function cardStyle(): React.CSSProperties {
     borderRadius: '20px',
     border: '1px solid #E8ECE6',
     boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-    padding: '24px',
+    padding: '20px 22px',
   };
 }
 
@@ -93,10 +93,11 @@ export default function ParametresPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '640px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
       <PageHeader title="Paramètres" subtitle="Gérez les informations de votre compte personnel." />
 
-      {/* ── Informations du compte ── */}
+      {/* ── Informations du compte + Mot de passe, côte à côte pour tenir sur une page ── */}
+      <div className="parametres-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(340px, 1fr) minmax(340px, 1fr)', gap: '18px', alignItems: 'start' }}>
       <div style={cardStyle()}>
         <h3 style={{ margin: '0 0 4px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <UsersIcon size={18} color="#3C7730" />
@@ -167,6 +168,16 @@ export default function ParametresPage() {
           </div>
         </form>
       </div>
+      </div>
+
+      {/* En dessous de 900px, les deux sections reprennent l'empilement vertical */}
+      <style>{`
+        @media (max-width: 900px) {
+          .parametres-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

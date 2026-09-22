@@ -5,7 +5,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { getFeedbackUrl } from '../../config';
 import type { Agence, Categorie } from '../../types';
 import PageHeader from '../../components/ui/PageHeader';
-import { CopyIcon, DownloadIcon, TagIcon, CheckCircleIcon } from '../../components/common/Icons';
+import { CopyIcon, DownloadIcon, TagIcon, CheckCircleIcon, PlusIcon, EditIcon, XCloseIcon } from '../../components/common/Icons';
 
 const cardStyle: React.CSSProperties = {
   background: '#FFFFFF',
@@ -35,9 +35,11 @@ const qrImageUrl = (lien: string, taille: number) =>
   `https://api.qrserver.com/v1/create-qr-code/?size=${taille}x${taille}&data=${encodeURIComponent(lien)}`;
 
 /**
- * "Mon agence" (Agency Manager) : QR code de collecte + catégories actives de SA
- * agence, en LECTURE SEULE. Création/modification des catégories et QR restent
- * réservées au CX Manager (l'API refuse toute écriture à l'Agency Manager).
+ * "Mon agence" (Agency Manager) : QR code de collecte de SA agence (lecture seule, géré
+ * par le CX Manager) + catégories du formulaire. L'Agency Manager peut désormais ajouter
+ * ses propres catégories et gérer (modifier/désactiver) UNIQUEMENT celles qu'il a créées ;
+ * les catégories créées par le CX Manager restent en lecture seule pour lui (l'API refuse
+ * toute écriture dessus, 403).
  */
 export default function MonAgencePage() {
   const user = useAuthStore((s) => s.user);
@@ -50,6 +52,17 @@ export default function MonAgencePage() {
   const [loading, setLoading] = useState(true);
   const [erreur, setErreur] = useState('');
   const [message, setMessage] = useState('');
+
+  // ── Formulaire d'ajout de catégorie ──
+  const [formulaireOuvert, setFormulaireOuvert] = useState(false);
+  const [nouveauNom, setNouveauNom] = useState('');
+  const [ajoutEnCours, setAjoutEnCours] = useState(false);
+  const [erreurCategorie, setErreurCategorie] = useState('');
+
+  // ── Édition inline (nom) d'une catégorie que j'ai créée ──
+  const [categorieEnEdition, setCategorieEnEdition] = useState<string | null>(null);
+  const [nomEdite, setNomEdite] = useState('');
+  const [actionEnCours, setActionEnCours] = useState<string | null>(null);
 
   useEffect(() => {
     let annule = false;
@@ -120,6 +133,62 @@ export default function MonAgencePage() {
     }
   };
 
+  const estAMoi = (c: Categorie) => c.cree_par_id != null && c.cree_par_id === user?.id;
+
+  const ajouterCategorie = async () => {
+    if (!nouveauNom.trim()) return;
+    setErreurCategorie('');
+    setAjoutEnCours(true);
+    try {
+      const r = await agencesApi.createCategorie(agence.id, { nom: nouveauNom.trim() });
+      setCategories((prev) => [...prev, r.data]);
+      setNouveauNom('');
+      setFormulaireOuvert(false);
+      afficherMessage('Catégorie ajoutée.');
+    } catch (err: any) {
+      setErreurCategorie(err?.response?.data?.detail || "Impossible d'ajouter cette catégorie.");
+    } finally {
+      setAjoutEnCours(false);
+    }
+  };
+
+  const demarrerEdition = (c: Categorie) => {
+    setCategorieEnEdition(c.id);
+    setNomEdite(c.nom);
+  };
+
+  const enregistrerEdition = async (c: Categorie) => {
+    if (!nomEdite.trim() || nomEdite.trim() === c.nom) {
+      setCategorieEnEdition(null);
+      return;
+    }
+    setActionEnCours(c.id);
+    try {
+      const r = await agencesApi.updateCategorie(agence.id, c.id, { nom: nomEdite.trim() });
+      setCategories((prev) => prev.map((x) => (x.id === c.id ? r.data : x)));
+      setCategorieEnEdition(null);
+      afficherMessage('Catégorie modifiée.');
+    } catch (err: any) {
+      afficherMessage(err?.response?.data?.detail || 'Impossible de modifier cette catégorie.');
+    } finally {
+      setActionEnCours(null);
+    }
+  };
+
+  const desactiverCategorie = async (c: Categorie) => {
+    setActionEnCours(c.id);
+    try {
+      await agencesApi.deleteCategorie(agence.id, c.id);
+      // L'Agency Manager ne voit que les catégories actives : une fois désactivée, elle disparaît de sa liste.
+      setCategories((prev) => prev.filter((x) => x.id !== c.id));
+      afficherMessage('Catégorie désactivée.');
+    } catch (err: any) {
+      afficherMessage(err?.response?.data?.detail || 'Impossible de désactiver cette catégorie.');
+    } finally {
+      setActionEnCours(null);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
       <PageHeader
@@ -164,29 +233,136 @@ export default function MonAgencePage() {
           </div>
         </div>
 
-        {/* Catégories actives (lecture seule) */}
+        {/* Catégories actives : les miennes sont gérables, celles du CX Manager en lecture seule */}
         <div style={cardStyle}>
-          <h3 style={{ margin: '0 0 4px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <TagIcon size={18} color="#3C7730" />
-            Catégories actives ({categories.length})
-          </h3>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px', marginBottom: '4px' }}>
+            <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 800, color: '#02302D', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <TagIcon size={18} color="#3C7730" />
+              Catégories actives ({categories.length})
+            </h3>
+            <button
+              type="button"
+              onClick={() => {
+                setFormulaireOuvert((v) => !v);
+                setErreurCategorie('');
+              }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px', background: formulaireOuvert ? '#F1F5F9' : '#EAF5EC',
+                color: formulaireOuvert ? '#64748B' : '#3C7730', border: 'none', borderRadius: '9999px', padding: '6px 12px',
+                fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit',
+              }}
+            >
+              {formulaireOuvert ? <XCloseIcon size={14} /> : <PlusIcon size={14} />}
+              {formulaireOuvert ? 'Annuler' : 'Ajouter une catégorie'}
+            </button>
+          </div>
           <p style={{ margin: '0 0 14px', fontSize: '0.82rem', color: '#64748B' }}>
-            Les thèmes proposés à vos clients dans le formulaire. Lecture seule : gérées par votre CX Manager.
+            Les thèmes proposés à vos clients dans le formulaire. Vous gérez celles que vous avez ajoutées ;
+            celles de votre CX Manager restent en lecture seule.
           </p>
+
+          {formulaireOuvert && (
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+              <input
+                type="text"
+                value={nouveauNom}
+                onChange={(e) => setNouveauNom(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && ajouterCategorie()}
+                placeholder="Ex: Accueil, Propreté..."
+                maxLength={100}
+                autoFocus
+                style={{ flex: 1, padding: '9px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', boxSizing: 'border-box', fontSize: '0.84rem' }}
+              />
+              <button
+                type="button"
+                onClick={ajouterCategorie}
+                disabled={ajoutEnCours || !nouveauNom.trim()}
+                style={{ background: '#02302D', color: '#FFFFFF', border: 'none', borderRadius: '10px', padding: '9px 16px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', opacity: ajoutEnCours || !nouveauNom.trim() ? 0.6 : 1, fontFamily: 'inherit' }}
+              >
+                {ajoutEnCours ? 'Ajout…' : 'Ajouter'}
+              </button>
+            </div>
+          )}
+          {erreurCategorie && (
+            <div style={{ color: '#B91C1C', fontSize: '0.78rem', fontWeight: 600, marginBottom: '12px' }}>{erreurCategorie}</div>
+          )}
+
           {categories.length === 0 ? (
             <div style={{ color: '#64748B', fontSize: '0.86rem', fontWeight: 600 }}>
               Aucune catégorie personnalisée : le formulaire utilise la catégorie « Général » par défaut.
             </div>
           ) : (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {categories.map((c) => (
-                <span
-                  key={c.id}
-                  style={{ background: '#EAF5EC', color: '#3C7730', border: '1px solid #CFE3D3', borderRadius: '9999px', padding: '5px 14px', fontSize: '0.82rem', fontWeight: 700 }}
-                >
-                  {c.nom}
-                </span>
-              ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {categories.map((c) => {
+                const moi = estAMoi(c);
+                const enEdition = categorieEnEdition === c.id;
+                return (
+                  <div
+                    key={c.id}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px',
+                      padding: '9px 12px', background: '#F8FAF8', border: '1px solid #E2EFE1', borderRadius: '12px',
+                    }}
+                  >
+                    {enEdition ? (
+                      <input
+                        type="text"
+                        value={nomEdite}
+                        onChange={(e) => setNomEdite(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && enregistrerEdition(c)}
+                        maxLength={100}
+                        autoFocus
+                        style={{ flex: 1, padding: '5px 8px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.82rem', boxSizing: 'border-box' }}
+                      />
+                    ) : (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                        <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>{c.nom}</span>
+                        <span
+                          style={{
+                            fontSize: '0.66rem', fontWeight: 700, padding: '2px 8px', borderRadius: '9999px', whiteSpace: 'nowrap',
+                            background: moi ? '#EAF5EC' : '#F1F5F9',
+                            color: moi ? '#3C7730' : '#64748B',
+                          }}
+                        >
+                          {moi ? 'Ajoutée par vous' : 'Ajoutée par le CX Manager'}
+                        </span>
+                      </span>
+                    )}
+
+                    {moi && (
+                      <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                        {enEdition ? (
+                          <button
+                            type="button"
+                            onClick={() => enregistrerEdition(c)}
+                            disabled={actionEnCours === c.id}
+                            style={{ background: '#EAF5EC', color: '#3C7730', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                          >
+                            Enregistrer
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => demarrerEdition(c)}
+                            title="Modifier"
+                            style={{ background: '#F1F5F9', color: '#334155', border: 'none', borderRadius: '8px', padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                          >
+                            <EditIcon size={13} />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => desactiverCategorie(c)}
+                          disabled={actionEnCours === c.id}
+                          style={{ background: '#FEE2E2', color: '#DC2626', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                        >
+                          Désactiver
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

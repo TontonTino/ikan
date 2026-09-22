@@ -56,6 +56,9 @@ export interface Categorie {
   nom: string;
   active: boolean;
   created_at: string;
+  cree_par_id?: string | null;
+  /** 'cx_manager' | 'agency_manager' | null (catégorie antérieure à cette fonctionnalité) */
+  cree_par_role?: string | null;
 }
 
 export type StatutTraitement = 'nouveau' | 'en_traitement' | 'en_cours' | 'resolu';

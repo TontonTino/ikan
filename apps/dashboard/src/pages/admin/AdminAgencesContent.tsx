@@ -812,8 +812,19 @@ export default function AdminAgencesContent() {
                         borderRadius: '12px',
                       }}
                     >
-                      <span style={{ fontSize: '0.86rem', fontWeight: 700, color: cat.active ? '#0F172A' : '#94A3B8', textDecoration: cat.active ? 'none' : 'line-through' }}>
-                        {cat.nom}
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                        <span style={{ fontSize: '0.86rem', fontWeight: 700, color: cat.active ? '#0F172A' : '#94A3B8', textDecoration: cat.active ? 'none' : 'line-through' }}>
+                          {cat.nom}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '0.66rem', fontWeight: 700, padding: '2px 8px', borderRadius: '9999px', whiteSpace: 'nowrap',
+                            background: cat.cree_par_role === 'agency_manager' ? '#EFF6FF' : '#F1F5F9',
+                            color: cat.cree_par_role === 'agency_manager' ? '#2563EB' : '#64748B',
+                          }}
+                        >
+                          {cat.cree_par_role === 'agency_manager' ? 'Ajoutée par l’Agency Manager' : 'Ajoutée par le CX Manager'}
+                        </span>
                       </span>
                       <button
                         type="button"
@@ -827,6 +838,7 @@ export default function AdminAgencesContent() {
                           fontSize: '0.72rem',
                           fontWeight: 700,
                           cursor: 'pointer',
+                          flexShrink: 0,
                         }}
                       >
                         {cat.active ? 'Désactiver' : 'Réactiver'}
