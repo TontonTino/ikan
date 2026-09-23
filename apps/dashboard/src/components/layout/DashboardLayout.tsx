@@ -57,8 +57,6 @@ const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
       items: [
         { path: '/siege', label: 'Dashboard', icon: <LayoutGridIcon size={18} /> },
         { path: '/statistiques', label: 'Statistiques & Analyses', icon: <BarChartIcon size={18} /> },
-        { path: '/feedbacks', label: 'Feedbacks Réseau', icon: <MessageSquareIcon size={18} /> },
-        { path: '/pilotage', label: 'Pilotage', icon: <BellIcon size={18} /> },
         { path: '/admin/gestion-agences', label: 'Gestion des agences', icon: <StoreIcon size={18} /> },
       ],
     },
@@ -70,7 +68,6 @@ const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
         { path: '/agence', label: 'Dashboard Agence', icon: <LayoutGridIcon size={18} /> },
         { path: '/statistiques', label: 'Statistiques & Analyses', icon: <BarChartIcon size={18} /> },
         { path: '/feedbacks', label: 'Feedbacks Clients', icon: <MessageSquareIcon size={18} /> },
-        { path: '/pilotage', label: 'Pilotage', icon: <BellIcon size={18} /> },
         { path: '/mon-agence', label: 'Mon agence', icon: <StoreIcon size={18} /> },
       ],
     },
