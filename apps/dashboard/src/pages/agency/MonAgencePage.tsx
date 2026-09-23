@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import jsPDF from 'jspdf';
 import { agencesApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import { getFeedbackUrl } from '../../config';
@@ -34,6 +35,79 @@ const boutonStyle: React.CSSProperties = {
 const qrImageUrl = (lien: string, taille: number) =>
   `https://api.qrserver.com/v1/create-qr-code/?size=${taille}x${taille}&data=${encodeURIComponent(lien)}`;
 
+const slug = (nom: string) => nom.trim().replace(/\s+/g, '-').toLowerCase();
+
+/** Récupère une image distante et la convertit en data URL (nécessaire pour jsPDF.addImage). */
+async function imageUrlEnDataUrl(url: string): Promise<string> {
+  const blob = await (await fetch(url)).blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Génère la fiche QR code de l'agence en PDF : carte compacte au format A6
+ * (105 x 148 mm), pensée pour être imprimée et affichée en agence (chevalet,
+ * comptoir) — une page A4 laisserait un QR minuscule perdu au milieu d'une
+ * grande marge blanche. En-tête en texte (pas d'image) pour un rendu net à
+ * toute taille sans dépendre du chargement d'un fichier logo.
+ */
+async function genererPdfQrCode(agence: Agence, lien: string) {
+  const qrDataUrl = await imageUrlEnDataUrl(qrImageUrl(lien, 600));
+
+  const doc = new jsPDF({ unit: 'mm', format: 'a6', orientation: 'portrait' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+
+  // En-tête : wordmark IKAN AI
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(2, 48, 45);
+  doc.text('IKAN AI', pageW / 2, 14, { align: 'center' });
+  doc.setDrawColor(117, 183, 42);
+  doc.setLineWidth(0.6);
+  doc.line(pageW / 2 - 10, 17, pageW / 2 + 10, 17);
+
+  // Titre : nom de l'agence (peut passer sur 2 lignes si le nom est long)
+  doc.setFontSize(13);
+  doc.setTextColor(2, 48, 45);
+  const nomLines = doc.splitTextToSize(agence.nom, pageW - 16);
+  doc.text(nomLines, pageW / 2, 27, { align: 'center' });
+
+  let y = 27 + nomLines.length * 5.5;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text('Scannez pour partager votre avis', pageW / 2, y + 5, { align: 'center' });
+  y += 12;
+
+  // QR code centré, sur un cadre blanc légèrement arrondi
+  const qrSize = 60;
+  const qrX = (pageW - qrSize) / 2;
+  doc.setDrawColor(232, 236, 230);
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(qrX - 5, y - 5, qrSize + 10, qrSize + 10, 3, 3, 'FD');
+  doc.addImage(qrDataUrl, 'PNG', qrX, y, qrSize, qrSize);
+  y += qrSize + 12;
+
+  // Lien lisible en dessous
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 116, 139);
+  const lienLines = doc.splitTextToSize(lien, pageW - 16);
+  doc.text(lienLines, pageW / 2, y, { align: 'center' });
+
+  // Pied de page
+  doc.setFontSize(7);
+  doc.setTextColor(148, 163, 184);
+  doc.text("IKAN AI — Plateforme d'écoute client", pageW / 2, pageH - 8, { align: 'center' });
+
+  doc.save(`qr-code-${slug(agence.nom)}.pdf`);
+}
+
 /**
  * "Mon agence" (Agency Manager) : QR code de collecte de SA agence (lecture seule, géré
  * par le CX Manager) + catégories du formulaire. L'Agency Manager peut désormais ajouter
@@ -63,6 +137,9 @@ export default function MonAgencePage() {
   const [categorieEnEdition, setCategorieEnEdition] = useState<string | null>(null);
   const [nomEdite, setNomEdite] = useState('');
   const [actionEnCours, setActionEnCours] = useState<string | null>(null);
+
+  // ── Génération du PDF du QR code ──
+  const [pdfEnCours, setPdfEnCours] = useState(false);
 
   useEffect(() => {
     let annule = false;
@@ -115,19 +192,33 @@ export default function MonAgencePage() {
     }
   };
 
-  const telechargerImage = async () => {
+  const telechargerPdf = async () => {
+    setPdfEnCours(true);
+    try {
+      await genererPdfQrCode(agence, lien);
+      afficherMessage('PDF du QR code téléchargé.');
+    } catch {
+      afficherMessage('Impossible de générer le PDF pour le moment.');
+    } finally {
+      setPdfEnCours(false);
+    }
+  };
+
+  // Conservée en option secondaire : utile pour insérer le QR brut dans un
+  // autre support (flyer, site web) sans le cadre/texte de la fiche PDF.
+  const telechargerImagePng = async () => {
     const source = qrImageUrl(lien, 800);
     try {
       const blob = await (await fetch(source)).blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `qr-code-${agence.nom.replace(/\s+/g, '-').toLowerCase()}.png`;
+      a.download = `qr-code-${slug(agence.nom)}.png`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      afficherMessage("Image du QR code téléchargée.");
+      afficherMessage('Image PNG du QR code téléchargée.');
     } catch {
       window.open(source, '_blank', 'noopener');
     }
@@ -221,12 +312,19 @@ export default function MonAgencePage() {
             />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0, flex: 1 }}>
               <div style={{ fontSize: '0.78rem', color: '#64748B', wordBreak: 'break-all' }}>{lien}</div>
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
                 <button type="button" onClick={copierLien} style={boutonStyle}>
                   <CopyIcon size={16} /> Copier le lien
                 </button>
-                <button type="button" onClick={telechargerImage} style={boutonStyle}>
-                  <DownloadIcon size={16} /> Télécharger l'image
+                <button type="button" onClick={telechargerPdf} disabled={pdfEnCours} style={{ ...boutonStyle, opacity: pdfEnCours ? 0.6 : 1 }}>
+                  <DownloadIcon size={16} /> {pdfEnCours ? 'Génération…' : 'Télécharger le PDF'}
+                </button>
+                <button
+                  type="button"
+                  onClick={telechargerImagePng}
+                  style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', padding: '4px' }}
+                >
+                  ou l'image PNG seule
                 </button>
               </div>
             </div>
