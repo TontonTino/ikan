@@ -19,8 +19,10 @@ import {
   ThumbsDownIcon,
   ClockIcon,
   TagIcon,
+  UsersIcon,
 } from '../../components/common/Icons';
 import { AgencyLocationPicker, LocationData } from '../../components/agency/AgencyLocationPicker';
+import CreateAgencyManagerModal from '../../components/admin/CreateAgencyManagerModal';
 
 interface AgenceForm {
   nom: string;
@@ -54,6 +56,7 @@ export default function AdminAgencesContent() {
   const [agencesStats, setAgencesStats] = useState<AgenceStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showCreateAgencyManager, setShowCreateAgencyManager] = useState(false);
   const [editTarget, setEditTarget] = useState<Agence | null>(null);
   const [qrModalTarget, setQrModalTarget] = useState<Agence | null>(null);
   const [form, setForm] = useState<AgenceForm>(emptyForm);
@@ -212,28 +215,57 @@ export default function AdminAgencesContent() {
             Gestion du parc d'agences physiques, des QR codes et du monitoring réseau
           </p>
         </div>
-        <button
-          type="button"
-          onClick={openCreate}
-          style={{
-            background: '#3C7730',
-            color: '#FFFFFF',
-            border: 'none',
-            borderRadius: '12px',
-            padding: '10px 18px',
-            fontSize: '0.86rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            boxShadow: '0 2px 8px rgba(60, 119, 48, 0.25)',
-          }}
-        >
-          <PlusIcon size={16} color="#FFFFFF" />
-          Nouvelle Agence
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setShowCreateAgencyManager(true)}
+            style={{
+              background: '#FFFFFF',
+              color: '#02302D',
+              border: '1px solid #D6E8D9',
+              borderRadius: '12px',
+              padding: '10px 18px',
+              fontSize: '0.86rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            <UsersIcon size={16} color="#02302D" />
+            Ajouter un nouveau chef d'agence
+          </button>
+          <button
+            type="button"
+            onClick={openCreate}
+            style={{
+              background: '#3C7730',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: '12px',
+              padding: '10px 18px',
+              fontSize: '0.86rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 2px 8px rgba(60, 119, 48, 0.25)',
+            }}
+          >
+            <PlusIcon size={16} color="#FFFFFF" />
+            Nouvelle Agence
+          </button>
+        </div>
       </div>
+
+      {showCreateAgencyManager && (
+        <CreateAgencyManagerModal
+          onClose={() => setShowCreateAgencyManager(false)}
+          onCreated={() => showToast("Chef d'agence créé — visible dans l'onglet Agency Managers")}
+        />
+      )}
 
       {/* Navigation par 2 Onglets */}
       <TabsNavigation

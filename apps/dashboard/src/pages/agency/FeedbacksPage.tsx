@@ -87,10 +87,22 @@ const normalizeCriticite = (criticite?: string): string => {
   return criticite.toLowerCase().trim();
 };
 
-export default function FeedbacksPage() {
+interface FeedbacksPageProps {
+  /**
+   * Agence fixe (page agence unifiée, onglet Feedbacks) : quand fourni, le
+   * sélecteur d'agence est masqué et la liste est filtrée côté serveur sur
+   * cette seule agence — le composant reste utilisable tel quel (sans prop)
+   * pour la route /feedbacks classique, comportement inchangé dans ce cas.
+   */
+  agenceId?: string;
+}
+
+export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
   const currentUser = useAuthStore((s) => s.user);
   const isCXOrAdmin = currentUser?.role === 'cx_manager' || currentUser?.role === 'admin';
   const isAllowedToTreat = currentUser?.role === 'agency_manager' || currentUser?.role === 'cx_manager';
+  // Le sélecteur d'agence n'a de sens que si l'agence n'est pas déjà fixée par le contexte de la page.
+  const showAgenceSelector = isCXOrAdmin && !agenceId;
 
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [agences, setAgences] = useState<Agence[]>([]);
@@ -102,7 +114,7 @@ export default function FeedbacksPage() {
   const [activeTab, setActiveTab] = useState<'tous' | 'a_traiter' | 'critiques' | 'thematiques'>('tous');
 
   // Filtres
-  const [selectedAgenceId, setSelectedAgenceId] = useState<string>('all');
+  const [selectedAgenceId, setSelectedAgenceId] = useState<string>(agenceId || 'all');
   const [filterSentiment, setFilterSentiment] = useState<string>('all');
   const [filterTheme, setFilterTheme] = useState<string>('all');
   const [search, setSearch] = useState<string>('');
@@ -112,10 +124,10 @@ export default function FeedbacksPage() {
     async function loadData() {
       setLoading(true);
       try {
-        const fRes = await feedbacksApi.list({ limit: 250 });
+        const fRes = await feedbacksApi.list({ limit: 250, ...(agenceId ? { agence_id: agenceId } : {}) });
         if (!cancelled) setFeedbacks(fRes?.data || []);
 
-        if (isCXOrAdmin) {
+        if (showAgenceSelector) {
           const aRes = await agencesApi.list();
           if (!cancelled && aRes?.data) setAgences(aRes.data);
         }
@@ -127,7 +139,7 @@ export default function FeedbacksPage() {
     }
     loadData();
     return () => { cancelled = true; };
-  }, [isCXOrAdmin]);
+  }, [showAgenceSelector, agenceId]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -246,7 +258,7 @@ export default function FeedbacksPage() {
       )}
 
       {/* Filtre agence */}
-      {isCXOrAdmin && (
+      {showAgenceSelector && (
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <select
             value={selectedAgenceId}

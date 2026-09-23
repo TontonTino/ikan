@@ -6,7 +6,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { getFeedbackUrl } from '../../config';
 import type { Agence, Categorie, ActiviteAgenceItem, StatsAgenceResponse } from '../../types';
 import TabsNavigation, { TabItem } from '../../components/ui/TabsNavigation';
-import SatisfactionEvolutionChart from '../../components/stats/SatisfactionEvolutionChart';
+import FeedbacksPage from './FeedbacksPage';
 import {
   CopyIcon,
   DownloadIcon,
@@ -19,7 +19,7 @@ import {
   PhoneIcon,
   MailIcon,
   UsersIcon,
-  BarChartIcon,
+  MessageSquareIcon,
   ActivityIcon,
 } from '../../components/common/Icons';
 
@@ -123,8 +123,8 @@ async function genererPdfQrCode(agence: Agence, lien: string) {
   doc.save(`qr-code-${slug(agence.nom)}.pdf`);
 }
 
-type AgenceTab = 'informations' | 'categories' | 'statistiques' | 'activite';
-const TABS_VALIDES: AgenceTab[] = ['informations', 'categories', 'statistiques', 'activite'];
+type AgenceTab = 'informations' | 'categories' | 'feedbacks' | 'activite';
+const TABS_VALIDES: AgenceTab[] = ['informations', 'categories', 'feedbacks', 'activite'];
 
 /**
  * Page agence unifiée : sert à la fois de "Mon agence" (Agency Manager, sur sa
@@ -374,7 +374,7 @@ export default function MonAgencePage() {
   const tabsConfig: TabItem[] = [
     { id: 'informations', label: 'Informations', icon: <MapPinIcon size={16} /> },
     { id: 'categories', label: 'Catégories', icon: <TagIcon size={16} />, badge: categories.length },
-    { id: 'statistiques', label: 'Statistiques', icon: <BarChartIcon size={16} /> },
+    { id: 'feedbacks', label: 'Feedbacks', icon: <MessageSquareIcon size={16} /> },
     { id: 'activite', label: 'Activité', icon: <ActivityIcon size={16} /> },
   ];
 
@@ -656,18 +656,9 @@ export default function MonAgencePage() {
         </div>
       )}
 
-      {/* ── Onglet Statistiques (réutilise le composant partagé, paramétré par agence_id) ── */}
-      {activeTab === 'statistiques' && (
-        <div style={cardStyle}>
-          <h3 style={{ margin: '0 0 4px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D' }}>Évolution de la satisfaction</h3>
-          <p style={{ margin: '0 0 16px', fontSize: '0.82rem', color: '#64748B' }}>30 derniers jours.</p>
-          {!stats ? (
-            <div style={{ color: '#64748B', fontSize: '0.84rem' }}>Chargement…</div>
-          ) : (
-            <SatisfactionEvolutionChart data={stats.evolution_satisfaction} height={280} />
-          )}
-        </div>
-      )}
+      {/* ── Onglet Feedbacks (réutilise FeedbacksPage.tsx paramétré par agenceId,
+          sélecteur d'agence masqué puisqu'elle est déjà fixée par cette page) ── */}
+      {activeTab === 'feedbacks' && <FeedbacksPage agenceId={agence.id} />}
 
       {/* ── Onglet Activité (HistoriqueFeedback + HistoriqueSuggestion fusionnés) ── */}
       {activeTab === 'activite' && (

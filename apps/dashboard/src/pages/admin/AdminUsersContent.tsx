@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { utilisateursApi, agencesApi, organisationsApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import TabsNavigation from '../../components/ui/TabsNavigation';
+import CreateAgencyManagerModal from '../../components/admin/CreateAgencyManagerModal';
 import {
   UsersIcon,
   PlusIcon,
@@ -51,6 +52,7 @@ export default function AdminUsersContent() {
   const [orgs, setOrgs] = useState<{ id: string; nom: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showCreateAgencyManager, setShowCreateAgencyManager] = useState(false);
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
@@ -211,7 +213,11 @@ export default function AdminUsersContent() {
         <button
           type="button"
           onClick={() => {
-            if (showForm) {
+            if (isCXManager) {
+              // Création d'un Chef d'Agence : modale partagée avec le bouton équivalent
+              // de l'onglet "Agences & QR Codes" (voir AdminAgencesContent.tsx).
+              setShowCreateAgencyManager(true);
+            } else if (showForm) {
               setShowForm(false);
               setEditingUser(null);
             } else {
@@ -234,9 +240,19 @@ export default function AdminUsersContent() {
           }}
         >
           <PlusIcon size={16} color="#FFFFFF" />
-          {showForm ? 'Fermer' : (isAdmin ? 'Nouveau CX Manager' : "Nouveau Chef d'Agence")}
+          {isCXManager ? "Nouveau Chef d'Agence" : (showForm ? 'Fermer' : 'Nouveau CX Manager')}
         </button>
       </div>
+
+      {showCreateAgencyManager && (
+        <CreateAgencyManagerModal
+          onClose={() => setShowCreateAgencyManager(false)}
+          onCreated={() => {
+            utilisateursApi.list().then((r) => setUsers(r.data));
+            showToast("Chef d'agence créé");
+          }}
+        />
+      )}
 
       {/* Navigation par Onglets */}
       <TabsNavigation
