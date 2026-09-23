@@ -10,7 +10,16 @@ services:
     runtime: python
     rootDir: apps/api
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    # Migrations exécutées automatiquement à chaque déploiement (aligné sur
+    # ikanai-agent) — évite qu'un déploiement de code en avance sur une migration
+    # non appliquée manuellement casse la prod (voir incident du 23/09/2026 :
+    # login en 500 après un push ajoutant des colonnes jamais migrées en base).
+    # Sûr uniquement parce que les migrations de ce repo restent strictement
+    # additives (sa.inspect avant chaque add_column, jamais de colonne supprimée/
+    # renommée) — le `&&` empêche uvicorn de démarrer si la migration échoue,
+    # donc Render garde l'ancienne instance en vie plutôt que de basculer sur un
+    # état incohérent.
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     plan: free
     healthCheckPath: /health
     envVars:
