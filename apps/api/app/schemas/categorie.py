@@ -9,11 +9,13 @@ from typing import Optional
 
 class CategorieCreate(BaseModel):
     nom: str = Field(..., min_length=1, max_length=100)
+    est_categorie_suggestion: bool = False
 
 
 class CategorieUpdate(BaseModel):
     nom: Optional[str] = Field(None, min_length=1, max_length=100)
     active: Optional[bool] = None
+    est_categorie_suggestion: Optional[bool] = None
 
 
 class CategorieResponse(BaseModel):
@@ -21,6 +23,7 @@ class CategorieResponse(BaseModel):
     agence_id: uuid.UUID
     nom: str
     active: bool
+    est_categorie_suggestion: bool = False
     created_at: datetime
     cree_par_id: Optional[uuid.UUID] = None
     # 'cx_manager' | 'agency_manager' | None (catégorie antérieure à cette fonctionnalité)

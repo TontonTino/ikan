@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { authApi } from '../services/api';
 import { useAuthStore } from '../stores/authStore';
 import PageHeader from '../components/ui/PageHeader';
-import { CheckCircleIcon, AlertTriangleIcon, KeyIcon, UsersIcon } from '../components/common/Icons';
+import { CheckCircleIcon, AlertTriangleIcon, KeyIcon, UsersIcon, BellIcon } from '../components/common/Icons';
 
 function cardStyle(): React.CSSProperties {
   return {
@@ -58,7 +58,27 @@ export default function ParametresPage() {
     }
   };
 
-  // ── Section 2 : mot de passe ──
+  // ── Section 2 (CX Manager uniquement) : délai avant alerte "suggestion" ──
+  const [delaiSuggestion, setDelaiSuggestion] = useState(user?.delai_alerte_suggestion_heures ?? 24);
+  const [delaiEnCours, setDelaiEnCours] = useState(false);
+  const [messageDelai, setMessageDelai] = useState<{ type: 'succes' | 'erreur'; texte: string } | null>(null);
+
+  const enregistrerDelai = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMessageDelai(null);
+    setDelaiEnCours(true);
+    try {
+      const res = await authApi.updateMe({ delai_alerte_suggestion_heures: delaiSuggestion });
+      setUser(res.data);
+      setMessageDelai({ type: 'succes', texte: 'Délai mis à jour.' });
+    } catch (err: any) {
+      setMessageDelai({ type: 'erreur', texte: err?.response?.data?.detail || 'Erreur lors de la mise à jour.' });
+    } finally {
+      setDelaiEnCours(false);
+    }
+  };
+
+  // ── Section 3 : mot de passe ──
   const [ancienMdp, setAncienMdp] = useState('');
   const [nouveauMdp, setNouveauMdp] = useState('');
   const [confirmationMdp, setConfirmationMdp] = useState('');
@@ -132,6 +152,43 @@ export default function ParametresPage() {
           </div>
         </form>
       </div>
+
+      {/* ── Délai d'alerte "suggestion" (CX Manager uniquement) ── */}
+      {user?.role === 'cx_manager' && (
+        <div style={cardStyle()}>
+          <h3 style={{ margin: '0 0 4px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <BellIcon size={18} color="#3C7730" />
+            Alertes
+          </h3>
+          <p style={{ margin: '0 0 18px', fontSize: '0.82rem', color: '#64748B' }}>
+            Délai avant qu'un feedback de catégorie « suggestion » non traité devienne une alerte pour vous.
+          </p>
+
+          <form onSubmit={enregistrerDelai}>
+            <div style={{ marginBottom: '4px' }}>
+              <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>Délai (en heures)</label>
+              <input
+                type="number"
+                min={1}
+                max={720}
+                value={delaiSuggestion}
+                onChange={(e) => setDelaiSuggestion(Number(e.target.value))}
+                required
+                className="saas-input"
+                style={{ width: '100%' }}
+              />
+            </div>
+
+            {messageDelai && <Bandeau type={messageDelai.type} texte={messageDelai.texte} />}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '18px' }}>
+              <button type="submit" disabled={delaiEnCours} className="btn-primary">
+                {delaiEnCours ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* ── Mot de passe ── */}
       <div style={cardStyle()}>

@@ -47,7 +47,7 @@ export default function DashboardAgencePage() {
       .then(([d, r, a]) => {
         setData(d.data);
         setRecos(r.data);
-        setAlertes(a.data || []);
+        setAlertes(a.data?.alertes_seuil || []);
       })
       .finally(() => setLoading(false));
   }, [agenceId, jours]);

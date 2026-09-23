@@ -24,6 +24,11 @@ class Categorie(Base):
     )
     nom: Mapped[str] = mapped_column(String(100), nullable=False)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Marque les feedbacks de cette catégorie comme alertes "suggestion" (voir
+    # app/services/alertes_feedback.py). Nom volontairement distinct du modèle
+    # Suggestion (idée client en texte libre, concept sans rapport) pour éviter
+    # toute confusion terminologique entre les deux.
+    est_categorie_suggestion: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

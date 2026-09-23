@@ -5,7 +5,7 @@ Le client (qui scanne le QR code) n'a PAS de compte — feedbacks anonymes.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, DateTime, Boolean, ForeignKey, Enum, func
+from sqlalchemy import String, DateTime, Boolean, ForeignKey, Enum, Integer, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -41,6 +41,11 @@ class Utilisateur(Base):
     derniere_connexion: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # Délai (en heures) avant qu'un feedback "suggestion" non traité devienne une
+    # alerte pour CE CX Manager (voir app/services/alertes_feedback.py). Réglable
+    # individuellement par compte, pertinent uniquement pour role=CX_MANAGER —
+    # non exposé/masqué côté frontend pour les autres rôles.
+    delai_alerte_suggestion_heures: Mapped[int] = mapped_column(Integer, default=24, nullable=False)
 
     # Relations
     organisation: Mapped["Organisation"] = relationship(

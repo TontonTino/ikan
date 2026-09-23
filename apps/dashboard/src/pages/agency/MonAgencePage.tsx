@@ -1,12 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useParams, useSearchParams } from 'react-router-dom';
 import jsPDF from 'jspdf';
-import { agencesApi } from '../../services/api';
+import { agencesApi, statisticsApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import { getFeedbackUrl } from '../../config';
-import type { Agence, Categorie } from '../../types';
-import PageHeader from '../../components/ui/PageHeader';
-import { CopyIcon, DownloadIcon, TagIcon, CheckCircleIcon, PlusIcon, EditIcon, XCloseIcon } from '../../components/common/Icons';
+import type { Agence, Categorie, ActiviteAgenceItem, StatsAgenceResponse } from '../../types';
+import TabsNavigation, { TabItem } from '../../components/ui/TabsNavigation';
+import SatisfactionEvolutionChart from '../../components/stats/SatisfactionEvolutionChart';
+import {
+  CopyIcon,
+  DownloadIcon,
+  TagIcon,
+  CheckCircleIcon,
+  PlusIcon,
+  EditIcon,
+  XCloseIcon,
+  MapPinIcon,
+  PhoneIcon,
+  MailIcon,
+  UsersIcon,
+  BarChartIcon,
+  ActivityIcon,
+} from '../../components/common/Icons';
 
 const cardStyle: React.CSSProperties = {
   background: '#FFFFFF',
@@ -108,21 +123,37 @@ async function genererPdfQrCode(agence: Agence, lien: string) {
   doc.save(`qr-code-${slug(agence.nom)}.pdf`);
 }
 
+type AgenceTab = 'informations' | 'categories' | 'statistiques' | 'activite';
+const TABS_VALIDES: AgenceTab[] = ['informations', 'categories', 'statistiques', 'activite'];
+
 /**
- * "Mon agence" (Agency Manager) : QR code de collecte de SA agence (lecture seule, géré
- * par le CX Manager) + catégories du formulaire. L'Agency Manager peut désormais ajouter
- * ses propres catégories et gérer (modifier/désactiver) UNIQUEMENT celles qu'il a créées ;
- * les catégories créées par le CX Manager restent en lecture seule pour lui (l'API refuse
- * toute écriture dessus, 403).
+ * Page agence unifiée : sert à la fois de "Mon agence" (Agency Manager, sur sa
+ * propre agence, via /mon-agence) et de vue détaillée d'une agence précise pour
+ * le CX Manager (via /agences/:agenceId/apercu, depuis l'onglet Agences de la
+ * Vue Siège ou le Répertoire). Le composant est identique pour les deux rôles ;
+ * seul l'agenceId effectif change (route param pour le CX Manager, agence
+ * rattachée au compte pour l'Agency Manager), et les droits d'écriture sur les
+ * catégories restent entièrement arbitrés par l'API (voir agences.py).
  */
 export default function MonAgencePage() {
   const user = useAuthStore((s) => s.user);
-  if (user && user.role !== 'agency_manager') {
+  const { agenceId: agenceIdParam } = useParams<{ agenceId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  if (user && user.role !== 'agency_manager' && user.role !== 'cx_manager') {
     return <Navigate to="/" replace />;
   }
 
+  const agenceId = agenceIdParam || user?.agence_id;
+
+  const requestedTab = searchParams.get('tab');
+  const initialTab: AgenceTab = TABS_VALIDES.includes(requestedTab as AgenceTab) ? (requestedTab as AgenceTab) : 'informations';
+  const [activeTab, setActiveTab] = useState<AgenceTab>(initialTab);
+
   const [agence, setAgence] = useState<Agence | null>(null);
   const [categories, setCategories] = useState<Categorie[]>([]);
+  const [stats, setStats] = useState<StatsAgenceResponse | null>(null);
+  const [activite, setActivite] = useState<ActiviteAgenceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [erreur, setErreur] = useState('');
   const [message, setMessage] = useState('');
@@ -130,10 +161,11 @@ export default function MonAgencePage() {
   // ── Formulaire d'ajout de catégorie ──
   const [formulaireOuvert, setFormulaireOuvert] = useState(false);
   const [nouveauNom, setNouveauNom] = useState('');
+  const [nouveauEstSuggestion, setNouveauEstSuggestion] = useState(false);
   const [ajoutEnCours, setAjoutEnCours] = useState(false);
   const [erreurCategorie, setErreurCategorie] = useState('');
 
-  // ── Édition inline (nom) d'une catégorie que j'ai créée ──
+  // ── Édition inline (nom) d'une catégorie que je peux gérer ──
   const [categorieEnEdition, setCategorieEnEdition] = useState<string | null>(null);
   const [nomEdite, setNomEdite] = useState('');
   const [actionEnCours, setActionEnCours] = useState<string | null>(null);
@@ -142,24 +174,24 @@ export default function MonAgencePage() {
   const [pdfEnCours, setPdfEnCours] = useState(false);
 
   useEffect(() => {
+    if (!agenceId) {
+      setLoading(false);
+      return;
+    }
     let annule = false;
+    setLoading(true);
     (async () => {
       try {
-        const res = await agencesApi.list();
-        const mienne: Agence | undefined = Array.isArray(res.data) ? res.data[0] : undefined;
-        if (!mienne) {
-          if (!annule) setErreur("Aucune agence n'est rattachée à votre compte.");
-          return;
-        }
-        if (!annule) setAgence(mienne);
+        const res = await agencesApi.get(agenceId);
+        if (!annule) setAgence(res.data);
         try {
-          const cats = await agencesApi.listCategories(mienne.id);
+          const cats = await agencesApi.listCategories(agenceId);
           if (!annule) setCategories(Array.isArray(cats.data) ? cats.data : []);
         } catch {
           if (!annule) setCategories([]);
         }
       } catch {
-        if (!annule) setErreur("Impossible de charger les informations de votre agence.");
+        if (!annule) setErreur("Impossible de charger les informations de cette agence.");
       } finally {
         if (!annule) setLoading(false);
       }
@@ -167,15 +199,56 @@ export default function MonAgencePage() {
     return () => {
       annule = true;
     };
-  }, []);
+  }, [agenceId]);
+
+  useEffect(() => {
+    if (!agenceId) return;
+    let annule = false;
+    statisticsApi
+      .agency({ agence_id: agenceId, jours: 30 })
+      .then((r) => {
+        if (!annule) setStats(r.data);
+      })
+      .catch(() => {
+        if (!annule) setStats(null);
+      });
+    return () => {
+      annule = true;
+    };
+  }, [agenceId]);
+
+  useEffect(() => {
+    if (!agenceId) return;
+    let annule = false;
+    agencesApi
+      .activite(agenceId)
+      .then((r) => {
+        if (!annule) setActivite(Array.isArray(r.data) ? r.data : []);
+      })
+      .catch(() => {
+        if (!annule) setActivite([]);
+      });
+    return () => {
+      annule = true;
+    };
+  }, [agenceId]);
+
+  const handleTabChange = (id: string) => {
+    const tab = id as AgenceTab;
+    setActiveTab(tab);
+    setSearchParams(tab === 'informations' ? {} : { tab }, { replace: true });
+  };
 
   const afficherMessage = (texte: string) => {
     setMessage(texte);
     setTimeout(() => setMessage(''), 2500);
   };
 
+  if (!agenceId) {
+    return <div style={{ color: '#B91C1C', padding: '32px', fontWeight: 600 }}>Aucune agence n'est rattachée à votre compte.</div>;
+  }
   if (loading) {
-    return <div style={{ color: '#64748B', padding: '32px', fontWeight: 600 }}>Chargement de votre agence…</div>;
+    return <div style={{ color: '#64748B', padding: '32px', fontWeight: 600 }}>Chargement de l'agence…</div>;
   }
   if (erreur || !agence) {
     return <div style={{ color: '#B91C1C', padding: '32px', fontWeight: 600 }}>{erreur || 'Agence introuvable.'}</div>;
@@ -224,16 +297,23 @@ export default function MonAgencePage() {
     }
   };
 
-  const estAMoi = (c: Categorie) => c.cree_par_id != null && c.cree_par_id === user?.id;
+  // Le CX Manager gère toutes les catégories de son organisation (l'API l'autorise
+  // déjà) ; l'Agency Manager ne gère que celles qu'il a lui-même créées.
+  const peutGererCategorie = (c: Categorie) =>
+    user?.role === 'cx_manager' || (c.cree_par_id != null && c.cree_par_id === user?.id);
 
   const ajouterCategorie = async () => {
     if (!nouveauNom.trim()) return;
     setErreurCategorie('');
     setAjoutEnCours(true);
     try {
-      const r = await agencesApi.createCategorie(agence.id, { nom: nouveauNom.trim() });
+      const r = await agencesApi.createCategorie(agence.id, {
+        nom: nouveauNom.trim(),
+        est_categorie_suggestion: nouveauEstSuggestion,
+      });
       setCategories((prev) => [...prev, r.data]);
       setNouveauNom('');
+      setNouveauEstSuggestion(false);
       setFormulaireOuvert(false);
       afficherMessage('Catégorie ajoutée.');
     } catch (err: any) {
@@ -266,11 +346,22 @@ export default function MonAgencePage() {
     }
   };
 
+  const toggleEstSuggestion = async (c: Categorie) => {
+    setActionEnCours(c.id);
+    try {
+      const r = await agencesApi.updateCategorie(agence.id, c.id, { est_categorie_suggestion: !c.est_categorie_suggestion });
+      setCategories((prev) => prev.map((x) => (x.id === c.id ? r.data : x)));
+    } catch (err: any) {
+      afficherMessage(err?.response?.data?.detail || 'Impossible de modifier cette catégorie.');
+    } finally {
+      setActionEnCours(null);
+    }
+  };
+
   const desactiverCategorie = async (c: Categorie) => {
     setActionEnCours(c.id);
     try {
       await agencesApi.deleteCategorie(agence.id, c.id);
-      // L'Agency Manager ne voit que les catégories actives : une fois désactivée, elle disparaît de sa liste.
       setCategories((prev) => prev.filter((x) => x.id !== c.id));
       afficherMessage('Catégorie désactivée.');
     } catch (err: any) {
@@ -280,12 +371,45 @@ export default function MonAgencePage() {
     }
   };
 
+  const tabsConfig: TabItem[] = [
+    { id: 'informations', label: 'Informations', icon: <MapPinIcon size={16} /> },
+    { id: 'categories', label: 'Catégories', icon: <TagIcon size={16} />, badge: categories.length },
+    { id: 'statistiques', label: 'Statistiques', icon: <BarChartIcon size={16} /> },
+    { id: 'activite', label: 'Activité', icon: <ActivityIcon size={16} /> },
+  ];
+
+  const positifs = stats?.sentiments.find((s) => s.sentiment === 'positif')?.count ?? 0;
+  const negatifs = stats?.sentiments.find((s) => s.sentiment === 'negatif')?.count ?? 0;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
-      <PageHeader
-        title="Mon agence"
-        subtitle={`${agence.nom}${agence.ville ? ` — ${agence.ville}` : ''} : QR code de collecte et catégories du formulaire.`}
-      />
+      {/* ── En-tête : nom, statut, ville, manager ── */}
+      <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <h1 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: '#02302D' }}>{agence.nom}</h1>
+            <span
+              style={{
+                fontSize: '0.70rem', fontWeight: 800, padding: '3px 10px', borderRadius: '9999px',
+                background: agence.active ? '#EBF6ED' : '#F1F5F9',
+                color: agence.active ? '#3C7730' : '#64748B',
+              }}
+            >
+              {agence.active ? 'Active' : 'Inactive'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap', marginTop: '8px', fontSize: '0.84rem', color: '#64748B' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <MapPinIcon size={15} color="#94A3B8" />
+              {agence.ville || 'Ville non renseignée'}
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <UsersIcon size={15} color="#94A3B8" />
+              {agence.manager_nom || 'Aucun manager assigné'}
+            </span>
+          </div>
+        </div>
+      </div>
 
       {message && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '10px', background: '#EAF5EC', border: '1px solid #CFE3D3', color: '#3C7730', fontSize: '0.84rem', fontWeight: 600 }}>
@@ -294,44 +418,90 @@ export default function MonAgencePage() {
         </div>
       )}
 
-      {/* ── QR code + Catégories actives, côte à côte pour tenir sur une page ── */}
-      <div className="mon-agence-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(340px, 1fr) minmax(320px, 1fr)', gap: '18px', alignItems: 'start' }}>
-        {/* QR code */}
-        <div style={cardStyle}>
-          <h3 style={{ margin: '0 0 4px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D' }}>QR code de l'agence</h3>
-          <p style={{ margin: '0 0 16px', fontSize: '0.82rem', color: '#64748B' }}>
-            Vos clients le scannent pour laisser leur avis. Lecture seule : il est géré par votre CX Manager.
-          </p>
-          <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <img
-              src={qrImageUrl(lien, 220)}
-              alt={`QR code de ${agence.nom}`}
-              width={150}
-              height={150}
-              style={{ borderRadius: '12px', border: '1px solid #E8ECE6', padding: '8px', background: '#FFFFFF', flexShrink: 0 }}
-            />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: '0.78rem', color: '#64748B', wordBreak: 'break-all' }}>{lien}</div>
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-                <button type="button" onClick={copierLien} style={boutonStyle}>
-                  <CopyIcon size={16} /> Copier le lien
-                </button>
-                <button type="button" onClick={telechargerPdf} disabled={pdfEnCours} style={{ ...boutonStyle, opacity: pdfEnCours ? 0.6 : 1 }}>
-                  <DownloadIcon size={16} /> {pdfEnCours ? 'Génération…' : 'Télécharger le PDF'}
-                </button>
-                <button
-                  type="button"
-                  onClick={telechargerImagePng}
-                  style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', padding: '4px' }}
-                >
-                  ou l'image PNG seule
-                </button>
-              </div>
+      {/* ── QR code (inchangé, toujours visible, hors onglets) ── */}
+      <div style={cardStyle}>
+        <h3 style={{ margin: '0 0 4px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D' }}>QR code de l'agence</h3>
+        <p style={{ margin: '0 0 16px', fontSize: '0.82rem', color: '#64748B' }}>
+          Vos clients le scannent pour laisser leur avis. Lecture seule : il est géré par le CX Manager.
+        </p>
+        <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <img
+            src={qrImageUrl(lien, 220)}
+            alt={`QR code de ${agence.nom}`}
+            width={150}
+            height={150}
+            style={{ borderRadius: '12px', border: '1px solid #E8ECE6', padding: '8px', background: '#FFFFFF', flexShrink: 0 }}
+          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: '0.78rem', color: '#64748B', wordBreak: 'break-all' }}>{lien}</div>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <button type="button" onClick={copierLien} style={boutonStyle}>
+                <CopyIcon size={16} /> Copier le lien
+              </button>
+              <button type="button" onClick={telechargerPdf} disabled={pdfEnCours} style={{ ...boutonStyle, opacity: pdfEnCours ? 0.6 : 1 }}>
+                <DownloadIcon size={16} /> {pdfEnCours ? 'Génération…' : 'Télécharger le PDF'}
+              </button>
+              <button
+                type="button"
+                onClick={telechargerImagePng}
+                style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', padding: '4px' }}
+              >
+                ou l'image PNG seule
+              </button>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Catégories actives : les miennes sont gérables, celles du CX Manager en lecture seule */}
+      <TabsNavigation tabs={tabsConfig} activeTab={activeTab} onChange={handleTabChange} style={{ marginBottom: 0 }} />
+
+      {/* ── Onglet Informations ── */}
+      {activeTab === 'informations' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) minmax(280px, 1fr)', gap: '18px' }}>
+          <div style={cardStyle}>
+            <h3 style={{ margin: '0 0 14px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D' }}>Coordonnées</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.86rem', color: '#334155' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                <MapPinIcon size={17} color="#94A3B8" />
+                <span>{agence.adresse || 'Adresse non renseignée'}{agence.ville ? ` — ${agence.ville}` : ''}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <PhoneIcon size={17} color="#94A3B8" />
+                <span>{agence.telephone || 'Téléphone non renseigné'}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <MailIcon size={17} color="#94A3B8" />
+                <span>{agence.email || 'Email non renseigné'}</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={cardStyle}>
+            <h3 style={{ margin: '0 0 14px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D' }}>Performances clés (30 derniers jours)</h3>
+            {!stats ? (
+              <div style={{ color: '#64748B', fontSize: '0.84rem' }}>Chargement…</div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                <div style={{ background: '#F8FAF8', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#02302D' }}>{stats.kpis.satisfaction?.valeur ?? '—'}</div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600, marginTop: '4px' }}>Satisfaction</div>
+                </div>
+                <div style={{ background: '#EBF6ED', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#3C7730' }}>{positifs}</div>
+                  <div style={{ fontSize: '0.72rem', color: '#3C7730', fontWeight: 600, marginTop: '4px' }}>Avis positifs</div>
+                </div>
+                <div style={{ background: '#FEF2F2', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#DC2626' }}>{negatifs}</div>
+                  <div style={{ fontSize: '0.72rem', color: '#DC2626', fontWeight: 600, marginTop: '4px' }}>Avis négatifs</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Onglet Catégories (contenu inchangé, déplacé depuis l'ancienne page) ── */}
+      {activeTab === 'categories' && (
         <div style={cardStyle}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px', marginBottom: '4px' }}>
             <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 800, color: '#02302D', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -355,30 +525,36 @@ export default function MonAgencePage() {
             </button>
           </div>
           <p style={{ margin: '0 0 14px', fontSize: '0.82rem', color: '#64748B' }}>
-            Les thèmes proposés à vos clients dans le formulaire. Vous gérez celles que vous avez ajoutées ;
-            celles de votre CX Manager restent en lecture seule.
+            Les thèmes proposés aux clients dans le formulaire. Une catégorie « suggestion » déclenche une alerte dédiée
+            (voir Pilotage) lorsqu'un feedback qui lui est associé reste non traité.
           </p>
 
           {formulaireOuvert && (
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
-              <input
-                type="text"
-                value={nouveauNom}
-                onChange={(e) => setNouveauNom(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && ajouterCategorie()}
-                placeholder="Ex: Accueil, Propreté..."
-                maxLength={100}
-                autoFocus
-                style={{ flex: 1, padding: '9px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', boxSizing: 'border-box', fontSize: '0.84rem' }}
-              />
-              <button
-                type="button"
-                onClick={ajouterCategorie}
-                disabled={ajoutEnCours || !nouveauNom.trim()}
-                style={{ background: '#02302D', color: '#FFFFFF', border: 'none', borderRadius: '10px', padding: '9px 16px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', opacity: ajoutEnCours || !nouveauNom.trim() ? 0.6 : 1, fontFamily: 'inherit' }}
-              >
-                {ajoutEnCours ? 'Ajout…' : 'Ajouter'}
-              </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  value={nouveauNom}
+                  onChange={(e) => setNouveauNom(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && ajouterCategorie()}
+                  placeholder="Ex: Accueil, Propreté..."
+                  maxLength={100}
+                  autoFocus
+                  style={{ flex: 1, padding: '9px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', boxSizing: 'border-box', fontSize: '0.84rem' }}
+                />
+                <button
+                  type="button"
+                  onClick={ajouterCategorie}
+                  disabled={ajoutEnCours || !nouveauNom.trim()}
+                  style={{ background: '#02302D', color: '#FFFFFF', border: 'none', borderRadius: '10px', padding: '9px 16px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', opacity: ajoutEnCours || !nouveauNom.trim() ? 0.6 : 1, fontFamily: 'inherit' }}
+                >
+                  {ajoutEnCours ? 'Ajout…' : 'Ajouter'}
+                </button>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: '#334155', fontWeight: 600, cursor: 'pointer' }}>
+                <input type="checkbox" checked={nouveauEstSuggestion} onChange={(e) => setNouveauEstSuggestion(e.target.checked)} />
+                Catégorie « suggestion » (déclenche une alerte dédiée)
+              </label>
             </div>
           )}
           {erreurCategorie && (
@@ -392,7 +568,7 @@ export default function MonAgencePage() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {categories.map((c) => {
-                const moi = estAMoi(c);
+                const gerable = peutGererCategorie(c);
                 const enEdition = categorieEnEdition === c.id;
                 return (
                   <div
@@ -413,21 +589,26 @@ export default function MonAgencePage() {
                         style={{ flex: 1, padding: '5px 8px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.82rem', boxSizing: 'border-box' }}
                       />
                     ) : (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>{c.nom}</span>
                         <span
                           style={{
                             fontSize: '0.66rem', fontWeight: 700, padding: '2px 8px', borderRadius: '9999px', whiteSpace: 'nowrap',
-                            background: moi ? '#EAF5EC' : '#F1F5F9',
-                            color: moi ? '#3C7730' : '#64748B',
+                            background: c.cree_par_role === 'agency_manager' ? '#EFF6FF' : '#F1F5F9',
+                            color: c.cree_par_role === 'agency_manager' ? '#2563EB' : '#64748B',
                           }}
                         >
-                          {moi ? 'Ajoutée par vous' : 'Ajoutée par le CX Manager'}
+                          {c.cree_par_role === 'agency_manager' ? 'Ajoutée par l’Agency Manager' : 'Ajoutée par le CX Manager'}
                         </span>
+                        {c.est_categorie_suggestion && (
+                          <span style={{ fontSize: '0.66rem', fontWeight: 700, padding: '2px 8px', borderRadius: '9999px', whiteSpace: 'nowrap', background: '#FEF3E2', color: '#B45309' }}>
+                            Suggestion
+                          </span>
+                        )}
                       </span>
                     )}
 
-                    {moi && (
+                    {gerable && (
                       <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
                         {enEdition ? (
                           <button
@@ -450,6 +631,15 @@ export default function MonAgencePage() {
                         )}
                         <button
                           type="button"
+                          onClick={() => toggleEstSuggestion(c)}
+                          disabled={actionEnCours === c.id}
+                          title="Basculer le type suggestion"
+                          style={{ background: c.est_categorie_suggestion ? '#FEF3E2' : '#F1F5F9', color: c.est_categorie_suggestion ? '#B45309' : '#64748B', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                        >
+                          {c.est_categorie_suggestion ? 'Suggestion ✓' : 'Marquer suggestion'}
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => desactiverCategorie(c)}
                           disabled={actionEnCours === c.id}
                           style={{ background: '#FEE2E2', color: '#DC2626', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
@@ -464,16 +654,43 @@ export default function MonAgencePage() {
             </div>
           )}
         </div>
-      </div>
+      )}
 
-      {/* En dessous de 900px, les deux blocs reprennent l'empilement vertical */}
-      <style>{`
-        @media (max-width: 900px) {
-          .mon-agence-grid {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
+      {/* ── Onglet Statistiques (réutilise le composant partagé, paramétré par agence_id) ── */}
+      {activeTab === 'statistiques' && (
+        <div style={cardStyle}>
+          <h3 style={{ margin: '0 0 4px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D' }}>Évolution de la satisfaction</h3>
+          <p style={{ margin: '0 0 16px', fontSize: '0.82rem', color: '#64748B' }}>30 derniers jours.</p>
+          {!stats ? (
+            <div style={{ color: '#64748B', fontSize: '0.84rem' }}>Chargement…</div>
+          ) : (
+            <SatisfactionEvolutionChart data={stats.evolution_satisfaction} height={280} />
+          )}
+        </div>
+      )}
+
+      {/* ── Onglet Activité (HistoriqueFeedback + HistoriqueSuggestion fusionnés) ── */}
+      {activeTab === 'activite' && (
+        <div style={cardStyle}>
+          <h3 style={{ margin: '0 0 14px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D' }}>Fil d'activité</h3>
+          {activite.length === 0 ? (
+            <div style={{ color: '#64748B', fontSize: '0.86rem', fontWeight: 600 }}>Aucun événement récent.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {activite.map((ev) => (
+                <div key={ev.id} style={{ display: 'flex', flexDirection: 'column', gap: '2px', padding: '10px 14px', background: '#F8FAFC', borderRadius: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>{ev.auteur_nom}</span>
+                    <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}>{new Date(ev.date).toLocaleString('fr-FR')}</span>
+                  </div>
+                  <span style={{ fontSize: '0.78rem', color: '#3C7730', fontWeight: 700, textTransform: 'capitalize' }}>{ev.type_evenement.replace(/_/g, ' ')}</span>
+                  {ev.details && <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: '#64748B' }}>{ev.details}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

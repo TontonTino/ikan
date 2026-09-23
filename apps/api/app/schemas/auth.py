@@ -23,6 +23,10 @@ class UserPublic(BaseModel):
     organisation_nom: str | None = None
     organisation_logo: str | None = None
     agence_nom: str | None = None
+    # Pertinent uniquement pour role=cx_manager (délai avant qu'un feedback
+    # "suggestion" non traité devienne une alerte pour ce compte) — présent pour
+    # tous les rôles par simplicité de schéma, ignoré/masqué ailleurs.
+    delai_alerte_suggestion_heures: int = 24
 
     model_config = {"from_attributes": True}
 
@@ -47,6 +51,7 @@ class UpdateMeRequest(BaseModel):
     nom: str | None = Field(default=None, min_length=1, max_length=150)
     prenom: str | None = Field(default=None, min_length=1, max_length=150)
     email: EmailStr | None = None
+    delai_alerte_suggestion_heures: int | None = Field(default=None, ge=1, le=720)
 
 
 class ChangerMotDePasseRequest(BaseModel):

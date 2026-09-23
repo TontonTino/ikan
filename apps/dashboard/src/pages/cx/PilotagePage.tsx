@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { alertesApi, suggestionsApi, recommandationsApi, agencesApi } from '../../services/api';
-import type { Alerte, Suggestion, IdeaStatus, RecommandationOrg, Agence } from '../../types';
+import type { Alerte, AlerteFeedback, Suggestion, IdeaStatus, RecommandationOrg, Agence } from '../../types';
 import TabsNavigation, { TabItem } from '../../components/ui/TabsNavigation';
 import RecommandationCard from '../../components/stats/RecommandationCard';
 import AgenceFilterSelect from '../../components/stats/AgenceFilterSelect';
@@ -69,15 +69,30 @@ export default function PilotagePage() {
 
   // ── Alertes ──────────────────────────────────────────
   const [alertes, setAlertes] = useState<Alerte[]>([]);
+  const [alertesFeedback, setAlertesFeedback] = useState<AlerteFeedback[]>([]);
   const [alertesLoading, setAlertesLoading] = useState(true);
 
   useEffect(() => {
     alertesApi
       .list()
-      .then((r) => setAlertes(r.data || []))
-      .catch(() => setAlertes([]))
+      .then((r) => {
+        setAlertes(r.data?.alertes_seuil || []);
+        setAlertesFeedback(r.data?.alertes_feedback || []);
+      })
+      .catch(() => {
+        setAlertes([]);
+        setAlertesFeedback([]);
+      })
       .finally(() => setAlertesLoading(false));
   }, []);
+
+  const RAISON_LABELS: Record<string, string> = {
+    negatif: 'Négatif',
+    suggestion: 'Suggestion',
+    negatif_et_suggestion: 'Négatif + Suggestion',
+  };
+
+  const totalAlertes = alertes.length + alertesFeedback.length;
 
   // ── Action (recommandations IA consolidées réseau) ───
   const [recos, setRecos] = useState<RecommandationOrg[]>([]);
@@ -178,7 +193,7 @@ export default function PilotagePage() {
   // fusionné (alertes actives + recommandations en attente), plus lisible
   // qu'un seul des deux compteurs isolément puisque le contenu des deux est
   // désormais présenté ensemble.
-  const alertesActionsCount = alertes.length + recos.length;
+  const alertesActionsCount = totalAlertes + recos.length;
 
   const tabsConfig: TabItem[] = [
     {
@@ -209,12 +224,12 @@ export default function PilotagePage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <AlertTriangleIcon size={18} color="#DC2626" />
               <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#02302D' }}>
-                Alertes ({alertes.length})
+                Alertes ({totalAlertes})
               </h3>
             </div>
             {alertesLoading ? (
             <div style={{ color: '#64748B', padding: '32px', fontWeight: 600 }}>Chargement des alertes...</div>
-          ) : alertes.length === 0 ? (
+          ) : totalAlertes === 0 ? (
             <div
               style={{
                 background: '#EBF5E9',
@@ -263,6 +278,33 @@ export default function PilotagePage() {
                     </span>
                   </div>
                   <p style={{ color: '#64748B', fontSize: '0.9rem', margin: 0, lineHeight: 1.5 }}>{a.message}</p>
+                </div>
+              ))}
+              {alertesFeedback.map((af) => (
+                <div
+                  key={af.feedback_id}
+                  style={{
+                    background: '#FFFFFF',
+                    border: '1px solid #E8ECE6',
+                    borderLeft: '6px solid #DC2626',
+                    borderRadius: '24px',
+                    padding: '22px 26px',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <AlertTriangleIcon size={20} color="#DC2626" />
+                      <h3 style={{ fontWeight: 800, color: '#02302D', margin: 0, fontSize: '1rem' }}>{af.agence_nom}</h3>
+                    </div>
+                    <span style={{ background: '#FEE2E2', color: '#DC2626', padding: '4px 12px', borderRadius: '9999px', fontSize: '0.78rem', fontWeight: 800 }}>
+                      {RAISON_LABELS[af.raison] || af.raison} — Note {af.note}/5
+                    </span>
+                  </div>
+                  <p style={{ color: '#64748B', fontSize: '0.9rem', margin: 0, lineHeight: 1.5 }}>
+                    {af.categorie_nom ? `Catégorie « ${af.categorie_nom} » — ` : ''}
+                    {af.commentaire || 'Aucun commentaire.'}
+                  </p>
                 </div>
               ))}
             </div>

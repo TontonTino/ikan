@@ -21,6 +21,12 @@ class HistoriqueFeedback(Base):
     feedback_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("feedbacks.id", ondelete="CASCADE"), nullable=False
     )
+    # Dénormalisé (via Feedback -> QRCode -> Agence à l'écriture) pour permettre de
+    # requêter efficacement "toute l'activité d'une agence" (onglet Activité de la
+    # page agence unifiée) sans jointure à 3 tables à chaque lecture.
+    agence_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("agences.id", ondelete="CASCADE"), nullable=True
+    )
     utilisateur_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("utilisateurs.id", ondelete="SET NULL"), nullable=True
     )

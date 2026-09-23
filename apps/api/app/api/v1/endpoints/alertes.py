@@ -14,6 +14,7 @@ from app.models.utilisateur import Utilisateur
 from app.models.agence import Agence
 from app.models.feedback import Feedback
 from app.models.qr_code import QRCode
+from app.models.categorie import Categorie
 from app.models.enums import UserRole
 from app.services.acces_agence import verifier_acces_agence
 from app.services.plan_catalog import FEATURE_ALERTES
@@ -30,26 +31,31 @@ class AlerteResponse(BaseModel):
     message: str
 
 
+class AlerteFeedbackResponse(BaseModel):
+    feedback_id: UUID
+    agence_id: UUID
+    agence_nom: str
+    note: int
+    categorie_nom: str | None
+    # 'negatif' | 'suggestion' | 'negatif_et_suggestion'
+    raison: str
+    commentaire: str | None
+    date_soumission: datetime
+
+
+class AlertesResponse(BaseModel):
+    alertes_seuil: List[AlerteResponse]
+    alertes_feedback: List[AlerteFeedbackResponse]
+
+
 class SeuilUpdate(BaseModel):
     seuil_alerte: float
 
 
-@router.get("/", response_model=List[AlerteResponse])
-def list_alertes(
-    db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
-):
-    """
-    Retourne les alertes actives (agences dont la satisfaction est sous le seuil).
-    BF-12 — consultable par Agency Manager et CX Manager uniquement (Admin exclu).
-    """
-    # Alertes de satisfaction = fonctionnalité Starter+. Liste vide (et non 403) pour
-    # un forfait Gratuit : plusieurs écrans chargent cet endpoint avec d'autres appels.
-    if not organisation_a_la_fonctionnalite(current_user.organisation_id, FEATURE_ALERTES, db):
-        return []
-
+def _calculer_alertes_seuil(db: Session, current_user: Utilisateur) -> List[AlerteResponse]:
+    """Système d'alertes existant (seuil de satisfaction par agence) — INCHANGÉ."""
     date_debut = datetime.now(timezone.utc) - timedelta(days=7)
-    alertes = []
+    alertes: List[AlerteResponse] = []
 
     if current_user.role == UserRole.AGENCY_MANAGER:
         agences = db.query(Agence).filter(Agence.id == current_user.agence_id).all()
@@ -84,6 +90,85 @@ def list_alertes(
             ))
 
     return alertes
+
+
+def _calculer_alertes_feedback(db: Session, current_user: Utilisateur) -> List[AlerteFeedbackResponse]:
+    """
+    Alertes individuelles par feedback (nouvelle catégorie, s'ajoute au système de
+    seuil ci-dessus sans le modifier) :
+    - négatif (note <= 2) : alerte immédiate, pour les deux rôles.
+    - catégorie marquée "suggestion" : alerte immédiate pour l'Agency Manager,
+      alerte seulement après `delai_alerte_suggestion_heures` (réglable par
+      compte) si toujours non traité pour le CX Manager.
+    Une alerte disparaît dès que le feedback est marqué "resolu" (traité), pour
+    les deux raisons. Calcul à la volée à chaque appel, comme le système de seuil.
+    """
+    query = (
+        db.query(Feedback, Categorie, Agence)
+        .join(QRCode, Feedback.qr_code_id == QRCode.id)
+        .join(Agence, QRCode.agence_id == Agence.id)
+        .outerjoin(Categorie, Feedback.categorie_id == Categorie.id)
+        .filter(Feedback.statut_traitement != "resolu")
+    )
+    if current_user.role == UserRole.AGENCY_MANAGER:
+        query = query.filter(Agence.id == current_user.agence_id)
+    else:
+        query = query.filter(Agence.organisation_id == current_user.organisation_id, Agence.active == True)
+
+    now = datetime.now(timezone.utc)
+    seuil_suggestion = now - timedelta(hours=current_user.delai_alerte_suggestion_heures)
+
+    alertes: List[AlerteFeedbackResponse] = []
+    for feedback, categorie, agence in query.all():
+        negatif = feedback.note <= 2
+        est_categorie_suggestion = bool(categorie and categorie.est_categorie_suggestion)
+        suggestion_active = est_categorie_suggestion and (
+            current_user.role == UserRole.AGENCY_MANAGER or feedback.date_soumission <= seuil_suggestion
+        )
+        if not negatif and not suggestion_active:
+            continue
+
+        if negatif and suggestion_active:
+            raison = "negatif_et_suggestion"
+        elif negatif:
+            raison = "negatif"
+        else:
+            raison = "suggestion"
+
+        alertes.append(AlerteFeedbackResponse(
+            feedback_id=feedback.id,
+            agence_id=agence.id,
+            agence_nom=agence.nom,
+            note=feedback.note,
+            categorie_nom=categorie.nom if categorie else None,
+            raison=raison,
+            commentaire=feedback.commentaire,
+            date_soumission=feedback.date_soumission,
+        ))
+
+    alertes.sort(key=lambda a: a.date_soumission, reverse=True)
+    return alertes
+
+
+@router.get("/", response_model=AlertesResponse)
+def list_alertes(
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+):
+    """
+    Retourne les alertes actives : seuil de satisfaction par agence (inchangé)
+    ET alertes individuelles par feedback (nouvelle catégorie), dans deux listes
+    séparées d'un même payload. BF-12 — Agency Manager et CX Manager uniquement.
+    """
+    # Alertes = fonctionnalité Starter+. Listes vides (et non 403) pour un forfait
+    # Gratuit : plusieurs écrans chargent cet endpoint avec d'autres appels.
+    if not organisation_a_la_fonctionnalite(current_user.organisation_id, FEATURE_ALERTES, db):
+        return AlertesResponse(alertes_seuil=[], alertes_feedback=[])
+
+    return AlertesResponse(
+        alertes_seuil=_calculer_alertes_seuil(db, current_user),
+        alertes_feedback=_calculer_alertes_feedback(db, current_user),
+    )
 
 
 @router.patch("/agences/{agence_id}/seuil")

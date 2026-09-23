@@ -46,7 +46,7 @@ export const authApi = {
     api.post('/auth/login', { email, password }),
   logout: () => api.post('/auth/logout'),
   me: () => api.get('/auth/me'),
-  updateMe: (data: { nom?: string; prenom?: string; email?: string }) =>
+  updateMe: (data: { nom?: string; prenom?: string; email?: string; delai_alerte_suggestion_heures?: number }) =>
     api.patch<import('../types').User>('/auth/me', data),
   changerMotDePasse: (ancienMotDePasse: string, nouveauMotDePasse: string) =>
     api.post('/auth/me/mot-de-passe', {
@@ -69,7 +69,7 @@ export const dashboardApi = {
 export const statisticsApi = {
   cx: (params?: { jours?: number; agence_id?: string }) =>
     api.get<import('../types').StatsCXResponse>('/dashboard/statistics/cx', { params }),
-  agency: (params?: { jours?: number }) =>
+  agency: (params?: { jours?: number; agence_id?: string }) =>
     api.get<import('../types').StatsAgenceResponse>('/dashboard/statistics/agency', { params }),
   admin: () =>
     api.get<import('../types').StatsAdminResponse>('/dashboard/statistics/admin'),
@@ -122,7 +122,7 @@ export const recommandationsApi = {
 
 // ── Alertes ───────────────────────────────────────────
 export const alertesApi = {
-  list: () => api.get('/alertes/'),
+  list: () => api.get<import('../types').AlertesResponse>('/alertes/'),
   updateSeuil: (agenceId: string, seuil: number) =>
     api.patch(`/alertes/agences/${agenceId}/seuil`, { seuil_alerte: seuil }),
 };
@@ -154,16 +154,19 @@ export const adminFacturationApi = {
 // ── Agences ───────────────────────────────────────────
 export const agencesApi = {
   list: () => api.get('/agences/'),
+  get: (id: string) => api.get(`/agences/${id}`),
   create: (orgId: string, data: object) => api.post('/agences/', data, { params: orgId ? { org_id: orgId } : undefined }),
   update: (id: string, data: object) => api.patch(`/agences/${id}`, data),
   delete: (id: string) => api.delete(`/agences/${id}`),
   updateSeuil: (id: string, seuil: number) => api.patch(`/agences/${id}`, { seuil_alerte: seuil }),
   listCategories: (agenceId: string) => api.get(`/agences/${agenceId}/categories`),
-  createCategorie: (agenceId: string, data: { nom: string }) => api.post(`/agences/${agenceId}/categories`, data),
+  createCategorie: (agenceId: string, data: { nom: string; est_categorie_suggestion?: boolean }) =>
+    api.post(`/agences/${agenceId}/categories`, data),
   updateCategorie: (agenceId: string, categorieId: string, data: object) =>
     api.patch(`/agences/${agenceId}/categories/${categorieId}`, data),
   deleteCategorie: (agenceId: string, categorieId: string) =>
     api.delete(`/agences/${agenceId}/categories/${categorieId}`),
+  activite: (agenceId: string) => api.get(`/agences/${agenceId}/activite`),
 };
 
 // ── Utilisateurs ──────────────────────────────────────

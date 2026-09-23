@@ -12,7 +12,7 @@ export default function AlertesPage() {
     alertesApi
       .list()
       .then((r) => {
-        setAlertes(r.data);
+        setAlertes(r.data?.alertes_seuil || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));

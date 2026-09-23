@@ -17,6 +17,8 @@ export interface User {
   organisation_nom?: string;
   organisation_logo?: string;
   agence_nom?: string;
+  /** Pertinent uniquement pour role='cx_manager' (délai avant qu'un feedback "suggestion" non traité devienne une alerte). */
+  delai_alerte_suggestion_heures?: number;
 }
 
 
@@ -41,6 +43,8 @@ export interface Agence {
   nom: string;
   adresse?: string;
   ville?: string;
+  telephone?: string | null;
+  email?: string | null;
   latitude?: number;
   longitude?: number;
   active: boolean;
@@ -48,6 +52,8 @@ export interface Agence {
   date_creation: string;
   qr_code_token?: string;
   qr_code_url?: string;
+  /** Nom du (premier) Agency Manager assigné, ou null si aucun. */
+  manager_nom?: string | null;
 }
 
 export interface Categorie {
@@ -55,10 +61,20 @@ export interface Categorie {
   agence_id: string;
   nom: string;
   active: boolean;
+  est_categorie_suggestion: boolean;
   created_at: string;
   cree_par_id?: string | null;
   /** 'cx_manager' | 'agency_manager' | null (catégorie antérieure à cette fonctionnalité) */
   cree_par_role?: string | null;
+}
+
+export interface ActiviteAgenceItem {
+  id: string;
+  date: string;
+  type_evenement: string;
+  auteur_nom: string;
+  auteur_role?: string | null;
+  details?: string | null;
 }
 
 export type StatutTraitement = 'nouveau' | 'en_traitement' | 'en_cours' | 'resolu';
@@ -231,6 +247,23 @@ export interface Alerte {
   taux_actuel: number;
   seuil: number;
   message: string;
+}
+
+export interface AlerteFeedback {
+  feedback_id: string;
+  agence_id: string;
+  agence_nom: string;
+  note: number;
+  categorie_nom?: string | null;
+  /** 'negatif' | 'suggestion' | 'negatif_et_suggestion' */
+  raison: string;
+  commentaire?: string | null;
+  date_soumission: string;
+}
+
+export interface AlertesResponse {
+  alertes_seuil: Alerte[];
+  alertes_feedback: AlerteFeedback[];
 }
 
 export interface AdminUserItem {

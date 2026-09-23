@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   LineChart,
   Line,
@@ -171,6 +172,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export default function DashboardSiegePage() {
   const user = useAuthStore((s) => s.user);
+  const navigate = useNavigate();
+  const voirAgence = (agenceId: string) => navigate(`/agences/${agenceId}/apercu`);
   const [data, setData] = useState<DashboardSiegeFull | null>(null);
   const [alertes, setAlertes] = useState<Alerte[]>([]);
   const [jours, setJours] = useState(30);
@@ -202,7 +205,7 @@ export default function DashboardSiegePage() {
     Promise.all([dashboardApi.siege(jours), alertesApi.list()])
       .then(([d, a]) => {
         setData(d.data as DashboardSiegeFull);
-        setAlertes(a.data || []);
+        setAlertes(a.data?.alertes_seuil || []);
       })
       .finally(() => setLoading(false));
   }, [jours]);
@@ -621,7 +624,11 @@ export default function DashboardSiegePage() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {topAgences.map((ag, idx) => (
-                  <div key={ag.agence_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: '#F8FAFC', borderRadius: '10px' }}>
+                  <div
+                    key={ag.agence_id}
+                    onClick={() => voirAgence(ag.agence_id)}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: '#F8FAFC', borderRadius: '10px', cursor: 'pointer' }}
+                  >
                     <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#0F172A' }}>
                       #{idx + 1} {ag.agence_nom}
                     </span>
@@ -648,7 +655,11 @@ export default function DashboardSiegePage() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {flopAgences.map((ag) => (
-                  <div key={ag.agence_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: '#FFF7F7', borderRadius: '10px' }}>
+                  <div
+                    key={ag.agence_id}
+                    onClick={() => voirAgence(ag.agence_id)}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: '#FFF7F7', borderRadius: '10px', cursor: 'pointer' }}
+                  >
                     <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#0F172A' }}>
                       {ag.agence_nom}
                     </span>
@@ -690,6 +701,13 @@ export default function DashboardSiegePage() {
                               Satisfaction : <strong style={{ color: AGENCE_COLOR(a.taux_satisfaction) }}>{a.taux_satisfaction}%</strong>
                             </div>
                             <div style={{ fontSize: '0.78rem' }}>Avis : {a.nombre_feedbacks}</div>
+                            <button
+                              type="button"
+                              onClick={() => voirAgence(a.agence_id)}
+                              style={{ marginTop: '8px', background: '#02302D', color: '#FFFFFF', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}
+                            >
+                              Voir l'agence
+                            </button>
                           </div>
                         </Popup>
                       </CircleMarker>
@@ -743,7 +761,8 @@ export default function DashboardSiegePage() {
                   {data.agences.map((a) => (
                     <tr
                       key={a.agence_id}
-                      style={{ borderBottom: '1px solid #F1F4EE' }}
+                      onClick={() => voirAgence(a.agence_id)}
+                      style={{ borderBottom: '1px solid #F1F4EE', cursor: 'pointer' }}
                     >
                       <td style={{ padding: '12px 14px', fontWeight: 700, color: '#02302D' }}>{a.agence_nom}</td>
                       <td style={{ padding: '12px 14px', color: '#64748B' }}>{a.ville || '—'}</td>

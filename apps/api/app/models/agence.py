@@ -23,6 +23,8 @@ class Agence(Base):
     nom: Mapped[str] = mapped_column(String(255), nullable=False)
     adresse: Mapped[str | None] = mapped_column(String(500), nullable=True)
     ville: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    telephone: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True)

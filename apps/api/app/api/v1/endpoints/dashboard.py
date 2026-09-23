@@ -5,7 +5,7 @@ from uuid import UUID
 from typing import Optional
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -924,20 +924,26 @@ def get_statistics_cx(
 @router.get("/statistics/agency", response_model=StatsAgenceResponse)
 def get_statistics_agency(
     jours: int = Query(30, ge=1, le=365),
+    agence_id: Optional[UUID] = Query(None),
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ):
     """
-    Interface Statistiques & Analyses pour un Agency Manager.
-    Portée locale STRICTEMENT limitée à son agence attitrée.
+    Interface Statistiques & Analyses pour une agence précise : l'Agency Manager
+    consulte sa propre agence (agence_id absent, retombe sur current_user.agence_id) ;
+    le CX Manager peut consulter n'importe quelle agence de SON organisation en
+    passant `agence_id` explicitement (page agence unifiée) — vérifié par
+    verifier_acces_agence, même garde que /dashboard/agence/{agence_id}.
     """
     from collections import defaultdict
     from app.models.enums import CriticiteType
 
-    if not current_user.agence_id:
+    target_agence_id = agence_id or current_user.agence_id
+    if not target_agence_id:
         raise HTTPException(status_code=400, detail="Aucune agence assignée à cet utilisateur.")
+    verifier_acces_agence(db, current_user, target_agence_id)
 
-    agence = db.query(Agence).filter(Agence.id == current_user.agence_id).first()
+    agence = db.query(Agence).filter(Agence.id == target_agence_id).first()
     if not agence:
         raise HTTPException(status_code=404, detail="Agence introuvable")
 

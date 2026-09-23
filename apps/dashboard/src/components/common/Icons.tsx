@@ -47,6 +47,8 @@ import {
   Funnel,
   FileText,
   Copy,
+  EnvelopeSimple,
+  ListBullets,
 } from '@phosphor-icons/react';
 
 export interface IconProps extends React.SVGProps<SVGSVGElement> {
@@ -102,6 +104,8 @@ export const EditIcon = wrap(PencilSimple, 18);
 export const TrashIcon = wrap(Trash, 18);
 export const QrCodeIcon = wrap(QrCode, 20);
 export const CopyIcon = wrap(Copy, 16);
+export const MailIcon = wrap(EnvelopeSimple, 18);
+export const ActivityIcon = wrap(ListBullets, 18);
 export const TargetIcon = wrap(Crosshair, 18);
 export const PhoneIcon = wrap(Phone, 18);
 export const ThumbsUpIcon = wrap(ThumbsUp, 18);

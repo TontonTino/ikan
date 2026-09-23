@@ -100,8 +100,11 @@ export default function App() {
 
         {/* Agency Manager & CX Manager */}
         <Route path="agence" element={<DashboardAgencePage />} />
-        {/* Agency Manager — QR code + catégories de SA agence (lecture seule) */}
+        {/* Page agence unifiée : Agency Manager sur sa propre agence (mon-agence),
+            CX Manager sur une agence précise de son organisation (agences/:agenceId/apercu) —
+            même composant, résout l'agence effective en interne (voir MonAgencePage.tsx). */}
         <Route path="mon-agence" element={<MonAgencePage />} />
+        <Route path="agences/:agenceId/apercu" element={<MonAgencePage />} />
         <Route path="feedbacks" element={<FeedbacksPage />} />
         <Route path="suggestions" element={<SuggestionsRoute />} />
         <Route path="alertes" element={<AlertesRoute />} />

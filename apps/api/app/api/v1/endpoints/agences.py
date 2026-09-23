@@ -15,8 +15,11 @@ from app.models.utilisateur import Utilisateur
 from app.models.agence import Agence
 from app.models.qr_code import QRCode
 from app.models.categorie import Categorie
+from app.models.feedback import Feedback
+from app.models.suggestion import Suggestion, HistoriqueSuggestion
+from app.models.historique_feedback import HistoriqueFeedback
 from app.models.enums import UserRole
-from app.schemas.agence import AgenceCreate, AgenceUpdate, AgenceResponse
+from app.schemas.agence import AgenceCreate, AgenceUpdate, AgenceResponse, ActiviteAgenceItem
 from app.schemas.categorie import CategorieCreate, CategorieUpdate, CategorieResponse
 from app.services.plan_catalog import FEATURE_CATEGORIES
 from app.services.plan_service import organisation_a_la_fonctionnalite
@@ -88,9 +91,26 @@ def _check_agence_access(agence: Agence, current_user: Utilisateur):
     raise HTTPException(status_code=403, detail="Accès refusé à cette agence. La gestion des agences est réservée au CX Manager.")
 
 
+def _get_manager_nom(agence: Agence, db: Session) -> Optional[str]:
+    """
+    Nom du (premier) Agency Manager rattaché à cette agence, ou None si aucun
+    n'est assigné (rien n'empêche plusieurs comptes agency_manager sur la même
+    agence : on prend le plus anciennement assigné, cas le plus courant restant
+    un seul manager par agence).
+    """
+    manager = (
+        db.query(Utilisateur)
+        .filter(Utilisateur.agence_id == agence.id, Utilisateur.role == UserRole.AGENCY_MANAGER)
+        .order_by(Utilisateur.date_creation.asc())
+        .first()
+    )
+    return f"{manager.prenom} {manager.nom}" if manager else None
+
+
 def _enrich_agence_qr(agence: Agence, db: Session) -> AgenceResponse:
-    """Attache le token QR et l'URL du QR Code actif à la réponse Agence."""
+    """Attache le token QR, l'URL du QR Code actif et le nom du manager à la réponse Agence."""
     res = AgenceResponse.model_validate(agence)
+    res.manager_nom = _get_manager_nom(agence, db)
     qr = db.query(QRCode).filter(
         QRCode.agence_id == agence.id,
         QRCode.actif == True,
@@ -286,6 +306,7 @@ def create_categorie(
         agence_id=agence_id,
         nom=data.nom.strip(),
         active=True,
+        est_categorie_suggestion=data.est_categorie_suggestion,
         cree_par_id=current_user.id,
         cree_par_role=current_user.role.value,
     )
@@ -358,3 +379,74 @@ def delete_categorie(
 
     categorie.active = False
     db.commit()
+
+
+# ============================================================================
+# Activité (page agence unifiée) — fusionne HistoriqueFeedback et
+# HistoriqueSuggestion, sans nouvelle table ni logique de calcul dupliquée.
+# ============================================================================
+
+@router.get("/{agence_id}/activite", response_model=List[ActiviteAgenceItem])
+def get_activite_agence(
+    agence_id: UUID,
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_active_user),
+):
+    """
+    Fil d'activité chronologique d'une agence : transitions de feedback
+    (HistoriqueFeedback, filtré par agence_id dénormalisé) fusionnées avec les
+    changements de statut de suggestions (HistoriqueSuggestion, atteint via
+    Suggestion.feedback_id -> Feedback -> QRCode.agence_id).
+    """
+    agence = db.query(Agence).filter(Agence.id == agence_id).first()
+    if not agence:
+        raise HTTPException(status_code=404, detail="Agence introuvable")
+    _check_agence_access(agence, current_user)
+
+    evenements: list[ActiviteAgenceItem] = []
+
+    historiques = (
+        db.query(HistoriqueFeedback)
+        .filter(HistoriqueFeedback.agence_id == agence_id)
+        .order_by(HistoriqueFeedback.date_evenement.desc())
+        .limit(limit)
+        .all()
+    )
+    for h in historiques:
+        evenements.append(ActiviteAgenceItem(
+            id=h.id,
+            date=h.date_evenement,
+            type_evenement=h.type_evenement,
+            auteur_nom=h.auteur_nom,
+            auteur_role=h.auteur_role,
+            details=h.details,
+        ))
+
+    historiques_suggestions = (
+        db.query(HistoriqueSuggestion)
+        .join(Suggestion, HistoriqueSuggestion.suggestion_id == Suggestion.id)
+        .join(Feedback, Suggestion.feedback_id == Feedback.id)
+        .join(QRCode, Feedback.qr_code_id == QRCode.id)
+        .filter(QRCode.agence_id == agence_id)
+        .order_by(HistoriqueSuggestion.date_action.desc())
+        .limit(limit)
+        .all()
+    )
+    auteurs_ids = {hs.utilisateur_id for hs in historiques_suggestions if hs.utilisateur_id}
+    auteurs = (
+        {u.id: f"{u.prenom} {u.nom}" for u in db.query(Utilisateur).filter(Utilisateur.id.in_(auteurs_ids)).all()}
+        if auteurs_ids else {}
+    )
+    for hs in historiques_suggestions:
+        evenements.append(ActiviteAgenceItem(
+            id=hs.id,
+            date=hs.date_action,
+            type_evenement=f"suggestion_{hs.nouveau_statut.value}",
+            auteur_nom=auteurs.get(hs.utilisateur_id, "Système"),
+            auteur_role=None,
+            details=hs.commentaire,
+        ))
+
+    evenements.sort(key=lambda e: e.date, reverse=True)
+    return evenements[:limit]

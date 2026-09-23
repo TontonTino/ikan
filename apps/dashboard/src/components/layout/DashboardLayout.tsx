@@ -120,9 +120,9 @@ export default function DashboardLayout() {
       alertesApi
         .list()
         .then((r) => {
-          if (Array.isArray(r.data)) {
-            setAlertCount(r.data.length);
-          }
+          const seuil = r.data?.alertes_seuil?.length || 0;
+          const feedback = r.data?.alertes_feedback?.length || 0;
+          setAlertCount(seuil + feedback);
         })
         .catch(() => setAlertCount(0));
     }
@@ -146,6 +146,7 @@ export default function DashboardLayout() {
     if (location.pathname.includes('/admin/settings')) return 'Paramètres';
     if (location.pathname.includes('/parametres')) return 'Paramètres';
     if (location.pathname.includes('/mon-agence')) return 'Mon agence';
+    if (location.pathname.includes('/apercu')) return 'Agence';
     if (location.pathname.includes('/admin/dashboard')) return 'Dashboard';
     if (location.pathname.includes('/siege')) return 'Vue Siège';
     if (location.pathname.includes('/agence')) return 'Dashboard Agence';
@@ -163,6 +164,7 @@ export default function DashboardLayout() {
   const hideBreadcrumb =
     location.pathname.includes('/feedbacks') ||
     location.pathname.includes('/pilotage') ||
+    location.pathname.includes('/apercu') ||
     location.pathname.includes('/admin/gestion-agences') ||
     (location.pathname.includes('/statistiques') && user?.role === 'cx_manager') ||
     user?.role === 'agency_manager';
