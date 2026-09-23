@@ -6,7 +6,13 @@ const isLocal = typeof window !== 'undefined' && (
   window.location.hostname.startsWith('192.168.')
 );
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || (isLocal ? '/api/v1' : 'https://ikanai-api.onrender.com/api/v1');
+// Le nom de service Render "ikanai-api" (défini dans render.yaml) était déjà pris à la
+// création : Render a attribué l'URL réelle "ikan-772d.onrender.com" à la place.
+// "ikanai-api.onrender.com" est un ANCIEN service abandonné, base de données morte — ne
+// jamais s'y fier de nouveau (piège déjà tombé dedans une fois). VITE_API_URL est
+// TOUJOURS définie sur le déploiement réel (voir render.yaml, service ikanai-dashboard) ;
+// ce fallback ne sert qu'en dev local sans .env, d'où la valeur alignée sur la vraie prod.
+const API_BASE_URL = import.meta.env.VITE_API_URL || (isLocal ? '/api/v1' : 'https://ikan-772d.onrender.com/api/v1');
 
 const api = axios.create({
   baseURL: API_BASE_URL,

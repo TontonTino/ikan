@@ -1,5 +1,22 @@
 # 🚀 Tutoriel Pas-à-Pas : Déploiement d'IKAN AI sur Render (`render.com`)
 
+> ⚠️ **Ce tutoriel est un document de démarrage historique, aujourd'hui dépassé par
+> `render.yaml`** (Blueprint Render à la racine du repo), qui est la source de vérité
+> réelle de l'infrastructure. Les URLs `*.onrender.com` de ce document sont des
+> **exemples de la configuration initiale, pas les URLs actuelles** : le nom d'un
+> service dans `render.yaml` (ex. `ikanai-api`) ne garantit PAS l'URL publique — si ce
+> nom est déjà pris, Render en assigne un autre avec un suffixe aléatoire.
+>
+> **URLs de production réelles actuelles** (à vérifier dans le tableau de bord Render
+> en cas de doute, jamais en devinant à partir d'un nom de service) :
+> - API : `https://ikan-772d.onrender.com`
+> - Client (QR codes) : `https://ikan-1.onrender.com`
+> - Dashboard : `https://ikanai-dashboard-fixs.onrender.com`
+> - Agent YAM : `https://yam-tpip.onrender.com`
+>
+> `https://ikanai-api.onrender.com` (nom du service dans `render.yaml`) est un
+> **ancien service abandonné, base de données morte** — ne pas s'y fier.
+
 Ce guide vous explique étape par étape comment déployer l'intégralité du projet **IKAN AI** en production sur Render, pour obtenir des URLs HTTPS permanentes 24h/24 et 7j/7 pour vos **QR Codes** et vos **Dashboards**.
 
 ---
