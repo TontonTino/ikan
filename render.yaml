@@ -81,8 +81,14 @@ services:
         value: production
       - key: DEBUG
         value: "false"
+      # groq/compound-mini décommissionné par Groq le 21/09/2026. Modèles de
+      # génération de texte encore accessibles au plan gratuit à cette date :
+      # openai/gpt-oss-20b et openai/gpt-oss-120b (Llama 3.1/3.3 passés en
+      # Enterprise uniquement). 20b retenu : suffisant, le LLM ne fait que
+      # rédiger à partir de données déjà extraites (voir app/agent/qa_service.py),
+      # aucun raisonnement complexe requis.
       - key: GROQ_MODEL
-        value: groq/compound-mini
+        value: openai/gpt-oss-20b
       # MÊME valeur que la base d'ikanai-api (lecture des feedbacks, écriture des tables de l'agent).
       - key: DATABASE_URL
         sync: false

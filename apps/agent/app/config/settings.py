@@ -40,7 +40,11 @@ class Settings(BaseSettings):
 
     # Groq — provider LLM pour la génération de texte (Q&A, brouillons d'action)
     GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "groq/compound-mini"
+    # groq/compound-mini décommissionné par Groq le 21/09/2026 (404 en prod).
+    # openai/gpt-oss-20b : accessible au plan gratuit, largement suffisant ici
+    # (le LLM ne fait que rédiger à partir de données déjà extraites, jamais
+    # de raisonnement complexe — voir app/agent/qa_service.py).
+    GROQ_MODEL: str = "openai/gpt-oss-20b"
 
     # Hugging Face — réservé, non utilisé par le classifieur d'intention actuel
     # (moteur à mots-clés déterministe, voir app/agent/intent_classifier.py).

@@ -22,8 +22,8 @@ from app.models.conversation import Conversation, ConversationTurn
 logger = logging.getLogger(__name__)
 
 # Nombre max de tours passés inclus dans l'historique envoyé au LLM — la
-# fenêtre de contexte de Groq compound-mini est limitée, et un historique
-# non borné finirait par la dépasser silencieusement.
+# fenêtre de contexte du modèle configuré (voir GROQ_MODEL) est limitée, et un
+# historique non borné finirait par la dépasser silencieusement.
 _MAX_TOURS_HISTORIQUE = 5
 
 # Nombre max d'éléments gardés dans un aperçu de données condensées.
