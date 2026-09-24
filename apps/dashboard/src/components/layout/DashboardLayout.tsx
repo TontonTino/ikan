@@ -134,7 +134,7 @@ export default function DashboardLayout() {
   };
 
   const navSections = user ? ROLE_NAV_SECTIONS[user.role] || [] : [];
-  const isAlertesActive = location.pathname === '/alertes' || location.pathname === '/pilotage';
+  const isAlertesActive = location.pathname === '/pilotage';
 
   // Fil d'Ariane dynamique
   const getBreadcrumb = () => {
@@ -153,7 +153,6 @@ export default function DashboardLayout() {
     if (location.pathname.includes('/feedbacks')) return 'Feedbacks';
     if (location.pathname.includes('/pilotage')) return 'Pilotage';
     if (location.pathname.includes('/suggestions')) return 'Boîte à idées';
-    if (location.pathname.includes('/alertes')) return 'Alertes';
     return 'Dashboard';
   };
 
@@ -450,7 +449,7 @@ export default function DashboardLayout() {
             <button
               onClick={() => {
                 if (user?.role === 'cx_manager' || user?.role === 'agency_manager') {
-                  navigate('/alertes');
+                  navigate('/pilotage');
                 }
               }}
               title={

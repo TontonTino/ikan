@@ -198,7 +198,7 @@ export default function EphemeralAlertsBanner({
           </div>
 
           <button
-            onClick={() => navigate('/alertes')}
+            onClick={() => navigate('/pilotage')}
             style={{
               background: '#FFFFFF',
               border: '1px solid #FDE68A',

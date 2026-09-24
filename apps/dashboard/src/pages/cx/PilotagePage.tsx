@@ -6,6 +6,9 @@ import type { Alerte, AlerteFeedback, Suggestion, IdeaStatus, RecommandationOrg,
 import TabsNavigation, { TabItem } from '../../components/ui/TabsNavigation';
 import RecommandationCard from '../../components/stats/RecommandationCard';
 import AgenceFilterSelect from '../../components/stats/AgenceFilterSelect';
+import EmptyState from '../../components/ui/EmptyState';
+import SkeletonBlock from '../../components/ui/SkeletonBlock';
+import SectionHeading from '../../components/ui/SectionHeading';
 import {
   BellIcon,
   LightningIcon,
@@ -223,37 +226,24 @@ export default function PilotagePage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <AlertTriangleIcon size={18} color="#DC2626" />
-              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#02302D' }}>
-                Alertes ({totalAlertes})
-              </h3>
+              <SectionHeading>Alertes réseau ({alertesLoading ? '…' : totalAlertes})</SectionHeading>
             </div>
             {alertesLoading ? (
-            <div style={{ color: '#64748B', padding: '32px', fontWeight: 600 }}>Chargement des alertes...</div>
-          ) : totalAlertes === 0 ? (
-            <div
-              style={{
-                background: '#EBF5E9',
-                border: '1px solid #D5E8D3',
-                borderRadius: '24px',
-                padding: '32px',
-                color: '#3C7730',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px',
-              }}
-            >
-              <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <CheckCircleIcon size={24} color="#3C7730" />
-              </div>
-              <div>
-                <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#02302D' }}>Aucune alerte critique active</div>
-                <p style={{ margin: '4px 0 0', fontSize: '0.88rem', color: '#166534' }}>
-                  {isAgencyManager
-                    ? "Votre agence maintient un taux de satisfaction supérieur à son seuil d'alerte."
-                    : "Toutes les agences du réseau maintiennent un taux de satisfaction supérieur à leurs seuils d'alerte."}
-                </p>
-              </div>
+            <div aria-busy="true" aria-label="Chargement des alertes" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {[0, 1].map((i) => (
+                <SkeletonBlock key={i} height={84} radius="var(--radius-2xl)" />
+              ))}
             </div>
+          ) : totalAlertes === 0 ? (
+            <EmptyState
+              illustration="no-alert"
+              title="Aucune alerte critique active"
+              message={
+                isAgencyManager
+                  ? "Votre agence maintient un taux de satisfaction supérieur à son seuil d'alerte."
+                  : "Toutes les agences du réseau maintiennent un taux de satisfaction supérieur à leurs seuils d'alerte."
+              }
+            />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {alertes.map((a, i) => (
@@ -316,9 +306,7 @@ export default function PilotagePage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <LightningIcon size={18} color="#75B72A" />
-              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#02302D' }}>
-                Actions ({recos.length})
-              </h3>
+              <SectionHeading>Recommandations IA ({recosLoading ? '…' : recos.length})</SectionHeading>
             </div>
             {!isAgencyManager && (
               <AgenceFilterSelect agences={agencesList} selectedId={selectedAgenceId} onChange={setSelectedAgenceId} />
@@ -326,21 +314,17 @@ export default function PilotagePage() {
           </div>
 
           {recosLoading ? (
-            <div style={{ color: '#64748B', padding: '32px', fontWeight: 600 }}>Chargement des recommandations...</div>
-          ) : recosAffichees.length === 0 ? (
-            <div
-              style={{
-                padding: '24px',
-                textAlign: 'center',
-                color: '#3C7730',
-                background: '#EBF5E9',
-                borderRadius: '16px',
-                border: '1px solid #D5E8D3',
-                fontWeight: 700,
-              }}
-            >
-              Aucune recommandation en attente sur ce périmètre ! Toutes les actions suggérées ont été traitées.
+            <div aria-busy="true" aria-label="Chargement des recommandations" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {[0, 1, 2].map((i) => (
+                <SkeletonBlock key={i} height={96} radius="var(--radius-xl)" />
+              ))}
             </div>
+          ) : recosAffichees.length === 0 ? (
+            <EmptyState
+              illustration="no-alert"
+              title="Aucune recommandation en attente"
+              message="Sur ce périmètre, toutes les actions suggérées ont été traitées."
+            />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {recosAffichees.map((r) => (
