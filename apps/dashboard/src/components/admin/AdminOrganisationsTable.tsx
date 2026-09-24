@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import SkeletonBlock from '../ui/SkeletonBlock';
 import type { AdminOrganisationHierarchy, AdminUserItem } from '../../types';
 import {
   BuildingIcon,
@@ -265,11 +266,13 @@ export default function AdminOrganisationsTable({
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#64748B' }}>
-                  Chargement des données...
-                </td>
-              </tr>
+              [0, 1, 2].map((i) => (
+                <tr key={i} aria-busy="true">
+                  <td colSpan={7} style={{ padding: '14px 24px' }}>
+                    <SkeletonBlock height={38} radius="var(--radius-md)" />
+                  </td>
+                </tr>
+              ))
             ) : filteredOrganisations.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#64748B' }}>
