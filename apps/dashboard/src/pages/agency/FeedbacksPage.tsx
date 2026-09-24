@@ -5,6 +5,9 @@ import type { Feedback, Agence, StatutTraitement } from '../../types';
 import FeedbackTreatmentModal from '../../components/feedbacks/FeedbackTreatmentModal';
 import KpiCard from '../../components/ui/KpiCard';
 import TabsNavigation from '../../components/ui/TabsNavigation';
+import EmptyState from '../../components/ui/EmptyState';
+import SkeletonBlock from '../../components/ui/SkeletonBlock';
+import SectionHeading from '../../components/ui/SectionHeading';
 import {
   MessageSquareIcon,
   SearchIcon,
@@ -19,6 +22,7 @@ import {
   ClockIcon,
   RefreshIcon,
   SmileIcon,
+  XCloseIcon,
 } from '../../components/common/Icons';
 
 const STATUT_BADGES: Record<StatutTraitement, { label: string; bg: string; text: string; icon: React.ReactNode }> = {
@@ -59,7 +63,12 @@ const THEME_LABELS: Record<string, string> = {
   personnalisation_besoin: 'Écoute & Personnalisation',
 };
 
-const formatDate = (dateStr: string) => {
+// L'API renvoie au plus FETCH_LIMIT feedbacks (les plus récents) ; la pagination ci-dessous est côté client
+// car les filtres sentiment/thème ne sont pas des paramètres de l'API.
+const FETCH_LIMIT = 250;
+const PAGE_SIZE = 25;
+
+const formatDate = (dateStr?: string) => {
   if (!dateStr) return '';
   try {
     return new Date(dateStr).toLocaleString('fr-FR', {
@@ -118,13 +127,14 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
   const [filterSentiment, setFilterSentiment] = useState<string>('all');
   const [filterTheme, setFilterTheme] = useState<string>('all');
   const [search, setSearch] = useState<string>('');
+  const [page, setPage] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     async function loadData() {
       setLoading(true);
       try {
-        const fRes = await feedbacksApi.list({ limit: 250, ...(agenceId ? { agence_id: agenceId } : {}) });
+        const fRes = await feedbacksApi.list({ limit: FETCH_LIMIT, ...(agenceId ? { agence_id: agenceId } : {}) });
         if (!cancelled) setFeedbacks(fRes?.data || []);
 
         if (showAgenceSelector) {
@@ -176,8 +186,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
       if (search.trim()) {
         const q = search.toLowerCase();
         const comment = (f.commentaire || '').toLowerCase();
-        const canal = (f.canal || '').toLowerCase();
-        if (!comment.includes(q) && !canal.includes(q)) return false;
+        if (!comment.includes(q)) return false;
       }
       return true;
     });
@@ -230,23 +239,63 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
     return Object.values(map).sort((a, b) => b.count - a.count);
   }, [feedbacks]);
 
+  // ── Filtres actifs (l'agence fixée par le contexte de la page n'est pas un filtre retirable) ──
+  const agenceFiltreActif = showAgenceSelector && selectedAgenceId !== 'all';
+  const activeFilters: { key: string; label: string; clear: () => void }[] = [];
+  if (agenceFiltreActif) {
+    activeFilters.push({
+      key: 'agence',
+      label: `Agence : ${agences.find((a) => a.id === selectedAgenceId)?.nom || 'Sélectionnée'}`,
+      clear: () => setSelectedAgenceId('all'),
+    });
+  }
+  if (filterSentiment !== 'all') {
+    activeFilters.push({
+      key: 'sentiment',
+      label: `Sentiment : ${SENTIMENT_STYLE[filterSentiment]?.label || filterSentiment}`,
+      clear: () => setFilterSentiment('all'),
+    });
+  }
+  if (filterTheme !== 'all') {
+    activeFilters.push({ key: 'theme', label: `Thème : ${themeLabel(filterTheme)}`, clear: () => setFilterTheme('all') });
+  }
+  if (search.trim()) {
+    activeFilters.push({ key: 'search', label: `Recherche : « ${search.trim()} »`, clear: () => setSearch('') });
+  }
+  const resetFilters = () => {
+    setSelectedAgenceId(agenceId || 'all');
+    setFilterSentiment('all');
+    setFilterTheme('all');
+    setSearch('');
+  };
+
+  // ── Pagination côté client sur la liste déjà filtrée (aucun rechargement API entre les pages) ──
+  const totalPages = Math.max(1, Math.ceil(tabFeedbacks.length / PAGE_SIZE));
+  const pageCourante = Math.min(page, totalPages - 1);
+  const pageFeedbacks = tabFeedbacks.slice(pageCourante * PAGE_SIZE, (pageCourante + 1) * PAGE_SIZE);
+
+  // Retour à la première page quand l'onglet, un filtre ou le nombre de feedbacks change (pas quand un feedback est simplement mis à jour depuis la modale).
+  useEffect(() => {
+    setPage(0);
+  }, [activeTab, selectedAgenceId, filterSentiment, filterTheme, search, feedbacks.length]);
+
   const tabsConfig = [
-    { id: 'tous', label: 'Tous les feedbacks', icon: <MessageSquareIcon size={16} />, badge: feedbacks.length },
+    { id: 'tous', label: 'Tous les feedbacks', icon: <MessageSquareIcon size={16} />, badge: loading ? undefined : feedbacks.length },
     {
       id: 'a_traiter',
       label: 'À traiter',
       icon: <ClockIcon size={16} />,
-      badge: aTraiterCount,
+      badge: loading ? undefined : aTraiterCount,
       badgeColor: aTraiterCount > 0 ? ('red' as const) : ('default' as const),
     },
     {
       id: 'critiques',
       label: 'Critiques & Alertes',
       icon: <AlertTriangleIcon size={16} />,
-      badge: critiquesCount,
+      badge: loading ? undefined : critiquesCount,
       badgeColor: critiquesCount > 0 ? ('red' as const) : ('default' as const),
     },
-    { id: 'thematiques', label: 'Thématiques IA (15)', icon: <TagIcon size={16} /> },
+    { id: 'thematiques', label: 'Thématiques IA', icon: <TagIcon size={16} />, badge: loading ? undefined : themesAggregated.length },
   ];
 
   return (
@@ -291,7 +340,8 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
 
       {/* ── ONGLET 1, 2, 3 : VUES TABLEAU DE FEEDBACKS ── */}
       {activeTab !== 'thematiques' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <section aria-labelledby="feedbacks-liste" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div id="feedbacks-liste"><SectionHeading>Liste des feedbacks</SectionHeading></div>
           {/* Barre de Recherche et Filtres */}
           <div
             style={{
@@ -310,7 +360,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
               <SearchIcon size={16} color="#94A3B8" />
               <input
                 type="text"
-                placeholder="Rechercher par mot-clé, canal, etc..."
+                placeholder="Rechercher un mot-clé dans les commentaires..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 style={{
@@ -367,6 +417,46 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
             </div>
           </div>
 
+          {/* Récapitulatif des filtres actifs */}
+          {activeFilters.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }} aria-label="Filtres actifs">
+              {activeFilters.map((f) => (
+                <span
+                  key={f.key}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'var(--color-active-item)',
+                    color: 'var(--color-primary-dark)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-pill)',
+                    padding: '4px 6px 4px 12px',
+                    fontSize: '0.76rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  {f.label}
+                  <button
+                    type="button"
+                    onClick={f.clear}
+                    aria-label={`Retirer le filtre ${f.label}`}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', color: 'inherit' }}
+                  >
+                    <XCloseIcon size={13} />
+                  </button>
+                </span>
+              ))}
+              <button
+                type="button"
+                onClick={resetFilters}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-primary)', textDecoration: 'underline', padding: '4px' }}
+              >
+                Tout réinitialiser
+              </button>
+            </div>
+          )}
+
           {/* Tableau des Feedbacks */}
           <div
             style={{
@@ -380,17 +470,25 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #E8ECE6', background: '#F8FAFB' }}>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase' }}>Date & Agence</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase' }}>Note & Sentiment</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase' }}>Verbatim Client</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase' }}>Thème IA</th>
-                  <th style={{ textAlign: 'center', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase' }}>Statut</th>
-                  <th style={{ textAlign: 'right', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase' }}>Action</th>
+                  <th scope="col" style={{ textAlign: 'left', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase' }}>Date & Agence</th>
+                  <th scope="col" style={{ textAlign: 'left', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase' }}>Note & Sentiment</th>
+                  <th scope="col" style={{ textAlign: 'left', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase' }}>Verbatim Client</th>
+                  <th scope="col" style={{ textAlign: 'left', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase' }}>Thème IA</th>
+                  <th scope="col" style={{ textAlign: 'center', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase' }}>Statut</th>
+                  <th scope="col" style={{ textAlign: 'right', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {tabFeedbacks.length > 0 ? (
-                  tabFeedbacks.map((f) => {
+                {loading ? (
+                  [0, 1, 2, 3, 4, 5].map((i) => (
+                    <tr key={i} aria-busy="true" style={{ borderBottom: '1px solid #F1F4EE' }}>
+                      <td colSpan={6} style={{ padding: '14px 16px' }}>
+                        <SkeletonBlock height={40} radius="var(--radius-md)" />
+                      </td>
+                    </tr>
+                  ))
+                ) : tabFeedbacks.length > 0 ? (
+                  pageFeedbacks.map((f) => {
                     const sKey = normalizeSentiment(f.analyse_ia?.sentiment);
                     const sentMeta = SENTIMENT_STYLE[sKey] || { bg: '#F1F5F9', text: '#64748B', label: sKey || '—', icon: null };
                     const statKey = (f.statut_traitement || 'nouveau') as StatutTraitement;
@@ -408,7 +506,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                         <td style={{ padding: '14px 16px', minWidth: '140px' }}>
                           <div style={{ fontWeight: 700, color: '#02302D' }}>{f.agence_nom || 'Agence'}</div>
                           <div style={{ fontSize: '0.74rem', color: '#64748B', marginTop: '2px' }}>
-                            {formatDate(f.created_at)}
+                            {formatDate(f.date_soumission)}
                           </div>
                         </td>
 
@@ -507,19 +605,70 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={6} style={{ padding: '48px', textAlign: 'center', color: '#94A3B8' }}>
-                      Aucun feedback trouvé pour les critères sélectionnés.
+                    <td colSpan={6}>
+                      <EmptyState
+                        illustration="no-feedback"
+                        title="Aucun feedback trouvé"
+                        message={
+                          activeFilters.length > 0
+                            ? 'Aucun feedback ne correspond aux filtres sélectionnés.'
+                            : "Il n'y a aucun feedback à afficher dans cette vue."
+                        }
+                        action={activeFilters.length > 0 ? { label: 'Réinitialiser les filtres', onClick: resetFilters } : undefined}
+                      />
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
-        </div>
+
+          {/* Pagination côté client */}
+          {!loading && tabFeedbacks.length > 0 && (
+            <nav aria-label="Pagination des feedbacks" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                {pageCourante * PAGE_SIZE + 1}–{Math.min((pageCourante + 1) * PAGE_SIZE, tabFeedbacks.length)} sur {tabFeedbacks.length}
+                {feedbacks.length >= FETCH_LIMIT && ` · limité aux ${FETCH_LIMIT} feedbacks les plus récents`}
+              </span>
+              {totalPages > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setPage(pageCourante - 1)}
+                    disabled={pageCourante === 0}
+                    style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'inherit', color: 'var(--color-text-main)', cursor: pageCourante === 0 ? 'default' : 'pointer', opacity: pageCourante === 0 ? 0.45 : 1 }}
+                  >
+                    Précédent
+                  </button>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-text-main)' }}>
+                    Page {pageCourante + 1} / {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPage(pageCourante + 1)}
+                    disabled={pageCourante >= totalPages - 1}
+                    style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'inherit', color: 'var(--color-text-main)', cursor: pageCourante >= totalPages - 1 ? 'default' : 'pointer', opacity: pageCourante >= totalPages - 1 ? 0.45 : 1 }}
+                  >
+                    Suivant
+                  </button>
+                </div>
+              )}
+            </nav>
+          )}
+        </section>
       )}
 
-      {/* ── ONGLET 4 : THÉMATIQUES IA (15 THÈMES) ── */}
+      {/* ── ONGLET 4 : THÉMATIQUES (thèmes réellement présents) ── */}
       {activeTab === 'thematiques' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div id="feedbacks-themes"><SectionHeading>Thématiques des feedbacks</SectionHeading></div>
+        {loading && (
+          <div aria-busy="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+            {[0, 1, 2].map((i) => (
+              <SkeletonBlock key={i} height={150} radius="var(--radius-xl)" />
+            ))}
+          </div>
+        )}
         <div
           style={{
             display: 'grid',
@@ -595,6 +744,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
               </button>
             </div>
           ))}
+        </div>
         </div>
       )}
 

@@ -100,12 +100,14 @@ export default function FeedbackTreatmentModal({
   // 1. Déclenchement automatique Nouveau -> En traitement à l'ouverture
   useEffect(() => {
     if (!isOpen || !feedback) return;
+    // Le rétrécissement de type ne traverse pas la frontière de la fonction imbriquée : on capture la valeur non nulle.
+    const fb = feedback;
 
     let isMounted = true;
     async function handleAutoOpen() {
-      if (feedback.statut_traitement === 'nouveau') {
+      if (fb.statut_traitement === 'nouveau') {
         try {
-          const res = await feedbacksApi.open(feedback.id);
+          const res = await feedbacksApi.open(fb.id);
           if (isMounted) {
             onUpdateFeedback(res.data);
             showToast('Feedback pris en charge : Nouveau → En traitement');
@@ -115,7 +117,7 @@ export default function FeedbackTreatmentModal({
         }
       }
       if (isMounted) {
-        loadHistoriqueAndReponses(feedback.id);
+        loadHistoriqueAndReponses(fb.id);
       }
     }
 
