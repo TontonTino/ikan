@@ -20,7 +20,6 @@ import {
 import {
   SmileIcon,
   MessageSquareIcon,
-  TrendingUpIcon,
   ThumbsUpIcon,
   AlertTriangleIcon,
   BarChartIcon,
@@ -30,8 +29,8 @@ import {
 
 export default function StatsCXView() {
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'satisfaction' | 'feedbacks' | 'sentiments' | 'thematiques' | 'agences' | 'tendances'
-  >('overview');
+    'satisfaction' | 'feedbacks' | 'sentiments' | 'thematiques' | 'agences' | 'tendances'
+  >('satisfaction');
 
   const [jours, setJours] = useState<number>(30);
   const [selectedAgenceId, setSelectedAgenceId] = useState<string | null>(null);
@@ -76,7 +75,6 @@ export default function StatsCXView() {
   const kpis = data?.kpis || {};
 
   const tabsConfig = [
-    { id: 'overview', label: "Vue d'ensemble", icon: <TrendingUpIcon size={16} /> },
     { id: 'satisfaction', label: 'Satisfaction', icon: <SmileIcon size={16} /> },
     { id: 'feedbacks', label: 'Feedbacks', icon: <MessageSquareIcon size={16} /> },
     { id: 'sentiments', label: 'Sentiments', icon: <ThumbsUpIcon size={16} /> },
@@ -108,7 +106,7 @@ export default function StatsCXView() {
         <PeriodSelector value={jours} onChange={setJours} />
       </div>
 
-      {/* ── Navigation par 7 Onglets Spécialisés ── */}
+      {/* ── Navigation par 6 Onglets Spécialisés ── */}
       <TabsNavigation
         tabs={tabsConfig}
         activeTab={activeTab}
@@ -124,37 +122,7 @@ export default function StatsCXView() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
           {/* ══════════════════════════════════════════════════════
-              1. VUE D'ENSEMBLE (Synthétique & Exécutif)
-          ══════════════════════════════════════════════════════ */}
-          {activeTab === 'overview' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {/* Résumé Exécutif Statistique */}
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-                  gap: '20px',
-                }}
-              >
-                <StatsSectionCard
-                  title="Évolution Générale de la Satisfaction"
-                  subtitle="Aperçu de la tendance sur la période"
-                >
-                  <SatisfactionEvolutionChart data={data.evolution_satisfaction} height={230} />
-                </StatsSectionCard>
-
-                <StatsSectionCard
-                  title="Répartition Émotionnelle Résumée"
-                  subtitle="Distribution globale des sentiments clients"
-                >
-                  <SentimentDonutChart data={data.sentiments} height={230} />
-                </StatsSectionCard>
-              </div>
-            </div>
-          )}
-
-          {/* ══════════════════════════════════════════════════════
-              2. SATISFACTION (Analyse Approfondie du CSAT)
+              1. SATISFACTION (Analyse Approfondie du CSAT)
           ══════════════════════════════════════════════════════ */}
           {activeTab === 'satisfaction' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -168,7 +136,7 @@ export default function StatsCXView() {
           )}
 
           {/* ══════════════════════════════════════════════════════
-              3. FEEDBACKS (Volumes, Flux & Traitement)
+              2. FEEDBACKS (Volumes, Flux & Traitement)
           ══════════════════════════════════════════════════════ */}
           {activeTab === 'feedbacks' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -182,7 +150,7 @@ export default function StatsCXView() {
           )}
 
           {/* ══════════════════════════════════════════════════════
-              4. SENTIMENTS (État Émotionnel & Polarités)
+              3. SENTIMENTS (État Émotionnel & Polarités)
           ══════════════════════════════════════════════════════ */}
           {activeTab === 'sentiments' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -242,7 +210,7 @@ export default function StatsCXView() {
           )}
 
           {/* ══════════════════════════════════════════════════════
-              5. THÉMATIQUES IA (15 Thèmes & NLP)
+              4. THÉMATIQUES IA (15 Thèmes & NLP)
           ══════════════════════════════════════════════════════ */}
           {activeTab === 'thematiques' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -256,7 +224,7 @@ export default function StatsCXView() {
           )}
 
           {/* ══════════════════════════════════════════════════════
-              6. AGENCES (Classement & Benchmark Réseau)
+              5. AGENCES (Classement & Benchmark Réseau)
           ══════════════════════════════════════════════════════ */}
           {activeTab === 'agences' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -274,7 +242,7 @@ export default function StatsCXView() {
           )}
 
           {/* ══════════════════════════════════════════════════════
-              7. TENDANCES (Évolutions, Anomalies & Insights IA)
+              6. TENDANCES (Évolutions, Anomalies & Insights IA)
           ══════════════════════════════════════════════════════ */}
           {activeTab === 'tendances' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
