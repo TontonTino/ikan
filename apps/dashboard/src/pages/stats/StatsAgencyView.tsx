@@ -19,16 +19,12 @@ import {
 import {
   SmileIcon,
   MessageSquareIcon,
-  CheckCircleIcon,
-  ClockIcon,
   TrendingUpIcon,
-  AlertTriangleIcon,
-  ThumbsUpIcon,
   TagIcon,
 } from '../../components/common/Icons';
 
 export default function StatsAgencyView() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'satisfaction' | 'sentiments_themes' | 'alertes'>('overview');
+  const [activeTab, setActiveTab] = useState<'satisfaction' | 'sentiments_themes' | 'alertes'>('satisfaction');
   const [jours, setJours] = useState<number>(30);
   const [data, setData] = useState<StatsAgenceResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -66,7 +62,6 @@ export default function StatsAgencyView() {
   const kpis = data?.kpis || {};
 
   const tabsConfig = [
-    { id: 'overview', label: "Vue d'ensemble", icon: <TrendingUpIcon size={16} /> },
     { id: 'satisfaction', label: 'Satisfaction & Flux', icon: <SmileIcon size={16} /> },
     { id: 'sentiments_themes', label: 'Sentiments & Thématiques', icon: <TagIcon size={16} /> },
     {
@@ -97,6 +92,73 @@ export default function StatsAgencyView() {
         <PeriodSelector value={jours} onChange={setJours} />
       </PageHeader>
 
+      {/* Bandeau permanent : 3 KPI avec variation vs période précédente, visibles quel que soit l'onglet actif */}
+      {data && (
+        <div
+          data-testid="stats-agency-kpi-band"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '16px',
+            marginBottom: '20px',
+          }}
+        >
+          <KpiCard
+            icon={<SmileIcon size={20} />}
+            label="Satisfaction locale"
+            value={kpis.satisfaction?.valeur ?? '0%'}
+            trend={
+              kpis.satisfaction?.evolution
+                ? {
+                    value: kpis.satisfaction.evolution,
+                    isPositive: kpis.satisfaction.is_positive,
+                    period: 'vs. période préc.',
+                  }
+                : undefined
+            }
+            sparklineType={kpis.satisfaction?.is_positive ? 'up' : 'down'}
+            badgeColor={kpis.satisfaction?.is_positive ? 'green' : 'red'}
+            compact={true}
+          />
+
+          <KpiCard
+            icon={<MessageSquareIcon size={20} />}
+            label="Feedbacks reçus"
+            value={kpis.total_feedbacks?.valeur ?? 0}
+            trend={
+              kpis.total_feedbacks?.evolution
+                ? {
+                    value: kpis.total_feedbacks.evolution,
+                    isPositive: kpis.total_feedbacks.is_positive,
+                    period: 'vs. période préc.',
+                  }
+                : undefined
+            }
+            sparklineType="neutral"
+            compact={true}
+          />
+
+          <KpiCard
+            icon={<TrendingUpIcon size={20} />}
+            label="Taux de traitement"
+            value={kpis.taux_traitement?.valeur ?? '0%'}
+            trend={
+              kpis.taux_traitement?.evolution
+                ? {
+                    value: kpis.taux_traitement.evolution,
+                    isPositive: kpis.taux_traitement.is_positive,
+                    period: 'vs. période préc.',
+                  }
+                : undefined
+            }
+            sparklineType="up"
+            badgeColor="green"
+            compact={true}
+          />
+
+        </div>
+      )}
+
       {/* Tabs */}
       <TabsNavigation
         tabs={tabsConfig}
@@ -112,98 +174,7 @@ export default function StatsAgencyView() {
       {data && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-          {/* ── 1. VUE D'ENSEMBLE ── */}
-          {activeTab === 'overview' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                  gap: '16px',
-                }}
-              >
-                <KpiCard
-                  icon={<SmileIcon size={20} />}
-                  label="Satisfaction locale"
-                  value={kpis.satisfaction?.valeur ?? '0%'}
-                  trend={
-                    kpis.satisfaction?.evolution
-                      ? {
-                          value: kpis.satisfaction.evolution,
-                          isPositive: kpis.satisfaction.is_positive,
-                          period: 'vs. période préc.',
-                        }
-                      : undefined
-                  }
-                  sparklineType={kpis.satisfaction?.is_positive ? 'up' : 'down'}
-                  badgeColor={kpis.satisfaction?.is_positive ? 'green' : 'red'}
-                  compact={true}
-                />
-
-                <KpiCard
-                  icon={<MessageSquareIcon size={20} />}
-                  label="Feedbacks reçus"
-                  value={kpis.total_feedbacks?.valeur ?? 0}
-                  trend={
-                    kpis.total_feedbacks?.evolution
-                      ? {
-                          value: kpis.total_feedbacks.evolution,
-                          isPositive: kpis.total_feedbacks.is_positive,
-                          period: 'vs. période préc.',
-                        }
-                      : undefined
-                  }
-                  sparklineType="neutral"
-                  compact={true}
-                />
-
-                <KpiCard
-                  icon={<TrendingUpIcon size={20} />}
-                  label="Taux de traitement"
-                  value={kpis.taux_traitement?.valeur ?? '0%'}
-                  trend={
-                    kpis.taux_traitement?.evolution
-                      ? {
-                          value: kpis.taux_traitement.evolution,
-                          isPositive: kpis.taux_traitement.is_positive,
-                          period: 'vs. période préc.',
-                        }
-                      : undefined
-                  }
-                  sparklineType="up"
-                  badgeColor="green"
-                  compact={true}
-                />
-
-                <KpiCard
-                  icon={<AlertTriangleIcon size={20} />}
-                  label="Alertes critiques"
-                  value={kpis.alertes_critiques?.valeur ?? 0}
-                  badgeColor={Number(kpis.alertes_critiques?.valeur_num || 0) > 0 ? 'red' : 'green'}
-                  sparklineType={Number(kpis.alertes_critiques?.valeur_num || 0) > 0 ? 'down' : 'neutral'}
-                  compact={true}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px' }}>
-                <StatsSectionCard
-                  title="Évolution du Score de Satisfaction"
-                  subtitle="Tendance calculée sur la période"
-                >
-                  <SatisfactionEvolutionChart data={data.evolution_satisfaction} height={230} />
-                </StatsSectionCard>
-
-                <StatsSectionCard
-                  title="Sentiment des Clients de l'Agence"
-                  subtitle="Répartition des avis positifs, neutres et négatifs"
-                >
-                  <SentimentDonutChart data={data.sentiments} height={230} />
-                </StatsSectionCard>
-              </div>
-            </div>
-          )}
-
-          {/* ── 2. SATISFACTION & FLUX ── */}
+          {/* ── 1. SATISFACTION & FLUX ── */}
           {activeTab === 'satisfaction' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <StatsSectionCard
@@ -222,7 +193,7 @@ export default function StatsAgencyView() {
             </div>
           )}
 
-          {/* ── 3. SENTIMENTS & THÉMATIQUES ── */}
+          {/* ── 2. SENTIMENTS & THÉMATIQUES ── */}
           {activeTab === 'sentiments_themes' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '20px' }}>
@@ -243,7 +214,7 @@ export default function StatsAgencyView() {
             </div>
           )}
 
-          {/* ── 4. ALERTES & CONSEILS IA ── */}
+          {/* ── 3. ALERTES & CONSEILS IA ── */}
           {activeTab === 'alertes' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
