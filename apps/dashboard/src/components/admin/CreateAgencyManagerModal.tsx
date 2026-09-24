@@ -2,26 +2,48 @@ import React, { useEffect, useState } from 'react';
 import { agencesApi, utilisateursApi } from '../../services/api';
 import { XCloseIcon } from '../common/Icons';
 
+/** Compte Agency Manager tel que renvoyé par GET /utilisateurs/ (champs utiles à l'UI). */
+export interface AgencyManagerLite {
+  id: string;
+  nom: string;
+  prenom: string;
+  email: string;
+  active: boolean;
+  agence_id?: string | null;
+}
+
 interface CreateAgencyManagerModalProps {
   onClose: () => void;
-  /** Appelé juste après une création réussie (avant onClose), pour que l'appelant rafraîchisse sa propre liste si besoin. */
+  /** Appelé juste après une création OU une modification réussie (avant onClose), pour que l'appelant rafraîchisse sa liste. */
   onCreated: () => void;
+  /** Si fourni : mode édition de ce compte (champs préremplis, mot de passe facultatif). Sinon : création. */
+  manager?: AgencyManagerLite | null;
+  /** Création : agence présélectionnée (ex. bouton « Assigner » d'une carte d'agence). */
+  defaultAgenceId?: string;
+  /** Liste d'agences déjà chargée par l'appelant : évite un nouveau fetch et le flash « Aucune agence » à l'ouverture. */
+  agences?: { id: string; nom: string }[];
 }
 
 /**
- * Modale de création d'un Chef d'Agence (agency_manager), réutilisée par
- * AdminUsersContent.tsx (onglet "Agency Managers") ET AdminAgencesContent.tsx
- * (onglet "Agences & QR Codes", bouton "Ajouter un nouveau chef d'agence") —
- * même formulaire, même appel API, pour ne pas dupliquer la logique de
- * création entre les deux emplacements.
+ * Modale de création / modification d'un Chef d'Agence (agency_manager), utilisée par le Répertoire
+ * des agences (AdminAgencesContent.tsx) et, pour la création, par AdminUsersContent.tsx.
+ * Une seule implémentation du formulaire : mêmes champs, mêmes validations, mêmes appels API.
  */
-export default function CreateAgencyManagerModal({ onClose, onCreated }: CreateAgencyManagerModalProps) {
-  const [agences, setAgences] = useState<{ id: string; nom: string }[]>([]);
-  const [form, setForm] = useState({ nom: '', prenom: '', email: '', password: '', agence_id: '' });
+export default function CreateAgencyManagerModal({ onClose, onCreated, manager, defaultAgenceId, agences: agencesFournies }: CreateAgencyManagerModalProps) {
+  const enEdition = !!manager;
+  const [agences, setAgences] = useState<{ id: string; nom: string }[]>(agencesFournies ?? []);
+  const [form, setForm] = useState({
+    nom: manager?.nom ?? '',
+    prenom: manager?.prenom ?? '',
+    email: manager?.email ?? '',
+    password: '',
+    agence_id: manager ? manager.agence_id ?? '' : defaultAgenceId ?? '',
+  });
   const [saving, setSaving] = useState(false);
   const [erreur, setErreur] = useState('');
 
   useEffect(() => {
+    if (agencesFournies) return;
     let annule = false;
     agencesApi
       .list()
@@ -47,22 +69,36 @@ export default function CreateAgencyManagerModal({ onClose, onCreated }: CreateA
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.nom.trim() || !form.prenom.trim() || !form.email.trim() || !form.password) return;
+    if (!form.nom.trim() || !form.prenom.trim() || !form.email.trim()) return;
+    if (!enEdition && !form.password) return;
     setErreur('');
     setSaving(true);
     try {
-      await utilisateursApi.create({
-        nom: form.nom.trim(),
-        prenom: form.prenom.trim(),
-        email: form.email.trim(),
-        password: form.password,
-        role: 'agency_manager',
-        agence_id: form.agence_id || null,
-      });
+      if (manager) {
+        // Édition : seuls les champs modifiés sont envoyés (le mot de passe n'est envoyé que s'il est saisi).
+        const updates: Record<string, unknown> = {};
+        if (form.nom.trim() !== manager.nom) updates.nom = form.nom.trim();
+        if (form.prenom.trim() !== manager.prenom) updates.prenom = form.prenom.trim();
+        if (form.email.trim() !== manager.email) updates.email = form.email.trim();
+        if ((form.agence_id || null) !== (manager.agence_id ?? null)) updates.agence_id = form.agence_id || null;
+        if (form.password) updates.password = form.password;
+        if (Object.keys(updates).length > 0) {
+          await utilisateursApi.update(manager.id, updates);
+        }
+      } else {
+        await utilisateursApi.create({
+          nom: form.nom.trim(),
+          prenom: form.prenom.trim(),
+          email: form.email.trim(),
+          password: form.password,
+          role: 'agency_manager',
+          agence_id: form.agence_id || null,
+        });
+      }
       onCreated();
       onClose();
     } catch (err: any) {
-      setErreur(err?.response?.data?.detail || 'Erreur lors de la création du chef d’agence.');
+      setErreur(err?.response?.data?.detail || (enEdition ? 'Erreur lors de la modification du chef d’agence.' : 'Erreur lors de la création du chef d’agence.'));
     } finally {
       setSaving(false);
     }
@@ -81,7 +117,9 @@ export default function CreateAgencyManagerModal({ onClose, onCreated }: CreateA
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-          <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#02302D' }}>Créer un Chef d'Agence</h3>
+          <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#02302D' }}>
+            {enEdition ? "Modifier le Chef d'Agence" : "Créer un Chef d'Agence"}
+          </h3>
           <button
             type="button"
             onClick={onClose}
@@ -106,8 +144,8 @@ export default function CreateAgencyManagerModal({ onClose, onCreated }: CreateA
             <input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={inputStyle} />
           </div>
           <div>
-            <label style={labelStyle}>Mot de passe initial *</label>
-            <input type="password" required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} style={inputStyle} />
+            <label style={labelStyle}>{enEdition ? 'Nouveau mot de passe (laisser vide si inchangé)' : 'Mot de passe initial *'}</label>
+            <input type="password" required={!enEdition} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} style={inputStyle} />
           </div>
           <div style={{ gridColumn: '1 / -1' }}>
             <label style={labelStyle}>Agence rattachée</label>

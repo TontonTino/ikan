@@ -1,29 +1,20 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { agencesApi, dashboardApi } from '../../services/api';
+import { agencesApi, utilisateursApi } from '../../services/api';
 import { getFeedbackUrl } from '../../config';
 import { useAuthStore } from '../../stores/authStore';
-import type { Agence, AgenceStats } from '../../types';
-import TabsNavigation from '../../components/ui/TabsNavigation';
+import type { Agence } from '../../types';
+import SectionHeading from '../../components/ui/SectionHeading';
 import {
   PlusIcon,
-  MapPinIcon,
-  TargetIcon,
   QrCodeIcon,
-  EditIcon,
-  TrashIcon,
-  ExternalLinkIcon,
   SearchIcon,
-  CheckCircleIcon,
-  ThumbsUpIcon,
-  ThumbsDownIcon,
-  ClockIcon,
   TagIcon,
   UsersIcon,
   XCloseIcon,
 } from '../../components/common/Icons';
 import { AgencyLocationPicker, LocationData } from '../../components/agency/AgencyLocationPicker';
-import CreateAgencyManagerModal from '../../components/admin/CreateAgencyManagerModal';
+import CreateAgencyManagerModal, { AgencyManagerLite } from '../../components/admin/CreateAgencyManagerModal';
 
 interface AgenceForm {
   nom: string;
@@ -47,17 +38,20 @@ const emptyForm: AgenceForm = {
   seuil_alerte: 80,
 };
 
-// Contenu de l'onglet "Agences & QR Codes" de la page Gestion des agences.
+// Répertoire des agences (page Gestion des agences) : liste unique des agences AVEC leur chef d'agence,
+// création/modification/suspension des chefs d'agence directement sur chaque carte.
 // N'est monté que pour le CX Manager (le rôle Admin ne gère pas les agences directement).
 export default function AdminAgencesContent() {
   const currentUser = useAuthStore((s) => s.user);
 
-  const [activeTab, setActiveTab] = useState<'repertoire' | 'activite'>('repertoire');
   const [agences, setAgences] = useState<Agence[]>([]);
-  const [agencesStats, setAgencesStats] = useState<AgenceStats[]>([]);
+  const [managers, setManagers] = useState<AgencyManagerLite[]>([]);
+  const [managersIndisponibles, setManagersIndisponibles] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [showCreateAgencyManager, setShowCreateAgencyManager] = useState(false);
+  // Modale chef d'agence : création (éventuellement agence présélectionnée) ou édition d'un compte existant.
+  const [managerModal, setManagerModal] = useState<{ manager?: AgencyManagerLite; defaultAgenceId?: string } | null>(null);
+  const [filtreSansManager, setFiltreSansManager] = useState(false);
   const [editTarget, setEditTarget] = useState<Agence | null>(null);
   const [qrModalTarget, setQrModalTarget] = useState<Agence | null>(null);
   const [form, setForm] = useState<AgenceForm>(emptyForm);
@@ -70,14 +64,25 @@ export default function AdminAgencesContent() {
   });
   const [qrMode, setQrMode] = useState<'render' | 'local'>('render');
 
-  useEffect(() => {
-    Promise.all([agencesApi.list(), dashboardApi.siege(30)])
-      .then(([agR, siegeR]) => {
-        setAgences(agR.data || []);
-        if (siegeR.data?.agences) {
-          setAgencesStats(siegeR.data.agences);
-        }
+  // Comptes Agency Manager du réseau, rapprochés des agences côté client (agence_id, active, email, nom).
+  const chargerManagers = () =>
+    utilisateursApi
+      .list()
+      .then((r) => {
+        const liste = Array.isArray(r.data) ? r.data : [];
+        setManagers(liste.filter((u: { role: string }) => u.role === 'agency_manager'));
+        setManagersIndisponibles(false);
       })
+      .catch((err) => {
+        console.error('Erreur chargement chefs d\'agence:', err);
+        setManagersIndisponibles(true);
+      });
+
+  useEffect(() => {
+    Promise.all([
+      agencesApi.list().then((r) => setAgences(r.data || [])),
+      chargerManagers(),
+    ])
       .catch((err) => console.error('Erreur chargement agences:', err))
       .finally(() => setLoading(false));
   }, []);
@@ -178,33 +183,46 @@ export default function AdminAgencesContent() {
     showToast('Lien du QR Code copié !');
   };
 
-  // Fusion des données d'agence avec les statistiques de satisfaction réelles
-  const agencesEnrichies = useMemo(() => {
-    return agences.map((a) => {
-      const stat = agencesStats.find((s) => s.agence_id === a.id);
-      return {
-        ...a,
-        taux_satisfaction: stat ? stat.taux_satisfaction : (a.taux_satisfaction ?? 75),
-        nombre_feedbacks: stat ? stat.nombre_feedbacks : 0,
-        nombre_negatifs: stat ? stat.nombre_negatifs : 0,
-        nombre_suggestions: stat ? stat.nombre_suggestions : 0,
-      };
-    });
-  }, [agences, agencesStats]);
+  const toggleManagerActive = async (m: AgencyManagerLite) => {
+    try {
+      await utilisateursApi.update(m.id, { active: !m.active });
+      setManagers((prev) => prev.map((x) => (x.id === m.id ? { ...x, active: !x.active } : x)));
+      showToast(m.active ? 'Compte suspendu' : 'Compte réactivé');
+    } catch {
+      showToast('Erreur lors de la modification du compte');
+    }
+  };
 
-  // Filtrage Répertoire
+  // Chefs d'agence groupés par agence ; comptes sans agence (invisibles sinon, aucune carte pour les porter).
+  const managersParAgence = useMemo(() => {
+    const map = new Map<string, AgencyManagerLite[]>();
+    managers.forEach((m) => {
+      if (!m.agence_id) return;
+      map.set(m.agence_id, [...(map.get(m.agence_id) || []), m]);
+    });
+    return map;
+  }, [managers]);
+  const managersSansAgence = useMemo(() => managers.filter((m) => !m.agence_id), [managers]);
+  const nbSansManager = useMemo(
+    () => agences.filter((a) => !(managersParAgence.get(a.id)?.length)).length,
+    [agences, managersParAgence]
+  );
+
+  // Filtrage Répertoire : recherche sur l'agence (nom, ville, adresse) ET sur ses chefs d'agence (nom, prénom, email).
   const filteredAgences = useMemo(() => {
-    return agencesEnrichies.filter((a) => {
-      if (!search.trim()) return true;
-      const q = search.toLowerCase();
-      return a.nom.toLowerCase().includes(q) || (a.ville || '').toLowerCase().includes(q) || (a.adresse || '').toLowerCase().includes(q);
+    const q = search.trim().toLowerCase();
+    return agences.filter((a) => {
+      const mgrs = managersParAgence.get(a.id) || [];
+      if (filtreSansManager && mgrs.length > 0) return false;
+      if (!q) return true;
+      return (
+        a.nom.toLowerCase().includes(q) ||
+        (a.ville || '').toLowerCase().includes(q) ||
+        (a.adresse || '').toLowerCase().includes(q) ||
+        mgrs.some((m) => `${m.prenom} ${m.nom}`.toLowerCase().includes(q) || m.email.toLowerCase().includes(q))
+      );
     });
-  }, [agencesEnrichies, search]);
-
-  const tabsConfig = [
-    { id: 'repertoire', label: 'Répertoire', icon: <TargetIcon size={16} />, badge: agences.length },
-    { id: 'activite', label: 'Activité', icon: <ClockIcon size={16} /> },
-  ];
+  }, [agences, managersParAgence, search, filtreSansManager]);
 
   if (loading) return <div style={{ padding: '32px', color: '#64748B', fontWeight: 600 }}>Chargement des agences...</div>;
 
@@ -220,16 +238,16 @@ export default function AdminAgencesContent() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#02302D' }}>
-            Agences & Points de Collecte ({agences.length})
+            Répertoire des agences ({agences.length})
           </h2>
           <p style={{ margin: '4px 0 0', fontSize: '0.84rem', color: '#64748B' }}>
-            Gestion du parc d'agences physiques, des QR codes et du monitoring réseau
+            Agences, QR codes et chefs d'agence du réseau
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <button
             type="button"
-            onClick={() => setShowCreateAgencyManager(true)}
+            onClick={() => setManagerModal({})}
             style={{
               background: '#FFFFFF',
               color: '#02302D',
@@ -271,36 +289,90 @@ export default function AdminAgencesContent() {
         </div>
       </div>
 
-      {showCreateAgencyManager && (
+      {managerModal && (
         <CreateAgencyManagerModal
-          onClose={() => setShowCreateAgencyManager(false)}
-          onCreated={() => showToast("Chef d'agence créé — visible dans l'onglet Agency Managers")}
+          manager={managerModal.manager}
+          defaultAgenceId={managerModal.defaultAgenceId}
+          agences={agences}
+          onClose={() => setManagerModal(null)}
+          onCreated={() => {
+            chargerManagers();
+            showToast(managerModal.manager ? "Chef d'agence modifié" : "Chef d'agence créé");
+          }}
         />
       )}
 
-      {/* Navigation par 2 Onglets */}
-      <TabsNavigation
-        tabs={tabsConfig}
-        activeTab={activeTab}
-        onChange={(id) => setActiveTab(id as any)}
-      />
+      {/* ── Répertoire unique : agences + chefs d'agence ── */}
+      <section aria-labelledby="repertoire-agences" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div id="repertoire-agences"><SectionHeading>Agences et chefs d'agence</SectionHeading></div>
 
-      {/* ── 1. RÉPERTOIRE (Gestion, Création, Modification) ── */}
-      {activeTab === 'repertoire' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Recherche */}
+          {managersIndisponibles && (
+            <div role="alert" style={{ background: '#FEF3C7', border: '1px solid #FDE68A', color: '#92400E', borderRadius: '12px', padding: '10px 14px', fontSize: '0.82rem', fontWeight: 600 }}>
+              Les chefs d'agence n'ont pas pu être chargés : leur section peut être incomplète.
+            </div>
+          )}
+
+          {/* Chefs d'agence sans agence : sinon invisibles (aucune carte pour les porter) */}
+          {managersSansAgence.length > 0 && (
+            <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '16px', padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <strong style={{ fontSize: '0.86rem', color: '#92400E' }}>Chefs d'agence sans agence ({managersSansAgence.length})</strong>
+              {managersSansAgence.map((m) => (
+                <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 600 }}>
+                    {m.prenom} {m.nom} <span style={{ color: '#64748B', fontWeight: 500 }}>— {m.email}</span>
+                    {!m.active && <span style={{ marginLeft: '8px', fontSize: '0.7rem', fontWeight: 800, color: '#64748B' }}>(suspendu)</span>}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setManagerModal({ manager: m })}
+                    style={{ background: '#02302D', color: '#FFFFFF', border: 'none', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 700 }}
+                  >
+                    Assigner
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Recherche + filtre */}
           <div style={{ display: 'flex', alignItems: 'center', background: '#FFFFFF', borderRadius: '16px', padding: '12px 18px', border: '1px solid #E2E8F0' }}>
             <SearchIcon size={16} color="#94A3B8" />
             <input
               type="text"
-              placeholder="Rechercher une agence par nom, ville ou adresse..."
+              placeholder="Rechercher par agence, ville, adresse ou chef d'agence (nom, email)..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              aria-label="Rechercher dans le répertoire"
               style={{ border: 'none', outline: 'none', marginLeft: '10px', width: '100%', fontSize: '0.86rem' }}
             />
+            <button
+              type="button"
+              onClick={() => setFiltreSansManager((v) => !v)}
+              aria-pressed={filtreSansManager}
+              style={{
+                flexShrink: 0,
+                marginLeft: '10px',
+                background: filtreSansManager ? '#02302D' : '#F1F5F9',
+                color: filtreSansManager ? '#FFFFFF' : '#334155',
+                border: 'none',
+                borderRadius: '9999px',
+                padding: '6px 14px',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              Sans chef d'agence ({nbSansManager})
+            </button>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+            {filteredAgences.length === 0 && (
+              <div style={{ gridColumn: '1 / -1', padding: '32px', textAlign: 'center', color: '#64748B', fontWeight: 600, fontSize: '0.88rem' }}>
+                Aucune agence ne correspond à votre recherche.
+              </div>
+            )}
             {filteredAgences.map((a) => (
               <div
                 key={a.id}
@@ -343,7 +415,65 @@ export default function AdminAgencesContent() {
                   </p>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '12px', borderTop: '1px solid #F1F5F9' }}>
+                {/* Chef d'agence */}
+                <div style={{ paddingTop: '12px', borderTop: '1px solid #F1F5F9' }}>
+                  <div style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94A3B8', marginBottom: '8px' }}>
+                    Chef d'agence
+                  </div>
+                  {(managersParAgence.get(a.id) || []).length === 0 ? (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                      <span style={{ fontSize: '0.82rem', color: '#64748B', fontWeight: 600 }}>Aucun chef d'agence</span>
+                      <button
+                        type="button"
+                        onClick={() => setManagerModal({ defaultAgenceId: a.id })}
+                        style={{ background: '#02302D', color: '#FFFFFF', border: 'none', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 700 }}
+                      >
+                        Assigner
+                      </button>
+                    </div>
+                  ) : (
+                    (managersParAgence.get(a.id) || []).map((m) => (
+                      <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0F172A' }}>{m.prenom} {m.nom}</span>
+                            <span
+                              style={{
+                                fontSize: '0.68rem',
+                                fontWeight: 800,
+                                padding: '2px 8px',
+                                borderRadius: '9999px',
+                                background: m.active ? '#EBF6ED' : '#FEE2E2',
+                                color: m.active ? '#3C7730' : '#DC2626',
+                              }}
+                            >
+                              {m.active ? 'Actif' : 'Suspendu'}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.76rem', color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.email}</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setManagerModal({ manager: m })}
+                            style={{ background: '#F1F5F9', border: 'none', borderRadius: '8px', padding: '5px 10px', cursor: 'pointer', fontSize: '0.74rem', fontWeight: 700 }}
+                          >
+                            Modifier
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => toggleManagerActive(m)}
+                            style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '5px 10px', cursor: 'pointer', fontSize: '0.74rem', fontWeight: 600 }}
+                          >
+                            {m.active ? 'Suspendre' : 'Réactiver'}
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', paddingTop: '12px', borderTop: '1px solid #F1F5F9' }}>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
                       type="button"
@@ -382,30 +512,7 @@ export default function AdminAgencesContent() {
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* ── 2. ACTIVITÉ ── */}
-      {activeTab === 'activite' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ background: '#FFFFFF', borderRadius: '20px', padding: '24px', border: '1px solid #E8ECE6' }}>
-            <h3 style={{ margin: '0 0 12px', fontSize: '1rem', fontWeight: 800, color: '#02302D' }}>
-              Journal des Événements et Bornes Réseau
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {agencesEnrichies.map((a) => (
-                <div key={a.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#F8FAFC', borderRadius: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <CheckCircleIcon size={16} color="#3C7730" />
-                    <span style={{ fontSize: '0.84rem', fontWeight: 600, color: '#0F172A' }}>Borne active et connectée : {a.nom}</span>
-                  </div>
-                  <span style={{ fontSize: '0.74rem', color: '#3C7730', fontWeight: 700 }}>En ligne</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      </section>
 
       {/* Modal Création / Édition avec Geolocation Leaflet */}
       {showModal && (
