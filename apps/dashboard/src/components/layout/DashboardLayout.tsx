@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation, matchPath } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { alertesApi } from '../../services/api';
 import type { UserRole } from '../../types';
 import IkanLogo from '../common/IkanLogo';
 import SidebarWorkspaceCard from './SidebarWorkspaceCard';
 import UserMenu from './UserMenu';
+import BackButton from './BackButton';
 import YamChatPanel, { YAM_PANEL_ID } from '../agent/YamChatPanel';
 import YamAvatar from '../agent/YamAvatar';
 import {
@@ -74,6 +75,35 @@ const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
   ],
 };
 
+// ── Table centrale du bouton « Retour » ───────────────────────────────────────
+// Pages profondes (non présentes dans le menu) qui affichent un BackButton en haut du contenu. Pour en ajouter
+// une : une ligne ici. `fallback` = route de repli (arrivée directe par URL, sans historique interne) et son
+// complément de libellé (« Retour au Répertoire »), selon le rôle. Les pages du menu n'ont pas de bouton retour.
+interface BackFallback {
+  to: string;
+  label: string;
+}
+interface BackRoute {
+  pattern: string;
+  roles: UserRole[];
+  fallback: (role: UserRole) => BackFallback;
+}
+
+const dashboardDuRole = (role: UserRole): BackFallback =>
+  role === 'agency_manager' ? { to: '/agence', label: 'au Dashboard Agence' } : { to: '/siege', label: 'au Dashboard' };
+
+const BACK_ROUTES: BackRoute[] = [
+  {
+    pattern: '/agences/:agenceId/apercu',
+    roles: ['cx_manager', 'agency_manager'],
+    fallback: (role) => (role === 'cx_manager' ? { to: '/admin/gestion-agences', label: 'au Répertoire' } : dashboardDuRole(role)),
+  },
+  { pattern: '/pilotage', roles: ['cx_manager', 'agency_manager'], fallback: dashboardDuRole },
+  { pattern: '/parametres', roles: ['cx_manager', 'agency_manager'], fallback: dashboardDuRole },
+  // Route sans entrée de menu pour le CX Manager : seule origine plausible = le Dashboard.
+  { pattern: '/feedbacks', roles: ['cx_manager'], fallback: dashboardDuRole },
+];
+
 // Un bug d'affichage du chat ne doit jamais casser le reste du dashboard :
 // en cas d'erreur de rendu, le panneau disparaît et le reste de l'application continue.
 class YamErrorBoundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
@@ -135,6 +165,10 @@ export default function DashboardLayout() {
 
   const navSections = user ? ROLE_NAV_SECTIONS[user.role] || [] : [];
   const isAlertesActive = location.pathname === '/pilotage';
+  const backRoute = user
+    ? BACK_ROUTES.find((r) => r.roles.includes(user.role) && matchPath({ path: r.pattern, end: true }, location.pathname))
+    : undefined;
+  const backFallback = backRoute && user ? backRoute.fallback(user.role) : undefined;
 
   // Fil d'Ariane dynamique
   const getBreadcrumb = () => {
@@ -544,6 +578,11 @@ export default function DashboardLayout() {
             boxSizing: 'border-box',
           }}
         >
+          {backFallback && (
+            <div style={{ marginBottom: '12px' }}>
+              <BackButton fallbackTo={backFallback.to} fallbackLabel={backFallback.label} />
+            </div>
+          )}
           <Outlet />
         </main>
       </div>

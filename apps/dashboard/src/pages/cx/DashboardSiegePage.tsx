@@ -241,7 +241,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export default function DashboardSiegePage() {
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
-  const voirAgence = (agenceId: string) => navigate(`/agences/${agenceId}/apercu`);
+  const voirAgence = (agenceId: string) => navigate(`/agences/${agenceId}/apercu`, { state: { retour: 'Vue Siège' } });
   const [data, setData] = useState<DashboardSiegeFull | null>(null);
   const [alertes, setAlertes] = useState<Alerte[]>([]);
   const [jours, setJours] = useState(30);

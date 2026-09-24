@@ -494,6 +494,7 @@ export default function AdminAgencesContent() {
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <Link
                       to={`/agences/${a.id}/apercu?tab=categories`}
+                      state={{ retour: 'Répertoire' }}
                       style={{ background: '#FEF3E2', color: '#B45309', textDecoration: 'none', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                     >
                       <TagIcon size={14} />
