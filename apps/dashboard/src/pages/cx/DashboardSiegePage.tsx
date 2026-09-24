@@ -27,7 +27,9 @@ import {
   Cell,
   Legend,
 } from 'recharts';
-import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapPin } from '@phosphor-icons/react';
+import { pinIcon } from '../../components/map/pinIcon';
 import 'leaflet/dist/leaflet.css';
 import { dashboardApi, alertesApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
@@ -813,14 +815,11 @@ export default function DashboardSiegePage() {
                       attribution='&copy; OpenStreetMap'
                     />
                     {agencesAvecCoords.map((a) => (
-                      <CircleMarker
+                      <Marker
                         key={a.agence_id}
-                        center={[a.latitude!, a.longitude!]}
-                        radius={Math.max(10, a.nombre_feedbacks / 2)}
-                        fillColor={AGENCE_COLOR(a.taux_satisfaction)}
-                        color="white"
-                        weight={2}
-                        fillOpacity={0.85}
+                        position={[a.latitude!, a.longitude!]}
+                        icon={pinIcon(AGENCE_COLOR(a.taux_satisfaction))}
+                        title={a.agence_nom}
                       >
                         <Popup>
                           <div style={{ minWidth: '160px' }}>
@@ -839,7 +838,7 @@ export default function DashboardSiegePage() {
                             </button>
                           </div>
                         </Popup>
-                      </CircleMarker>
+                      </Marker>
                     ))}
                   </MapContainer>
                 </div>
@@ -850,7 +849,7 @@ export default function DashboardSiegePage() {
                     { color: '#DC2626', label: '< 60% — Critique' },
                   ].map(({ color, label }) => (
                     <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '0.80rem', fontWeight: 600 }}>
-                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: color }} />
+                      <MapPin size={18} weight="fill" color={color} aria-hidden="true" />
                       {label}
                     </div>
                   ))}
