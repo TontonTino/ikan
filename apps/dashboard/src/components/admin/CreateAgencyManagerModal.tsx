@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { agencesApi, utilisateursApi } from '../../services/api';
+import { XCloseIcon } from '../common/Icons';
 
 interface CreateAgencyManagerModalProps {
   onClose: () => void;
@@ -35,6 +36,15 @@ export default function CreateAgencyManagerModal({ onClose, onCreated }: CreateA
     };
   }, []);
 
+  // Fermeture à la touche Échap (le composant n'est monté que pendant que la modale est ouverte).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.nom.trim() || !form.prenom.trim() || !form.email.trim() || !form.password) return;
@@ -62,9 +72,25 @@ export default function CreateAgencyManagerModal({ onClose, onCreated }: CreateA
   const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0', boxSizing: 'border-box' };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-      <div style={{ background: '#FFFFFF', borderRadius: '24px', padding: '28px', maxWidth: '520px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
-        <h3 style={{ margin: '0 0 16px', fontSize: '1.2rem', fontWeight: 800, color: '#02302D' }}>Créer un Chef d'Agence</h3>
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}
+      onClick={onClose}
+    >
+      <div
+        style={{ background: '#FFFFFF', borderRadius: '24px', padding: '28px', maxWidth: '520px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+          <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#02302D' }}>Créer un Chef d'Agence</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fermer"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', flexShrink: 0 }}
+          >
+            <XCloseIcon size={18} color="#94A3B8" />
+          </button>
+        </div>
 
         <form onSubmit={submit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
           <div>

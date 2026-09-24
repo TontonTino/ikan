@@ -20,6 +20,7 @@ import {
   ClockIcon,
   TagIcon,
   UsersIcon,
+  XCloseIcon,
 } from '../../components/common/Icons';
 import { AgencyLocationPicker, LocationData } from '../../components/agency/AgencyLocationPicker';
 import CreateAgencyManagerModal from '../../components/admin/CreateAgencyManagerModal';
@@ -80,6 +81,16 @@ export default function AdminAgencesContent() {
       .catch((err) => console.error('Erreur chargement agences:', err))
       .finally(() => setLoading(false));
   }, []);
+
+  // Fermeture de la modale Nouvelle/Modifier Agence à la touche Échap.
+  useEffect(() => {
+    if (!showModal) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowModal(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showModal]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -398,11 +409,27 @@ export default function AdminAgencesContent() {
 
       {/* Modal Création / Édition avec Geolocation Leaflet */}
       {showModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ background: '#FFFFFF', borderRadius: '24px', padding: '28px', maxWidth: '520px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ margin: '0 0 16px', fontSize: '1.2rem', fontWeight: 800, color: '#02302D' }}>
-              {editTarget ? "Modifier l'agence" : 'Créer une nouvelle agence'}
-            </h3>
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            style={{ background: '#FFFFFF', borderRadius: '24px', padding: '28px', maxWidth: '520px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#02302D' }}>
+                {editTarget ? "Modifier l'agence" : 'Créer une nouvelle agence'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                aria-label="Fermer"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', flexShrink: 0 }}
+              >
+                <XCloseIcon size={18} color="#94A3B8" />
+              </button>
+            </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
