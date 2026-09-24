@@ -181,6 +181,23 @@ def health_check():
     return {"status": "ok"}
 
 
+@app.get("/health/schema")
+def health_schema():
+    """
+    SONDE TEMPORAIRE (déploiement expand/contract de delai_alerte_negatif_heures) : indique si la
+    migration 014 est bien appliquée. Volontairement séparée de /health (healthCheckPath de Render).
+    À retirer une fois le déploiement confirmé.
+    """
+    try:
+        from sqlalchemy import inspect
+        from app.db.session import engine
+
+        colonnes = {c["name"] for c in inspect(engine).get_columns("utilisateurs")}
+        return {"delai_alerte_negatif_heures": "delai_alerte_negatif_heures" in colonnes}
+    except Exception as e:  # sonde de diagnostic : ne doit jamais lever
+        return {"erreur": type(e).__name__}
+
+
 @app.get("/debug-db")
 def debug_db():
     try:
