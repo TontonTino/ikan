@@ -19,10 +19,6 @@ export default function GestionAgencesPage() {
   const isAdmin = currentUser?.role === 'admin';
   const isCXManager = currentUser?.role === 'cx_manager';
 
-  if (currentUser?.role === 'agency_manager') {
-    return <Navigate to="/agence" replace />;
-  }
-
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTab = searchParams.get('tab') === 'utilisateurs' ? 'utilisateurs' : 'agences';
   const [activeTab, setActiveTab] = useState<GestionTab>(isCXManager ? requestedTab : 'utilisateurs');
@@ -41,6 +37,12 @@ export default function GestionAgencesPage() {
     setActiveTab(tab);
     setSearchParams(tab === 'agences' ? {} : { tab }, { replace: true });
   };
+
+  // Redirection APRÈS tous les hooks (Rules of Hooks) ; ce composant ne fait aucun appel API lui-même
+  // (les onglets enfants ne sont montés qu'en l'absence de redirection).
+  if (currentUser?.role === 'agency_manager') {
+    return <Navigate to="/agence" replace />;
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>

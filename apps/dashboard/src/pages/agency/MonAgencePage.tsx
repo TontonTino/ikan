@@ -140,9 +140,9 @@ export default function MonAgencePage() {
   const { agenceId: agenceIdParam } = useParams<{ agenceId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  if (user && user.role !== 'agency_manager' && user.role !== 'cx_manager') {
-    return <Navigate to="/" replace />;
-  }
+  // Rôle non autorisé : redirigé plus bas, APRÈS tous les hooks (Rules of Hooks). Les effets sortent
+  // tôt dans ce cas, donc aucun appel API n'est lancé pour un utilisateur sans accès à la page.
+  const nonAutorise = !!user && user.role !== 'agency_manager' && user.role !== 'cx_manager';
 
   const agenceId = agenceIdParam || user?.agence_id;
 
@@ -174,6 +174,7 @@ export default function MonAgencePage() {
   const [pdfEnCours, setPdfEnCours] = useState(false);
 
   useEffect(() => {
+    if (nonAutorise) return;
     if (!agenceId) {
       setLoading(false);
       return;
@@ -199,10 +200,10 @@ export default function MonAgencePage() {
     return () => {
       annule = true;
     };
-  }, [agenceId]);
+  }, [agenceId, nonAutorise]);
 
   useEffect(() => {
-    if (!agenceId) return;
+    if (nonAutorise || !agenceId) return;
     let annule = false;
     statisticsApi
       .agency({ agence_id: agenceId, jours: 30 })
@@ -215,10 +216,10 @@ export default function MonAgencePage() {
     return () => {
       annule = true;
     };
-  }, [agenceId]);
+  }, [agenceId, nonAutorise]);
 
   useEffect(() => {
-    if (!agenceId) return;
+    if (nonAutorise || !agenceId) return;
     let annule = false;
     agencesApi
       .activite(agenceId)
@@ -231,7 +232,7 @@ export default function MonAgencePage() {
     return () => {
       annule = true;
     };
-  }, [agenceId]);
+  }, [agenceId, nonAutorise]);
 
   const handleTabChange = (id: string) => {
     const tab = id as AgenceTab;
@@ -243,6 +244,10 @@ export default function MonAgencePage() {
     setMessage(texte);
     setTimeout(() => setMessage(''), 2500);
   };
+
+  if (nonAutorise) {
+    return <Navigate to="/" replace />;
+  }
 
   if (!agenceId) {
     return <div style={{ color: '#B91C1C', padding: '32px', fontWeight: 600 }}>Aucune agence n'est rattachée à votre compte.</div>;
