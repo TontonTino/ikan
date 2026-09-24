@@ -362,3 +362,17 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .yam-avatar-pulse { animation: none; opacity: 0.85; }
 }
+
+/* Placeholder de chargement (components/ui/SkeletonBlock.tsx) : garde la structure de la page pendant le fetch */
+.skeleton-block {
+  display: block;
+  background: var(--color-bg-subtle);
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+}
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-block { animation: none; }
+}

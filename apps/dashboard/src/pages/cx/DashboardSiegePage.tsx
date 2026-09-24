@@ -1,3 +1,15 @@
+/**
+ * Vue Siège (CX Manager) — hiérarchie de lecture en 4 niveaux, un <h2> par groupe :
+ *   Niveau 1  Situation globale  → « Comment vont nos clients ? » (onglet Vue d'ensemble :
+ *             KPI de tête + évolution du CSAT)
+ *   Niveau 2  Attention          → « Urgent » (résumé des alertes en Vue d'ensemble,
+ *             détail dans l'onglet Alertes)
+ *   Niveau 3  Compréhension      → « Que disent nos clients ? » (onglet Performance CX :
+ *             sentiments, thèmes) et « Où sont les problèmes ? » (onglet Agences)
+ *   Niveau 4  Action             → non présent sur cette page : aucune donnée d'actions
+ *             (recommandations créées/en cours/résolues) n'est chargée ici, elles vivent
+ *             dans Pilotage (recommandationsApi).
+ */
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -21,6 +33,9 @@ import { dashboardApi, alertesApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import type { DashboardSiege, Alerte } from '../../types';
 import TabsNavigation from '../../components/ui/TabsNavigation';
+import KpiCard from '../../components/ui/KpiCard';
+import EmptyState from '../../components/ui/EmptyState';
+import SkeletonBlock from '../../components/ui/SkeletonBlock';
 import EphemeralAlertsBanner from '../../components/alerts/EphemeralAlertsBanner';
 import {
   StoreIcon,
@@ -146,6 +161,130 @@ function SectionCard({
   );
 }
 
+// ── Titre de section (h2 sémantique, style discret) ─────
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h2
+      style={{
+        margin: 0,
+        fontSize: '0.78rem',
+        fontWeight: 800,
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        color: 'var(--color-text-muted)',
+      }}
+    >
+      {children}
+    </h2>
+  );
+}
+
+// ── Ligne d'alerte de seuil (champs réels de GET /alertes → alertes_seuil) ──
+function AlerteRow({ alerte }: { alerte: Alerte }) {
+  return (
+    <div
+      style={{
+        background: 'var(--color-surface)',
+        border: '1px solid #FECACA',
+        borderLeft: '6px solid var(--color-error)',
+        borderRadius: '16px',
+        padding: '16px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '16px',
+        flexWrap: 'wrap',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '240px', flex: 1 }}>
+        <div
+          style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '10px',
+            background: 'var(--color-error-bg)',
+            color: 'var(--color-error)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <AlertTriangleIcon size={18} />
+        </div>
+        <div>
+          <h3 style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: 'var(--color-text-body)' }}>
+            {alerte.agence_nom}
+          </h3>
+          <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', marginTop: '2px' }}>{alerte.message}</div>
+        </div>
+      </div>
+      <span
+        style={{
+          fontSize: '0.76rem',
+          fontWeight: 800,
+          padding: '4px 12px',
+          borderRadius: 'var(--radius-pill)',
+          background: 'var(--color-error-bg)',
+          color: 'var(--color-error)',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        Taux actuel : {alerte.taux_actuel}% / Seuil {alerte.seuil}%
+      </span>
+    </div>
+  );
+}
+
+// ── Squelette de chargement : reproduit la structure de chaque onglet ──
+function SiegeSkeleton({ tab }: { tab: 'overview' | 'performance' | 'agences' | 'alertes' }) {
+  const card = (h: number) => (
+    <div
+      style={{
+        background: 'var(--color-surface)',
+        border: '1px solid var(--color-border)',
+        borderRadius: '24px',
+        padding: '24px 28px',
+      }}
+    >
+      <SkeletonBlock width="35%" height={18} style={{ marginBottom: 8 }} />
+      <SkeletonBlock width="55%" height={12} style={{ marginBottom: 20 }} />
+      <SkeletonBlock height={h} radius="var(--radius-lg)" />
+    </div>
+  );
+  return (
+    <div aria-busy="true" aria-label="Chargement des données du réseau" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {tab === 'overview' && (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+            <SkeletonBlock height={84} radius="var(--radius-lg)" />
+            <SkeletonBlock height={84} radius="var(--radius-lg)" />
+            <SkeletonBlock height={84} radius="var(--radius-lg)" />
+          </div>
+          {card(260)}
+          {card(90)}
+        </>
+      )}
+      {tab === 'performance' && (
+        <>
+          {card(180)}
+          {card(200)}
+        </>
+      )}
+      {tab === 'agences' && (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+            <SkeletonBlock height={140} radius="var(--radius-xl)" />
+            <SkeletonBlock height={140} radius="var(--radius-xl)" />
+          </div>
+          {card(420)}
+        </>
+      )}
+      {tab === 'alertes' && card(220)}
+    </div>
+  );
+}
+
 // ── Tooltip personnalisé Recharts ───────────────────────
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -214,18 +353,12 @@ export default function DashboardSiegePage() {
     load();
   }, [load]);
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh', color: '#64748B', fontWeight: 600 }}>
-        Chargement des données du réseau...
-      </div>
-    );
-  }
-
-  if (!data) return <div style={{ padding: '32px' }}>Aucune donnée disponible</div>;
+  // Aucune donnée (échec du chargement) : la structure de la page n'est pas remplacée par un texte brut.
+  const loadFailed = !loading && !data;
 
   // Calculs & métriques dérivées
-  const agencesAvecCoords = data.agences.filter((a) => a.latitude && a.longitude);
+  const agences = data?.agences ?? [];
+  const agencesAvecCoords = agences.filter((a) => a.latitude && a.longitude);
   const centerLat = agencesAvecCoords.length > 0
     ? agencesAvecCoords.reduce((s, a) => s + (a.latitude || 0), 0) / agencesAvecCoords.length
     : 34.0;
@@ -234,14 +367,14 @@ export default function DashboardSiegePage() {
     : 9.0;
 
   // Top & Flop agences
-  const sortedAgences = [...data.agences].sort((a, b) => b.wilson_score - a.wilson_score);
+  const sortedAgences = [...agences].sort((a, b) => b.wilson_score - a.wilson_score);
   const topAgences = sortedAgences.slice(0, 3);
   const flopAgences = sortedAgences.slice(-3).reverse();
 
   const tabsConfig = [
     { id: 'overview', label: "Vue d'ensemble", icon: <TrendingUpIcon size={16} /> },
     { id: 'performance', label: 'Performance CX', icon: <BarChartIcon size={16} /> },
-    { id: 'agences', label: 'Agences', icon: <StoreIcon size={16} />, badge: data.agences.length },
+    { id: 'agences', label: 'Agences', icon: <StoreIcon size={16} />, badge: data ? agences.length : undefined },
     {
       id: 'alertes',
       label: 'Alertes',
@@ -403,11 +536,55 @@ export default function DashboardSiegePage() {
         onChange={(id) => setActiveTab(id as any)}
       />
 
+      {loadFailed && (
+        <EmptyState
+          illustration="no-data"
+          title="Impossible de charger les données du réseau"
+          message="Vérifiez votre connexion puis réessayez."
+          action={{ label: 'Réessayer', onClick: load }}
+        />
+      )}
+      {!data && !loadFailed && <SiegeSkeleton tab={activeTab} />}
+
+      {/* Pendant une actualisation (changement de période), les données précédentes restent affichées, atténuées. */}
+      {data && (
+      <div aria-busy={loading} style={{ display: 'flex', flexDirection: 'column', gap: '20px', opacity: loading ? 0.55 : 1, transition: 'opacity 0.2s ease' }}>
       {/* ══════════════════════════════════════════════════════
-          ONGLET 1 : VUE D'ENSEMBLE (Exécutif, Léger, Épuré)
+          ONGLET 1 : VUE D'ENSEMBLE — niveau 1 (situation) puis niveau 2 (urgent)
       ══════════════════════════════════════════════════════ */}
       {activeTab === 'overview' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+          <section aria-labelledby="siege-situation" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div id="siege-situation"><SectionHeading>Comment vont nos clients ?</SectionHeading></div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+              <KpiCard
+                compact
+                icon={<ThumbsUpIcon size={14} />}
+                label="Satisfaction réseau"
+                value={`${data.taux_satisfaction_global}%`}
+                trend={data.evolution_satisfaction ? { value: data.evolution_satisfaction, isPositive: data.evolution_satisfaction_positive, period: 'vs. période précédente' } : undefined}
+                sparklineType={data.evolution_satisfaction_positive === false ? 'down' : 'up'}
+              />
+              <KpiCard
+                compact
+                icon={<BarChartIcon size={14} />}
+                label="Avis collectés"
+                value={data.feedbacks_total}
+                trend={data.evolution_feedbacks_total ? { value: data.evolution_feedbacks_total, isPositive: data.evolution_feedbacks_total_positive, period: 'vs. période précédente' } : undefined}
+                sparklineType="neutral"
+              />
+              <KpiCard
+                compact
+                icon={<AlertTriangleIcon size={14} />}
+                label="Avis critiques"
+                value={data.nombre_critiques}
+                badgeColor={data.nombre_critiques > 0 ? 'red' : 'green'}
+                subtitle="sur la période"
+                sparklineType="neutral"
+              />
+            </div>
+
           {/* Graphique Unique d'Évolution CSAT */}
           <SectionCard
             title="Évolution du CSAT Réseau"
@@ -480,6 +657,29 @@ export default function DashboardSiegePage() {
               </div>
             </div>
           </div>
+          </section>
+
+          <section aria-labelledby="siege-urgent" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div id="siege-urgent"><SectionHeading>Urgent</SectionHeading></div>
+            {alertes.length > 0 ? (
+              <>
+                {alertes.slice(0, 3).map((al) => (
+                  <AlerteRow key={al.agence_id} alerte={al} />
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('alertes')}
+                  style={{ alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.84rem', fontWeight: 700, color: 'var(--color-primary)' }}
+                >
+                  {alertes.length > 3 ? `Voir les ${alertes.length} alertes →` : 'Voir le détail des alertes →'}
+                </button>
+              </>
+            ) : (
+              <p style={{ margin: 0, fontSize: '0.86rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                Aucune agence sous son seuil d'alerte de satisfaction.
+              </p>
+            )}
+          </section>
         </div>
       )}
 
@@ -487,7 +687,8 @@ export default function DashboardSiegePage() {
           ONGLET 2 : PERFORMANCE CX (Analyses Approfondies)
       ══════════════════════════════════════════════════════ */}
       {activeTab === 'performance' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <section aria-labelledby="siege-comprehension" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div id="siege-comprehension"><SectionHeading>Que disent nos clients ?</SectionHeading></div>
           {/* Row 1: Sentiments (l'évolution temporelle du CSAT est dans Statistiques & Analyses) */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '20px' }}>
             {/* Répartition des Sentiments */}
@@ -597,14 +798,15 @@ export default function DashboardSiegePage() {
               </div>
             )}
           </SectionCard>
-        </div>
+        </section>
       )}
 
       {/* ══════════════════════════════════════════════════════
           ONGLET 3 : AGENCES (Cartographie & Benchmark Réseau)
       ══════════════════════════════════════════════════════ */}
       {activeTab === 'agences' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <section aria-labelledby="siege-agences" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div id="siege-agences"><SectionHeading>Où sont les problèmes ?</SectionHeading></div>
           {/* Top & Flop Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
             <div
@@ -618,9 +820,9 @@ export default function DashboardSiegePage() {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <ThumbsUpIcon size={16} color="#3C7730" />
-                <span style={{ fontWeight: 800, fontSize: '0.90rem', color: '#02302D' }}>
+                <h3 style={{ margin: 0, fontWeight: 800, fontSize: '0.90rem', color: '#02302D' }}>
                   Top 3 Agences — Satisfaction
-                </span>
+                </h3>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {topAgences.map((ag, idx) => (
@@ -649,9 +851,9 @@ export default function DashboardSiegePage() {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <ThumbsDownIcon size={16} color="#DC2626" />
-                <span style={{ fontWeight: 800, fontSize: '0.90rem', color: '#02302D' }}>
+                <h3 style={{ margin: 0, fontWeight: 800, fontSize: '0.90rem', color: '#02302D' }}>
                   Agences à surveiller
-                </span>
+                </h3>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {flopAgences.map((ag) => (
@@ -792,104 +994,36 @@ export default function DashboardSiegePage() {
               </table>
             </div>
           </SectionCard>
-        </div>
+        </section>
       )}
 
       {/* ══════════════════════════════════════════════════════
-          ONGLET 4 : ALERTES (Actionnable & Orienté Résolution)
+          ONGLET 4 : ALERTES — détail du niveau 2 (seuil de satisfaction par agence)
       ══════════════════════════════════════════════════════ */}
       {activeTab === 'alertes' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <section aria-labelledby="siege-alertes" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div id="siege-alertes"><SectionHeading>Urgent</SectionHeading></div>
           <SectionCard
-            title="Alertes & Incidents Réseau Actifs"
-            subtitle="Cas critiques détectés par l'IA nécessitant une prise en charge ou une escalade"
+            title="Agences sous leur seuil d'alerte"
+            subtitle="Satisfaction de la semaine inférieure au seuil configuré pour l'agence"
           >
             {alertes.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {alertes.map((al) => (
-                  <div
-                    key={al.id}
-                    style={{
-                      background: al.critique ? '#FFFBFB' : '#FFFFFF',
-                      border: al.critique ? '1px solid #FECACA' : '1px solid #E2E8F0',
-                      borderRadius: '16px',
-                      padding: '16px 20px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '16px',
-                      flexWrap: 'wrap',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '240px', flex: 1 }}>
-                      <div
-                        style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '10px',
-                          background: al.critique ? '#FEE2E2' : '#FEF3C7',
-                          color: al.critique ? '#DC2626' : '#D97706',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <AlertTriangleIcon size={18} />
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 800, fontSize: '0.86rem', color: '#0F172A' }}>
-                          {al.titre || al.type_alerte || 'Alerte Réseau'}
-                        </div>
-                        <div style={{ fontSize: '0.76rem', color: '#64748B', marginTop: '2px' }}>
-                          {al.agence_nom ? `📍 Agence ${al.agence_nom}` : 'Point de vente'}
-                          {al.created_at ? ` • ${new Date(al.created_at).toLocaleDateString('fr-FR')}` : ''}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span
-                        style={{
-                          fontSize: '0.74rem',
-                          fontWeight: 800,
-                          padding: '4px 10px',
-                          borderRadius: '9999px',
-                          background: al.critique ? '#DC2626' : '#D97706',
-                          color: '#FFFFFF',
-                        }}
-                      >
-                        {al.critique ? 'CRITIQUE' : 'IMPORTANT'}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: '0.74rem',
-                          fontWeight: 700,
-                          padding: '4px 10px',
-                          borderRadius: '9999px',
-                          background: '#F1F5F9',
-                          color: '#475569',
-                        }}
-                      >
-                        {al.statut || 'En attente'}
-                      </span>
-                    </div>
-                  </div>
+                  <AlerteRow key={al.agence_id} alerte={al} />
                 ))}
               </div>
             ) : (
-              <div style={{ textAlign: 'center', padding: '60px 0', color: '#3C7730' }}>
-                <div style={{ fontSize: '1.2rem', marginBottom: '6px' }}>🎉</div>
-                <div style={{ fontWeight: 800, fontSize: '0.96rem', color: '#02302D' }}>
-                  Aucune alerte active sur le réseau
-                </div>
-                <div style={{ fontSize: '0.82rem', color: '#64748B', marginTop: '4px' }}>
-                  Toutes les agences fonctionnent dans leurs seuils nominaux.
-                </div>
-              </div>
+              <EmptyState
+                illustration="no-alert"
+                title="Aucune agence sous son seuil d'alerte"
+                message="La satisfaction de chaque agence est au-dessus du seuil configuré pour elle."
+              />
             )}
           </SectionCard>
-        </div>
+        </section>
+      )}
+      </div>
       )}
     </div>
   );
