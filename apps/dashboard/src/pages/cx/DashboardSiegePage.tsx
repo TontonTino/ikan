@@ -123,6 +123,7 @@ function SectionCard({
 }) {
   return (
     <div
+      className={critical ? 'on-dark' : undefined}
       style={{
         background: critical ? 'var(--color-primary-dark)' : '#FFFFFF',
         borderRadius: '24px',

@@ -82,6 +82,28 @@ body {
   min-height: 100vh;
 }
 
+/* Anneau de focus clavier — global, cohérent avec la charte, accessible.
+   :where() garde une spécificité nulle pour ne jamais écraser les règles de
+   composants existantes (.saas-input:focus, .yam-input:focus,
+   .yam-panel :focus-visible notamment, non touchées).
+   var(--color-primary) et non var(--color-accent) : le lime vif de
+   --color-accent (#75B72A) ne passe qu'à 2.45:1 de contraste sur blanc,
+   sous le minimum WCAG 1.4.11 de 3:1 pour un indicateur de focus ;
+   --color-primary (#3C7730) passe à 5.4:1. */
+:where(a, button, [role="button"], [tabindex]:not([tabindex="-1"]), summary, select):focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Variante zones sombres (ex. .saas-card--critical, ou tout conteneur avec
+   className="on-dark") : le vert forêt --color-primary est illisible sur un
+   fond sombre --color-primary-dark, le lime --color-lime (~8:1 sur
+   #02302D) prend le relais. */
+.saas-card--critical :focus-visible,
+.on-dark :focus-visible {
+  outline-color: var(--color-lime);
+}
+
 /* Scrollbar Design */
 ::-webkit-scrollbar {
   width: 6px;
