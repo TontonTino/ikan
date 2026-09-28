@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_cx_or_agency_manager, get_cx_or_admin, get_db
@@ -15,8 +16,16 @@ from app.models.agence import Agence
 from app.models.feedback import Feedback
 from app.models.qr_code import QRCode
 from app.models.categorie import Categorie
-from app.models.enums import UserRole
+from app.models.analyse_ia import AnalyseIA
+from app.models.enums import UserRole, SentimentType
 from app.services.acces_agence import verifier_acces_agence
+from app.services.alertes_seuil import (
+    DUREE_PERSISTANCE_SEUIL_CX,
+    FENETRE_SATISFACTION,
+    en_utc,
+    satisfaction_a,
+    sous_seuil_en_continu,
+)
 from app.services.plan_catalog import FEATURE_ALERTES
 from app.services.plan_service import organisation_a_la_fonctionnalite
 
@@ -37,7 +46,7 @@ class AlerteFeedbackResponse(BaseModel):
     agence_nom: str
     note: int
     categorie_nom: str | None
-    # 'negatif' | 'suggestion' | 'negatif_et_suggestion'
+    # 'note_basse' | 'sentiment_negatif' | 'note_basse_et_sentiment_negatif'
     raison: str
     commentaire: str | None
     date_soumission: datetime
@@ -53,87 +62,121 @@ class SeuilUpdate(BaseModel):
 
 
 def _calculer_alertes_seuil(db: Session, current_user: Utilisateur) -> List[AlerteResponse]:
-    """Système d'alertes existant (seuil de satisfaction par agence) — INCHANGÉ."""
-    date_debut = datetime.now(timezone.utc) - timedelta(days=7)
-    alertes: List[AlerteResponse] = []
+    """
+    Alertes de seuil de satisfaction par agence (fenêtre glissante de 7 jours, au moins 3 avis).
+    - Agency Manager (son agence) : IMMÉDIAT, dès que la satisfaction est sous le seuil.
+    - CX Manager (agences actives de son organisation) : uniquement si la satisfaction est restée sous le
+      seuil EN CONTINU pendant DUREE_PERSISTANCE_SEUIL_CX (48 h) — voir app/services/alertes_seuil.py.
+    """
+    maintenant = datetime.now(timezone.utc)
+    pour_cx = current_user.role != UserRole.AGENCY_MANAGER
 
-    if current_user.role == UserRole.AGENCY_MANAGER:
+    if not pour_cx:
         agences = db.query(Agence).filter(Agence.id == current_user.agence_id).all()
     else:
         agences = db.query(Agence).filter(
             Agence.organisation_id == current_user.organisation_id,
             Agence.active == True,
         ).all()
+    if not agences:
+        return []
 
-    for agence in agences:
-        feedbacks = (
-            db.query(Feedback)
-            .join(QRCode, Feedback.qr_code_id == QRCode.id)
-            .filter(
-                QRCode.agence_id == agence.id,
-                Feedback.date_soumission >= date_debut,
-            )
-            .all()
+    # Une seule requête : les avis nécessaires à la fenêtre de 7 jours, en remontant de 48 h pour le CX Manager.
+    debut_donnees = maintenant - FENETRE_SATISFACTION - (DUREE_PERSISTANCE_SEUIL_CX if pour_cx else timedelta(0))
+    lignes = (
+        db.query(QRCode.agence_id, Feedback.date_soumission, Feedback.note)
+        .join(Feedback, Feedback.qr_code_id == QRCode.id)
+        .filter(
+            QRCode.agence_id.in_([a.id for a in agences]),
+            Feedback.date_soumission >= debut_donnees,
         )
-        total = len(feedbacks)
-        if total < 3:
+        .all()
+    )
+    avis_par_agence: dict = {}
+    for agence_id, date_soumission, note in lignes:
+        avis_par_agence.setdefault(agence_id, []).append((en_utc(date_soumission), note))
+
+    alertes: List[AlerteResponse] = []
+    for agence in agences:
+        avis = avis_par_agence.get(agence.id, [])
+        _, taux = satisfaction_a(avis, maintenant)
+        if taux is None:
             continue  # Pas assez de données pour déclencher une alerte
 
-        taux = round(sum(1 for f in feedbacks if f.note >= 4) / total * 100, 1)
-        if taux < agence.seuil_alerte:
-            alertes.append(AlerteResponse(
-                agence_id=agence.id,
-                agence_nom=agence.nom,
-                taux_actuel=taux,
-                seuil=agence.seuil_alerte,
-                message=f"Satisfaction en baisse — {agence.nom} : {taux}% cette semaine, sous le seuil de {agence.seuil_alerte}%",
-            ))
+        if pour_cx:
+            sous_le_seuil, _ = sous_seuil_en_continu(avis, agence.seuil_alerte, maintenant)
+            if not sous_le_seuil:
+                continue
+            heures = int(DUREE_PERSISTANCE_SEUIL_CX.total_seconds() // 3600)
+            message = (
+                f"Satisfaction sous le seuil depuis plus de {heures} h — {agence.nom} : "
+                f"{taux}% sur 7 jours, seuil de {agence.seuil_alerte}%"
+            )
+        else:
+            if not taux < agence.seuil_alerte:
+                continue
+            message = f"Satisfaction en baisse — {agence.nom} : {taux}% cette semaine, sous le seuil de {agence.seuil_alerte}%"
+
+        alertes.append(AlerteResponse(
+            agence_id=agence.id,
+            agence_nom=agence.nom,
+            taux_actuel=taux,
+            seuil=agence.seuil_alerte,
+            message=message,
+        ))
 
     return alertes
 
 
+def _raison_alerte_feedback(note: int, sentiment) -> "str | None":
+    """Motif d'alerte d'un feedback : note <= 2 et/ou sentiment IA négatif (None = pas d'alerte)."""
+    note_basse = note <= 2
+    sentiment_negatif = sentiment == SentimentType.NEGATIF
+    if note_basse and sentiment_negatif:
+        return "note_basse_et_sentiment_negatif"
+    if note_basse:
+        return "note_basse"
+    if sentiment_negatif:
+        return "sentiment_negatif"
+    return None
+
+
 def _calculer_alertes_feedback(db: Session, current_user: Utilisateur) -> List[AlerteFeedbackResponse]:
     """
-    Alertes individuelles par feedback (nouvelle catégorie, s'ajoute au système de
-    seuil ci-dessus sans le modifier) :
-    - négatif (note <= 2) : alerte immédiate, pour les deux rôles.
-    - catégorie marquée "suggestion" : alerte immédiate pour l'Agency Manager,
-      alerte seulement après `delai_alerte_suggestion_heures` (réglable par
-      compte) si toujours non traité pour le CX Manager.
-    Une alerte disparaît dès que le feedback est marqué "resolu" (traité), pour
-    les deux raisons. Calcul à la volée à chaque appel, comme le système de seuil.
+    Alertes individuelles par feedback : mauvaise note (<= 2) OU sentiment IA négatif
+    (AnalyseIA.sentiment == NEGATIF ; un feedback sans analyse n'est pas considéré négatif).
+    - Agency Manager (sa propre agence) : alerte IMMÉDIATE.
+    - CX Manager (son organisation) : seulement si le feedback n'est pas traité (statut != 'resolu') une fois
+      le délai configuré par ce CX Manager (delai_alerte_negatif_heures) écoulé depuis sa soumission.
+    Une alerte disparaît dès que le feedback est marqué « resolu ». Calcul à la volée, sans cache ni job.
+    La catégorie (et son étiquette informative est_categorie_suggestion) ne déclenche aucune alerte.
     """
     query = (
-        db.query(Feedback, Categorie, Agence)
+        db.query(Feedback, Categorie, Agence, AnalyseIA)
         .join(QRCode, Feedback.qr_code_id == QRCode.id)
         .join(Agence, QRCode.agence_id == Agence.id)
         .outerjoin(Categorie, Feedback.categorie_id == Categorie.id)
-        .filter(Feedback.statut_traitement != "resolu")
+        .outerjoin(AnalyseIA, AnalyseIA.feedback_id == Feedback.id)
+        .filter(
+            Feedback.statut_traitement != "resolu",
+            or_(Feedback.note <= 2, AnalyseIA.sentiment == SentimentType.NEGATIF),
+        )
     )
     if current_user.role == UserRole.AGENCY_MANAGER:
         query = query.filter(Agence.id == current_user.agence_id)
     else:
         query = query.filter(Agence.organisation_id == current_user.organisation_id, Agence.active == True)
 
-    now = datetime.now(timezone.utc)
-    seuil_suggestion = now - timedelta(hours=current_user.delai_alerte_suggestion_heures)
+    maintenant = datetime.now(timezone.utc)
+    apres_delai = maintenant - timedelta(hours=current_user.delai_alerte_negatif_heures)
 
     alertes: List[AlerteFeedbackResponse] = []
-    for feedback, categorie, agence in query.all():
-        negatif = feedback.note <= 2
-        est_categorie_suggestion = bool(categorie and categorie.est_categorie_suggestion)
-        suggestion_active = est_categorie_suggestion and (
-            current_user.role == UserRole.AGENCY_MANAGER or feedback.date_soumission <= seuil_suggestion
-        )
-        if not negatif and not suggestion_active:
+    for feedback, categorie, agence, analyse in query.all():
+        if current_user.role != UserRole.AGENCY_MANAGER and en_utc(feedback.date_soumission) > apres_delai:
+            continue  # CX Manager : le chef d'agence a encore le temps de traiter ce feedback
+        raison = _raison_alerte_feedback(feedback.note, analyse.sentiment if analyse else None)
+        if raison is None:
             continue
-
-        if negatif and suggestion_active:
-            raison = "negatif_et_suggestion"
-        elif negatif:
-            raison = "negatif"
-        else:
-            raison = "suggestion"
 
         alertes.append(AlerteFeedbackResponse(
             feedback_id=feedback.id,
@@ -146,7 +189,7 @@ def _calculer_alertes_feedback(db: Session, current_user: Utilisateur) -> List[A
             date_soumission=feedback.date_soumission,
         ))
 
-    alertes.sort(key=lambda a: a.date_soumission, reverse=True)
+    alertes.sort(key=lambda a: en_utc(a.date_soumission), reverse=True)
     return alertes
 
 

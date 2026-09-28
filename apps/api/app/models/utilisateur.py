@@ -41,11 +41,12 @@ class Utilisateur(Base):
     derniere_connexion: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    # Délai (en heures) avant qu'un feedback "suggestion" non traité devienne une
-    # alerte pour CE CX Manager (voir app/services/alertes_feedback.py). Réglable
-    # individuellement par compte, pertinent uniquement pour role=CX_MANAGER —
-    # non exposé/masqué côté frontend pour les autres rôles.
-    delai_alerte_suggestion_heures: Mapped[int] = mapped_column(Integer, default=24, nullable=False)
+    # Délai (en heures) avant qu'un avis négatif (note <= 2 ou sentiment négatif) non traité devienne une
+    # alerte pour CE CX Manager (voir app/api/v1/endpoints/alertes.py). Réglable individuellement par compte,
+    # pertinent uniquement pour role=CX_MANAGER — masqué côté frontend pour les autres rôles.
+    # Remplace delai_alerte_suggestion_heures (renommage en expand/contract : l'ancienne colonne reste en
+    # base, inutilisée, jusqu'à une migration de suppression ultérieure).
+    delai_alerte_negatif_heures: Mapped[int] = mapped_column(Integer, default=24, nullable=False)
 
     # Relations
     organisation: Mapped["Organisation"] = relationship(

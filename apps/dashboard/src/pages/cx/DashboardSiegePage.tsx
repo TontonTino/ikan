@@ -110,20 +110,25 @@ function SectionCard({
   subtitle,
   children,
   action,
+  critical = false,
 }: {
   title: string;
   subtitle?: string;
   children: React.ReactNode;
   action?: React.ReactNode;
+  /** Équivalent visuel de .saas-card--critical (SectionCard est en styles
+      inline, pas en classes) — réservé aux cartes véritablement critiques
+      (alertes actives), jamais aux cartes neutres. */
+  critical?: boolean;
 }) {
   return (
     <div
       style={{
-        background: '#FFFFFF',
+        background: critical ? 'var(--color-primary-dark)' : '#FFFFFF',
         borderRadius: '24px',
         padding: '24px 28px',
-        boxShadow: '0 2px 12px rgba(20, 60, 40, 0.03)',
-        border: '1px solid #E8ECE6',
+        boxShadow: critical ? '0 4px 20px rgba(2, 48, 45, 0.25)' : '0 2px 12px rgba(20, 60, 40, 0.03)',
+        border: critical ? '1px solid #0A4A44' : '1px solid #E8ECE6',
         width: '100%',
         maxWidth: '100%',
         minWidth: 0,
@@ -147,13 +152,13 @@ function SectionCard({
               margin: 0,
               fontSize: '1.05rem',
               fontWeight: 800,
-              color: '#02302D',
+              color: critical ? '#FFFFFF' : '#02302D',
             }}
           >
             {title}
           </h3>
           {subtitle && (
-            <p style={{ margin: '3px 0 0', fontSize: '0.82rem', color: '#64748B', fontWeight: 500 }}>
+            <p style={{ margin: '3px 0 0', fontSize: '0.82rem', color: critical ? 'var(--color-text-on-dark-muted)' : '#64748B', fontWeight: 500 }}>
               {subtitle}
             </p>
           )}
@@ -489,6 +494,7 @@ export default function DashboardSiegePage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
               <KpiCard
                 compact
+                highlight
                 icon={<ThumbsUpIcon size={14} />}
                 label="Satisfaction réseau"
                 value={`${data.taux_satisfaction_global}%`}
@@ -832,7 +838,8 @@ export default function DashboardSiegePage() {
                             <button
                               type="button"
                               onClick={() => voirAgence(a.agence_id)}
-                              style={{ marginTop: '8px', background: '#02302D', color: '#FFFFFF', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}
+                              className="btn-primary"
+                              style={{ marginTop: '8px', padding: '5px 10px', fontSize: '0.76rem', borderRadius: '8px' }}
                             >
                               Voir l'agence
                             </button>
@@ -932,6 +939,7 @@ export default function DashboardSiegePage() {
           <SectionCard
             title="Agences sous leur seuil d'alerte"
             subtitle="Satisfaction de la semaine inférieure au seuil configuré pour l'agence"
+            critical={alertes.length > 0}
           >
             {alertes.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

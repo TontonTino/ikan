@@ -187,6 +187,11 @@ class AgenceRankDetail(BaseModel):
     alertes_critiques: int = 0
     tendance_val: str | None = None
     tendance_positive: bool = True
+    # Borne inférieure de Wilson (0-1) : sert au classement (agences_ranking
+    # trié par ce champ, voir dashboard.py) — affichée dans l'UI sous forme
+    # de pourcentage ("Score Wilson"), jamais présentée comme un "score de
+    # fiabilité".
+    wilson_score: float = 0.0
 
 
 class AgenceImpacteeItem(BaseModel):

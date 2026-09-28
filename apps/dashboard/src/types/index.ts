@@ -365,6 +365,7 @@ export interface AgenceRankDetail {
   alertes_critiques: number;
   tendance_val?: string | null;
   tendance_positive: boolean;
+  wilson_score: number;
 }
 
 export interface AgenceImpacteeItem {

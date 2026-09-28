@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import { alertesApi, suggestionsApi, recommandationsApi, agencesApi } from '../../services/api';
-import type { Alerte, AlerteFeedback, Suggestion, IdeaStatus, RecommandationOrg, Agence } from '../../types';
+import { alertesApi, suggestionsApi, recommandationsApi, agencesApi, feedbacksApi } from '../../services/api';
+import type { Alerte, AlerteFeedback, Suggestion, IdeaStatus, RecommandationOrg, Agence, Feedback } from '../../types';
 import TabsNavigation, { TabItem } from '../../components/ui/TabsNavigation';
 import RecommandationCard from '../../components/stats/RecommandationCard';
 import AgenceFilterSelect from '../../components/stats/AgenceFilterSelect';
@@ -16,6 +16,7 @@ import {
   AlertTriangleIcon,
   CheckCircleIcon,
   ClockIcon,
+  TargetIcon,
 } from '../../components/common/Icons';
 
 const STATUS_LABELS: Record<IdeaStatus, string> = {
@@ -39,7 +40,7 @@ const NEXT_STATUS: Record<IdeaStatus, IdeaStatus | null> = {
   rejete: null,
 };
 
-type PilotageTab = 'alertes_actions' | 'idees';
+type PilotageTab = 'alertes_actions' | 'idees' | 'actions_correctives';
 
 /**
  * Page fusionnée "Pilotage" : regroupe Alertes & Actions (alertes réseau +
@@ -54,14 +55,24 @@ export default function PilotagePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTab = searchParams.get('tab');
   // Un ancien lien "?tab=action" (onglet désormais fusionné) retombe simplement
-  // sur l'onglet par défaut "Alertes & Actions".
-  const initialTab: PilotageTab = requestedTab === 'idees' ? 'idees' : 'alertes_actions';
+  // sur l'onglet par défaut "Alertes & Recommandations".
+  const initialTab: PilotageTab =
+    requestedTab === 'idees' ? 'idees' : requestedTab === 'actions' ? 'actions_correctives' : 'alertes_actions';
   const [activeTab, setActiveTab] = useState<PilotageTab>(initialTab);
+
+  // Alias URL court pour l'onglet "Actions correctives" (?tab=actions plutôt
+  // que ?tab=actions_correctives), même logique que ?tab=idees existant.
+  const TAB_URL_PARAM: Record<PilotageTab, string | null> = {
+    alertes_actions: null,
+    idees: 'idees',
+    actions_correctives: 'actions',
+  };
 
   const handleTabChange = (id: string) => {
     const tab = id as PilotageTab;
     setActiveTab(tab);
-    setSearchParams(tab === 'alertes_actions' ? {} : { tab }, { replace: true });
+    const param = TAB_URL_PARAM[tab];
+    setSearchParams(param ? { tab: param } : {}, { replace: true });
   };
 
   const [toast, setToast] = useState('');
@@ -192,6 +203,56 @@ export default function PilotagePage() {
     { id: 'decisions', label: 'Décisions prises', icon: <CheckCircleIcon size={16} />, badge: decisionsCount },
   ];
 
+  // ── Actions correctives (suivi + confirmation, pas de création ici) ──
+  const [actionsToggle, setActionsToggle] = useState<'en_cours' | 'terminees'>('en_cours');
+  const [actionsEnCours, setActionsEnCours] = useState<Feedback[]>([]);
+  const [actionsTerminees, setActionsTerminees] = useState<Feedback[]>([]);
+  const [actionsLoading, setActionsLoading] = useState(true);
+  const [actionsFirstLoadDone, setActionsFirstLoadDone] = useState(false);
+  const [actionsAgenceId, setActionsAgenceId] = useState<string | null>(null);
+
+  const fetchActions = useCallback(async () => {
+    setActionsLoading(true);
+    try {
+      const agenceParam = actionsAgenceId ? { agence_id: actionsAgenceId } : {};
+      const [enCoursRes, termineesRes] = await Promise.all([
+        feedbacksApi.list({ avec_action: true, action_realisee: false, ...agenceParam }),
+        feedbacksApi.list({ avec_action: true, action_realisee: true, ...agenceParam }),
+      ]);
+      setActionsEnCours(enCoursRes?.data || []);
+      setActionsTerminees(termineesRes?.data || []);
+    } catch {
+      setActionsEnCours([]);
+      setActionsTerminees([]);
+    } finally {
+      setActionsLoading(false);
+      setActionsFirstLoadDone(true);
+    }
+  }, [actionsAgenceId]);
+
+  useEffect(() => {
+    fetchActions();
+  }, [fetchActions]);
+
+  const marquerActionRealisee = async (feedbackId: string) => {
+    try {
+      await feedbacksApi.confirmerActionRealisee(feedbackId);
+      setActionsEnCours((prev) => prev.filter((f) => f.id !== feedbackId));
+      showToast('Action marquée comme réalisée');
+    } catch {
+      showToast("Erreur lors de la confirmation de l'action");
+    }
+  };
+
+  const actionsAffichees = actionsToggle === 'en_cours' ? actionsEnCours : actionsTerminees;
+
+  const extraitCommentaire = (texte?: string, max = 140) => {
+    if (!texte) return 'Aucun commentaire.';
+    return texte.length > max ? `${texte.slice(0, max)}…` : texte;
+  };
+
+  const formatDate = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('fr-FR') : null);
+
   // Badge combiné : total des éléments nécessitant une action dans cet onglet
   // fusionné (alertes actives + recommandations en attente), plus lisible
   // qu'un seul des deux compteurs isolément puisque le contenu des deux est
@@ -201,12 +262,19 @@ export default function PilotagePage() {
   const tabsConfig: TabItem[] = [
     {
       id: 'alertes_actions',
-      label: 'Alertes & Actions',
+      label: 'Alertes & Recommandations',
       icon: <BellIcon size={16} />,
       badge: alertesActionsCount,
       badgeColor: alertesActionsCount > 0 ? 'red' : 'default',
     },
     { id: 'idees', label: 'Boîte à idées', icon: <LightbulbIcon size={16} />, badge: suggestions.length },
+    {
+      id: 'actions_correctives',
+      label: 'Actions correctives',
+      icon: <TargetIcon size={16} />,
+      badge: actionsFirstLoadDone ? actionsEnCours.length : undefined,
+      badgeColor: actionsEnCours.length > 0 ? 'red' : 'default',
+    },
   ];
 
   return (
@@ -407,6 +475,168 @@ export default function PilotagePage() {
                 </div>
               )}
             </>
+          )}
+        </div>
+      )}
+
+      {/* ── ONGLET ACTIONS CORRECTIVES (suivi + confirmation uniquement — la définition d'une action reste dans FeedbackTreatmentModal) ── */}
+      {activeTab === 'actions_correctives' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+            <div
+              style={{
+                display: 'inline-flex',
+                padding: '4px',
+                background: '#F8FAFB',
+                border: '1px solid #E2E8F0',
+                borderRadius: '12px',
+                width: 'fit-content',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setActionsToggle('en_cours')}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: '9px',
+                  border: 'none',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  background: actionsToggle === 'en_cours' ? '#FEF3C7' : 'transparent',
+                  color: actionsToggle === 'en_cours' ? '#B45309' : '#64748B',
+                }}
+              >
+                En cours {actionsFirstLoadDone ? `(${actionsEnCours.length})` : ''}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActionsToggle('terminees')}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: '9px',
+                  border: 'none',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  background: actionsToggle === 'terminees' ? '#EBF5E9' : 'transparent',
+                  color: actionsToggle === 'terminees' ? '#3C7730' : '#64748B',
+                }}
+              >
+                Terminées {actionsFirstLoadDone ? `(${actionsTerminees.length})` : ''}
+              </button>
+            </div>
+            {!isAgencyManager && (
+              <AgenceFilterSelect agences={agencesList} selectedId={actionsAgenceId} onChange={setActionsAgenceId} />
+            )}
+          </div>
+
+          {actionsLoading ? (
+            <div aria-busy="true" aria-label="Chargement des actions correctives" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {[0, 1, 2].map((i) => (
+                <SkeletonBlock key={i} height={90} radius="var(--radius-2xl)" />
+              ))}
+            </div>
+          ) : actionsAffichees.length === 0 ? (
+            <EmptyState
+              illustration="no-alert"
+              title={actionsToggle === 'en_cours' ? 'Aucune action en cours' : 'Aucune action terminée pour l’instant'}
+              message={
+                actionsToggle === 'en_cours'
+                  ? 'Toutes les actions correctives définies ont été confirmées comme réalisées.'
+                  : 'Les actions confirmées comme réalisées apparaîtront ici.'
+              }
+            />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {actionsAffichees.map((f) => (
+                <div
+                  key={f.id}
+                  style={{
+                    background: '#FFFFFF',
+                    border: '1px solid #E8ECE6',
+                    borderLeft: `6px solid ${actionsToggle === 'en_cours' ? '#D97706' : '#3C7730'}`,
+                    borderRadius: '24px',
+                    padding: '22px 26px',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {!isAgencyManager && f.agence_nom && (
+                        <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#3C7730', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          {f.agence_nom}
+                        </span>
+                      )}
+                      <p style={{ margin: 0, fontSize: '0.88rem', color: '#1E293B', lineHeight: 1.5, fontWeight: 500 }}>
+                        "{extraitCommentaire(f.commentaire)}"
+                      </p>
+                    </div>
+                    <span
+                      style={{
+                        background: actionsToggle === 'en_cours' ? '#FEF3C7' : '#EBF5E9',
+                        color: actionsToggle === 'en_cours' ? '#B45309' : '#3C7730',
+                        padding: '4px 12px',
+                        borderRadius: '9999px',
+                        fontSize: '0.76rem',
+                        fontWeight: 800,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {actionsToggle === 'en_cours' ? 'En cours' : 'Terminée'}
+                    </span>
+                  </div>
+
+                  <div style={{ background: '#F8FAFB', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px 14px' }}>
+                    <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Action à prendre
+                    </div>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '0.86rem', color: '#02302D', fontWeight: 600 }}>
+                      {f.action_a_prendre || '—'}
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>
+                    {f.assigne_a_nom && <span>Assigné à : {f.assigne_a_nom}</span>}
+                    {formatDate(f.date_assignation) && <span>Assignée le {formatDate(f.date_assignation)}</span>}
+                    {actionsToggle === 'terminees' && formatDate(f.date_resolution) && (
+                      <span>Résolue le {formatDate(f.date_resolution)}</span>
+                    )}
+                  </div>
+
+                  {actionsToggle === 'en_cours' && (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #F1F4EE', paddingTop: '12px' }}>
+                      <button
+                        type="button"
+                        onClick={() => marquerActionRealisee(f.id)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          background: '#3C7730',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          borderRadius: '10px',
+                          padding: '8px 16px',
+                          fontSize: '0.8rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                        }}
+                      >
+                        <CheckCircleIcon size={15} />
+                        Marquer réalisée
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}

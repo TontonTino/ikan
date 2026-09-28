@@ -32,7 +32,10 @@ ikanai/
 ├── apps/
 │   ├── api/          # ⚙️ Backend FastAPI (Python 3.12, SQLModel/SQLAlchemy, PostgreSQL, JWT)
 │   ├── client/       # 📱 Formulaire Client QR Mobile (Astro 5 + Node Adapter, <200KB)
-│   └── dashboard/    # 🖥️ Back-Office Web Management (React 18 + Vite, Recharts, Leaflet)
+│   ├── dashboard/    # 🖥️ Back-Office Web Management (React 18 + Vite, Recharts, Leaflet)
+│   ├── agent/        # 🤖 Agent IA Conversationnel (FastAPI, Q&A managers, alertes automatiques)
+│   └── veille/       # 🌐 Microservice de Veille & Scraping Réseaux Sociaux (Playwright / FastAPI)
+├── shared/           # 🎨 Tokens CSS, typographies et assets partagés
 ├── DEPLOYMENT.md     # 📖 Guide de déploiement Cloudflare / Tunnels
 └── RENDER_DEPLOYMENT_TUTORIAL.md # 🚀 Tutoriel pas-à-pas de déploiement Cloud Render
 ```
@@ -55,6 +58,12 @@ ikanai/
 ### 🖥️ Dashboard Management (`apps/dashboard`)
 - **React 18 + Vite** — SPA fluide avec routage sécurisé par rôle.
 - **Recharts & Leaflet** — Graphiques de tendances, répartition des sentiments & cartographie des agences.
+
+### 🤖 Agent IA Conversationnel (`apps/agent`)
+- **FastAPI** — Assistant contextuel branché sur PostgreSQL, Q&A managers, propositions de plans d'action.
+
+### 🌐 Veille & Scraping Réseaux Sociaux (`apps/veille`)
+- **Playwright & FastAPI** — Extraction résiliente de posts, avis et commentaires publics (Facebook/Avis) pour l'e-réputation.
 
 ---
 

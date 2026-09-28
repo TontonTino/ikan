@@ -827,6 +827,11 @@ def get_statistics_cx(
 
         ag_tend_str, ag_tend_pos = _calc_kpi_trend(ag_sat, ag_prev_sat, is_pct_diff=True)
 
+        # Score de Wilson : sert au tri du classement par fiabilité statistique
+        # plutôt que par CSAT brut (une agence à 100% sur 2 avis ne doit pas
+        # dominer une agence à 90% sur 200 avis) — voir app/utils/stats.py.
+        ag_wilson = wilson_lower_bound(ag_pos, ag_tot)
+
         if ag_critiques > 0:
             impacted_agencies.append(AgenceImpacteeItem(
                 agence_id=ag.id,
@@ -847,9 +852,13 @@ def get_statistics_cx(
             alertes_critiques=ag_critiques,
             tendance_val=ag_tend_str,
             tendance_positive=ag_tend_pos,
+            wilson_score=ag_wilson,
         ))
 
-    agences_ranking.sort(key=lambda x: -x.satisfaction_rate)
+    # Classement par score de Wilson décroissant (même logique que le
+    # Top/Flop de la Vue Siège, DashboardSiegePage.tsx), CSAT brut en second
+    # critère pour départager les égalités ou scores très proches.
+    agences_ranking.sort(key=lambda x: (-x.wilson_score, -x.satisfaction_rate))
     impacted_agencies.sort(key=lambda x: -x.alertes_count)
 
     alertes_synthese = AlerteSyntheseDetail(

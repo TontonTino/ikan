@@ -47,6 +47,12 @@ class Settings(BaseSettings):
     AGENT_WEBHOOK_URL: str = ""
     WEBHOOK_SECRET: str = ""
 
+    # Microservice de Veille & Scraping (optionnel — service séparé, port 8002).
+    # VEILLE_SERVICE_URL = URL de BASE du microservice (ex. http://localhost:8002) ;
+    # VEILLE_API_KEY = Clé transmise dans le header X-API-Key.
+    VEILLE_SERVICE_URL: str = "http://localhost:8002"
+    VEILLE_API_KEY: str = "ikan_veille_secret_key_local_2026"
+
     # Email (optionnel — pour les alertes)
     MAIL_USERNAME: str = ""
     MAIL_PASSWORD: str = ""

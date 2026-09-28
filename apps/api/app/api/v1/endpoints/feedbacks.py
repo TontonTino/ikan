@@ -216,6 +216,8 @@ def list_feedbacks(
     statut: Optional[str] = Query(None),
     date_debut: Optional[datetime] = Query(None),
     date_fin: Optional[datetime] = Query(None),
+    avec_action: Optional[bool] = Query(None),
+    action_realisee: Optional[bool] = Query(None),
     limit: int = Query(250, le=1000),
     offset: int = Query(0),
 ):
@@ -252,6 +254,12 @@ def list_feedbacks(
         query = query.filter(Feedback.date_soumission >= date_debut)
     if date_fin:
         query = query.filter(Feedback.date_soumission <= date_fin)
+    if avec_action is True:
+        query = query.filter(Feedback.action_a_prendre.isnot(None))
+    elif avec_action is False:
+        query = query.filter(Feedback.action_a_prendre.is_(None))
+    if action_realisee is not None:
+        query = query.filter(Feedback.action_realisee == action_realisee)
 
     feedbacks = query.order_by(Feedback.date_soumission.desc()).offset(offset).limit(limit).all()
 
@@ -479,13 +487,11 @@ def confirmer_action_realisee(
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ):
     """
-    CX Manager uniquement : Confirme que l'action a été réalisée sur le terrain.
+    CX Manager ou Agency Manager (sur sa propre agence) : Confirme que
+    l'action a été réalisée sur le terrain.
     Transition automatique du statut : En cours -> Résolu.
     Trace la résolution dans l'historique.
     """
-    if current_user.role != UserRole.CX_MANAGER and current_user.role != UserRole.ADMIN:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Seul le CX Manager peut confirmer une action et résoudre un feedback")
-
     feedback = db.query(Feedback).filter(Feedback.id == feedback_id).first()
     if not feedback:
         raise HTTPException(status_code=404, detail="Feedback introuvable")

@@ -77,8 +77,14 @@ export const statisticsApi = {
 
 // ── Feedbacks ─────────────────────────────────────────
 export const feedbacksApi = {
-  list: (params?: { agence_id?: string; statut?: string; limit?: number; offset?: number }) =>
-    api.get('/feedbacks/', { params }),
+  list: (params?: {
+    agence_id?: string;
+    statut?: string;
+    avec_action?: boolean;
+    action_realisee?: boolean;
+    limit?: number;
+    offset?: number;
+  }) => api.get('/feedbacks/', { params }),
   get: (feedbackId: string) =>
     api.get(`/feedbacks/${feedbackId}`),
   open: (feedbackId: string) =>

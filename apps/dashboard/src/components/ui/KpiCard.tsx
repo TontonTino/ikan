@@ -15,6 +15,10 @@ export interface KpiCardProps {
   subtitle?: string;
   onClick?: () => void;
   compact?: boolean;
+  /** Met en avant CE KPI (barre lime décorative sous la valeur) — doit rester
+      rare, un seul KPI par page, contrairement à la pastille de tendance qui
+      est systématique pour toute tendance positive. */
+  highlight?: boolean;
 }
 
 export default function KpiCard({
@@ -27,6 +31,7 @@ export default function KpiCard({
   subtitle,
   onClick,
   compact = false,
+  highlight = false,
 }: KpiCardProps) {
   const isNegative = badgeColor === 'red' || (trend && trend.isPositive === false);
   
@@ -128,6 +133,7 @@ export default function KpiCard({
             }}
           >
             {value}
+            {highlight && <div className="accent-lime-underline" />}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -149,7 +155,10 @@ export default function KpiCard({
                 {isNegative ? (
                   <ArrowDownRightIcon size={10} color={badgeTextColor} />
                 ) : (
-                  <ArrowUpRightIcon size={10} color={badgeTextColor} />
+                  <>
+                    <ArrowUpRightIcon size={10} color={badgeTextColor} />
+                    <span className="accent-lime-dot" />
+                  </>
                 )}
                 <span>{trend.value}</span>
               </div>
@@ -250,6 +259,7 @@ export default function KpiCard({
         >
           {value}
         </div>
+        {highlight && <div className="accent-lime-underline" />}
       </div>
 
       {/* 3. Bottom Row: Trend Capsule + Period or Subtitle */}
@@ -272,7 +282,10 @@ export default function KpiCard({
             {isNegative ? (
               <ArrowDownRightIcon size={12} color={badgeTextColor} />
             ) : (
-              <ArrowUpRightIcon size={12} color={badgeTextColor} />
+              <>
+                <ArrowUpRightIcon size={12} color={badgeTextColor} />
+                <span className="accent-lime-dot" />
+              </>
             )}
             <span>{trend.value}</span>
           </div>

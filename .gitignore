@@ -64,3 +64,9 @@ logs/
 *.safetensors
 *.onnx
 apps/api/app/services/ai/model_theme_v2_fr/model.safetensors
+
+# Veille service (sessions, caches et captures de debug)
+apps/veille/state/
+apps/veille/debug/
+apps/veille/data/
+apps/veille/*.json

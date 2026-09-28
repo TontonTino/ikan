@@ -44,6 +44,12 @@ export default function AgencesRankingTable({
         <thead>
           <tr style={{ color: '#64748B', fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             <th style={{ textAlign: 'left', padding: '8px 14px', fontWeight: 700 }}>Rang & Agence</th>
+            <th
+              style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700, cursor: 'help' }}
+              title="Borne inférieure de l'intervalle de confiance de Wilson (95%) — favorise les agences avec un volume d'avis fiable plutôt qu'un petit nombre d'avis parfaits."
+            >
+              Score Wilson
+            </th>
             <th style={{ textAlign: 'left', padding: '8px 14px', fontWeight: 700 }}>Ville</th>
             <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Satisfaction</th>
             <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Avis collectés</th>
@@ -105,6 +111,16 @@ export default function AgencesRankingTable({
                       <div style={{ fontWeight: 700, color: '#0F172A' }}>{ag.agence_nom}</div>
                     </div>
                   </div>
+                </td>
+
+                {/* Score Wilson */}
+                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                  <span
+                    style={{ fontWeight: 700, color: '#0F172A', cursor: 'help' }}
+                    title="Borne inférieure de l'intervalle de confiance de Wilson (95%) — favorise les agences avec un volume d'avis fiable plutôt qu'un petit nombre d'avis parfaits."
+                  >
+                    {Math.round(ag.wilson_score * 100)}%
+                  </span>
                 </td>
 
                 {/* Ville */}
