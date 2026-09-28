@@ -6,6 +6,7 @@ feedbacks : ces avis n'ont pas de note client réelle, voir ingest_mentions).
 """
 import hashlib
 import logging
+import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID
@@ -89,6 +90,24 @@ async def trigger_facebook_scrape(target: str, max_items: int = 20) -> Dict[str,
         return {"success": True, "data": data}
 
 
+_EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+# Préfixe pays optionnel (+226, +33, ...) puis une séquence de 8 chiffres ou plus,
+# les chiffres pouvant être séparés par des espaces, points ou tirets.
+_TELEPHONE_CANDIDAT_RE = re.compile(r"(?:\+\d{1,4}[\s.\-]?)?(?:\d[\s.\-]?){7,}\d")
+
+
+def _masquer_donnees_personnelles(texte: str) -> str:
+    """Masque e-mails et numéros de téléphone AVANT calcul de l'empreinte et stockage —
+    ces mentions publiques ne doivent jamais faire fuiter de coordonnées personnelles."""
+    texte = _EMAIL_RE.sub("[email]", texte)
+
+    def _remplacer_si_telephone(match: "re.Match[str]") -> str:
+        chiffres = re.sub(r"\D", "", match.group(0))
+        return "[téléphone]" if len(chiffres) >= 8 else match.group(0)
+
+    return _TELEPHONE_CANDIDAT_RE.sub(_remplacer_si_telephone, texte)
+
+
 def _normaliser_texte(texte: str) -> str:
     """Minuscules, espaces multiples réduits — pour une empreinte stable face aux
     variations mineures de formatage d'une ré-extraction du même contenu."""
@@ -120,8 +139,9 @@ def ingest_mentions(
     """
     Ingère des mentions réseaux sociaux dans `mentions_veille` — jamais dans `feedbacks`
     (pas de note client réelle sur ces avis, voir docstring du modèle). Pour chaque item :
-    ignore les textes vides, déduplique par empreinte au sein de l'organisation, calcule
-    le sentiment immédiatement (analyser_sentiment, pas de tâche de fond).
+    ignore les textes vides, masque e-mails/téléphones AVANT calcul de l'empreinte et
+    stockage, déduplique par empreinte au sein de l'organisation, calcule le sentiment
+    immédiatement (analyser_sentiment, pas de tâche de fond).
 
     NE STOCKE JAMAIS l'identité de l'auteur (nom, identifiant, profil), même si le
     microservice la renvoie dans `item` : ces champs sont simplement ignorés ci-dessous.
@@ -136,6 +156,7 @@ def ingest_mentions(
         if not texte:
             ignored_empty_count += 1
             continue
+        texte = _masquer_donnees_personnelles(texte)
 
         plateforme = (item.get("plateforme") or item.get("platform") or "facebook").strip().lower() or "facebook"
         type_contenu = item.get("type_contenu") or item.get("type") or "avis"

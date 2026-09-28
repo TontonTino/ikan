@@ -160,6 +160,46 @@ def test_sentiment_calcule_immediatement(ctx):
     db.close()
 
 
+def test_masque_email_dans_le_texte(ctx):
+    client = ctx.client_pour(UserRole.CX_MANAGER, ctx.cx_a, ctx.org_a)
+    r = client.post("/veille/ingest", json={"agence_id": str(ctx.ag_a), "items": [
+        {"text": "Contactez-moi à jean.dupont@example.com pour plus d'infos, service excellent"},
+    ]})
+    assert r.status_code == 200, r.text
+
+    db = ctx.Session()
+    mention = db.query(MentionVeille).first()
+    assert "jean.dupont@example.com" not in mention.texte
+    assert "[email]" in mention.texte
+    db.close()
+
+
+def test_masque_telephone_burkinabe_dans_le_texte(ctx):
+    client = ctx.client_pour(UserRole.CX_MANAGER, ctx.cx_a, ctx.org_a)
+    r = client.post("/veille/ingest", json={"agence_id": str(ctx.ag_a), "items": [
+        {"text": "Appelez-moi au +226 70 12 34 56, très bon accueil"},
+    ]})
+    assert r.status_code == 200, r.text
+
+    db = ctx.Session()
+    mention = db.query(MentionVeille).first()
+    assert "70 12 34 56" not in mention.texte
+    assert "[téléphone]" in mention.texte
+    db.close()
+
+
+def test_texte_sans_donnee_personnelle_inchange(ctx):
+    client = ctx.client_pour(UserRole.CX_MANAGER, ctx.cx_a, ctx.org_a)
+    texte_original = "Excellent accueil, personnel très professionnel, je recommande"
+    r = client.post("/veille/ingest", json={"agence_id": str(ctx.ag_a), "items": [{"text": texte_original}]})
+    assert r.status_code == 200, r.text
+
+    db = ctx.Session()
+    mention = db.query(MentionVeille).first()
+    assert mention.texte == texte_original
+    db.close()
+
+
 def test_aucune_identite_auteur_stockee(ctx):
     colonnes = {c.name for c in MentionVeille.__table__.columns}
     assert not any(mot in colonne for colonne in colonnes for mot in ("auteur", "author", "profil", "profile"))
