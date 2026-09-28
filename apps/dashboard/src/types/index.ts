@@ -509,3 +509,60 @@ export interface ChangementPlanHistoriqueItem {
   modifie_par_nom: string | null;
   created_at: string;
 }
+
+// ── Veille & Réseaux Sociaux (CX Manager uniquement) ──────────────────
+export interface VeilleServiceHealth {
+  status: 'online' | 'offline' | 'disabled' | 'error';
+  details?: Record<string, unknown>;
+  code?: number;
+  detail?: string;
+  message?: string;
+  error?: string;
+}
+
+export interface VeilleFacebookSession {
+  valid: boolean;
+  is_expired?: boolean;
+  message?: string;
+  error?: string;
+}
+
+export interface VeilleStatusResponse {
+  service: VeilleServiceHealth;
+  facebook_session: VeilleFacebookSession;
+}
+
+export interface VeilleMention {
+  id: string;
+  plateforme: string;
+  type_contenu: string;
+  texte: string;
+  sentiment: SentimentType;
+  score_sentiment: number;
+  date_publication: string | null;
+  url_source: string | null;
+  agence_nom: string | null;
+}
+
+export interface VeilleMentionsResponse {
+  total: number;
+  items: VeilleMention[];
+}
+
+export interface VeilleSentimentBucket {
+  count: number;
+  pourcentage: number;
+}
+
+export interface VeilleSyntheseJour {
+  date: string;
+  positif: number;
+  neutre: number;
+  negatif: number;
+}
+
+export interface VeilleSyntheseResponse {
+  total: number;
+  par_sentiment: Record<SentimentType, VeilleSentimentBucket>;
+  serie_journaliere: VeilleSyntheseJour[];
+}

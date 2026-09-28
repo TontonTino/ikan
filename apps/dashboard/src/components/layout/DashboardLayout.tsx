@@ -24,6 +24,7 @@ import {
   ChevronRightIcon,
   LandmarkIcon,
   XCloseIcon,
+  MegaphoneIcon,
 } from '../common/Icons';
 
 interface NavItem {
@@ -59,6 +60,7 @@ const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
       items: [
         { path: '/siege', label: 'Dashboard', icon: <LayoutGridIcon size={18} /> },
         { path: '/statistiques', label: 'Statistiques & Analyses', icon: <BarChartIcon size={18} /> },
+        { path: '/veille', label: 'Veille', icon: <MegaphoneIcon size={18} /> },
         { path: '/admin/gestion-agences', label: 'Gestion des agences', icon: <StoreIcon size={18} /> },
       ],
     },
@@ -187,6 +189,7 @@ export default function DashboardLayout() {
     if (location.pathname.includes('/agence')) return 'Dashboard Agence';
     if (location.pathname.includes('/feedbacks')) return 'Feedbacks';
     if (location.pathname.includes('/pilotage')) return 'Pilotage';
+    if (location.pathname.includes('/veille')) return 'Veille';
     if (location.pathname.includes('/suggestions')) return 'Boîte à idées';
     return 'Dashboard';
   };

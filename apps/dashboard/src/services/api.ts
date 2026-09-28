@@ -183,6 +183,22 @@ export const utilisateursApi = {
   delete: (id: string) => api.delete(`/utilisateurs/${id}`),
 };
 
+// ── Veille & Réseaux Sociaux (CX Manager uniquement, lecture seule ici) ──
+export const veilleApi = {
+  status: () =>
+    api.get<import('../types').VeilleStatusResponse>('/veille/status'),
+  mentions: (params?: {
+    date_debut?: string;
+    date_fin?: string;
+    sentiment?: import('../types').SentimentType;
+    agence_id?: string;
+    limit?: number;
+    offset?: number;
+  }) => api.get<import('../types').VeilleMentionsResponse>('/veille/mentions', { params }),
+  synthese: (params?: { date_debut?: string; date_fin?: string; agence_id?: string }) =>
+    api.get<import('../types').VeilleSyntheseResponse>('/veille/synthese', { params }),
+};
+
 // ── Système (Settings & Permissions) ──────────────────
 export const systemApi = {
   getSettings: () => api.get('/system/settings'),

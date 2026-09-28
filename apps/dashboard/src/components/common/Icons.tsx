@@ -50,6 +50,11 @@ import {
   EnvelopeSimple,
   ArrowLeft,
   ListBullets,
+  Megaphone,
+  Info,
+  WifiHigh,
+  WifiSlash,
+  SmileyMeh,
 } from '@phosphor-icons/react';
 
 export interface IconProps extends React.SVGProps<SVGSVGElement> {
@@ -129,6 +134,11 @@ export const SendIcon = wrap(PaperPlaneRight, 18);
 // même sens). Les deux noms restent exportés pour ne rien casser côté appelants.
 export const RefreshIcon = wrap(ArrowClockwise, 18);
 export const RefreshCwIcon = wrap(ArrowClockwise, 16);
+export const MegaphoneIcon = wrap(Megaphone, 20);
+export const InfoIcon = wrap(Info, 18);
+export const WifiHighIcon = wrap(WifiHigh, 16);
+export const WifiSlashIcon = wrap(WifiSlash, 16);
+export const SmileyMehIcon = wrap(SmileyMeh, 18);
 
 // Sparkline SVG Graphique pour le coin supérieur des cartes — hors périmètre du
 // remplacement Phosphor (pas une icône, un mini-graphique dessiné à la main).

@@ -10,6 +10,7 @@ import DashboardAgencePage from './pages/agency/DashboardAgencePage';
 import FeedbacksPage from './pages/agency/FeedbacksPage';
 import SuggestionsPage from './pages/agency/SuggestionsPage';
 import PilotagePage from './pages/cx/PilotagePage';
+import VeillePage from './pages/cx/VeillePage';
 import AdminOrgsPage from './pages/admin/AdminOrgsPage';
 import GestionAgencesPage from './pages/admin/GestionAgencesPage';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
@@ -105,6 +106,9 @@ export default function App() {
 
         {/* Pilotage CX Manager & Agency Manager (Alertes + Actions + Boîte à idées fusionnés) */}
         <Route path="pilotage" element={<PilotagePage />} />
+
+        {/* Veille réseaux sociaux — CX Manager uniquement (garde de rôle interne à la page) */}
+        <Route path="veille" element={<VeillePage />} />
 
         {/* Admin */}
         <Route path="admin/dashboard" element={<AdminDashboardPage />} />
