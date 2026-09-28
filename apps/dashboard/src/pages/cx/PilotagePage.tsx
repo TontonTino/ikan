@@ -303,17 +303,19 @@ export default function PilotagePage() {
               ))}
             </div>
           ) : totalAlertes === 0 ? (
-            <EmptyState
-              illustration="no-alert"
-              title="Aucune alerte critique active"
-              message={
-                isAgencyManager
-                  ? "Votre agence maintient un taux de satisfaction supérieur à son seuil d'alerte."
-                  : "Toutes les agences du réseau maintiennent un taux de satisfaction supérieur à leurs seuils d'alerte."
-              }
-            />
+            <div className="saas-card saas-card--success">
+              <EmptyState
+                illustration="no-alert"
+                title="Aucune alerte critique active"
+                message={
+                  isAgencyManager
+                    ? "Votre agence maintient un taux de satisfaction supérieur à son seuil d'alerte."
+                    : "Toutes les agences du réseau maintiennent un taux de satisfaction supérieur à leurs seuils d'alerte."
+                }
+              />
+            </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div className="saas-card saas-card--critical" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {alertes.map((a, i) => (
                 <div
                   key={i}
@@ -388,11 +390,13 @@ export default function PilotagePage() {
               ))}
             </div>
           ) : recosAffichees.length === 0 ? (
-            <EmptyState
-              illustration="no-alert"
-              title="Aucune recommandation en attente"
-              message="Sur ce périmètre, toutes les actions suggérées ont été traitées."
-            />
+            <div className="saas-card saas-card--success">
+              <EmptyState
+                illustration="no-alert"
+                title="Aucune recommandation en attente"
+                message="Sur ce périmètre, toutes les actions suggérées ont été traitées."
+              />
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {recosAffichees.map((r) => (
@@ -454,7 +458,8 @@ export default function PilotagePage() {
                             <button
                               type="button"
                               onClick={() => updateStatut(s.id, next)}
-                              style={{ background: '#02302D', color: '#FFFFFF', border: 'none', borderRadius: '10px', padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                              className="btn-primary"
+                              style={{ padding: '6px 12px', fontSize: '0.78rem', borderRadius: '10px' }}
                             >
                               → Passer à "{STATUS_LABELS[next]}"
                             </button>
@@ -540,15 +545,17 @@ export default function PilotagePage() {
               ))}
             </div>
           ) : actionsAffichees.length === 0 ? (
-            <EmptyState
-              illustration="no-alert"
-              title={actionsToggle === 'en_cours' ? 'Aucune action en cours' : 'Aucune action terminée pour l’instant'}
-              message={
-                actionsToggle === 'en_cours'
-                  ? 'Toutes les actions correctives définies ont été confirmées comme réalisées.'
-                  : 'Les actions confirmées comme réalisées apparaîtront ici.'
-              }
-            />
+            <div className="saas-card saas-card--success">
+              <EmptyState
+                illustration="no-alert"
+                title={actionsToggle === 'en_cours' ? 'Aucune action en cours' : 'Aucune action terminée pour l’instant'}
+                message={
+                  actionsToggle === 'en_cours'
+                    ? 'Toutes les actions correctives définies ont été confirmées comme réalisées.'
+                    : 'Les actions confirmées comme réalisées apparaîtront ici.'
+                }
+              />
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {actionsAffichees.map((f) => (
@@ -614,20 +621,8 @@ export default function PilotagePage() {
                       <button
                         type="button"
                         onClick={() => marquerActionRealisee(f.id)}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          background: '#3C7730',
-                          color: '#FFFFFF',
-                          border: 'none',
-                          borderRadius: '10px',
-                          padding: '8px 16px',
-                          fontSize: '0.8rem',
-                          fontWeight: 800,
-                          cursor: 'pointer',
-                          fontFamily: 'inherit',
-                        }}
+                        className="btn-primary"
+                        style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '10px', fontWeight: 800 }}
                       >
                         <CheckCircleIcon size={15} />
                         Marquer réalisée
