@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_active_user, get_db
 from app.models.enums import UserRole
 from app.models.utilisateur import Utilisateur
+from app.services.acces_agence import verifier_acces_agence
 from app.services.veille_service import (
     check_veille_service,
     get_session_status,
@@ -39,10 +40,10 @@ async def veille_status(
 ) -> Dict[str, Any]:
     """
     Vérifie l'état de santé du microservice de veille et la validité de la session Facebook.
-    Réservé aux Administrateurs et CX Managers.
+    Réservé aux CX Managers.
     """
-    if current_user.role not in (UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.CX_MANAGER):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès réservé aux managers et administrateurs")
+    if current_user.role != UserRole.CX_MANAGER:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès réservé aux CX Managers")
 
     health = await check_veille_service()
     session = await get_session_status() if health.get("status") == "online" else {"valid": False}
@@ -63,8 +64,8 @@ async def scrape_facebook(
     Déclenche une extraction Facebook via le microservice de veille.
     Optionnellement, convertit et injecte les avis directement dans le pipeline d'analyse IA.
     """
-    if current_user.role not in (UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.CX_MANAGER):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès réservé aux managers et administrateurs")
+    if current_user.role != UserRole.CX_MANAGER:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès réservé aux CX Managers")
 
     scrape_result = await trigger_facebook_scrape(payload.target, payload.max_items)
     if not scrape_result.get("success"):
@@ -85,6 +86,7 @@ async def scrape_facebook(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Veuillez spécifier agence_id pour auto-ingérer les avis",
             )
+        verifier_acces_agence(db, current_user, target_agence_id)
         try:
             ingestion_summary = ingest_feedback_items(
                 items=items,
@@ -114,8 +116,10 @@ def ingest_batch(
     """
     Ingère manuellement un lot d'items de veille dans une agence et lance l'analyse IA.
     """
-    if current_user.role not in (UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.CX_MANAGER):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès réservé aux managers et administrateurs")
+    if current_user.role != UserRole.CX_MANAGER:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès réservé aux CX Managers")
+
+    verifier_acces_agence(db, current_user, payload.agence_id)
 
     try:
         summary = ingest_feedback_items(
