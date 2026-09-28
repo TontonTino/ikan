@@ -236,8 +236,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     >
       <p style={{ fontWeight: 800, marginBottom: '6px', color: '#E2F2E5' }}>{label}</p>
       {payload.map((p: any, i: number) => (
-        <p key={i} style={{ color: p.color || '#75B72A', margin: '2px 0', fontWeight: 600 }}>
-          {p.name} : <strong>{p.value}{typeof p.value === 'number' && p.name.toLowerCase().includes('satisfaction') || p.name.toLowerCase().includes('csat') ? '%' : ''}</strong>
+        <p key={i} style={{ color: 'var(--color-text-on-dark-muted)', margin: '2px 0', fontWeight: 600 }}>
+          {p.name} : <strong style={{ color: 'var(--color-lime)', fontWeight: 800 }}>{p.value}{typeof p.value === 'number' && p.name.toLowerCase().includes('satisfaction') || p.name.toLowerCase().includes('csat') ? '%' : ''}</strong>
         </p>
       ))}
     </div>

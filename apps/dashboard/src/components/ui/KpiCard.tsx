@@ -167,7 +167,7 @@ export default function KpiCard({
             <span
               style={{
                 fontSize: '0.68rem',
-                color: '#94A3B8',
+                color: '#64748B',
                 fontWeight: 500,
                 whiteSpace: 'nowrap',
               }}
@@ -294,7 +294,7 @@ export default function KpiCard({
         <div
           style={{
             fontSize: '0.74rem',
-            color: '#94A3B8',
+            color: '#64748B',
             fontWeight: 500,
             whiteSpace: 'nowrap',
             overflow: 'hidden',
