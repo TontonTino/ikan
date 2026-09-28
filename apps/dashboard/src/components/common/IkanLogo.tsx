@@ -9,13 +9,17 @@ interface LogoProps {
 export default function IkanLogo({ variant = 'dark', size = 38, showText = true }: LogoProps) {
   const isDarkBg = variant === 'light';
   const textColor = isDarkBg ? '#FFFFFF' : '#02302D';
+  // Sur fond sombre, /logo.png contient un texte "IKAN AI" noir incrusté
+  // dans l'image, quasi invisible — on utilise l'icône seule (cube) à la
+  // place ; le texte "ikanai" est alors porté par le <span> ci-dessous.
+  const logoSrc = isDarkBg ? '/logo-ikan-ai-icon.svg' : '/logo.png';
 
   return (
     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
       {/* Logo IKAN AI officiel */}
       <img
-        src="/logo.png"
-        alt="IKAN AI"
+        src={logoSrc}
+        alt={showText ? '' : 'IKAN AI'}
         style={{
           height: `${size}px`,
           width: 'auto',

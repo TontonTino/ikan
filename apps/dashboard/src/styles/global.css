@@ -567,6 +567,11 @@ body {
   align-items: center;
   flex-shrink: 0;
 }
+/* Contraste ~6.2:1 au pire cas (fond translucide sur le dégradé sidebar),
+   contre ~4.77:1 avec --sidebar-muted : marge insuffisante pour un sous-titre. */
+.ikan-yam-subtitle {
+  color: #B9C7C2;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .ikan-nav-link,

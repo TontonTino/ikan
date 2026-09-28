@@ -343,7 +343,7 @@ export default function DashboardLayout() {
             <YamAvatar size={34} />
             <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25, minWidth: 0 }}>
               <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--sidebar-text-strong)' }}>Demander à YAM</span>
-              <span style={{ fontWeight: 600, fontSize: '0.72rem', color: 'var(--sidebar-muted)' }}>Assistant IA</span>
+              <span className="ikan-yam-subtitle" style={{ fontWeight: 600, fontSize: '0.72rem' }}>Assistant IA</span>
             </span>
             <span className="ikan-yam-chevron" aria-hidden="true">
               <ChevronRightIcon size={14} />
