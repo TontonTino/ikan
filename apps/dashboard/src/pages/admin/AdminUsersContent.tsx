@@ -362,7 +362,7 @@ export default function AdminUsersContent() {
               placeholder="Rechercher par nom, prénom ou email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              style={{ border: 'none', outline: 'none', marginLeft: '10px', width: '100%', fontSize: '0.86rem' }}
+              style={{ border: 'none', marginLeft: '10px', width: '100%', fontSize: '0.86rem' }}
             />
           </div>
 

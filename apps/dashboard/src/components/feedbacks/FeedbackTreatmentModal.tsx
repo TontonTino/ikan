@@ -306,6 +306,7 @@ export default function FeedbackTreatmentModal({
       >
         {/* ── Header ────────────────────────────────────────────── */}
         <div
+          className="on-dark"
           style={{
             background: '#02302D',
             color: '#FFFFFF',
@@ -689,7 +690,6 @@ export default function FeedbackTreatmentModal({
                           fontFamily: 'inherit',
                           boxSizing: 'border-box',
                           marginBottom: '8px',
-                          outline: 'none',
                         }}
                       />
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
@@ -767,7 +767,6 @@ export default function FeedbackTreatmentModal({
                           background: '#FFFFFF',
                           fontFamily: 'inherit',
                           fontSize: '0.86rem',
-                          outline: 'none',
                           resize: 'none',
                           boxSizing: 'border-box',
                           marginBottom: '10px',
@@ -851,7 +850,6 @@ export default function FeedbackTreatmentModal({
                             background: '#FFFFFF',
                             fontFamily: 'inherit',
                             fontSize: '0.86rem',
-                            outline: 'none',
                             resize: 'none',
                             boxSizing: 'border-box',
                             marginBottom: '10px',
@@ -949,7 +947,6 @@ export default function FeedbackTreatmentModal({
                       background: '#F8FAFC',
                       fontFamily: 'inherit',
                       fontSize: '0.85rem',
-                      outline: 'none',
                       resize: 'none',
                       boxSizing: 'border-box',
                       marginBottom: '8px',

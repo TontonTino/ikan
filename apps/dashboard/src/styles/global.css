@@ -90,7 +90,7 @@ body {
    --color-accent (#75B72A) ne passe qu'à 2.45:1 de contraste sur blanc,
    sous le minimum WCAG 1.4.11 de 3:1 pour un indicateur de focus ;
    --color-primary (#3C7730) passe à 5.4:1. */
-:where(a, button, [role="button"], [tabindex]:not([tabindex="-1"]), summary, select):focus-visible {
+:where(a, button, [role="button"], [tabindex]:not([tabindex="-1"]), summary, select, input, textarea):focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }

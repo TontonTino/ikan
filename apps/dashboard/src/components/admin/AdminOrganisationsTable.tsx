@@ -172,7 +172,6 @@ export default function AdminOrganisationsTable({
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
                 border: 'none',
-                outline: 'none',
                 background: 'transparent',
                 fontSize: '0.82rem',
                 color: '#1E293B',
@@ -211,7 +210,6 @@ export default function AdminOrganisationsTable({
               fontSize: '0.82rem',
               fontWeight: 600,
               color: '#1E293B',
-              outline: 'none',
               cursor: 'pointer',
               fontFamily: 'inherit',
               boxSizing: 'border-box',

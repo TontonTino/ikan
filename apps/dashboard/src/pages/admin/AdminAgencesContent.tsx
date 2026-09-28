@@ -343,7 +343,7 @@ export default function AdminAgencesContent() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               aria-label="Rechercher dans le répertoire"
-              style={{ border: 'none', outline: 'none', marginLeft: '10px', width: '100%', fontSize: '0.86rem' }}
+              style={{ border: 'none', marginLeft: '10px', width: '100%', fontSize: '0.86rem' }}
             />
             <button
               type="button"

@@ -320,7 +320,6 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
               fontSize: '0.80rem',
               fontWeight: 600,
               color: '#0F172A',
-              outline: 'none',
             }}
           >
             <option value="all">Toutes les agences</option>
@@ -365,7 +364,6 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                 onChange={(e) => setSearch(e.target.value)}
                 style={{
                   border: 'none',
-                  outline: 'none',
                   width: '100%',
                   fontSize: '0.84rem',
                   fontFamily: 'inherit',
