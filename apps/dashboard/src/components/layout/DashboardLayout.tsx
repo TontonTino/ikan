@@ -21,6 +21,7 @@ import {
   BellIcon,
   TrendingUpIcon,
   ChevronDownIcon,
+  ChevronRightIcon,
   LandmarkIcon,
   XCloseIcon,
 } from '../common/Icons';
@@ -232,10 +233,9 @@ export default function DashboardLayout() {
 
       {/* ── Sidebar Latérale (Style SaaS Épuré Bolt.new) ── */}
       <aside
-        className={`dashboard-sidebar${mobileMenuOpen ? ' dashboard-sidebar--open' : ''}`}
+        className={`dashboard-sidebar${mobileMenuOpen ? ' dashboard-sidebar--open' : ''} ikan-sidebar--dark on-dark`}
         style={{
           width: '270px',
-          background: '#F3F8F4',
           display: 'flex',
           flexDirection: 'column',
           position: 'fixed',
@@ -244,8 +244,6 @@ export default function DashboardLayout() {
           height: 'calc(100vh - 32px)',
           zIndex: 30,
           borderRadius: '20px',
-          border: '1px solid #DCE8DF',
-          boxShadow: '0 4px 20px rgba(2, 45, 42, 0.06)',
           padding: '24px 18px',
           overflow: 'hidden',
           boxSizing: 'border-box',
@@ -260,17 +258,17 @@ export default function DashboardLayout() {
             padding: '0 6px 22px',
           }}
         >
-          <IkanLogo size={28} showText={false} />
+          <IkanLogo variant="light" size={28} showText />
           <div
             style={{
-              background: '#EBF5E9',
-              color: '#3C7730',
+              background: 'rgba(188, 207, 0, 0.14)',
+              color: 'var(--color-lime)',
               fontSize: '0.68rem',
               fontWeight: 800,
               letterSpacing: '0.05em',
               padding: '3px 8px',
               borderRadius: '9999px',
-              border: '1px solid #D5E8D3',
+              border: '1px solid rgba(188, 207, 0, 0.35)',
             }}
           >
             {roleLabel}
@@ -294,16 +292,7 @@ export default function DashboardLayout() {
           {navSections.map((section, idx) => (
             <div key={idx}>
               {section.title && (
-                <div
-                  style={{
-                    fontSize: '0.72rem',
-                    fontWeight: 800,
-                    color: '#94A3B8',
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    padding: '0 12px 8px',
-                  }}
-                >
+                <div className="ikan-nav-section-title">
                   {section.title}
                 </div>
               )}
@@ -316,45 +305,18 @@ export default function DashboardLayout() {
                     <NavLink
                       key={item.path}
                       to={item.path}
-                      style={({ isActive }) => ({
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '11px 14px',
-                        color: isActive ? '#022D2A' : '#64748B',
-                        textDecoration: 'none',
-                        background: isActive ? '#E2F2E5' : 'transparent',
-                        fontWeight: isActive ? 700 : 600,
-                        fontSize: '0.88rem',
-                        borderRadius: '12px',
-                        transition: 'all 0.15s ease',
-                      })}
+                      className={({ isActive }) => `ikan-nav-link${isActive ? ' ikan-nav-link--active' : ''}`}
                     >
                       {({ isActive }) => (
                         <>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <span
-                              style={{
-                                color: isActive ? '#3C7730' : '#94A3B8',
-                                display: 'flex',
-                                alignItems: 'center',
-                              }}
-                            >
+                            <span className="ikan-nav-icon">
                               {item.icon}
                             </span>
                             <span>{item.label}</span>
                           </div>
                           {!!badgeValue && (
-                            <span
-                              style={{
-                                background: badgeUrgent ? '#FEE2E2' : (isActive ? '#D3EAD7' : '#EAF2EC'),
-                                color: badgeUrgent ? '#DC2626' : (isActive ? '#022D2A' : '#64748B'),
-                                fontSize: '0.72rem',
-                                fontWeight: 700,
-                                padding: '2px 8px',
-                                borderRadius: '9999px',
-                              }}
-                            >
+                            <span className={`ikan-nav-badge${badgeUrgent ? ' ikan-nav-badge--urgent' : ''}`}>
                               {badgeValue}
                             </span>
                           )}
@@ -376,27 +338,15 @@ export default function DashboardLayout() {
             aria-expanded={yamOpen}
             aria-controls={YAM_PANEL_ID}
             title="Discuter avec YAM, l'assistant IA"
-            style={{
-              marginTop: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              width: '100%',
-              padding: '11px 12px',
-              borderRadius: '14px',
-              border: `1px solid ${yamOpen ? '#3C7730' : '#CFE3D2'}`,
-              background: yamOpen ? '#E2F2E5' : '#FFFFFF',
-              cursor: 'pointer',
-              textAlign: 'left',
-              fontFamily: 'inherit',
-              boxShadow: '0 1px 3px rgba(2, 45, 42, 0.05)',
-              transition: 'all 0.15s ease',
-            }}
+            className="ikan-yam-button"
           >
             <YamAvatar size={34} />
             <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25, minWidth: 0 }}>
-              <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#022D2A' }}>Demander à YAM</span>
-              <span style={{ fontWeight: 600, fontSize: '0.72rem', color: '#64748B' }}>Assistant IA</span>
+              <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--sidebar-text-strong)' }}>Demander à YAM</span>
+              <span style={{ fontWeight: 600, fontSize: '0.72rem', color: 'var(--sidebar-muted)' }}>Assistant IA</span>
+            </span>
+            <span className="ikan-yam-chevron" aria-hidden="true">
+              <ChevronRightIcon size={14} />
             </span>
           </button>
         )}

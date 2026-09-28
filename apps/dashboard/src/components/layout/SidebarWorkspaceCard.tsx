@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { User } from '../../types';
+import { ChevronDownIcon } from '../common/Icons';
 
 interface SidebarWorkspaceCardProps {
   user: User | null;
@@ -147,6 +148,7 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
         marginBottom: '24px',
         cursor: 'default',
         userSelect: 'none',
+        boxShadow: '0 2px 8px rgba(2, 48, 45, 0.10)',
       }}
     >
       {/* Logo ou Avatar */}
@@ -211,6 +213,11 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
           {spaceSub}
         </div>
       </div>
+
+      {/* Chevron purement décoratif : la carte n'a aucun comportement de bouton (voir commentaire ci-dessus). */}
+      <span style={{ display: 'flex', alignItems: 'center', color: '#94A3B8', flexShrink: 0 }} aria-hidden="true">
+        <ChevronDownIcon size={16} />
+      </span>
     </div>
   );
 }

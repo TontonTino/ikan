@@ -37,6 +37,21 @@
   --color-info: #0369A1;
   --color-info-bg: #E0F2FE;
 
+  /* Sidebar (thème sombre) — ratios de contraste réels (formule WCAG),
+     calculés sur les DEUX extrémités du dégradé :
+       --sidebar-text   sur --sidebar-bg-from : 10.6:1 | sur --sidebar-bg-to : 9.5:1
+       --sidebar-muted  sur --sidebar-bg-from : 6.3:1  | sur --sidebar-bg-to : 5.7:1
+     NE PAS éclaircir --sidebar-bg-to davantage : la marge de --sidebar-muted
+     se réduit déjà en s'approchant de 4.5:1 à cette extrémité. */
+  --sidebar-bg-from: #02302D;
+  --sidebar-bg-to: #06392F;
+  --sidebar-text: #D5E0DC;
+  --sidebar-text-strong: #FFFFFF;
+  --sidebar-muted: var(--color-text-on-dark-muted);
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.06);
+  --sidebar-active-bg: rgba(255, 255, 255, 0.10);
+  --sidebar-active-border: rgba(255, 255, 255, 0.16);
+
   /* Dimensions & Rayons de courbure */
   --sidebar-width: 270px;
   --header-height: 70px;
@@ -450,4 +465,112 @@ body {
   background: var(--color-lime);
   border-radius: var(--radius-pill);
   margin-top: 6px;
+}
+
+/* ── Sidebar sombre ──────────────────────────────────────────────────
+   À combiner avec les classes structurelles existantes du <aside>
+   (dashboard-sidebar / dashboard-sidebar--open, qui pilotent déjà le
+   tiroir mobile) : radius/largeur/position restent en styles inline sur
+   le <aside>, cette classe ne fournit que fond/bordure/ombre. */
+.ikan-sidebar--dark {
+  /* Filigrane décoratif (3 courbes ondulées, 1px, blanc à 5% d'opacité)
+     posé au-dessus du dégradé, ancré en bas de la sidebar. */
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='270' height='160' viewBox='0 0 270 160'%3E%3Cpath d='M0 100 Q 67 70 135 100 T 270 100' stroke='rgba(255,255,255,0.05)' stroke-width='1' fill='none'/%3E%3Cpath d='M0 125 Q 67 95 135 125 T 270 125' stroke='rgba(255,255,255,0.05)' stroke-width='1' fill='none'/%3E%3Cpath d='M0 150 Q 67 120 135 150 T 270 150' stroke='rgba(255,255,255,0.05)' stroke-width='1' fill='none'/%3E%3C/svg%3E") no-repeat bottom / 100% auto,
+    linear-gradient(180deg, var(--sidebar-bg-from), var(--sidebar-bg-to));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 28px rgba(2, 48, 45, 0.28);
+}
+
+.ikan-nav-section-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--sidebar-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0 12px 8px;
+}
+
+.ikan-nav-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  color: var(--sidebar-text);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.88rem;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.ikan-nav-link:hover {
+  background: var(--sidebar-hover-bg);
+  color: var(--sidebar-text-strong);
+}
+.ikan-nav-link--active {
+  background: var(--sidebar-active-bg);
+  border-color: var(--sidebar-active-border);
+  color: var(--sidebar-text-strong);
+  font-weight: 700;
+}
+.ikan-nav-icon {
+  color: var(--sidebar-muted);
+  display: flex;
+  align-items: center;
+}
+.ikan-nav-link--active .ikan-nav-icon {
+  /* Seul accent décoratif (icône), jamais du texte — cohérent avec la
+     règle générale d'usage du lime. */
+  color: var(--color-lime);
+}
+
+.ikan-nav-badge {
+  background: rgba(255, 255, 255, 0.12);
+  color: #E6EFEC;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+}
+.ikan-nav-badge--urgent {
+  background: #FEE2E2;
+  /* #DC2626 (rouge standard de la charte) sur #FEE2E2 ne passe qu'à
+     3.95:1 — sous 4.5:1. #B91C1C (déjà utilisé ailleurs dans l'app pour
+     le même badge "négatif") passe à 5.3:1, même fond conservé. */
+  color: #B91C1C;
+}
+
+.ikan-yam-button {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.ikan-yam-button[aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(188, 207, 0, 0.5);
+}
+.ikan-yam-chevron {
+  margin-left: auto;
+  color: var(--sidebar-muted);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ikan-nav-link,
+  .ikan-yam-button {
+    transition: none;
+  }
 }
