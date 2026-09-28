@@ -450,7 +450,8 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
               <button
                 type="button"
                 onClick={resetFilters}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-primary)', textDecoration: 'underline', padding: '4px' }}
+                className="btn-secondary"
+                style={{ padding: '4px 10px', fontSize: '0.78rem' }}
               >
                 Tout réinitialiser
               </button>
@@ -586,16 +587,8 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                               e.stopPropagation();
                               setSelectedFeedbackForTreatment(f);
                             }}
-                            style={{
-                              background: '#02302D',
-                              color: '#FFFFFF',
-                              border: 'none',
-                              borderRadius: '10px',
-                              padding: '6px 12px',
-                              fontSize: '0.76rem',
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                            }}
+                            className="btn-primary"
+                            style={{ padding: '6px 12px', fontSize: '0.76rem', borderRadius: '10px' }}
                           >
                             Consulter
                           </button>
@@ -606,16 +599,22 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                 ) : (
                   <tr>
                     <td colSpan={6}>
-                      <EmptyState
-                        illustration="no-feedback"
-                        title="Aucun feedback trouvé"
-                        message={
-                          activeFilters.length > 0
-                            ? 'Aucun feedback ne correspond aux filtres sélectionnés.'
-                            : "Il n'y a aucun feedback à afficher dans cette vue."
-                        }
-                        action={activeFilters.length > 0 ? { label: 'Réinitialiser les filtres', onClick: resetFilters } : undefined}
-                      />
+                      {activeFilters.length > 0 ? (
+                        <EmptyState
+                          illustration="no-feedback"
+                          title="Aucun feedback trouvé"
+                          message="Aucun feedback ne correspond aux filtres sélectionnés."
+                          action={{ label: 'Réinitialiser les filtres', onClick: resetFilters }}
+                        />
+                      ) : (
+                        <div className="saas-card saas-card--success">
+                          <EmptyState
+                            illustration="no-feedback"
+                            title="Aucun feedback trouvé"
+                            message="Il n'y a aucun feedback à afficher dans cette vue."
+                          />
+                        </div>
+                      )}
                     </td>
                   </tr>
                 )}
@@ -636,7 +635,8 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                     type="button"
                     onClick={() => setPage(pageCourante - 1)}
                     disabled={pageCourante === 0}
-                    style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'inherit', color: 'var(--color-text-main)', cursor: pageCourante === 0 ? 'default' : 'pointer', opacity: pageCourante === 0 ? 0.45 : 1 }}
+                    className="btn-secondary"
+                    style={{ padding: '6px 14px', fontSize: '0.8rem', cursor: pageCourante === 0 ? 'default' : 'pointer', opacity: pageCourante === 0 ? 0.45 : 1 }}
                   >
                     Précédent
                   </button>
@@ -647,7 +647,8 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                     type="button"
                     onClick={() => setPage(pageCourante + 1)}
                     disabled={pageCourante >= totalPages - 1}
-                    style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '6px 14px', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'inherit', color: 'var(--color-text-main)', cursor: pageCourante >= totalPages - 1 ? 'default' : 'pointer', opacity: pageCourante >= totalPages - 1 ? 0.45 : 1 }}
+                    className="btn-secondary"
+                    style={{ padding: '6px 14px', fontSize: '0.8rem', cursor: pageCourante >= totalPages - 1 ? 'default' : 'pointer', opacity: pageCourante >= totalPages - 1 ? 0.45 : 1 }}
                   >
                     Suivant
                   </button>
@@ -728,17 +729,8 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                   setFilterTheme(thm.theme);
                   setActiveTab('tous');
                 }}
-                style={{
-                  background: '#EBF6ED',
-                  color: '#3C7730',
-                  border: 'none',
-                  borderRadius: '10px',
-                  padding: '8px',
-                  fontSize: '0.76rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  width: '100%',
-                }}
+                className="btn-primary"
+                style={{ padding: '8px', fontSize: '0.76rem', borderRadius: '10px', width: '100%', justifyContent: 'center' }}
               >
                 Voir les {thm.count} avis de ce thème →
               </button>

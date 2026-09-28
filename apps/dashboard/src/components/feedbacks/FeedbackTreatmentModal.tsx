@@ -645,19 +645,8 @@ export default function FeedbackTreatmentModal({
                   {!showReponseForm ? (
                     <button
                       onClick={() => setShowReponseForm(true)}
-                      style={{
-                        padding: '8px 14px',
-                        background: '#C2410C',
-                        color: '#FFFFFF',
-                        border: 'none',
-                        borderRadius: '10px',
-                        fontSize: '0.8rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
+                      className="btn-primary"
+                      style={{ padding: '8px 14px', fontSize: '0.8rem', borderRadius: '10px' }}
                     >
                       <MessageSquareIcon size={14} />
                       <span>Répondre au client</span>
@@ -707,25 +696,21 @@ export default function FeedbackTreatmentModal({
                         <button
                           type="button"
                           onClick={() => setShowReponseForm(false)}
-                          style={{ padding: '6px 12px', background: '#F1F5F9', border: 'none', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+                          className="btn-secondary"
+                          style={{ padding: '6px 12px', fontSize: '0.78rem', borderRadius: '8px' }}
                         >
                           Annuler
                         </button>
                         <button
                           type="submit"
                           disabled={loadingAction || !reponseInput.trim()}
+                          className="btn-primary"
                           style={{
                             padding: '6px 14px',
-                            background: '#C2410C',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
                             fontSize: '0.78rem',
-                            fontWeight: 700,
+                            borderRadius: '8px',
+                            opacity: reponseInput.trim() ? 1 : 0.5,
                             cursor: reponseInput.trim() ? 'pointer' : 'not-allowed',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '5px',
                           }}
                         >
                           <SendIcon size={12} />
@@ -791,18 +776,13 @@ export default function FeedbackTreatmentModal({
                       <button
                         type="submit"
                         disabled={loadingAction || !suggestionInput.trim()}
+                        className="btn-primary"
                         style={{
                           padding: '10px 18px',
-                          background: suggestionInput.trim() ? '#02302D' : '#94A3B8',
-                          color: '#FFFFFF',
-                          border: 'none',
-                          borderRadius: '12px',
-                          fontWeight: 700,
                           fontSize: '0.82rem',
+                          borderRadius: '12px',
+                          opacity: suggestionInput.trim() ? 1 : 0.5,
                           cursor: suggestionInput.trim() ? 'pointer' : 'not-allowed',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
                         }}
                       >
                         <SendIcon size={13} />
@@ -880,18 +860,13 @@ export default function FeedbackTreatmentModal({
                         <button
                           type="submit"
                           disabled={loadingAction || !actionInput.trim()}
+                          className="btn-primary"
                           style={{
                             padding: '10px 18px',
-                            background: actionInput.trim() ? '#D97706' : '#94A3B8',
-                            color: '#FFFFFF',
-                            border: 'none',
-                            borderRadius: '12px',
-                            fontWeight: 700,
                             fontSize: '0.82rem',
+                            borderRadius: '12px',
+                            opacity: actionInput.trim() ? 1 : 0.5,
                             cursor: actionInput.trim() ? 'pointer' : 'not-allowed',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
                           }}
                         >
                           <PlusIcon size={14} />
@@ -911,22 +886,8 @@ export default function FeedbackTreatmentModal({
                         <button
                           onClick={handleConfirmerActionRealisee}
                           disabled={loadingAction}
-                          style={{
-                            width: '100%',
-                            padding: '12px',
-                            background: '#3C7730',
-                            color: '#FFFFFF',
-                            border: 'none',
-                            borderRadius: '12px',
-                            fontWeight: 800,
-                            fontSize: '0.86rem',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '8px',
-                            boxShadow: '0 4px 12px rgba(60, 119, 48, 0.25)',
-                          }}
+                          className="btn-primary"
+                          style={{ width: '100%', padding: '12px', fontWeight: 800, fontSize: '0.86rem', justifyContent: 'center' }}
                         >
                           <CheckCircleIcon size={16} />
                           <span>{loadingAction ? 'Validation en cours...' : 'Confirmer l’action réalisée → Résoudre le feedback'}</span>
@@ -950,19 +911,8 @@ export default function FeedbackTreatmentModal({
                         <button
                           onClick={handleReouvrir}
                           disabled={loadingAction}
-                          style={{
-                            padding: '6px 12px',
-                            background: '#FFFFFF',
-                            border: '1px solid #CBD5E1',
-                            borderRadius: '8px',
-                            fontSize: '0.76rem',
-                            fontWeight: 700,
-                            color: '#475569',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                          }}
+                          className="btn-secondary"
+                          style={{ padding: '6px 12px', fontSize: '0.76rem', borderRadius: '8px' }}
                         >
                           <RefreshIcon size={12} />
                           <span>Rouvrir</span>
@@ -1009,18 +959,13 @@ export default function FeedbackTreatmentModal({
                     <button
                       type="submit"
                       disabled={loadingAction || !noteInterneInput.trim()}
+                      className="btn-primary"
                       style={{
                         padding: '8px 14px',
-                        background: noteInterneInput.trim() ? '#02302D' : '#94A3B8',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '10px',
-                        fontWeight: 700,
                         fontSize: '0.8rem',
+                        borderRadius: '10px',
+                        opacity: noteInterneInput.trim() ? 1 : 0.5,
                         cursor: noteInterneInput.trim() ? 'pointer' : 'not-allowed',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px',
                       }}
                     >
                       <PlusIcon size={13} />
@@ -1175,17 +1120,8 @@ export default function FeedbackTreatmentModal({
         >
           <button
             onClick={onClose}
-            style={{
-              padding: '10px 20px',
-              background: '#FFFFFF',
-              border: '1px solid #CBD5E1',
-              borderRadius: '12px',
-              fontSize: '0.84rem',
-              fontWeight: 700,
-              color: '#334155',
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}
+            className="btn-secondary"
+            style={{ padding: '10px 20px', fontSize: '0.84rem', borderRadius: '12px' }}
           >
             Fermer
           </button>
