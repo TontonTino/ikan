@@ -233,6 +233,7 @@ export default function DashboardLayout() {
 
       {/* ── Sidebar Latérale (Style SaaS Épuré Bolt.new) ── */}
       <aside
+        id="dashboard-sidebar"
         className={`dashboard-sidebar${mobileMenuOpen ? ' dashboard-sidebar--open' : ''} ikan-sidebar--dark on-dark`}
         style={{
           width: '270px',
@@ -280,7 +281,8 @@ export default function DashboardLayout() {
 
 
         {/* 3. Navigation Links */}
-        <div
+        <nav
+          aria-label="Navigation principale"
           style={{
             flex: 1,
             overflowY: 'auto',
@@ -296,39 +298,40 @@ export default function DashboardLayout() {
                   {section.title}
                 </div>
               )}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <ul style={{ display: 'flex', flexDirection: 'column', gap: '4px', listStyle: 'none', margin: 0, padding: 0 }}>
                 {section.items.map((item) => {
                   // Le badge de "Pilotage" reflète le nombre d'alertes actives en temps réel
                   const badgeValue = item.path === '/pilotage' ? alertCount : item.badge;
                   const badgeUrgent = item.path === '/pilotage' ? alertCount > 0 : item.badgeUrgent;
                   return (
-                    <NavLink
-                      key={item.path}
-                      to={item.path}
-                      className={({ isActive }) => `ikan-nav-link${isActive ? ' ikan-nav-link--active' : ''}`}
-                    >
-                      {({ isActive }) => (
-                        <>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <span className="ikan-nav-icon">
-                              {item.icon}
-                            </span>
-                            <span>{item.label}</span>
-                          </div>
-                          {!!badgeValue && (
-                            <span className={`ikan-nav-badge${badgeUrgent ? ' ikan-nav-badge--urgent' : ''}`}>
-                              {badgeValue}
-                            </span>
-                          )}
-                        </>
-                      )}
-                    </NavLink>
+                    <li key={item.path}>
+                      <NavLink
+                        to={item.path}
+                        className={({ isActive }) => `ikan-nav-link${isActive ? ' ikan-nav-link--active' : ''}`}
+                      >
+                        {({ isActive }) => (
+                          <>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <span className="ikan-nav-icon">
+                                {item.icon}
+                              </span>
+                              <span>{item.label}</span>
+                            </div>
+                            {!!badgeValue && (
+                              <span className={`ikan-nav-badge${badgeUrgent ? ' ikan-nav-badge--urgent' : ''}`}>
+                                {badgeValue}
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </NavLink>
+                    </li>
                   );
                 })}
-              </div>
+              </ul>
             </div>
           ))}
-        </div>
+        </nav>
 
         {/* 4. Assistant IA YAM (ouvre le panneau de chat, ne change pas de page) */}
         {canUseYam && (
@@ -390,6 +393,7 @@ export default function DashboardLayout() {
               onClick={() => setMobileMenuOpen((o) => !o)}
               aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
               aria-expanded={mobileMenuOpen}
+              aria-controls="dashboard-sidebar"
               style={{
                 width: '38px',
                 height: '38px',
@@ -436,6 +440,14 @@ export default function DashboardLayout() {
                   navigate('/pilotage');
                 }
               }}
+              disabled={user?.role === 'admin'}
+              aria-label={
+                user?.role === 'admin'
+                  ? 'Notifications non disponibles pour le rôle administrateur'
+                  : alertCount > 0
+                    ? `${alertCount} alerte${alertCount > 1 ? 's' : ''} critique${alertCount > 1 ? 's' : ''}`
+                    : 'Alertes de satisfaction, aucune alerte critique'
+              }
               title={
                 user?.role === 'admin'
                   ? 'Notifications'
@@ -474,6 +486,7 @@ export default function DashboardLayout() {
               <BellIcon size={16} color={isAlertesActive ? '#3C7730' : 'currentColor'} />
               {alertCount > 0 ? (
                 <span
+                  aria-hidden="true"
                   style={{
                     position: 'absolute',
                     top: '-3px',
@@ -498,6 +511,7 @@ export default function DashboardLayout() {
                 </span>
               ) : (
                 <span
+                  aria-hidden="true"
                   style={{
                     position: 'absolute',
                     top: '9px',
@@ -545,9 +559,10 @@ export default function DashboardLayout() {
       )}
 
       {/* ── Sidebar en tiroir sur mobile/tablette ──
-          La sidebar reste en CSS pur (position fixed) sur desktop. En dessous de 768px,
+          La sidebar reste en CSS pur (position fixed) sur desktop. En dessous de 1024px,
           elle devient un tiroir plein écran caché par défaut (translateX hors champ),
           ouvert par le bouton hamburger, fermé par le voile, Échap ou un lien de nav.
+          (Entre 768 et 1024px la sidebar fixe de 270px écrasait sinon le contenu.)
           Les !important ne visent que des propriétés déjà fixées en style inline plus
           haut (seul moyen de les surcharger depuis une media query), pattern déjà utilisé
           ailleurs dans le dashboard (AdminDashboardPage, MonAgencePage, ParametresPage). */}
@@ -555,7 +570,7 @@ export default function DashboardLayout() {
         .dashboard-hamburger { display: none; }
         .dashboard-sidebar-overlay { display: none; }
 
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
           .dashboard-hamburger { display: flex !important; }
 
           .dashboard-sidebar {
