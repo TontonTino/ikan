@@ -1,23 +1,29 @@
 """
 Service d'intégration du microservice IKAN AI Veille (port 8002).
 Permet à l'API principale de piloter le scraping Facebook / Réseaux sociaux
-et d'ingérer automatiquement les avis extraits dans le pipeline d'analyse IA.
+et d'ingérer les mentions extraites dans la table mentions_veille (jamais dans
+feedbacks : ces avis n'ont pas de note client réelle, voir ingest_mentions).
 """
+import hashlib
 import logging
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 import httpx
 from sqlalchemy.orm import Session
-from fastapi import BackgroundTasks
 
 from app.core.config import settings
-from app.models.agence import Agence
-from app.models.feedback import Feedback
-from app.models.qr_code import QRCode
-from app.services.ai.analyse_service import analyser_feedback
+from app.models.mention_veille import MentionVeille
+from app.services.ai.sentiment import analyser_sentiment
 
 logger = logging.getLogger(__name__)
+
+# Identité renvoyée par le VRAI microservice de veille (apps/veille/scraping_service/api.py,
+# HealthResponse.service) : un autre service qui répondrait 200 sur le même port/host par
+# coïncidence (ex. une instance égarée d'apps/api, dont /health renvoie juste {"status":"ok"})
+# ne doit jamais être rapporté comme "online".
+VEILLE_SERVICE_IDENTITY = "IKAN AI - Service de Veille"
 
 
 def _get_headers() -> Dict[str, str]:
@@ -28,7 +34,7 @@ def _get_headers() -> Dict[str, str]:
 
 
 async def check_veille_service() -> Dict[str, Any]:
-    """Vérifie si le microservice de veille est actif et joignable."""
+    """Vérifie si le microservice de veille est actif et joignable — et que c'est bien LUI."""
     if not settings.VEILLE_SERVICE_URL:
         return {"status": "disabled", "message": "VEILLE_SERVICE_URL non configuré"}
 
@@ -36,10 +42,17 @@ async def check_veille_service() -> Dict[str, Any]:
     try:
         async with httpx.AsyncClient(timeout=4.0) as client:
             res = await client.get(url)
-            if res.status_code == 200:
-                data = res.json()
-                return {"status": "online", "details": data}
-            return {"status": "error", "code": res.status_code, "detail": res.text}
+            if res.status_code != 200:
+                return {"status": "error", "code": res.status_code, "detail": res.text}
+            data = res.json()
+            if data.get("service") != VEILLE_SERVICE_IDENTITY:
+                return {
+                    "status": "error",
+                    "detail": "Réponse HTTP 200 reçue, mais ce n'est pas le microservice de veille "
+                              "(identité absente ou différente — un autre service répond peut-être sur ce port)",
+                    "details": data,
+                }
+            return {"status": "online", "details": data}
     except Exception as e:
         logger.warning(f"Microservice de veille injoignable sur {url}: {e}")
         return {"status": "offline", "error": str(e)}
@@ -76,71 +89,92 @@ async def trigger_facebook_scrape(target: str, max_items: int = 20) -> Dict[str,
         return {"success": True, "data": data}
 
 
-def ingest_feedback_items(
+def _normaliser_texte(texte: str) -> str:
+    """Minuscules, espaces multiples réduits — pour une empreinte stable face aux
+    variations mineures de formatage d'une ré-extraction du même contenu."""
+    return " ".join(texte.strip().lower().split())
+
+
+def _parser_date_publication(valeur: Any) -> Optional[datetime]:
+    if not valeur:
+        return None
+    if isinstance(valeur, datetime):
+        return valeur
+    try:
+        return datetime.fromisoformat(str(valeur).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
+
+
+def _calculer_empreinte(plateforme: str, texte_normalise: str, date_publication: Optional[datetime], url_source: Optional[str]) -> str:
+    brut = f"{plateforme}|{texte_normalise}|{date_publication.isoformat() if date_publication else ''}|{url_source or ''}"
+    return hashlib.sha256(brut.encode("utf-8")).hexdigest()
+
+
+def ingest_mentions(
     items: List[Dict[str, Any]],
-    agence_id: UUID,
+    organisation_id: UUID,
+    agence_id: Optional[UUID],
     db: Session,
-    background_tasks: BackgroundTasks,
 ) -> Dict[str, Any]:
     """
-    Transforme les items extraits par le microservice de veille en vrais Feedbacks
-    rattachés à l'agence, et lance l'analyse IA (sentiment, thématique, anomalies).
+    Ingère des mentions réseaux sociaux dans `mentions_veille` — jamais dans `feedbacks`
+    (pas de note client réelle sur ces avis, voir docstring du modèle). Pour chaque item :
+    ignore les textes vides, déduplique par empreinte au sein de l'organisation, calcule
+    le sentiment immédiatement (analyser_sentiment, pas de tâche de fond).
+
+    NE STOCKE JAMAIS l'identité de l'auteur (nom, identifiant, profil), même si le
+    microservice la renvoie dans `item` : ces champs sont simplement ignorés ci-dessous.
     """
-    agence = db.query(Agence).filter(Agence.id == agence_id).first()
-    if not agence:
-        raise ValueError("Agence introuvable")
-
-    # Récupérer ou trouver un QR code pour rattacher le feedback
-    qr = db.query(QRCode).filter(QRCode.agence_id == agence.id, QRCode.actif == True).first()
-    if not qr:
-        # QR par défaut ou fallback
-        qr = db.query(QRCode).filter(QRCode.agence_id == agence.id).first()
-
-    if not qr:
-        raise ValueError("Aucun QR Code rattaché à cette agence pour associer les avis")
-
     ingested_count = 0
-    created_feedbacks = []
+    duplicate_count = 0
+    ignored_empty_count = 0
 
     for item in items:
         raw_text = item.get("text") or item.get("raw_text") or ""
-        text = raw_text.strip()
-        if not text:
+        texte = raw_text.strip()[:2000]
+        if not texte:
+            ignored_empty_count += 1
             continue
 
-        # Note : 1 à 5 étoiles. Si rating direct fourni (ex: reco 1 ou 5), l'utiliser, sinon note neutre 3
-        rating_raw = item.get("rating")
-        if rating_raw is not None:
-            try:
-                note = max(1, min(5, int(round(float(rating_raw)))))
-            except (ValueError, TypeError):
-                note = 3
-        else:
-            note = 3
+        plateforme = (item.get("plateforme") or item.get("platform") or "facebook").strip().lower() or "facebook"
+        type_contenu = item.get("type_contenu") or item.get("type") or "avis"
+        url_source = item.get("url_source") or item.get("url") or None
+        date_publication = _parser_date_publication(item.get("date_publication") or item.get("date"))
 
-        # Troncature max 1000 chars selon contrainte modèle Feedback
-        commentaire = text[:1000]
+        empreinte = _calculer_empreinte(plateforme, _normaliser_texte(texte), date_publication, url_source)
 
-        feedback = Feedback(
-            qr_code_id=qr.id,
-            note=note,
-            commentaire=f"[Veille Facebook] {commentaire}"[:1000],
-            statut_traitement="nouveau",
+        deja_present = (
+            db.query(MentionVeille)
+            .filter(MentionVeille.organisation_id == organisation_id, MentionVeille.empreinte == empreinte)
+            .first()
         )
-        db.add(feedback)
+        if deja_present:
+            duplicate_count += 1
+            continue
+
+        sentiment, score = analyser_sentiment(texte)
+
+        mention = MentionVeille(
+            organisation_id=organisation_id,
+            agence_id=agence_id,
+            plateforme=plateforme,
+            type_contenu=type_contenu,
+            texte=texte,
+            url_source=url_source,
+            date_publication=date_publication,
+            sentiment=sentiment,
+            score_sentiment=score,
+            empreinte=empreinte,
+        )
+        db.add(mention)
         db.flush()
-
-        # Déclencher l'analyse IA complète en tâche de fond (sentiment, thème, criticité)
-        background_tasks.add_task(analyser_feedback, feedback.id)
-
-        created_feedbacks.append(str(feedback.id))
         ingested_count += 1
 
     db.commit()
 
     return {
         "ingested_count": ingested_count,
-        "agence_id": str(agence.id),
-        "agence_nom": agence.nom,
-        "feedback_ids": created_feedbacks,
+        "duplicate_count": duplicate_count,
+        "ignored_empty_count": ignored_empty_count,
     }

@@ -24,6 +24,7 @@ from app.models.system_settings import SystemSettings
 from app.models.historique_feedback import HistoriqueFeedback
 from app.models.reponse_client import ReponseClient
 from app.models.categorie import Categorie
+from app.models.mention_veille import MentionVeille
 
 __all__ = [
     # Enums
@@ -50,4 +51,5 @@ __all__ = [
     "HistoriqueFeedback",
     "ReponseClient",
     "Categorie",
+    "MentionVeille",
 ]

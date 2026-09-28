@@ -121,8 +121,8 @@ def test_status_cx_manager_passe_le_garde_de_role(monkeypatch):
 # ── Cloisonnement par organisation : verifier_acces_agence AVANT toute écriture ──
 
 def test_ingest_cx_manager_refuse_agence_d_une_autre_organisation(monkeypatch):
-    monkeypatch.setattr(veille, "ingest_feedback_items", lambda *a, **k: (_ for _ in ()).throw(
-        AssertionError("ingest_feedback_items appelé : l'accès aurait dû être refusé avant toute ingestion")
+    monkeypatch.setattr(veille, "ingest_mentions", lambda *a, **k: (_ for _ in ()).throw(
+        AssertionError("ingest_mentions appelé : l'accès aurait dû être refusé avant toute ingestion")
     ))
     agence_autre_org = SimpleNamespace(id=uuid4(), organisation_id=uuid4())
     user = _cx_manager(uuid4())  # organisation différente de celle de l'agence ciblée
@@ -137,8 +137,8 @@ def test_scrape_auto_ingest_cx_manager_refuse_agence_d_une_autre_organisation(mo
         return {"success": True, "data": {"items": [{"text": "avis test"}]}}
 
     monkeypatch.setattr(veille, "trigger_facebook_scrape", _fake_scrape)
-    monkeypatch.setattr(veille, "ingest_feedback_items", lambda *a, **k: (_ for _ in ()).throw(
-        AssertionError("ingest_feedback_items appelé : l'accès aurait dû être refusé avant toute ingestion")
+    monkeypatch.setattr(veille, "ingest_mentions", lambda *a, **k: (_ for _ in ()).throw(
+        AssertionError("ingest_mentions appelé : l'accès aurait dû être refusé avant toute ingestion")
     ))
     agence_autre_org = SimpleNamespace(id=uuid4(), organisation_id=uuid4())
     user = _cx_manager(uuid4())
@@ -154,7 +154,7 @@ def test_scrape_auto_ingest_cx_manager_refuse_agence_d_une_autre_organisation(mo
 def test_ingest_cx_manager_accede_a_une_agence_de_sa_propre_organisation(monkeypatch):
     # Le garde d'organisation laisse passer ; on neutralise l'ingestion elle-même (hors périmètre RBAC,
     # et pour ne déclencher aucune écriture réelle dans ce test unitaire).
-    monkeypatch.setattr(veille, "ingest_feedback_items", lambda *a, **k: {"ingested_count": 0, "feedback_ids": []})
+    monkeypatch.setattr(veille, "ingest_mentions", lambda *a, **k: {"ingested_count": 0, "duplicate_count": 0, "ignored_empty_count": 0})
     org = uuid4()
     ma_agence = SimpleNamespace(id=uuid4(), organisation_id=org)
     user = _cx_manager(org)
