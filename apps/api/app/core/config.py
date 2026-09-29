@@ -16,6 +16,11 @@ ENV_PATH = BASE_DIR / ".env"
 class Settings(BaseSettings):
     # Application
     APP_ENV: str = "development"
+    # Active le garde-fou sur l'hôte de la base (app/db/session.py). Désactivé par défaut :
+    # la production utilise encore Supabase au 29/09/2026 ; à activer lors du basculement
+    # vers une base dédiée (voir commentaire dans session.py). Volontairement absent de
+    # render.yaml pour rester à False en production tant que ce basculement n'a pas eu lieu.
+    ENFORCE_DB_ISOLATION: bool = False
     APP_HOST: str = "0.0.0.0"
     APP_PORT: int = 8000
     DEBUG: bool = True

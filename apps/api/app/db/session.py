@@ -23,8 +23,14 @@ if db_url.startswith("postgres://"):
 # dessus par erreur, voir app/main.py) — ce garde empêche qu'un futur
 # APP_ENV=production réglé par erreur EN LOCAL, toujours pointé sur cette même
 # base, active des comportements de prod (Stripe live, etc.) sur une base partagée.
+# Neutralisé par défaut (ENFORCE_DB_ISOLATION=False) : la production utilise encore
+# Supabase au 29/09/2026 ; à activer lors du basculement vers une base dédiée.
 _HOTE_DB = (urlparse(db_url).hostname or "").lower()
-if settings.APP_ENV != "development" and ("supabase.co" in _HOTE_DB or "supabase.com" in _HOTE_DB):
+if (
+    settings.ENFORCE_DB_ISOLATION
+    and settings.APP_ENV != "development"
+    and ("supabase.co" in _HOTE_DB or "supabase.com" in _HOTE_DB)
+):
     raise RuntimeError(
         f"Configuration dangereuse : APP_ENV='{settings.APP_ENV}' (différent de "
         f"'development') mais DATABASE_URL pointe vers un hôte Supabase connu ({_HOTE_DB}). "
