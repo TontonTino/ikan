@@ -224,11 +224,8 @@ export default function AdminUsersContent() {
               openCreate();
             }
           }}
+          className="btn-primary"
           style={{
-            background: '#3C7730',
-            color: '#FFFFFF',
-            border: 'none',
-            borderRadius: '12px',
             padding: '10px 18px',
             fontSize: '0.86rem',
             fontWeight: 700,
@@ -239,7 +236,7 @@ export default function AdminUsersContent() {
             boxShadow: '0 2px 8px rgba(60, 119, 48, 0.25)',
           }}
         >
-          <PlusIcon size={16} color="#FFFFFF" />
+          <PlusIcon size={16} />
           {isCXManager ? "Nouveau Chef d'Agence" : (showForm ? 'Fermer' : 'Nouveau CX Manager')}
         </button>
       </div>
@@ -335,14 +332,16 @@ export default function AdminUsersContent() {
               <button
                 type="button"
                 onClick={() => { setShowForm(false); setEditingUser(null); }}
-                style={{ background: '#F1F5F9', border: 'none', borderRadius: '12px', padding: '10px 18px', fontWeight: 700, cursor: 'pointer' }}
+                className="btn-secondary"
+                style={{ padding: '10px 18px', fontWeight: 700, cursor: 'pointer' }}
               >
                 Annuler
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                style={{ background: '#02302D', color: '#FFFFFF', border: 'none', borderRadius: '12px', padding: '10px 22px', fontWeight: 700, cursor: 'pointer' }}
+                className="btn-primary"
+                style={{ padding: '10px 22px', fontWeight: 700, cursor: 'pointer' }}
               >
                 {saving ? 'Enregistrement...' : 'Enregistrer'}
               </button>
@@ -401,14 +400,16 @@ export default function AdminUsersContent() {
                           <button
                             type="button"
                             onClick={() => openEdit(u)}
-                            style={{ background: '#F1F5F9', border: 'none', borderRadius: '8px', padding: '6px 10px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}
+                            className="btn-secondary"
+                            style={{ padding: '6px 10px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}
                           >
                             Modifier
                           </button>
                           <button
                             type="button"
                             onClick={() => toggleUserActive(u)}
-                            style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '6px 10px', fontSize: '0.76rem', fontWeight: 600, cursor: 'pointer' }}
+                            className="btn-secondary"
+                            style={{ padding: '6px 10px', fontSize: '0.76rem', fontWeight: 600, cursor: 'pointer' }}
                           >
                             {u.active !== false ? 'Suspendre' : 'Activer'}
                           </button>

@@ -169,14 +169,16 @@ export default function CreateAgencyManagerModal({ onClose, onCreated, manager, 
             <button
               type="button"
               onClick={onClose}
-              style={{ background: '#F1F5F9', border: 'none', borderRadius: '12px', padding: '10px 18px', fontWeight: 700, cursor: 'pointer' }}
+              className="btn-secondary"
+              style={{ padding: '10px 18px', fontWeight: 700, cursor: 'pointer' }}
             >
               Annuler
             </button>
             <button
               type="submit"
               disabled={saving}
-              style={{ background: '#02302D', color: '#FFFFFF', border: 'none', borderRadius: '12px', padding: '10px 22px', fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}
+              className="btn-primary"
+              style={{ padding: '10px 22px', fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}
             >
               {saving ? 'Enregistrement...' : 'Enregistrer'}
             </button>

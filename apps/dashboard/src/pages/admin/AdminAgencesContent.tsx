@@ -5,6 +5,7 @@ import { getFeedbackUrl } from '../../config';
 import { useAuthStore } from '../../stores/authStore';
 import type { Agence } from '../../types';
 import SectionHeading from '../../components/ui/SectionHeading';
+import EmptyState from '../../components/ui/EmptyState';
 import {
   PlusIcon,
   QrCodeIcon,
@@ -248,11 +249,8 @@ export default function AdminAgencesContent() {
           <button
             type="button"
             onClick={() => setManagerModal({})}
+            className="btn-secondary"
             style={{
-              background: '#FFFFFF',
-              color: '#02302D',
-              border: '1px solid #D6E8D9',
-              borderRadius: '12px',
               padding: '10px 18px',
               fontSize: '0.86rem',
               fontWeight: 700,
@@ -268,11 +266,8 @@ export default function AdminAgencesContent() {
           <button
             type="button"
             onClick={openCreate}
+            className="btn-primary"
             style={{
-              background: '#3C7730',
-              color: '#FFFFFF',
-              border: 'none',
-              borderRadius: '12px',
               padding: '10px 18px',
               fontSize: '0.86rem',
               fontWeight: 700,
@@ -283,7 +278,7 @@ export default function AdminAgencesContent() {
               boxShadow: '0 2px 8px rgba(60, 119, 48, 0.25)',
             }}
           >
-            <PlusIcon size={16} color="#FFFFFF" />
+            <PlusIcon size={16} />
             Nouvelle Agence
           </button>
         </div>
@@ -325,7 +320,8 @@ export default function AdminAgencesContent() {
                   <button
                     type="button"
                     onClick={() => setManagerModal({ manager: m })}
-                    style={{ background: '#02302D', color: '#FFFFFF', border: 'none', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 700 }}
+                    className="btn-primary"
+                    style={{ padding: '6px 12px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 700 }}
                   >
                     Assigner
                   </button>
@@ -369,8 +365,8 @@ export default function AdminAgencesContent() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
             {filteredAgences.length === 0 && (
-              <div style={{ gridColumn: '1 / -1', padding: '32px', textAlign: 'center', color: '#64748B', fontWeight: 600, fontSize: '0.88rem' }}>
-                Aucune agence ne correspond à votre recherche.
+              <div style={{ gridColumn: '1 / -1' }}>
+                <EmptyState title="Aucune agence trouvée" message="Aucune agence ne correspond à votre recherche." />
               </div>
             )}
             {filteredAgences.map((a) => (
@@ -426,7 +422,8 @@ export default function AdminAgencesContent() {
                       <button
                         type="button"
                         onClick={() => setManagerModal({ defaultAgenceId: a.id })}
-                        style={{ background: '#02302D', color: '#FFFFFF', border: 'none', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 700 }}
+                        className="btn-primary"
+                        style={{ padding: '6px 12px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 700 }}
                       >
                         Assigner
                       </button>
@@ -456,14 +453,16 @@ export default function AdminAgencesContent() {
                           <button
                             type="button"
                             onClick={() => setManagerModal({ manager: m })}
-                            style={{ background: '#F1F5F9', border: 'none', borderRadius: '8px', padding: '5px 10px', cursor: 'pointer', fontSize: '0.74rem', fontWeight: 700 }}
+                            className="btn-secondary"
+                            style={{ padding: '5px 10px', cursor: 'pointer', fontSize: '0.74rem', fontWeight: 700 }}
                           >
                             Modifier
                           </button>
                           <button
                             type="button"
                             onClick={() => toggleManagerActive(m)}
-                            style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '5px 10px', cursor: 'pointer', fontSize: '0.74rem', fontWeight: 600 }}
+                            className="btn-secondary"
+                            style={{ padding: '5px 10px', cursor: 'pointer', fontSize: '0.74rem', fontWeight: 600 }}
                           >
                             {m.active ? 'Suspendre' : 'Réactiver'}
                           </button>
@@ -478,14 +477,16 @@ export default function AdminAgencesContent() {
                     <button
                       type="button"
                       onClick={() => openEdit(a)}
-                      style={{ background: '#F1F5F9', border: 'none', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 700 }}
+                      className="btn-secondary"
+                      style={{ padding: '6px 10px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 700 }}
                     >
                       Modifier
                     </button>
                     <button
                       type="button"
                       onClick={() => handleToggleActive(a)}
-                      style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 600 }}
+                      className="btn-secondary"
+                      style={{ padding: '6px 10px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 600 }}
                     >
                       {a.active !== false ? 'Désactiver' : 'Activer'}
                     </button>
@@ -627,7 +628,8 @@ export default function AdminAgencesContent() {
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                style={{ background: '#F1F5F9', border: 'none', borderRadius: '12px', padding: '10px 18px', fontWeight: 700, cursor: 'pointer' }}
+                className="btn-secondary"
+                style={{ padding: '10px 18px', fontWeight: 700, cursor: 'pointer' }}
               >
                 Annuler
               </button>
@@ -635,7 +637,8 @@ export default function AdminAgencesContent() {
                 type="button"
                 onClick={handleSave}
                 disabled={saving}
-                style={{ background: '#02302D', color: '#FFFFFF', border: 'none', borderRadius: '12px', padding: '10px 20px', fontWeight: 700, cursor: 'pointer' }}
+                className="btn-primary"
+                style={{ padding: '10px 20px', fontWeight: 700, cursor: 'pointer' }}
               >
                 {saving ? 'Enregistrement...' : 'Enregistrer'}
               </button>
@@ -667,14 +670,16 @@ export default function AdminAgencesContent() {
                 <button
                   type="button"
                   onClick={() => copyQrUrl(modalQrUrl)}
-                  style={{ background: '#EBF6ED', color: '#3C7730', border: 'none', borderRadius: '12px', padding: '10px', fontWeight: 700, cursor: 'pointer' }}
+                  className="btn-primary"
+                  style={{ padding: '10px', fontWeight: 700, cursor: 'pointer' }}
                 >
                   Copier l'URL
                 </button>
                 <button
                   type="button"
                   onClick={() => setQrModalTarget(null)}
-                  style={{ background: '#F1F5F9', border: 'none', borderRadius: '12px', padding: '10px', fontWeight: 700, cursor: 'pointer' }}
+                  className="btn-secondary"
+                  style={{ padding: '10px', fontWeight: 700, cursor: 'pointer' }}
                 >
                   Fermer
                 </button>
