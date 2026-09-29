@@ -45,8 +45,13 @@ export const useAuthStore = create<AuthState>()(
         try {
           const res = await authApi.me();
           set({ user: res.data });
-        } catch {
-          set({ user: null });
+        } catch (err: any) {
+          // Ne déconnecte que sur une vraie session expirée/invalide (401). Un accroc
+          // réseau ou une erreur serveur (500/502/503, timeout, redémarrage Render...)
+          // ne doit pas effacer un utilisateur toujours réellement connecté.
+          if (err?.response?.status === 401) {
+            set({ user: null });
+          }
         }
       },
     }),
