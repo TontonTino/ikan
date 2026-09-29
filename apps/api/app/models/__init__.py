@@ -25,6 +25,9 @@ from app.models.historique_feedback import HistoriqueFeedback
 from app.models.reponse_client import ReponseClient
 from app.models.categorie import Categorie
 from app.models.mention_veille import MentionVeille
+from app.models.issue import Issue
+from app.models.action_corrective import ActionCorrective
+from app.models.historique_issue import HistoriqueIssue
 
 __all__ = [
     # Enums
@@ -52,4 +55,7 @@ __all__ = [
     "ReponseClient",
     "Categorie",
     "MentionVeille",
+    "Issue",
+    "ActionCorrective",
+    "HistoriqueIssue",
 ]

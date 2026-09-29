@@ -113,6 +113,7 @@ class FeedbackResponse(BaseModel):
     suggestion_agence_date: Optional[datetime] = None
     notes_internes: Optional[List[dict]] = []
     discordance_status: Optional[str] = None
+    issue_id: Optional[uuid.UUID] = None
     analyse_ia: Optional[AnalyseIAInfo] = None
     demande_contact: Optional[DemandeContactInfo] = None
 

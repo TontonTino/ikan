@@ -18,6 +18,7 @@ from app.api.v1.endpoints import (
     system,
     admin_facturation,
     veille,
+    issues,
 )
 
 api_router = APIRouter()
@@ -36,3 +37,4 @@ api_router.include_router(alertes.router, prefix="/alertes", tags=["Alertes"])
 api_router.include_router(system.router, prefix="/system", tags=["Système"])
 api_router.include_router(admin_facturation.router, prefix="/admin/facturation", tags=["Admin — Facturation"])
 api_router.include_router(veille.router, prefix="/veille", tags=["Veille & Réseaux"])
+api_router.include_router(issues.router, prefix="/issues", tags=["Issues"])

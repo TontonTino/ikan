@@ -53,9 +53,15 @@ class Feedback(Base):
     suggestion_agence_date: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # Rattachement manuel à un problème réel (Issue) potentiellement signalé par plusieurs
+    # feedbacks — V1 volontairement manuelle, voir app/models/issue.py.
+    issue_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("issues.id", ondelete="SET NULL"), nullable=True
+    )
 
     # Relations
     qr_code: Mapped["QRCode"] = relationship("QRCode", back_populates="feedbacks")
+    issue: Mapped["Issue | None"] = relationship("Issue")
     categorie: Mapped["Categorie | None"] = relationship("Categorie")
     assigne_a: Mapped["Utilisateur | None"] = relationship(
         "Utilisateur", foreign_keys=[assigne_a_id]
