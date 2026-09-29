@@ -2,6 +2,8 @@
 Configuration de la session SQLAlchemy et connexion à PostgreSQL.
 """
 import logging
+from urllib.parse import urlparse
+
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
@@ -14,6 +16,21 @@ logger = logging.getLogger(__name__)
 db_url = settings.DATABASE_URL.strip()
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+# Garde-fou : un hôte Supabase connu (direct "*.supabase.co" ou pooler Supavisor
+# "*.pooler.supabase.com") est une base de développement partagée, jamais la prod.
+# La confondre avec la prod a déjà eu lieu dans l'autre sens (create_all() exécuté
+# dessus par erreur, voir app/main.py) — ce garde empêche qu'un futur
+# ENVIRONMENT=production réglé par erreur EN LOCAL, toujours pointé sur cette même
+# base, active des comportements de prod (Stripe live, etc.) sur une base partagée.
+_HOTE_DB = (urlparse(db_url).hostname or "").lower()
+if settings.ENVIRONMENT != "development" and ("supabase.co" in _HOTE_DB or "supabase.com" in _HOTE_DB):
+    raise RuntimeError(
+        f"Configuration dangereuse : ENVIRONMENT='{settings.ENVIRONMENT}' (différent de "
+        f"'development') mais DATABASE_URL pointe vers un hôte Supabase connu ({_HOTE_DB}). "
+        "Cette base est une base de développement partagée, jamais la production. "
+        "Vérifiez DATABASE_URL et ENVIRONMENT avant de redémarrer."
+    )
 
 # sslmode=require systématique sur toutes les bases distantes (Render PostgreSQL)
 if "localhost" not in db_url and "127.0.0.1" not in db_url and "sslmode" not in db_url:

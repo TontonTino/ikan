@@ -16,6 +16,11 @@ ENV_PATH = BASE_DIR / ".env"
 class Settings(BaseSettings):
     # Application
     APP_ENV: str = "development"
+    # Distinct d'APP_ENV (déjà utilisé ailleurs, non fiable pour ce garde) : ENVIRONMENT
+    # contrôle spécifiquement si Base.metadata.create_all() peut tourner au démarrage
+    # (app/main.py) et si app/db/session.py refuse de démarrer sur un hôte Supabase connu.
+    # Render la fixe à "production" (voir render.yaml) ; en local, valeur par défaut "development".
+    ENVIRONMENT: str = "development"
     APP_HOST: str = "0.0.0.0"
     APP_PORT: int = 8000
     DEBUG: bool = True
