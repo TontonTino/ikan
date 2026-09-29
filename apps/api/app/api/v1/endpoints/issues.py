@@ -242,7 +242,11 @@ def rattacher_feedback(
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ):
     """Vérifie l'accès aux DEUX ressources avant d'écrire. Met à jour derniere_detection.
-    Si l'Issue était 'verifiee' : repasse à 'reouverte' et remet date_verification à NULL."""
+    Si l'Issue était 'verifiee' : repasse à 'reouverte' et remet date_verification à NULL.
+    Si le feedback était déjà rattaché à une AUTRE Issue, le déplacement n'est autorisé que
+    si l'utilisateur a aussi accès à cette ancienne Issue (vérifiée avant toute écriture) ;
+    le déplacement est alors tracé des deux côtés (événement sortant sur l'ancienne Issue,
+    entrant sur la nouvelle) — jamais silencieux."""
     issue = _get_issue_or_404(db, issue_id)
     _check_issue_access(issue, current_user)
 
@@ -256,6 +260,12 @@ def rattacher_feedback(
         raise HTTPException(status_code=404, detail="Feedback introuvable")
     _check_feedback_access_scope(feedback, current_user)
 
+    ancienne_issue = None
+    if feedback.issue_id and feedback.issue_id != issue.id:
+        ancienne_issue = db.query(Issue).filter(Issue.id == feedback.issue_id).first()
+        if ancienne_issue:
+            _check_issue_access(ancienne_issue, current_user)
+
     feedback.issue_id = issue.id
     issue.derniere_detection = datetime.now()
 
@@ -263,12 +273,24 @@ def rattacher_feedback(
     if issue.statut == "verifiee":
         issue.statut = "reouverte"
         issue.date_verification = None
+    nouveau_statut = issue.statut if issue.statut != ancien_statut else None
+    ancien_statut = ancien_statut if nouveau_statut else None
+
+    if ancienne_issue:
         _log_issue_event(
-            db, issue, current_user, "feedback_rattache", feedback_id=feedback.id,
-            ancien_statut=ancien_statut, nouveau_statut="reouverte",
+            db, ancienne_issue, current_user, "feedback_deplace_sortant", feedback_id=feedback.id,
+            details=f"Feedback déplacé vers l'Issue « {issue.titre} » ({issue.id})",
+        )
+        _log_issue_event(
+            db, issue, current_user, "feedback_deplace_entrant", feedback_id=feedback.id,
+            ancien_statut=ancien_statut, nouveau_statut=nouveau_statut,
+            details=f"Feedback déplacé depuis l'Issue « {ancienne_issue.titre} » ({ancienne_issue.id})",
         )
     else:
-        _log_issue_event(db, issue, current_user, "feedback_rattache", feedback_id=feedback.id)
+        _log_issue_event(
+            db, issue, current_user, "feedback_rattache", feedback_id=feedback.id,
+            ancien_statut=ancien_statut, nouveau_statut=nouveau_statut,
+        )
 
     db.commit()
     db.refresh(issue)
@@ -322,6 +344,15 @@ def creer_action_corrective(
     Si l'Issue était 'resolue' (mais pas 'verifiee') : comportement inchangé."""
     issue = _get_issue_or_404(db, issue_id)
     _check_issue_access(issue, current_user)
+
+    if data.responsable_id:
+        responsable = db.query(Utilisateur).filter(Utilisateur.id == data.responsable_id).first()
+        if not responsable:
+            raise HTTPException(status_code=400, detail="responsable_id invalide : utilisateur introuvable")
+        if responsable.organisation_id != issue.organisation_id:
+            raise HTTPException(status_code=400, detail="responsable_id invalide : cet utilisateur n'appartient pas à la même organisation que l'Issue")
+        if responsable.role not in (UserRole.CX_MANAGER, UserRole.AGENCY_MANAGER):
+            raise HTTPException(status_code=400, detail="responsable_id invalide : seul un CX Manager ou un Agency Manager peut être responsable d'une action")
 
     action = ActionCorrective(
         issue_id=issue.id,
