@@ -312,7 +312,14 @@ def creer_action_corrective(
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ):
     """Crée l'ActionCorrective (statut='creee'), passe issue.statut à 'action_en_cours' et
-    issue.necessite_action à True si ce n'était pas déjà fait."""
+    issue.necessite_action à True si ce n'était pas déjà fait.
+
+    Si l'Issue était 'verifiee' : une nouvelle action la remet en cause, comme un
+    rattachement de feedback après vérification — repasse d'abord par 'reouverte' et
+    remet date_verification à NULL (sinon date_verification resterait renseignée alors
+    que le statut n'est plus 'verifiee', ce qui fausserait un futur calcul de Loop
+    Closure Rate basé sur cette date), avant la transition normale vers 'action_en_cours'.
+    Si l'Issue était 'resolue' (mais pas 'verifiee') : comportement inchangé."""
     issue = _get_issue_or_404(db, issue_id)
     _check_issue_access(issue, current_user)
 
@@ -325,6 +332,15 @@ def creer_action_corrective(
         statut="creee",
     )
     db.add(action)
+
+    if issue.statut == "verifiee":
+        issue.statut = "reouverte"
+        issue.date_verification = None
+        _log_issue_event(
+            db, issue, current_user, "action_creee",
+            ancien_statut="verifiee", nouveau_statut="reouverte",
+            details=data.titre.strip(),
+        )
 
     ancien_statut = issue.statut
     issue.statut = "action_en_cours"
