@@ -81,21 +81,8 @@ export function StatsErrorState({
       {onRetry && (
         <button
           onClick={onRetry}
-          style={{
-            marginTop: '8px',
-            background: '#02302D',
-            color: '#FFFFFF',
-            border: 'none',
-            borderRadius: '12px',
-            padding: '10px 20px',
-            fontSize: '0.84rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontFamily: 'inherit',
-          }}
+          className="btn-primary"
+          style={{ marginTop: '8px' }}
         >
           <RefreshCwIcon size={14} />
           Réessayer

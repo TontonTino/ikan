@@ -119,6 +119,7 @@ export default function StatsAgencyView() {
             sparklineType={kpis.satisfaction?.is_positive ? 'up' : 'down'}
             badgeColor={kpis.satisfaction?.is_positive ? 'green' : 'red'}
             compact={true}
+            highlight
           />
 
           <KpiCard
