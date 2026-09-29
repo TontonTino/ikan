@@ -37,11 +37,11 @@ function CustomTooltip({ active, payload, label }: any) {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
-            <span style={{ color: '#94A3B8' }}>Collectés :</span>
+            <span style={{ color: '#94A3B8' }}>Critiques / Négatifs reçus :</span>
             <strong style={{ color: '#FFFFFF' }}>{pt.feedbacks}</strong>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
-            <span style={{ color: '#75B72A' }}>Traités / Analysés :</span>
+            <span style={{ color: '#75B72A' }}>Pris en charge par l'agence :</span>
             <strong style={{ color: '#75B72A' }}>{pt.traites}</strong>
           </div>
         </div>
@@ -72,7 +72,7 @@ export default function VolumeEvolutionChart({
           border: '1px dashed #D6E8D9',
         }}
       >
-        Aucun volume de feedback enregistré pour cette période.
+        Aucun feedback critique ou négatif enregistré pour cette période.
       </div>
     );
   }
@@ -98,7 +98,7 @@ export default function VolumeEvolutionChart({
           />
           <Tooltip content={<CustomTooltip />} />
           <Bar
-            name="Feedbacks Collectés"
+            name="Critiques / Négatifs reçus"
             dataKey="feedbacks"
             fill="#3C7730"
             radius={[6, 6, 0, 0]}
@@ -106,7 +106,7 @@ export default function VolumeEvolutionChart({
           />
           {showTreated && (
             <Bar
-              name="Feedbacks Traités"
+              name="Pris en charge par l'agence"
               dataKey="traites"
               fill="#02302D"
               radius={[6, 6, 0, 0]}

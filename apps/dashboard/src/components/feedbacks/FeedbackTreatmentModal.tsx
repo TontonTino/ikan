@@ -105,7 +105,9 @@ export default function FeedbackTreatmentModal({
 
     let isMounted = true;
     async function handleAutoOpen() {
-      if (fb.statut_traitement === 'nouveau') {
+      // Prise en charge réservée à l'Agency Manager (voir open_feedback, backend) : pour
+      // le CX Manager, l'appel échouerait (403) — ne pas le déclencher.
+      if (fb.statut_traitement === 'nouveau' && isAgencyManager) {
         try {
           const res = await feedbacksApi.open(fb.id);
           if (isMounted) {

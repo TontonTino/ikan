@@ -186,7 +186,7 @@ export default function StatsAgencyView() {
               </StatsSectionCard>
 
               <StatsSectionCard
-                title="Volume d'Avis Reçus et Pris en Charge"
+                title="Avis Critiques / Négatifs Reçus et Pris en Charge"
                 subtitle="Activité quotidienne en agence"
               >
                 <VolumeEvolutionChart data={data.evolution_volume} height={260} showTreated={true} />

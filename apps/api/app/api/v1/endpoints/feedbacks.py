@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 from app.api.deps import (
     get_current_active_user,
+    get_agency_manager,
     get_cx_or_agency_manager,
     get_feedback_viewer_user,
     get_db,
@@ -305,12 +306,14 @@ def get_feedback(
 def open_feedback(
     feedback_id: UUID,
     db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+    current_user: Utilisateur = Depends(get_agency_manager),
 ):
     """
     Action automatique lors de l'ouverture du feedback dans la modale :
     Si le statut est 'nouveau', passe automatiquement à 'en_traitement',
     assigne le feedback à l'utilisateur connecté et enregistre l'événement dans l'historique.
+    Agency Manager UNIQUEMENT : seul lui traite un feedback jusqu'à sa résolution — le
+    CX Manager consulte (GET reste ouvert aux deux via get_feedback_viewer_user).
     """
     feedback = (
         db.query(Feedback)

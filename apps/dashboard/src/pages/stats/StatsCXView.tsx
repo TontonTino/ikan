@@ -141,8 +141,8 @@ export default function StatsCXView() {
           {activeTab === 'feedbacks' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <StatsSectionCard
-                title="Flux des Avis : Collecte vs Traitement"
-                subtitle="Comparatif quotidien entre flux d'avis entrants et volume pris en charge"
+                title="Flux des Avis Critiques / Négatifs : Reçus vs Pris en Charge"
+                subtitle="Comparatif quotidien entre avis critiques/négatifs entrants et volume pris en charge par les agences"
               >
                 <VolumeEvolutionChart data={data.evolution_volume} height={280} showTreated={true} />
               </StatsSectionCard>

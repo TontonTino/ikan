@@ -689,6 +689,15 @@ def get_statistics_cx(
         "negatifs": 0,
         "label": "",
     })
+    # Graphique de volume (evolution_volume) : uniquement les feedbacks critiques/négatifs
+    # (sentiment IA négatif OU criticité élevée/critique — même définition que
+    # generer_recommandations, services/ai/recommandations.py). "feedbacks" = reçus ce
+    # jour-là parmi ceux-ci ; "traites" = parmi eux, ceux déjà sortis du statut "nouveau"
+    # (donc ouverts par un Agency Manager). Un feedback sans analyse IA est exclu du
+    # comptage plutôt que compté par défaut. Compteur séparé de timeline_map, qui reste
+    # inchangé pour evolution_satisfaction (tous les feedbacks, définition "traites"
+    # existante).
+    volume_map: dict[str, dict] = defaultdict(lambda: {"feedbacks": 0, "traites": 0, "label": ""})
 
     for f in fbs_current:
         dt = f.date_soumission
@@ -718,6 +727,13 @@ def get_statistics_cx(
         else:
             timeline_map[key]["negatifs"] += 1
 
+        analyse = analyses_cur_map.get(f.id)
+        if analyse and (analyse.sentiment == SentimentType.NEGATIF or analyse.criticite in (CriticiteType.ELEVEE, CriticiteType.CRITIQUE)):
+            volume_map[key]["feedbacks"] += 1
+            volume_map[key]["label"] = label
+            if f.statut_traitement != "nouveau":
+                volume_map[key]["traites"] += 1
+
     evolution_satisfaction: list[EvolutionPoint] = []
     evolution_volume: list[EvolutionPoint] = []
 
@@ -736,7 +752,14 @@ def get_statistics_cx(
             negatifs=data["negatifs"],
         )
         evolution_satisfaction.append(pt)
-        evolution_volume.append(pt)
+
+    for k, data in sorted(volume_map.items()):
+        evolution_volume.append(EvolutionPoint(
+            date=k,
+            label=data["label"],
+            feedbacks=data["feedbacks"],
+            traites=data["traites"],
+        ))
 
     # 5. Répartition des sentiments
     sent_counts: dict[str, int] = {"positif": 0, "neutre": 0, "negatif": 0}
@@ -1089,6 +1112,15 @@ def get_statistics_agency(
         "negatifs": 0,
         "label": "",
     })
+    # Graphique de volume (evolution_volume) : uniquement les feedbacks critiques/négatifs
+    # (sentiment IA négatif OU criticité élevée/critique — même définition que
+    # generer_recommandations, services/ai/recommandations.py). "feedbacks" = reçus ce
+    # jour-là parmi ceux-ci ; "traites" = parmi eux, ceux déjà sortis du statut "nouveau"
+    # (donc ouverts par un Agency Manager). Un feedback sans analyse IA est exclu du
+    # comptage plutôt que compté par défaut. Compteur séparé de timeline_map, qui reste
+    # inchangé pour evolution_satisfaction (tous les feedbacks, définition "traites"
+    # existante).
+    volume_map: dict[str, dict] = defaultdict(lambda: {"feedbacks": 0, "traites": 0, "label": ""})
 
     for f in fbs_current:
         dt = f.date_soumission
@@ -1118,6 +1150,13 @@ def get_statistics_agency(
         else:
             timeline_map[key]["negatifs"] += 1
 
+        analyse = analyses_cur_map.get(f.id)
+        if analyse and (analyse.sentiment == SentimentType.NEGATIF or analyse.criticite in (CriticiteType.ELEVEE, CriticiteType.CRITIQUE)):
+            volume_map[key]["feedbacks"] += 1
+            volume_map[key]["label"] = label
+            if f.statut_traitement != "nouveau":
+                volume_map[key]["traites"] += 1
+
     evolution_satisfaction: list[EvolutionPoint] = []
     evolution_volume: list[EvolutionPoint] = []
 
@@ -1135,7 +1174,14 @@ def get_statistics_agency(
             negatifs=data["negatifs"],
         )
         evolution_satisfaction.append(pt)
-        evolution_volume.append(pt)
+
+    for k, data in sorted(volume_map.items()):
+        evolution_volume.append(EvolutionPoint(
+            date=k,
+            label=data["label"],
+            feedbacks=data["feedbacks"],
+            traites=data["traites"],
+        ))
 
     # Sentiments
     sent_counts: dict[str, int] = {"positif": 0, "neutre": 0, "negatif": 0}

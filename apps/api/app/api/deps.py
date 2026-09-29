@@ -123,6 +123,19 @@ def get_cx_manager(
     return current_user
 
 
+def get_agency_manager(
+    current_user: Utilisateur = Depends(get_current_active_user),
+) -> Utilisateur:
+    """Exige le rôle Agency Manager uniquement (CX Manager et Admin exclus). Seul l'Agency
+    Manager prend en charge un feedback jusqu'à sa résolution ; le CX Manager consulte."""
+    if current_user.role != UserRole.AGENCY_MANAGER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Accès réservé exclusivement aux Agency Managers",
+        )
+    return current_user
+
+
 MESSAGE_ADMIN_EXCLU = (
     "Accès interdit : l'Administrateur n'a aucun accès aux données clients "
     "(feedbacks, suggestions, alertes, recommandations, analyses) — uniquement à la vue structurelle."
