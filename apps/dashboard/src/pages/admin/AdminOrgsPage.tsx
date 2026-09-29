@@ -248,12 +248,9 @@ export default function AdminOrgsPage() {
                 />
 
                 <label
+                  className="btn-secondary"
                   style={{
-                    background: '#F1F5F2',
-                    border: '1px solid #E2E8F0',
-                    color: '#02302D',
                     padding: '10px 16px',
-                    borderRadius: '12px',
                     cursor: 'pointer',
                     fontWeight: 700,
                     fontSize: '0.84rem',
@@ -436,11 +433,8 @@ export default function AdminOrgsPage() {
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <button
                       onClick={() => openEdit(o)}
+                      className="btn-secondary"
                       style={{
-                        background: '#FFFFFF',
-                        color: '#02302D',
-                        border: '1px solid #E2E8F0',
-                        borderRadius: '8px',
                         padding: '6px 12px',
                         cursor: 'pointer',
                         fontSize: '0.8rem',

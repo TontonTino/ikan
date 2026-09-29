@@ -9,7 +9,8 @@ import type {
   ChangementPlanHistoriqueItem,
 } from '../../types';
 import PageHeader from '../../components/ui/PageHeader';
-import { AlertTriangleIcon, ClockIcon, XCloseIcon, CheckCircleIcon } from '../../components/common/Icons';
+import EmptyState from '../../components/ui/EmptyState';
+import { AlertTriangleIcon, ClockIcon, XCloseIcon } from '../../components/common/Icons';
 
 const SOURCE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   stripe: { label: 'Stripe', color: '#3C7730', bg: '#EAF5EC' },
@@ -83,7 +84,7 @@ function ModaleChangerForfait({
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
           <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#02302D' }}>Changer le forfait</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}>
+          <button onClick={onClose} aria-label="Fermer" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}>
             <XCloseIcon size={18} color="#94A3B8" />
           </button>
         </div>
@@ -171,7 +172,7 @@ function ModaleHistorique({ org, onClose }: { org: Organisation; onClose: () => 
             <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#02302D' }}>Historique du forfait</h3>
             <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#64748B' }}>{org.nom}</p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}>
+          <button onClick={onClose} aria-label="Fermer" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}>
             <XCloseIcon size={18} color="#94A3B8" />
           </button>
         </div>
@@ -179,7 +180,7 @@ function ModaleHistorique({ org, onClose }: { org: Organisation; onClose: () => 
         {historique === null ? (
           <div style={{ color: '#94A3B8', fontSize: '0.84rem' }}>Chargement…</div>
         ) : historique.length === 0 ? (
-          <div style={{ color: '#94A3B8', fontSize: '0.84rem' }}>Aucun changement de forfait enregistré.</div>
+          <EmptyState title="Aucun changement de forfait" message="Aucun changement de forfait enregistré." />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {historique.map((h) => {
@@ -287,9 +288,12 @@ export default function AdminFacturationPage() {
         </p>
 
         {!paiementsEchoues || paiementsEchoues.length === 0 ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#3C7730', fontSize: '0.84rem', fontWeight: 600 }}>
-            <CheckCircleIcon size={16} color="#3C7730" />
-            Aucun paiement en échec actuellement.
+          <div className="saas-card saas-card--success" style={{ padding: 0 }}>
+            <EmptyState
+              title="Aucun paiement en échec"
+              message="Aucun paiement en échec actuellement."
+              illustration="no-alert"
+            />
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -351,13 +355,15 @@ export default function AdminFacturationPage() {
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
                       onClick={() => setOrgPourChangement(o)}
-                      style={{ background: '#FFFFFF', color: '#02302D', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'inherit' }}
+                      className="btn-primary"
+                      style={{ padding: '6px 12px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'inherit' }}
                     >
                       Changer le forfait
                     </button>
                     <button
                       onClick={() => setOrgPourHistorique(o)}
-                      style={{ background: '#FFFFFF', color: '#475569', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'inherit' }}
+                      className="btn-secondary"
+                      style={{ padding: '6px 12px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'inherit' }}
                     >
                       Historique
                     </button>
