@@ -21,15 +21,15 @@ if db_url.startswith("postgres://"):
 # "*.pooler.supabase.com") est une base de développement partagée, jamais la prod.
 # La confondre avec la prod a déjà eu lieu dans l'autre sens (create_all() exécuté
 # dessus par erreur, voir app/main.py) — ce garde empêche qu'un futur
-# ENVIRONMENT=production réglé par erreur EN LOCAL, toujours pointé sur cette même
+# APP_ENV=production réglé par erreur EN LOCAL, toujours pointé sur cette même
 # base, active des comportements de prod (Stripe live, etc.) sur une base partagée.
 _HOTE_DB = (urlparse(db_url).hostname or "").lower()
-if settings.ENVIRONMENT != "development" and ("supabase.co" in _HOTE_DB or "supabase.com" in _HOTE_DB):
+if settings.APP_ENV != "development" and ("supabase.co" in _HOTE_DB or "supabase.com" in _HOTE_DB):
     raise RuntimeError(
-        f"Configuration dangereuse : ENVIRONMENT='{settings.ENVIRONMENT}' (différent de "
+        f"Configuration dangereuse : APP_ENV='{settings.APP_ENV}' (différent de "
         f"'development') mais DATABASE_URL pointe vers un hôte Supabase connu ({_HOTE_DB}). "
         "Cette base est une base de développement partagée, jamais la production. "
-        "Vérifiez DATABASE_URL et ENVIRONMENT avant de redémarrer."
+        "Vérifiez DATABASE_URL et APP_ENV avant de redémarrer."
     )
 
 # sslmode=require systématique sur toutes les bases distantes (Render PostgreSQL)

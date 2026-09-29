@@ -46,14 +46,14 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.on_event("startup")
 def on_startup():
     """Création automatique des tables (développement uniquement), migration DDL et auto-seeding."""
-    if settings.ENVIRONMENT == "development":
-        print(f"[STARTUP] environnement='{settings.ENVIRONMENT}' — Base.metadata.create_all() exécuté.")
+    if settings.APP_ENV == "development":
+        print(f"[STARTUP] APP_ENV='{settings.APP_ENV}' — Base.metadata.create_all() exécuté.")
         try:
             Base.metadata.create_all(bind=engine)
         except Exception as e:
             print(f"[STARTUP DB MIGRATION LOG] {e}")
     else:
-        print(f"[STARTUP] environnement='{settings.ENVIRONMENT}' — Base.metadata.create_all() IGNORÉ "
+        print(f"[STARTUP] APP_ENV='{settings.APP_ENV}' — Base.metadata.create_all() IGNORÉ "
               f"(le schéma ne vient que de `alembic upgrade head`).")
 
     try:

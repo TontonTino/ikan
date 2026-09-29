@@ -29,11 +29,11 @@ docker stop ikan-schema-check
 
 ## Variables d'environnement liées au schéma de la base
 
-- `ENVIRONMENT` (`development` par défaut) : contrôle si `app/main.py` exécute
-  `Base.metadata.create_all()` au démarrage (uniquement en `development` — en production, le
-  schéma ne vient que de `alembic upgrade head`, déjà dans la commande de démarrage Render) et
-  si `app/db/session.py` refuse de démarrer lorsque `DATABASE_URL` pointe vers un hôte Supabase
-  connu (`*.supabase.co` ou `*.pooler.supabase.com`) alors que `ENVIRONMENT != "development"` —
-  ces hôtes sont une base de développement partagée, jamais la production.
-- Distincte d'`APP_ENV` (préexistante, utilisée ailleurs) : Render doit définir **les deux**
-  (voir `render.yaml`).
+- `APP_ENV` (`development` par défaut ; déjà utilisée pour `COOKIE_SECURE` dans `auth.py`,
+  réglée à `production` sur Render — voir `render.yaml`) contrôle aussi si `app/main.py`
+  exécute `Base.metadata.create_all()` au démarrage (uniquement en `development` — en
+  production, le schéma ne vient que de `alembic upgrade head`, déjà dans la commande de
+  démarrage Render) et si `app/db/session.py` refuse de démarrer lorsque `DATABASE_URL`
+  pointe vers un hôte Supabase connu (`*.supabase.co` ou `*.pooler.supabase.com`) alors que
+  `APP_ENV != "development"` — ces hôtes sont une base de développement partagée, jamais
+  la production.

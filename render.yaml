@@ -25,11 +25,6 @@ services:
     envVars:
       - key: APP_ENV
         value: production
-      # Distinct d'APP_ENV : contrôle Base.metadata.create_all() au démarrage (app/main.py)
-      # et le garde-fou sur l'hôte de la base (app/db/session.py). Sans cette variable ici,
-      # ENVIRONMENT resterait à sa valeur par défaut "development" en production.
-      - key: ENVIRONMENT
-        value: production
       - key: DEBUG
         value: "false"
       - key: DATABASE_URL
