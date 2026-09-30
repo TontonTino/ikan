@@ -76,18 +76,22 @@ export default function PageHeader({
     >
       {/* Left side: Date + Title + Subtitle */}
       <div>
-        <div
-          style={{
-            fontSize: '0.74rem',
-            fontWeight: 800,
-            color: '#6B8E6A',
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            marginBottom: '4px',
-          }}
-        >
-          {displayDate}
-        </div>
+        {/* Avec greetingUser, la date figure déjà dans la pastille à côté des actions
+            (showDateBesideActions) : cet eyebrow ferait doublon, donc masqué dans ce cas. */}
+        {!greetingUser && (
+          <div
+            style={{
+              fontSize: '0.74rem',
+              fontWeight: 800,
+              color: '#6B8E6A',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              marginBottom: '4px',
+            }}
+          >
+            {displayDate}
+          </div>
+        )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <h1
