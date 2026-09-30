@@ -125,6 +125,9 @@ export interface Feedback {
   qr_code_id: string;
   agence_id?: string;
   agence_nom?: string;
+  categorie_id?: string;
+  categorie_nom?: string;
+  issue_id?: string;
   note: number;
   commentaire?: string;
   date_soumission: string;

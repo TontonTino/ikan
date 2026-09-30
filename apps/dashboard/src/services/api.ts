@@ -205,6 +205,12 @@ export const issuesApi = {
     api.get<import('../types').Issue[]>('/issues/', { params }),
   get: (issueId: string) =>
     api.get<import('../types').IssueDetail>(`/issues/${issueId}`),
+  create: (data: { titre: string; description?: string; agence_id: string; categorie_id?: string; severite?: string; feedback_ids?: string[] }) =>
+    api.post<import('../types').Issue>('/issues/', data),
+  rattacherFeedback: (issueId: string, feedbackId: string) =>
+    api.patch<import('../types').Issue>(`/issues/${issueId}/rattacher-feedback/${feedbackId}`),
+  detacherFeedback: (issueId: string, feedbackId: string) =>
+    api.patch<import('../types').Issue>(`/issues/${issueId}/detacher-feedback/${feedbackId}`),
   terminerAction: (issueId: string, actionId: string) =>
     api.post<import('../types').ActionCorrective>(`/issues/${issueId}/actions/${actionId}/terminer`),
   verifier: (issueId: string) =>

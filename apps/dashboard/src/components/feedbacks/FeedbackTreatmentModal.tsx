@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import type { Feedback, StatutTraitement, HistoriqueFeedback, ReponseClient, UserRole } from '../../types';
-import { feedbacksApi } from '../../services/api';
+import type { Feedback, StatutTraitement, HistoriqueFeedback, ReponseClient, UserRole, Issue, IssueStatut, Categorie, CriticiteType } from '../../types';
+import { feedbacksApi, issuesApi, agencesApi } from '../../services/api';
+import EmptyState from '../ui/EmptyState';
 import {
   AlertTriangleIcon,
   ClockIcon,
@@ -15,7 +16,23 @@ import {
   ThumbsDownIcon,
   SendIcon,
   RefreshIcon,
+  TargetIcon,
 } from '../common/Icons';
+
+const ISSUE_STATUT_LABELS: Record<IssueStatut, string> = {
+  ouverte: 'Ouverte',
+  action_en_cours: 'Action en cours',
+  resolue: 'Résolue',
+  verifiee: 'Vérifiée',
+  reouverte: 'Réouverte',
+};
+
+const ISSUE_SEVERITE_LABELS: Record<CriticiteType, string> = {
+  faible: 'Faible',
+  moyenne: 'Moyenne',
+  elevee: 'Élevée',
+  critique: 'Critique',
+};
 
 interface FeedbackTreatmentModalProps {
   feedback: Feedback | null;
@@ -75,6 +92,21 @@ export default function FeedbackTreatmentModal({
   const [loadingAction, setLoadingAction] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // ── Issue liée (créer / rattacher / détacher) ──────────
+  const [issueLiee, setIssueLiee] = useState<Issue | null>(null);
+  const [issueLieeLoading, setIssueLieeLoading] = useState(false);
+  const [issueMode, setIssueMode] = useState<'choix' | 'creer' | 'rattacher'>('choix');
+
+  const [categoriesAgence, setCategoriesAgence] = useState<Categorie[]>([]);
+  const [creerTitre, setCreerTitre] = useState('');
+  const [creerDescription, setCreerDescription] = useState('');
+  const [creerSeverite, setCreerSeverite] = useState<CriticiteType>('faible');
+  const [creerCategorieId, setCreerCategorieId] = useState('');
+
+  const [issuesExistantes, setIssuesExistantes] = useState<Issue[]>([]);
+  const [issuesExistantesLoading, setIssuesExistantesLoading] = useState(false);
+  const [issueSelectionneeId, setIssueSelectionneeId] = useState<string | null>(null);
+
   const isAgencyManager = currentUserRole === 'agency_manager';
   const isCXManager = currentUserRole === 'cx_manager' || currentUserRole === 'admin';
 
@@ -132,6 +164,28 @@ export default function FeedbackTreatmentModal({
     setReponseInput('');
     setShowReponseForm(false);
     setActiveTab('traitement');
+
+    // Reset Issue liée
+    setIssueMode('choix');
+    setCreerTitre('');
+    setCreerDescription('');
+    setCreerSeverite(fb.analyse_ia?.criticite || 'faible');
+    setCreerCategorieId(fb.categorie_id || '');
+    setIssuesExistantes([]);
+    setIssueSelectionneeId(null);
+    setIssueLiee(null);
+    if (fb.issue_id) {
+      setIssueLieeLoading(true);
+      issuesApi
+        .get(fb.issue_id)
+        .then((res) => {
+          if (isMounted) setIssueLiee(res.data);
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (isMounted) setIssueLieeLoading(false);
+        });
+    }
 
     return () => {
       isMounted = false;
@@ -261,6 +315,104 @@ export default function FeedbackTreatmentModal({
       showToast('Feedback rouvert : Statut passé à "En traitement"');
     } catch {
       showToast('Erreur lors de la réouverture');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  // ── Issue liée ────────────────────────────────────────────────────────────
+
+  // Recharge le feedback complet (pour que issue_id soit à jour) sans fermer la modale.
+  const refreshFeedback = useCallback(async () => {
+    try {
+      const res = await feedbacksApi.get(feedback.id);
+      onUpdateFeedback(res.data);
+    } catch {
+      // Le feedback affiché reste celui d'avant si le refetch échoue ; l'action elle-même
+      // (créer/rattacher/détacher) a déjà réussi ou échoué indépendamment de ce refresh.
+    }
+  }, [feedback.id, onUpdateFeedback]);
+
+  const ouvrirCreationIssue = async () => {
+    setIssueMode('creer');
+    if (categoriesAgence.length === 0 && feedback.agence_id) {
+      try {
+        const res = await agencesApi.listCategories(feedback.agence_id);
+        setCategoriesAgence(res.data || []);
+      } catch {
+        setCategoriesAgence([]);
+      }
+    }
+  };
+
+  const ouvrirRattachement = async () => {
+    setIssueMode('rattacher');
+    if (!feedback.agence_id) return;
+    setIssuesExistantesLoading(true);
+    try {
+      const res = await issuesApi.list({ agence_id: feedback.agence_id });
+      // Les Issues déjà vérifiées ne sont pas proposées ici : y rattacher un feedback les
+      // rouvre automatiquement côté backend (comportement voulu, mais pas le premier choix).
+      setIssuesExistantes((res.data || []).filter((i) => i.statut !== 'verifiee'));
+    } catch {
+      setIssuesExistantes([]);
+    } finally {
+      setIssuesExistantesLoading(false);
+    }
+  };
+
+  const handleCreerIssue = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!creerTitre.trim() || !feedback.agence_id) return;
+    setLoadingAction(true);
+    try {
+      const res = await issuesApi.create({
+        titre: creerTitre.trim(),
+        description: creerDescription.trim() || undefined,
+        agence_id: feedback.agence_id,
+        categorie_id: creerCategorieId || undefined,
+        severite: creerSeverite,
+        feedback_ids: [feedback.id],
+      });
+      setIssueLiee(res.data);
+      setIssueMode('choix');
+      await refreshFeedback();
+      showToast('Issue créée et feedback rattaché');
+    } catch {
+      showToast("Erreur lors de la création de l'Issue");
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  const handleRattacherIssue = async () => {
+    if (!issueSelectionneeId) return;
+    setLoadingAction(true);
+    try {
+      const res = await issuesApi.rattacherFeedback(issueSelectionneeId, feedback.id);
+      setIssueLiee(res.data);
+      setIssueMode('choix');
+      await refreshFeedback();
+      showToast('Feedback rattaché à l’Issue');
+    } catch {
+      showToast('Erreur lors du rattachement');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  const handleDetacherIssue = async () => {
+    if (!feedback.issue_id) return;
+    if (!window.confirm(`Détacher ce feedback de l'Issue "${issueLiee?.titre || ''}" ?`)) return;
+    setLoadingAction(true);
+    try {
+      await issuesApi.detacherFeedback(feedback.issue_id, feedback.id);
+      setIssueLiee(null);
+      setIssueMode('choix');
+      await refreshFeedback();
+      showToast('Feedback détaché de l’Issue');
+    } catch {
+      showToast('Erreur lors du détachement');
     } finally {
       setLoadingAction(false);
     }
@@ -922,6 +1074,185 @@ export default function FeedbackTreatmentModal({
                   </div>
                 </div>
               )}
+
+              {/* 5bis. ISSUE LIÉE (CX Manager & Agency Manager) — créer, rattacher ou détacher */}
+              <div
+                style={{
+                  background: '#FFFFFF',
+                  borderRadius: '18px',
+                  padding: '18px 20px',
+                  border: '1px solid #E2E8F0',
+                }}
+              >
+                <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#02302D', marginBottom: '10px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <TargetIcon size={15} color="#02302D" />
+                  <span>Issue liée</span>
+                </div>
+
+                {issueLieeLoading ? (
+                  <div style={{ fontSize: '0.84rem', color: '#64748B' }}>Chargement...</div>
+                ) : feedback.issue_id ? (
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: '12px',
+                      background: '#F8FAFC',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '12px',
+                      padding: '12px 14px',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <div style={{ fontSize: '0.86rem', color: '#02302D' }}>
+                      Lié à l'Issue : <strong>{issueLiee?.titre || '…'}</strong>
+                      {issueLiee && (
+                        <span style={{ marginLeft: '8px', fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
+                          ({ISSUE_STATUT_LABELS[issueLiee.statut]} · {ISSUE_SEVERITE_LABELS[issueLiee.severite]})
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleDetacherIssue}
+                      disabled={loadingAction}
+                      style={{ background: '#FFFFFF', color: '#DC2626', border: '1px solid #FEE2E2', borderRadius: '10px', padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Détacher
+                    </button>
+                  </div>
+                ) : issueMode === 'choix' ? (
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={ouvrirCreationIssue}
+                      className="btn-primary"
+                      style={{ padding: '8px 14px', fontSize: '0.8rem', borderRadius: '10px' }}
+                    >
+                      <PlusIcon size={13} />
+                      <span>Créer une nouvelle Issue</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={ouvrirRattachement}
+                      className="btn-secondary"
+                      style={{ padding: '8px 14px', fontSize: '0.8rem', borderRadius: '10px' }}
+                    >
+                      Rattacher à une Issue existante
+                    </button>
+                  </div>
+                ) : issueMode === 'creer' ? (
+                  <form onSubmit={handleCreerIssue} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <input
+                      type="text"
+                      value={creerTitre}
+                      onChange={(e) => setCreerTitre(e.target.value)}
+                      placeholder="Titre de l'Issue"
+                      required
+                      style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.86rem', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                    />
+                    <textarea
+                      rows={2}
+                      value={creerDescription}
+                      onChange={(e) => setCreerDescription(e.target.value)}
+                      placeholder="Description (optionnelle)"
+                      style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.86rem', fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box' }}
+                    />
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      <select
+                        value={creerSeverite}
+                        onChange={(e) => setCreerSeverite(e.target.value as CriticiteType)}
+                        style={{ padding: '8px 10px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.82rem', fontFamily: 'inherit' }}
+                      >
+                        {(Object.keys(ISSUE_SEVERITE_LABELS) as CriticiteType[]).map((s) => (
+                          <option key={s} value={s}>{ISSUE_SEVERITE_LABELS[s]}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={creerCategorieId}
+                        onChange={(e) => setCreerCategorieId(e.target.value)}
+                        style={{ padding: '8px 10px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.82rem', fontFamily: 'inherit', minWidth: '160px' }}
+                      >
+                        <option value="">Sans catégorie</option>
+                        {categoriesAgence.map((c) => (
+                          <option key={c.id} value={c.id}>{c.nom}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                      <button type="button" onClick={() => setIssueMode('choix')} className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.78rem', borderRadius: '8px' }}>
+                        Annuler
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={loadingAction || !creerTitre.trim()}
+                        className="btn-primary"
+                        style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '10px', opacity: creerTitre.trim() ? 1 : 0.5, cursor: creerTitre.trim() ? 'pointer' : 'not-allowed' }}
+                      >
+                        {loadingAction ? 'Création...' : 'Créer l’Issue'}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {issuesExistantesLoading ? (
+                      <div style={{ fontSize: '0.84rem', color: '#64748B' }}>Chargement des Issues...</div>
+                    ) : issuesExistantes.length === 0 ? (
+                      <EmptyState
+                        illustration="no-data"
+                        title="Aucune Issue disponible"
+                        message="Aucune Issue ouverte n'existe pour cette agence (les Issues déjà vérifiées ne sont pas proposées ici). Créez-en une nouvelle."
+                      />
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto' }}>
+                        {issuesExistantes.map((i) => (
+                          <label
+                            key={i.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px',
+                              padding: '10px 12px',
+                              borderRadius: '10px',
+                              border: issueSelectionneeId === i.id ? '2px solid #3C7730' : '1px solid #E2E8F0',
+                              cursor: 'pointer',
+                              background: issueSelectionneeId === i.id ? '#EBF5E9' : '#FFFFFF',
+                            }}
+                          >
+                            <input
+                              type="radio"
+                              name="issue-existante"
+                              checked={issueSelectionneeId === i.id}
+                              onChange={() => setIssueSelectionneeId(i.id)}
+                            />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#02302D' }}>{i.titre}</div>
+                              <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
+                                {ISSUE_STATUT_LABELS[i.statut]} · {ISSUE_SEVERITE_LABELS[i.severite]}
+                              </div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                      <button type="button" onClick={() => setIssueMode('choix')} className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.78rem', borderRadius: '8px' }}>
+                        Annuler
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRattacherIssue}
+                        disabled={loadingAction || !issueSelectionneeId}
+                        className="btn-primary"
+                        style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '10px', opacity: issueSelectionneeId ? 1 : 0.5, cursor: issueSelectionneeId ? 'pointer' : 'not-allowed' }}
+                      >
+                        {loadingAction ? 'Rattachement...' : 'Rattacher à cette Issue'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* 6. Commentaires Internes (Main Courante) */}
               <div
