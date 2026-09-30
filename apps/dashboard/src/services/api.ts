@@ -199,6 +199,24 @@ export const veilleApi = {
     api.get<import('../types').VeilleSyntheseResponse>('/veille/synthese', { params }),
 };
 
+// ── Issues ────────────────────────────────────────────
+export const issuesApi = {
+  list: (params?: { statut?: string; severite?: string; agence_id?: string; categorie_id?: string }) =>
+    api.get<import('../types').Issue[]>('/issues/', { params }),
+  get: (issueId: string) =>
+    api.get<import('../types').IssueDetail>(`/issues/${issueId}`),
+  terminerAction: (issueId: string, actionId: string) =>
+    api.post<import('../types').ActionCorrective>(`/issues/${issueId}/actions/${actionId}/terminer`),
+  verifier: (issueId: string) =>
+    api.post<import('../types').Issue>(`/issues/${issueId}/verifier`),
+};
+
+// ── KPI ───────────────────────────────────────────────
+export const kpisApi = {
+  list: (params?: { jours?: number; agence_id?: string }) =>
+    api.get<import('../types').KPICollectionResponse>('/kpis/', { params }),
+};
+
 // ── Système (Settings & Permissions) ──────────────────
 export const systemApi = {
   getSettings: () => api.get('/system/settings'),

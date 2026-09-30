@@ -566,3 +566,65 @@ export interface VeilleSyntheseResponse {
   par_sentiment: Record<SentimentType, VeilleSentimentBucket>;
   serie_journaliere: VeilleSyntheseJour[];
 }
+
+// ── Issues (app/schemas/issue.py) ──────────────────────
+export type IssueStatut = 'ouverte' | 'action_en_cours' | 'resolue' | 'verifiee' | 'reouverte';
+
+export interface Issue {
+  id: string;
+  organisation_id: string;
+  agence_id: string;
+  agence_nom?: string;
+  titre: string;
+  description?: string;
+  statut: IssueStatut;
+  severite: CriticiteType;
+  categorie_id?: string;
+  categorie_nom?: string;
+  theme_principal?: string;
+  necessite_action: boolean;
+  premiere_detection: string;
+  derniere_detection?: string;
+  date_resolution?: string;
+  date_verification?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ActionCorrective {
+  id: string;
+  issue_id: string;
+  titre: string;
+  description?: string;
+  statut: string;
+  responsable_id?: string;
+  echeance?: string;
+  date_completion?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IssueDetail extends Issue {
+  feedbacks: Feedback[];
+  actions: ActionCorrective[];
+}
+
+// ── KPI (app/schemas/kpi.py) ────────────────────────────
+export interface KPIResult {
+  code: string;
+  label: string;
+  unit: 'percent' | 'count' | 'hours';
+  status: 'ok' | 'no_data';
+  value: number | null;
+  numerator: number | null;
+  denominator: number | null;
+  verified_count: number | null;
+  requiring_action_count: number | null;
+}
+
+export interface KPICollectionResponse {
+  organisation_id: string;
+  agence_id: string | null;
+  jours: number;
+  kpis: KPIResult[];
+}

@@ -1,14 +1,19 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import { alertesApi, suggestionsApi, recommandationsApi, agencesApi, feedbacksApi } from '../../services/api';
-import type { Alerte, AlerteFeedback, Suggestion, IdeaStatus, RecommandationOrg, Agence, Feedback } from '../../types';
+import { alertesApi, suggestionsApi, recommandationsApi, agencesApi, feedbacksApi, issuesApi, kpisApi } from '../../services/api';
+import type { Alerte, AlerteFeedback, Suggestion, IdeaStatus, RecommandationOrg, Agence, Feedback, Issue, IssueStatut, IssueDetail, CriticiteType, KPIResult } from '../../types';
 import TabsNavigation, { TabItem } from '../../components/ui/TabsNavigation';
 import RecommandationCard from '../../components/stats/RecommandationCard';
 import AgenceFilterSelect from '../../components/stats/AgenceFilterSelect';
+import PeriodSelector from '../../components/stats/PeriodSelector';
+import { StatsErrorState } from '../../components/stats/StatsStates';
 import EmptyState from '../../components/ui/EmptyState';
 import SkeletonBlock from '../../components/ui/SkeletonBlock';
 import SectionHeading from '../../components/ui/SectionHeading';
+import KpiCard from '../../components/ui/KpiCard';
+import Badge from '../../components/ui/Badge';
+import IssueDetailModal from '../../components/issues/IssueDetailModal';
 import {
   BellIcon,
   LightningIcon,
@@ -17,7 +22,81 @@ import {
   CheckCircleIcon,
   ClockIcon,
   TargetIcon,
+  ActivityIcon,
+  MessageSquareIcon,
+  ShieldCheckIcon,
+  SmileIcon,
+  ThumbsDownIcon,
 } from '../../components/common/Icons';
+
+const ISSUE_STATUT_LABELS: Record<IssueStatut, string> = {
+  ouverte: 'Ouverte',
+  action_en_cours: 'Action en cours',
+  resolue: 'Résolue',
+  verifiee: 'Vérifiée',
+  reouverte: 'Réouverte',
+};
+
+const ISSUE_STATUT_BADGE_VARIANT: Record<IssueStatut, 'info' | 'elevee' | 'positif'> = {
+  ouverte: 'info',
+  action_en_cours: 'elevee',
+  resolue: 'positif',
+  verifiee: 'positif',
+  reouverte: 'elevee',
+};
+
+const ISSUE_SEVERITE_LABELS: Record<CriticiteType, string> = {
+  faible: 'Faible',
+  moyenne: 'Moyenne',
+  elevee: 'Élevée',
+  critique: 'Critique',
+};
+
+function kpiIcon(code: string): React.ReactNode {
+  switch (code) {
+    case 'CSAT':
+      return <SmileIcon size={16} />;
+    case 'NEGATIVE_SENTIMENT_RATE':
+      return <ThumbsDownIcon size={16} />;
+    case 'FEEDBACK_VOLUME':
+      return <MessageSquareIcon size={16} />;
+    case 'ISSUE_VOLUME':
+      return <TargetIcon size={16} />;
+    case 'CRITICAL_ISSUE_RATE':
+      return <AlertTriangleIcon size={16} />;
+    case 'ISSUE_RESOLUTION_RATE':
+      return <CheckCircleIcon size={16} />;
+    case 'MEDIAN_RESOLUTION_TIME':
+      return <ClockIcon size={16} />;
+    case 'LOOP_CLOSURE_RATE':
+      return <ShieldCheckIcon size={16} />;
+    default:
+      return <ActivityIcon size={16} />;
+  }
+}
+
+// Règle stricte du backend (KPI Engine) : status "no_data" signifie qu'aucune donnée
+// exploitable n'existe pour la période — jamais un 0%/0 trompeur. Le frontend ne doit
+// pas la contredire en affichant un faux zéro.
+function formatKpiValue(k: KPIResult): string {
+  if (k.status === 'no_data' || k.value === null) return 'Pas de données';
+  if (k.unit === 'percent') return `${k.value}%`;
+  if (k.unit === 'hours') return `${k.value} h`;
+  return `${Math.round(k.value)}`;
+}
+
+// LOOP_CLOSURE_RATE : exigence produit — toujours afficher la base ("X vérifiées sur Y
+// nécessitant une action") sous le pourcentage, jamais le pourcentage seul, pour que le
+// KPI reste interprétable même quand peu d'Issues sont encore vérifiées.
+function formatKpiSubtitle(k: KPIResult, jours: number): string {
+  if (k.code === 'LOOP_CLOSURE_RATE') {
+    const verifiees = k.verified_count ?? 0;
+    const requises = k.requiring_action_count ?? 0;
+    return `${verifiees} vérifiée${verifiees !== 1 ? 's' : ''} sur ${requises} nécessitant une action`;
+  }
+  if (k.status === 'no_data') return 'sur cette période';
+  return `${jours} derniers jours`;
+}
 
 const STATUS_LABELS: Record<IdeaStatus, string> = {
   nouveau: 'Nouveau',
@@ -40,7 +119,7 @@ const NEXT_STATUS: Record<IdeaStatus, IdeaStatus | null> = {
   rejete: null,
 };
 
-type PilotageTab = 'alertes_actions' | 'idees' | 'actions_correctives';
+type PilotageTab = 'alertes_actions' | 'idees' | 'actions_correctives' | 'issues';
 
 /**
  * Page fusionnée "Pilotage" : regroupe Alertes & Actions (alertes réseau +
@@ -57,7 +136,10 @@ export default function PilotagePage() {
   // Un ancien lien "?tab=action" (onglet désormais fusionné) retombe simplement
   // sur l'onglet par défaut "Alertes & Recommandations".
   const initialTab: PilotageTab =
-    requestedTab === 'idees' ? 'idees' : requestedTab === 'actions' ? 'actions_correctives' : 'alertes_actions';
+    requestedTab === 'idees' ? 'idees' :
+    requestedTab === 'actions' ? 'actions_correctives' :
+    requestedTab === 'issues' ? 'issues' :
+    'alertes_actions';
   const [activeTab, setActiveTab] = useState<PilotageTab>(initialTab);
 
   // Alias URL court pour l'onglet "Actions correctives" (?tab=actions plutôt
@@ -66,6 +148,7 @@ export default function PilotagePage() {
     alertes_actions: null,
     idees: 'idees',
     actions_correctives: 'actions',
+    issues: 'issues',
   };
 
   const handleTabChange = (id: string) => {
@@ -246,6 +329,123 @@ export default function PilotagePage() {
 
   const actionsAffichees = actionsToggle === 'en_cours' ? actionsEnCours : actionsTerminees;
 
+  // ── Issues (KPI P0 + liste + détail) ──────────────────
+  const [issuesJours, setIssuesJours] = useState(30);
+  const [issuesAgenceId, setIssuesAgenceId] = useState<string | null>(null);
+
+  const [issuesKpis, setIssuesKpis] = useState<KPIResult[]>([]);
+  const [issuesKpisLoading, setIssuesKpisLoading] = useState(true);
+  const [issuesKpisError, setIssuesKpisError] = useState(false);
+
+  const [issuesListRaw, setIssuesListRaw] = useState<Issue[]>([]);
+  const [issuesListLoading, setIssuesListLoading] = useState(true);
+  const [issuesListError, setIssuesListError] = useState(false);
+  const [issuesFirstLoadDone, setIssuesFirstLoadDone] = useState(false);
+
+  const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
+  const [issueDetail, setIssueDetail] = useState<IssueDetail | null>(null);
+  const [issueDetailLoading, setIssueDetailLoading] = useState(false);
+
+  const fetchIssuesKpis = useCallback(async () => {
+    setIssuesKpisLoading(true);
+    setIssuesKpisError(false);
+    try {
+      const params = issuesAgenceId ? { jours: issuesJours, agence_id: issuesAgenceId } : { jours: issuesJours };
+      const res = await kpisApi.list(params);
+      setIssuesKpis(res.data.kpis);
+    } catch {
+      setIssuesKpisError(true);
+    } finally {
+      setIssuesKpisLoading(false);
+    }
+  }, [issuesJours, issuesAgenceId]);
+
+  const fetchIssuesList = useCallback(async () => {
+    setIssuesListLoading(true);
+    setIssuesListError(false);
+    try {
+      const params = issuesAgenceId ? { agence_id: issuesAgenceId } : {};
+      const res = await issuesApi.list(params);
+      setIssuesListRaw(res.data || []);
+    } catch {
+      setIssuesListError(true);
+    } finally {
+      setIssuesListLoading(false);
+      setIssuesFirstLoadDone(true);
+    }
+  }, [issuesAgenceId]);
+
+  useEffect(() => {
+    fetchIssuesKpis();
+  }, [fetchIssuesKpis]);
+
+  useEffect(() => {
+    fetchIssuesList();
+  }, [fetchIssuesList]);
+
+  // GET /issues/ ne prend pas de paramètre de période (contrairement à GET /kpis) : le
+  // filtre "jours" de cet onglet s'applique donc côté client sur premiere_detection,
+  // pour rester cohérent avec la définition du KPI Engine (même champ de référence).
+  const issuesAffichees = useMemo(() => {
+    const seuil = Date.now() - issuesJours * 24 * 60 * 60 * 1000;
+    return issuesListRaw.filter((i) => new Date(i.premiere_detection).getTime() >= seuil);
+  }, [issuesListRaw, issuesJours]);
+
+  const issuesOuvertesCount = useMemo(
+    () => issuesAffichees.filter((i) => i.statut !== 'verifiee').length,
+    [issuesAffichees]
+  );
+
+  const openIssueDetail = useCallback(async (issueId: string) => {
+    setSelectedIssueId(issueId);
+    setIssueDetail(null);
+    setIssueDetailLoading(true);
+    try {
+      const res = await issuesApi.get(issueId);
+      setIssueDetail(res.data);
+    } catch {
+      showToast('Impossible de charger le détail de cette Issue');
+      setSelectedIssueId(null);
+    } finally {
+      setIssueDetailLoading(false);
+    }
+  }, []);
+
+  const closeIssueDetail = () => {
+    setSelectedIssueId(null);
+    setIssueDetail(null);
+  };
+
+  const rafraichirApresActionIssue = useCallback(async (issueId: string) => {
+    await Promise.all([fetchIssuesList(), fetchIssuesKpis()]);
+    try {
+      const res = await issuesApi.get(issueId);
+      setIssueDetail(res.data);
+    } catch {
+      // Le détail reste tel quel si le refetch échoue ; liste et KPI sont déjà à jour.
+    }
+  }, [fetchIssuesList, fetchIssuesKpis]);
+
+  const terminerActionIssue = async (issueId: string, actionId: string) => {
+    try {
+      await issuesApi.terminerAction(issueId, actionId);
+      showToast('Action marquée comme terminée');
+      await rafraichirApresActionIssue(issueId);
+    } catch {
+      showToast("Erreur lors de la clôture de l'action");
+    }
+  };
+
+  const verifierIssue = async (issueId: string) => {
+    try {
+      await issuesApi.verifier(issueId);
+      showToast('Issue marquée comme vérifiée');
+      await rafraichirApresActionIssue(issueId);
+    } catch {
+      showToast("Erreur lors de la vérification de l'Issue");
+    }
+  };
+
   const extraitCommentaire = (texte?: string, max = 140) => {
     if (!texte) return 'Aucun commentaire.';
     return texte.length > max ? `${texte.slice(0, max)}…` : texte;
@@ -274,6 +474,13 @@ export default function PilotagePage() {
       icon: <TargetIcon size={16} />,
       badge: actionsFirstLoadDone ? actionsEnCours.length : undefined,
       badgeColor: actionsEnCours.length > 0 ? 'red' : 'default',
+    },
+    {
+      id: 'issues',
+      label: 'Issues',
+      icon: <ActivityIcon size={16} />,
+      badge: issuesFirstLoadDone ? issuesOuvertesCount : undefined,
+      badgeColor: issuesOuvertesCount > 0 ? 'red' : 'default',
     },
   ];
 
@@ -632,6 +839,132 @@ export default function PilotagePage() {
                 </div>
               ))}
             </div>
+          )}
+        </div>
+      )}
+
+      {/* ── ONGLET ISSUES (KPI P0 + liste + détail — pas de création ici, voir rapport) ── */}
+      {activeTab === 'issues' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            <PeriodSelector
+              value={issuesJours}
+              onChange={setIssuesJours}
+              options={[
+                { label: '7 jours', jours: 7 },
+                { label: '30 jours', jours: 30 },
+                { label: '90 jours', jours: 90 },
+              ]}
+            />
+            {!isAgencyManager && (
+              <AgenceFilterSelect agences={agencesList} selectedId={issuesAgenceId} onChange={setIssuesAgenceId} />
+            )}
+          </div>
+
+          {/* KPI P0 */}
+          {issuesKpisError ? (
+            <StatsErrorState message="Impossible de charger les indicateurs KPI." onRetry={fetchIssuesKpis} />
+          ) : issuesKpisLoading ? (
+            <div aria-busy="true" aria-label="Chargement des indicateurs KPI" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(225px, 1fr))', gap: '12px' }}>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <SkeletonBlock key={i} height={90} radius="16px" />
+              ))}
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(225px, 1fr))', gap: '12px' }}>
+              {issuesKpis.map((k) => (
+                <KpiCard
+                  key={k.code}
+                  compact
+                  icon={kpiIcon(k.code)}
+                  label={k.label}
+                  value={formatKpiValue(k)}
+                  subtitle={formatKpiSubtitle(k, issuesJours)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Liste des Issues */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <SectionHeading>Issues ({issuesFirstLoadDone ? issuesAffichees.length : '…'})</SectionHeading>
+
+            {issuesListError ? (
+              <StatsErrorState message="Impossible de charger la liste des Issues." onRetry={fetchIssuesList} />
+            ) : issuesListLoading ? (
+              <div aria-busy="true" aria-label="Chargement des Issues" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {[0, 1, 2].map((i) => (
+                  <SkeletonBlock key={i} height={100} radius="var(--radius-2xl)" />
+                ))}
+              </div>
+            ) : issuesAffichees.length === 0 ? (
+              <div className="saas-card saas-card--success">
+                <EmptyState
+                  illustration="no-alert"
+                  title="Aucune Issue sur cette période"
+                  message="Aucun problème récurrent n'a été identifié pour les filtres sélectionnés."
+                />
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {issuesAffichees.map((issue) => (
+                  <div
+                    key={issue.id}
+                    onClick={() => openIssueDetail(issue.id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') openIssueDetail(issue.id);
+                    }}
+                    style={{
+                      background: '#FFFFFF',
+                      border: '1px solid #E8ECE6',
+                      borderRadius: '24px',
+                      padding: '20px 24px',
+                      boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
+                        {!isAgencyManager && issue.agence_nom && (
+                          <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#3C7730', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            {issue.agence_nom}
+                          </span>
+                        )}
+                        <h3 style={{ margin: 0, fontSize: '0.96rem', fontWeight: 800, color: '#02302D' }}>{issue.titre}</h3>
+                        {issue.description && (
+                          <p style={{ margin: 0, fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5 }}>
+                            {extraitCommentaire(issue.description, 160)}
+                          </p>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', flexShrink: 0 }}>
+                        <Badge label={ISSUE_SEVERITE_LABELS[issue.severite]} value={issue.severite} />
+                        <Badge label={ISSUE_STATUT_LABELS[issue.statut]} variant={ISSUE_STATUT_BADGE_VARIANT[issue.statut]} />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '0.78rem', color: '#64748B', fontWeight: 600, borderTop: '1px solid #F1F4EE', paddingTop: '10px' }}>
+                      <span>Détectée le {formatDate(issue.premiere_detection)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {selectedIssueId && (
+            <IssueDetailModal
+              issue={issueDetail}
+              loading={issueDetailLoading}
+              onClose={closeIssueDetail}
+              onTerminerAction={terminerActionIssue}
+              onVerifier={verifierIssue}
+            />
           )}
         </div>
       )}
