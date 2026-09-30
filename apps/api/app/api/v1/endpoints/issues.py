@@ -173,6 +173,7 @@ def lister_issues(
     severite: Optional[CriticiteType] = Query(None),
     agence_id: Optional[UUID] = Query(None),
     categorie_id: Optional[UUID] = Query(None),
+    tri: Optional[str] = Query("recent", description="'recent' (défaut, décroissant) ou 'ancien' (croissant) sur premiere_detection. Toute autre valeur ou absence : comportement par défaut, inchangé."),
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ):
@@ -193,7 +194,8 @@ def lister_issues(
     if categorie_id:
         query = query.filter(Issue.categorie_id == categorie_id)
 
-    issues = query.order_by(Issue.premiere_detection.desc()).all()
+    ordre = Issue.premiere_detection.asc() if tri == "ancien" else Issue.premiere_detection.desc()
+    issues = query.order_by(ordre).all()
     return [_format_issue_response(i) for i in issues]
 
 

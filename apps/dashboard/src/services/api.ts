@@ -203,7 +203,7 @@ export const veilleApi = {
 
 // ── Issues ────────────────────────────────────────────
 export const issuesApi = {
-  list: (params?: { statut?: string; severite?: string; agence_id?: string; categorie_id?: string }) =>
+  list: (params?: { statut?: string; severite?: string; agence_id?: string; categorie_id?: string; tri?: string }) =>
     api.get<import('../types').Issue[]>('/issues/', { params }),
   get: (issueId: string) =>
     api.get<import('../types').IssueDetail>(`/issues/${issueId}`),

@@ -9,6 +9,7 @@ réouverture (verifiee → reouverte) déclenchée par un rattachement de feedba
 nouvelle action, qui repasse ensuite immédiatement par action_en_cours.
 """
 import os
+from datetime import datetime, timedelta
 from types import SimpleNamespace
 from uuid import UUID, uuid4
 
@@ -437,3 +438,58 @@ def test_isolation_dans_les_deux_sens(ctx):
 def test_isolation_creation_issue_sur_agence_autre_organisation_refuse(ctx):
     r = ctx.call("cx_a", "post", "/issues/", json={"titre": "Intrusion", "agence_id": str(ctx.agence_b)})
     assert r.status_code == 403
+
+
+# ── Tri (vue Backlog) ─────────────────────────────────────────────────────────────
+
+def _creer_issue_avec_date(ctx, titre: str, premiere_detection: datetime) -> UUID:
+    """Insertion directe (contourne l'API) : premiere_detection est en server_default=now()
+    côté endpoint, avec une résolution trop grossière en SQLite (CURRENT_TIMESTAMP, à la
+    seconde) pour garantir un ordre distinct entre créations rapprochées dans un test."""
+    db = ctx.Session()
+    issue = Issue(
+        id=uuid4(), organisation_id=ctx.org_a, agence_id=ctx.agence_a, titre=titre,
+        statut="ouverte", severite=CriticiteType.FAIBLE, premiere_detection=premiere_detection,
+    )
+    db.add(issue)
+    db.commit()
+    issue_id = issue.id
+    db.close()
+    return issue_id
+
+
+def test_tri_ancien_ordre_croissant(ctx):
+    maintenant = datetime.now()
+    plus_ancienne = _creer_issue_avec_date(ctx, "Plus ancienne", maintenant - timedelta(days=14))
+    intermediaire = _creer_issue_avec_date(ctx, "Intermediaire", maintenant - timedelta(days=7))
+    plus_recente = _creer_issue_avec_date(ctx, "Plus recente", maintenant - timedelta(days=1))
+
+    r = ctx.call("cx_a", "get", "/issues/", params={"tri": "ancien"})
+    assert r.status_code == 200
+    ids_dans_l_ordre = [i["id"] for i in r.json()]
+    assert ids_dans_l_ordre == [str(plus_ancienne), str(intermediaire), str(plus_recente)]
+
+
+def test_tri_absent_reste_decroissant_comme_avant(ctx):
+    """Rétrocompatibilité explicite : un appel sans `tri` (comme tout code existant avant
+    cette tâche) garde le comportement actuel, décroissant sur premiere_detection."""
+    maintenant = datetime.now()
+    plus_ancienne = _creer_issue_avec_date(ctx, "Plus ancienne", maintenant - timedelta(days=14))
+    plus_recente = _creer_issue_avec_date(ctx, "Plus recente", maintenant - timedelta(days=1))
+
+    r = ctx.call("cx_a", "get", "/issues/")
+    assert r.status_code == 200
+    ids_dans_l_ordre = [i["id"] for i in r.json()]
+    assert ids_dans_l_ordre == [str(plus_recente), str(plus_ancienne)]
+
+
+def test_tri_valeur_inconnue_reste_decroissant(ctx):
+    """Toute autre valeur que 'ancien' retombe sur le comportement par défaut, inchangé."""
+    maintenant = datetime.now()
+    plus_ancienne = _creer_issue_avec_date(ctx, "Plus ancienne", maintenant - timedelta(days=14))
+    plus_recente = _creer_issue_avec_date(ctx, "Plus recente", maintenant - timedelta(days=1))
+
+    r = ctx.call("cx_a", "get", "/issues/", params={"tri": "n_importe_quoi"})
+    assert r.status_code == 200
+    ids_dans_l_ordre = [i["id"] for i in r.json()]
+    assert ids_dans_l_ordre == [str(plus_recente), str(plus_ancienne)]

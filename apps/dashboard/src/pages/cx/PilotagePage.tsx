@@ -282,6 +282,9 @@ export default function PilotagePage() {
   // ── Issues (KPI P0 + liste + détail) ──────────────────
   const [issuesJours, setIssuesJours] = useState(30);
   const [issuesAgenceId, setIssuesAgenceId] = useState<string | null>(null);
+  // Vue Backlog : tri par ancienneté (premiere_detection croissant) + Issues non closes
+  // uniquement. Désactivée par défaut, pour un comportement strictement inchangé.
+  const [backlogActif, setBacklogActif] = useState(false);
 
   // KpiCoreGrid gère son propre fetch ; ce compteur ne sert qu'à lui demander de
   // rafraîchir après une action qui modifie les Issues sous-jacentes (terminer/vérifier).
@@ -300,7 +303,9 @@ export default function PilotagePage() {
     setIssuesListLoading(true);
     setIssuesListError(false);
     try {
-      const params = issuesAgenceId ? { agence_id: issuesAgenceId } : {};
+      const params: { agence_id?: string; tri?: string } = {};
+      if (issuesAgenceId) params.agence_id = issuesAgenceId;
+      if (backlogActif) params.tri = 'ancien';
       const res = await issuesApi.list(params);
       setIssuesListRaw(res.data || []);
     } catch {
@@ -309,7 +314,7 @@ export default function PilotagePage() {
       setIssuesListLoading(false);
       setIssuesFirstLoadDone(true);
     }
-  }, [issuesAgenceId]);
+  }, [issuesAgenceId, backlogActif]);
 
   useEffect(() => {
     fetchIssuesList();
@@ -318,10 +323,30 @@ export default function PilotagePage() {
   // GET /issues/ ne prend pas de paramètre de période (contrairement à GET /kpis) : le
   // filtre "jours" de cet onglet s'applique donc côté client sur premiere_detection,
   // pour rester cohérent avec la définition du KPI Engine (même champ de référence).
+  // La vue Backlog ajoute un filtre statut "non closes" côté client également (le
+  // paramètre `statut` de l'API ne fait qu'une égalité exacte, pas une exclusion).
   const issuesAffichees = useMemo(() => {
     const seuil = Date.now() - issuesJours * 24 * 60 * 60 * 1000;
-    return issuesListRaw.filter((i) => new Date(i.premiere_detection).getTime() >= seuil);
-  }, [issuesListRaw, issuesJours]);
+    let resultat = issuesListRaw.filter((i) => new Date(i.premiere_detection).getTime() >= seuil);
+    if (backlogActif) {
+      resultat = resultat.filter((i) => i.statut !== 'resolue' && i.statut !== 'verifiee');
+    }
+    return resultat;
+  }, [issuesListRaw, issuesJours, backlogActif]);
+
+  const issuePlusAncienne = useMemo(() => {
+    if (!backlogActif || issuesAffichees.length === 0) return null;
+    return issuesAffichees.reduce((plusAncienne, i) =>
+      new Date(i.premiere_detection).getTime() < new Date(plusAncienne.premiere_detection).getTime() ? i : plusAncienne
+    );
+  }, [issuesAffichees, backlogActif]);
+
+  const ancienneteTexte = useMemo(() => {
+    if (!issuePlusAncienne) return null;
+    const jours = Math.floor((Date.now() - new Date(issuePlusAncienne.premiere_detection).getTime()) / (24 * 60 * 60 * 1000));
+    if (jours <= 0) return "la plus ancienne : aujourd'hui";
+    return `la plus ancienne : il y a ${jours} jour${jours > 1 ? 's' : ''}`;
+  }, [issuePlusAncienne]);
 
   const issuesOuvertesCount = useMemo(
     () => issuesAffichees.filter((i) => i.statut !== 'verifiee').length,
@@ -792,6 +817,29 @@ export default function PilotagePage() {
             {!isAgencyManager && (
               <AgenceFilterSelect agences={agencesList} selectedId={issuesAgenceId} onChange={setIssuesAgenceId} />
             )}
+            <button
+              type="button"
+              onClick={() => setBacklogActif((v) => !v)}
+              title="Trie les Issues non closes par ancienneté (les plus anciennes d'abord)"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 14px',
+                borderRadius: '9999px',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                fontFamily: 'inherit',
+                cursor: 'pointer',
+                border: backlogActif ? '1px solid #3C7730' : '1px solid #E2E8F0',
+                background: backlogActif ? '#EBF5E9' : '#FFFFFF',
+                color: backlogActif ? '#3C7730' : '#64748B',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+              }}
+            >
+              <ClockIcon size={14} color={backlogActif ? '#3C7730' : '#64748B'} />
+              Vue Backlog
+            </button>
           </div>
 
           {/* KPI P0 */}
@@ -799,7 +847,12 @@ export default function PilotagePage() {
 
           {/* Liste des Issues */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <SectionHeading>Issues ({issuesFirstLoadDone ? issuesAffichees.length : '…'})</SectionHeading>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', flexWrap: 'wrap' }}>
+              <SectionHeading>Issues ({issuesFirstLoadDone ? issuesAffichees.length : '…'})</SectionHeading>
+              {ancienneteTexte && (
+                <span style={{ fontSize: '0.78rem', color: '#B45309', fontWeight: 700 }}>{ancienneteTexte}</span>
+              )}
+            </div>
 
             {issuesListError ? (
               <StatsErrorState message="Impossible de charger la liste des Issues." onRetry={fetchIssuesList} />
