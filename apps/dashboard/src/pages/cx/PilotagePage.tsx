@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import { alertesApi, suggestionsApi, recommandationsApi, agencesApi, feedbacksApi, issuesApi, kpisApi } from '../../services/api';
-import type { Alerte, AlerteFeedback, Suggestion, IdeaStatus, RecommandationOrg, Agence, Feedback, Issue, IssueStatut, IssueDetail, CriticiteType, KPIResult } from '../../types';
+import { alertesApi, suggestionsApi, recommandationsApi, agencesApi, feedbacksApi, issuesApi } from '../../services/api';
+import type { Alerte, AlerteFeedback, Suggestion, IdeaStatus, RecommandationOrg, Agence, Feedback, Issue, IssueStatut, IssueDetail, CriticiteType } from '../../types';
 import TabsNavigation, { TabItem } from '../../components/ui/TabsNavigation';
 import RecommandationCard from '../../components/stats/RecommandationCard';
 import AgenceFilterSelect from '../../components/stats/AgenceFilterSelect';
@@ -11,9 +11,9 @@ import { StatsErrorState } from '../../components/stats/StatsStates';
 import EmptyState from '../../components/ui/EmptyState';
 import SkeletonBlock from '../../components/ui/SkeletonBlock';
 import SectionHeading from '../../components/ui/SectionHeading';
-import KpiCard from '../../components/ui/KpiCard';
 import Badge from '../../components/ui/Badge';
 import IssueDetailModal from '../../components/issues/IssueDetailModal';
+import KpiCoreGrid from '../../components/kpi/KpiCoreGrid';
 import {
   BellIcon,
   LightningIcon,
@@ -23,10 +23,6 @@ import {
   ClockIcon,
   TargetIcon,
   ActivityIcon,
-  MessageSquareIcon,
-  ShieldCheckIcon,
-  SmileIcon,
-  ThumbsDownIcon,
 } from '../../components/common/Icons';
 
 const ISSUE_STATUT_LABELS: Record<IssueStatut, string> = {
@@ -51,52 +47,6 @@ const ISSUE_SEVERITE_LABELS: Record<CriticiteType, string> = {
   elevee: 'Élevée',
   critique: 'Critique',
 };
-
-function kpiIcon(code: string): React.ReactNode {
-  switch (code) {
-    case 'CSAT':
-      return <SmileIcon size={16} />;
-    case 'NEGATIVE_SENTIMENT_RATE':
-      return <ThumbsDownIcon size={16} />;
-    case 'FEEDBACK_VOLUME':
-      return <MessageSquareIcon size={16} />;
-    case 'ISSUE_VOLUME':
-      return <TargetIcon size={16} />;
-    case 'CRITICAL_ISSUE_RATE':
-      return <AlertTriangleIcon size={16} />;
-    case 'ISSUE_RESOLUTION_RATE':
-      return <CheckCircleIcon size={16} />;
-    case 'MEDIAN_RESOLUTION_TIME':
-      return <ClockIcon size={16} />;
-    case 'LOOP_CLOSURE_RATE':
-      return <ShieldCheckIcon size={16} />;
-    default:
-      return <ActivityIcon size={16} />;
-  }
-}
-
-// Règle stricte du backend (KPI Engine) : status "no_data" signifie qu'aucune donnée
-// exploitable n'existe pour la période — jamais un 0%/0 trompeur. Le frontend ne doit
-// pas la contredire en affichant un faux zéro.
-function formatKpiValue(k: KPIResult): string {
-  if (k.status === 'no_data' || k.value === null) return 'Pas de données';
-  if (k.unit === 'percent') return `${k.value}%`;
-  if (k.unit === 'hours') return `${k.value} h`;
-  return `${Math.round(k.value)}`;
-}
-
-// LOOP_CLOSURE_RATE : exigence produit — toujours afficher la base ("X vérifiées sur Y
-// nécessitant une action") sous le pourcentage, jamais le pourcentage seul, pour que le
-// KPI reste interprétable même quand peu d'Issues sont encore vérifiées.
-function formatKpiSubtitle(k: KPIResult, jours: number): string {
-  if (k.code === 'LOOP_CLOSURE_RATE') {
-    const verifiees = k.verified_count ?? 0;
-    const requises = k.requiring_action_count ?? 0;
-    return `${verifiees} vérifiée${verifiees !== 1 ? 's' : ''} sur ${requises} nécessitant une action`;
-  }
-  if (k.status === 'no_data') return 'sur cette période';
-  return `${jours} derniers jours`;
-}
 
 const STATUS_LABELS: Record<IdeaStatus, string> = {
   nouveau: 'Nouveau',
@@ -333,9 +283,9 @@ export default function PilotagePage() {
   const [issuesJours, setIssuesJours] = useState(30);
   const [issuesAgenceId, setIssuesAgenceId] = useState<string | null>(null);
 
-  const [issuesKpis, setIssuesKpis] = useState<KPIResult[]>([]);
-  const [issuesKpisLoading, setIssuesKpisLoading] = useState(true);
-  const [issuesKpisError, setIssuesKpisError] = useState(false);
+  // KpiCoreGrid gère son propre fetch ; ce compteur ne sert qu'à lui demander de
+  // rafraîchir après une action qui modifie les Issues sous-jacentes (terminer/vérifier).
+  const [issuesKpisRefreshToken, setIssuesKpisRefreshToken] = useState(0);
 
   const [issuesListRaw, setIssuesListRaw] = useState<Issue[]>([]);
   const [issuesListLoading, setIssuesListLoading] = useState(true);
@@ -345,20 +295,6 @@ export default function PilotagePage() {
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
   const [issueDetail, setIssueDetail] = useState<IssueDetail | null>(null);
   const [issueDetailLoading, setIssueDetailLoading] = useState(false);
-
-  const fetchIssuesKpis = useCallback(async () => {
-    setIssuesKpisLoading(true);
-    setIssuesKpisError(false);
-    try {
-      const params = issuesAgenceId ? { jours: issuesJours, agence_id: issuesAgenceId } : { jours: issuesJours };
-      const res = await kpisApi.list(params);
-      setIssuesKpis(res.data.kpis);
-    } catch {
-      setIssuesKpisError(true);
-    } finally {
-      setIssuesKpisLoading(false);
-    }
-  }, [issuesJours, issuesAgenceId]);
 
   const fetchIssuesList = useCallback(async () => {
     setIssuesListLoading(true);
@@ -374,10 +310,6 @@ export default function PilotagePage() {
       setIssuesFirstLoadDone(true);
     }
   }, [issuesAgenceId]);
-
-  useEffect(() => {
-    fetchIssuesKpis();
-  }, [fetchIssuesKpis]);
 
   useEffect(() => {
     fetchIssuesList();
@@ -417,14 +349,15 @@ export default function PilotagePage() {
   };
 
   const rafraichirApresActionIssue = useCallback(async (issueId: string) => {
-    await Promise.all([fetchIssuesList(), fetchIssuesKpis()]);
+    await fetchIssuesList();
+    setIssuesKpisRefreshToken((t) => t + 1);
     try {
       const res = await issuesApi.get(issueId);
       setIssueDetail(res.data);
     } catch {
       // Le détail reste tel quel si le refetch échoue ; liste et KPI sont déjà à jour.
     }
-  }, [fetchIssuesList, fetchIssuesKpis]);
+  }, [fetchIssuesList]);
 
   const terminerActionIssue = async (issueId: string, actionId: string) => {
     try {
@@ -862,28 +795,7 @@ export default function PilotagePage() {
           </div>
 
           {/* KPI P0 */}
-          {issuesKpisError ? (
-            <StatsErrorState message="Impossible de charger les indicateurs KPI." onRetry={fetchIssuesKpis} />
-          ) : issuesKpisLoading ? (
-            <div aria-busy="true" aria-label="Chargement des indicateurs KPI" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(225px, 1fr))', gap: '12px' }}>
-              {Array.from({ length: 8 }).map((_, i) => (
-                <SkeletonBlock key={i} height={90} radius="16px" />
-              ))}
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(225px, 1fr))', gap: '12px' }}>
-              {issuesKpis.map((k) => (
-                <KpiCard
-                  key={k.code}
-                  compact
-                  icon={kpiIcon(k.code)}
-                  label={k.label}
-                  value={formatKpiValue(k)}
-                  subtitle={formatKpiSubtitle(k, issuesJours)}
-                />
-              ))}
-            </div>
-          )}
+          <KpiCoreGrid jours={issuesJours} agenceId={issuesAgenceId} refreshToken={issuesKpisRefreshToken} />
 
           {/* Liste des Issues */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

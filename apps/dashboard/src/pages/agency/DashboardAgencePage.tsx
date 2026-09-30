@@ -8,6 +8,7 @@
  *   Niveau 4  Action                → « Actions » (recommandations IA à traiter)
  */
 import React, { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   AreaChart,
   Area,
@@ -24,14 +25,14 @@ import { dashboardApi, recommandationsApi, alertesApi } from '../../services/api
 import { useAuthStore } from '../../stores/authStore';
 import type { DashboardAgence, Recommandation, Alerte } from '../../types';
 import PageHeader from '../../components/ui/PageHeader';
-import KpiCard from '../../components/ui/KpiCard';
+import KpiCoreGrid from '../../components/kpi/KpiCoreGrid';
 import EmptyState from '../../components/ui/EmptyState';
 import SkeletonBlock from '../../components/ui/SkeletonBlock';
 import SectionHeading from '../../components/ui/SectionHeading';
 import AlerteRow from '../../components/alerts/AlerteRow';
 import EphemeralAlertsBanner from '../../components/alerts/EphemeralAlertsBanner';
 import RecommandationCard from '../../components/stats/RecommandationCard';
-import { ThumbsUpIcon, ThumbsDownIcon, BarChartIcon, AlertTriangleIcon } from '../../components/common/Icons';
+import { ArrowUpRightIcon } from '../../components/common/Icons';
 
 const THEME_COLORS = [
   '#02302D', '#3C7730', '#75B72A', '#BCCF00', '#0284C7',
@@ -213,41 +214,16 @@ export default function DashboardAgencePage() {
           <section aria-labelledby="agence-situation" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div id="agence-situation"><SectionHeading>Comment va mon agence ?</SectionHeading></div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-              <KpiCard
-                compact
-                icon={<ThumbsUpIcon size={14} />}
-                label="Satisfaction"
-                value={`${data.taux_satisfaction}%`}
-                subtitle={`${jours} derniers jours`}
-                sparklineType="neutral"
-              />
-              <KpiCard
-                compact
-                icon={<BarChartIcon size={14} />}
-                label="Avis collectés"
-                value={data.nombre_feedbacks}
-                subtitle={`${jours} derniers jours`}
-                sparklineType="neutral"
-              />
-              <KpiCard
-                compact
-                icon={<ThumbsDownIcon size={14} />}
-                label="Avis négatifs"
-                value={data.nombre_negatifs}
-                badgeColor={data.nombre_negatifs > 0 ? 'red' : 'green'}
-                subtitle={`${jours} derniers jours`}
-                sparklineType="neutral"
-              />
-              <KpiCard
-                compact
-                icon={<AlertTriangleIcon size={14} />}
-                label="Avis critiques"
-                value={data.nombre_critiques}
-                badgeColor={data.nombre_critiques > 0 ? 'red' : 'green'}
-                subtitle={`${jours} derniers jours`}
-                sparklineType="neutral"
-              />
+            <KpiCoreGrid jours={jours} />
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Link
+                to="/pilotage?tab=issues"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.84rem', fontWeight: 700, color: '#3C7730', textDecoration: 'none' }}
+              >
+                Voir le détail des Issues et actions
+                <ArrowUpRightIcon size={13} color="#3C7730" />
+              </Link>
             </div>
 
             {/* Évolution de la satisfaction */}
