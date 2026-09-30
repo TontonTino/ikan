@@ -38,6 +38,7 @@ from app.schemas.feedback import (
     SuggestionAgenceCreate,
     ActionCXCreate,
     ReponseClientCreate,
+    DemandeContactListItem,
 )
 from app.services.ai.analyse_service import analyser_feedback
 from app.core.config import settings
@@ -56,6 +57,33 @@ def _format_feedback_response(f: Feedback) -> FeedbackResponse:
     if f.assigne_a:
         res.assigne_a_nom = f"{f.assigne_a.prenom} {f.assigne_a.nom}"
     return res
+
+
+def _tronquer(texte: Optional[str], max_len: int = 140) -> Optional[str]:
+    if not texte:
+        return texte
+    return texte if len(texte) <= max_len else f"{texte[:max_len]}…"
+
+
+def _format_demande_contact(dc: DemandeContact) -> DemandeContactListItem:
+    """Transforme une DemandeContact (avec son feedback pré-chargé) en DemandeContactListItem."""
+    feedback = dc.feedback
+    agence_nom = None
+    if feedback and feedback.qr_code and feedback.qr_code.agence:
+        agence_nom = feedback.qr_code.agence.nom
+    return DemandeContactListItem(
+        id=dc.id,
+        nom=dc.nom,
+        telephone=dc.telephone,
+        email=dc.email,
+        souhaite_etre_rappele=dc.souhaite_etre_rappele,
+        traitee=dc.traitee,
+        feedback_id=dc.feedback_id,
+        date_demande=dc.date_demande,
+        feedback_commentaire=_tronquer(feedback.commentaire) if feedback else None,
+        feedback_note=feedback.note if feedback else 0,
+        agence_nom=agence_nom,
+    )
 
 
 def _check_feedback_access(feedback: Feedback, user: Utilisateur) -> None:
@@ -265,6 +293,39 @@ def list_feedbacks(
     feedbacks = query.order_by(Feedback.date_soumission.desc()).offset(offset).limit(limit).all()
 
     return [_format_feedback_response(f) for f in feedbacks]
+
+
+@router.get("/demandes-contact", response_model=List[DemandeContactListItem])
+def lister_demandes_contact(
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+    traitee: Optional[bool] = Query(False, description="Par défaut, ne montre que les demandes non traitées (traitee=false)."),
+):
+    """
+    Liste les demandes de rappel/contact — CX Manager (organisation) ou Agency Manager
+    (sa seule agence, forcée). Déclarée AVANT GET /{feedback_id} : même forme de chemin
+    à un seul segment, sinon FastAPI la ferait matcher comme un feedback_id invalide.
+    """
+    query = (
+        db.query(DemandeContact)
+        .join(Feedback, DemandeContact.feedback_id == Feedback.id)
+        .join(QRCode, Feedback.qr_code_id == QRCode.id)
+        .options(joinedload(DemandeContact.feedback).joinedload(Feedback.qr_code).joinedload(QRCode.agence))
+    )
+
+    if current_user.role == UserRole.AGENCY_MANAGER:
+        query = query.filter(QRCode.agence_id == current_user.agence_id)
+    elif current_user.role == UserRole.CX_MANAGER:
+        if current_user.organisation_id:
+            query = query.join(Agence, QRCode.agence_id == Agence.id).filter(
+                Agence.organisation_id == current_user.organisation_id
+            )
+
+    if traitee is not None:
+        query = query.filter(DemandeContact.traitee == traitee)
+
+    demandes = query.order_by(DemandeContact.date_demande.desc()).all()
+    return [_format_demande_contact(d) for d in demandes]
 
 
 @router.get("/{feedback_id}", response_model=FeedbackResponse)
@@ -674,9 +735,17 @@ def marquer_demande_contact_traitee(
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ):
     """Marque une demande de contact client comme traitée."""
-    dc = db.query(DemandeContact).filter(DemandeContact.id == contact_id).first()
+    dc = (
+        db.query(DemandeContact)
+        .options(joinedload(DemandeContact.feedback).joinedload(Feedback.qr_code).joinedload(QRCode.agence))
+        .filter(DemandeContact.id == contact_id)
+        .first()
+    )
     if not dc:
         raise HTTPException(status_code=404, detail="Demande de contact introuvable")
+
+    _check_feedback_access(dc.feedback, current_user)
+
     dc.traitee = True
     db.commit()
     return {"message": "Demande de contact marquée comme traitée"}

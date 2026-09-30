@@ -45,6 +45,17 @@ class DemandeContactInfo(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class DemandeContactListItem(DemandeContactInfo):
+    """Item de GET /feedbacks/demandes-contact : DemandeContactInfo enrichi du contexte
+    minimal du feedback lié (évite un aller-retour supplémentaire côté frontend pour
+    afficher la liste)."""
+    feedback_id: uuid.UUID
+    date_demande: datetime
+    feedback_commentaire: Optional[str] = None
+    feedback_note: int
+    agence_nom: Optional[str] = None
+
+
 class HistoriqueFeedbackResponse(BaseModel):
     id: uuid.UUID
     feedback_id: uuid.UUID
