@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.api.deps import get_cx_or_admin, get_current_active_user, get_db
+from app.api.deps import get_cx_or_admin, get_cx_or_agency_manager, get_current_active_user, get_db
 from app.models.utilisateur import Utilisateur
 from app.models.agence import Agence
 from app.models.qr_code import QRCode
@@ -19,7 +19,7 @@ from app.models.feedback import Feedback
 from app.models.suggestion import Suggestion, HistoriqueSuggestion
 from app.models.historique_feedback import HistoriqueFeedback
 from app.models.enums import UserRole
-from app.schemas.agence import AgenceCreate, AgenceUpdate, AgenceResponse, ActiviteAgenceItem
+from app.schemas.agence import AgenceCreate, AgenceUpdate, AgenceResponse, AgencePhotoUpdate, ActiviteAgenceItem
 from app.schemas.categorie import CategorieCreate, CategorieUpdate, CategorieResponse
 from app.services.plan_catalog import FEATURE_CATEGORIES
 from app.services.plan_service import organisation_a_la_fonctionnalite
@@ -225,6 +225,31 @@ def update_agence(
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(agence, field, value)
 
+    db.commit()
+    db.refresh(agence)
+    return _enrich_agence_qr(agence, db)
+
+
+@router.patch("/{agence_id}/photo", response_model=AgenceResponse)
+def update_agence_photo(
+    agence_id: UUID,
+    data: AgencePhotoUpdate,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+):
+    """
+    Met à jour (ou retire, avec photo=None) la photo de l'agence. Endpoint étroit et
+    séparé de update_agence : ne touche à AUCUN autre champ, et ouvert à l'Agency
+    Manager (contrairement à update_agence, réservé au CX Manager/Admin) — c'est la
+    seule action d'écriture sur sa propre agence que l'Agency Manager peut faire ici.
+    """
+    agence = db.query(Agence).filter(Agence.id == agence_id).first()
+    if not agence:
+        raise HTTPException(status_code=404, detail="Agence introuvable")
+
+    _check_agence_access(agence, current_user)
+
+    agence.photo = data.photo
     db.commit()
     db.refresh(agence)
     return _enrich_agence_qr(agence, db)

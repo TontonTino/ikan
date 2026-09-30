@@ -165,6 +165,8 @@ export const agencesApi = {
   update: (id: string, data: object) => api.patch(`/agences/${id}`, data),
   delete: (id: string) => api.delete(`/agences/${id}`),
   updateSeuil: (id: string, seuil: number) => api.patch(`/agences/${id}`, { seuil_alerte: seuil }),
+  updatePhoto: (id: string, photo: string | null) =>
+    api.patch<import('../types').Agence>(`/agences/${id}/photo`, { photo }),
   listCategories: (agenceId: string) => api.get(`/agences/${agenceId}/categories`),
   createCategorie: (agenceId: string, data: { nom: string; est_categorie_suggestion?: boolean }) =>
     api.post(`/agences/${agenceId}/categories`, data),

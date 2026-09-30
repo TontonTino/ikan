@@ -21,6 +21,7 @@ import {
   UsersIcon,
   MessageSquareIcon,
   ActivityIcon,
+  StoreIcon,
 } from '../../components/common/Icons';
 
 const cardStyle: React.CSSProperties = {
@@ -173,6 +174,9 @@ export default function MonAgencePage() {
   // ── Génération du PDF du QR code ──
   const [pdfEnCours, setPdfEnCours] = useState(false);
 
+  // ── Photo de l'agence ──
+  const [photoEnCours, setPhotoEnCours] = useState(false);
+
   useEffect(() => {
     if (nonAutorise) return;
     if (!agenceId) {
@@ -302,6 +306,66 @@ export default function MonAgencePage() {
     }
   };
 
+  // Reproduit exactement le mécanisme du logo d'organisation (AdminOrgsPage.tsx) :
+  // redimensionnement côté client (250px de côté max) puis conversion en base64 PNG,
+  // stocké tel quel — même principe, aucune infrastructure de fichiers.
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      const img = new Image();
+      img.onload = async () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 250;
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height = Math.round((height * MAX_SIZE) / width);
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width = Math.round((width * MAX_SIZE) / height);
+            height = MAX_SIZE;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        const resizedBase64 = canvas.toDataURL('image/png', 0.9);
+
+        setPhotoEnCours(true);
+        try {
+          const res = await agencesApi.updatePhoto(agence.id, resizedBase64);
+          setAgence(res.data);
+          afficherMessage("Photo de l'agence mise à jour.");
+        } catch {
+          afficherMessage("Erreur lors de l'envoi de la photo.");
+        } finally {
+          setPhotoEnCours(false);
+        }
+      };
+      img.src = uploadEvent.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const retirerPhoto = async () => {
+    setPhotoEnCours(true);
+    try {
+      const res = await agencesApi.updatePhoto(agence.id, null);
+      setAgence(res.data);
+      afficherMessage("Photo de l'agence retirée.");
+    } catch {
+      afficherMessage('Erreur lors du retrait de la photo.');
+    } finally {
+      setPhotoEnCours(false);
+    }
+  };
+
   // Le CX Manager gère toutes les catégories de son organisation (l'API l'autorise
   // déjà) ; l'Agency Manager ne gère que celles qu'il a lui-même créées.
   const peutGererCategorie = (c: Categorie) =>
@@ -388,30 +452,83 @@ export default function MonAgencePage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
-      {/* ── En-tête : nom, statut, ville, manager ── */}
+      {/* ── En-tête : photo, nom, statut, ville, manager ── */}
       <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-            <h1 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: '#02302D' }}>{agence.nom}</h1>
-            <span
+        <div style={{ display: 'flex', alignItems: 'center', gap: '18px', flexWrap: 'wrap' }}>
+          {/* Photo de l'agence — carte d'identité visuelle de cette page */}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            {agence.photo ? (
+              <img
+                src={agence.photo}
+                alt={`Photo de ${agence.nom}`}
+                style={{ width: '84px', height: '84px', borderRadius: '16px', objectFit: 'cover', border: '1px solid #E8ECE6', display: 'block' }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: '84px', height: '84px', borderRadius: '16px',
+                  background: '#F1F5F2', border: '1px solid #E8ECE6',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8',
+                }}
+              >
+                <StoreIcon size={32} />
+              </div>
+            )}
+            <label
+              className="btn-secondary"
+              title={agence.photo ? "Remplacer la photo de l'agence" : "Ajouter une photo de l'agence"}
               style={{
-                fontSize: '0.70rem', fontWeight: 800, padding: '3px 10px', borderRadius: '9999px',
-                background: agence.active ? '#EBF6ED' : '#F1F5F9',
-                color: agence.active ? '#3C7730' : '#64748B',
+                position: 'absolute', bottom: '-6px', right: '-6px',
+                width: '30px', height: '30px', borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: 0, margin: 0, cursor: photoEnCours ? 'default' : 'pointer',
+                opacity: photoEnCours ? 0.6 : 1,
               }}
             >
-              {agence.active ? 'Active' : 'Inactive'}
-            </span>
+              <EditIcon size={14} />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoChange}
+                disabled={photoEnCours}
+                style={{ display: 'none' }}
+              />
+            </label>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap', marginTop: '8px', fontSize: '0.84rem', color: '#64748B' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <MapPinIcon size={15} color="#94A3B8" />
-              {agence.ville || 'Ville non renseignée'}
-            </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <UsersIcon size={15} color="#94A3B8" />
-              {agence.manager_nom || 'Aucun manager assigné'}
-            </span>
+
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <h1 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: '#02302D' }}>{agence.nom}</h1>
+              <span
+                style={{
+                  fontSize: '0.70rem', fontWeight: 800, padding: '3px 10px', borderRadius: '9999px',
+                  background: agence.active ? '#EBF6ED' : '#F1F5F9',
+                  color: agence.active ? '#3C7730' : '#64748B',
+                }}
+              >
+                {agence.active ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap', marginTop: '8px', fontSize: '0.84rem', color: '#64748B' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <MapPinIcon size={15} color="#94A3B8" />
+                {agence.ville || 'Ville non renseignée'}
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <UsersIcon size={15} color="#94A3B8" />
+                {agence.manager_nom || 'Aucun manager assigné'}
+              </span>
+            </div>
+            {agence.photo && (
+              <button
+                type="button"
+                onClick={retirerPhoto}
+                disabled={photoEnCours}
+                style={{ marginTop: '8px', background: 'none', border: 'none', color: '#DC2626', cursor: photoEnCours ? 'default' : 'pointer', fontSize: '0.78rem', fontWeight: 700, padding: 0, opacity: photoEnCours ? 0.6 : 1 }}
+              >
+                ✕ Retirer la photo
+              </button>
+            )}
           </div>
         </div>
       </div>

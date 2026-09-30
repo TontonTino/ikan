@@ -49,6 +49,7 @@ export interface Agence {
   longitude?: number;
   active: boolean;
   seuil_alerte: number;
+  photo?: string | null;
   date_creation: string;
   qr_code_token?: string;
   qr_code_url?: string;

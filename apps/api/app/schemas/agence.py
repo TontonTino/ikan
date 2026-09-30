@@ -42,12 +42,17 @@ class AgenceResponse(BaseModel):
     longitude: float | None
     active: bool
     seuil_alerte: float
+    photo: str | None = None
     date_creation: datetime
     qr_code_token: str | None = None
     qr_code_url: str | None = None
     manager_nom: str | None = None
 
     model_config = {"from_attributes": True}
+
+
+class AgencePhotoUpdate(BaseModel):
+    photo: str | None = None
 
 
 class ActiviteAgenceItem(BaseModel):

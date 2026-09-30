@@ -4,7 +4,7 @@ Modèle Agence — point de service d'une organisation.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, DateTime, Boolean, ForeignKey, Float, func
+from sqlalchemy import String, DateTime, Boolean, ForeignKey, Float, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -28,6 +28,9 @@ class Agence(Base):
     latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Photo de l'agence, même principe qu'Organisation.logo : base64 stocké tel quel,
+    # aucune infrastructure de fichiers dédiée.
+    photo: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Seuil d'alerte satisfaction (configurable par l'admin, défaut 80%)
     seuil_alerte: Mapped[float] = mapped_column(Float, default=80.0)
     date_creation: Mapped[datetime] = mapped_column(
