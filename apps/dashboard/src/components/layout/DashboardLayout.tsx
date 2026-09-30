@@ -25,6 +25,8 @@ import {
   LandmarkIcon,
   XCloseIcon,
   MegaphoneIcon,
+  CheckCircleIcon,
+  LightbulbIcon,
 } from '../common/Icons';
 
 interface NavItem {
@@ -67,12 +69,19 @@ const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
   ],
   agency_manager: [
     {
-      title: 'WORKSPACE',
+      title: 'MON AGENCE',
       items: [
-        { path: '/agence', label: 'Dashboard Agence', icon: <LayoutGridIcon size={18} /> },
-        { path: '/statistiques', label: 'Statistiques & Analyses', icon: <BarChartIcon size={18} /> },
-        { path: '/feedbacks', label: 'Feedbacks Clients', icon: <MessageSquareIcon size={18} /> },
-        { path: '/mon-agence', label: 'Mon agence', icon: <StoreIcon size={18} /> },
+        { path: '/agence', label: 'Vue d\'ensemble', icon: <LayoutGridIcon size={18} /> },
+        { path: '/statistiques', label: 'Performance CX', icon: <BarChartIcon size={18} /> },
+        { path: '/feedbacks', label: 'Feedbacks', icon: <MessageSquareIcon size={18} /> },
+        { path: '/pilotage?tab=actions', label: 'Actions', icon: <CheckCircleIcon size={18} /> },
+        { path: '/pilotage', label: 'Alertes', icon: <BellIcon size={18} /> },
+      ],
+    },
+    {
+      title: 'CLIENTS',
+      items: [
+        { path: '/suggestions', label: 'Suggestions', icon: <LightbulbIcon size={18} /> },
       ],
     },
   ],
@@ -167,7 +176,11 @@ export default function DashboardLayout() {
   };
 
   const navSections = user ? ROLE_NAV_SECTIONS[user.role] || [] : [];
-  const isAlertesActive = location.pathname === '/pilotage';
+  // /pilotage porte maintenant deux entrées de menu distinctes pour l'Agency Manager
+  // ("Actions" via ?tab=actions, "Alertes" sans paramètre) : seul le paramètre réellement
+  // présent dans l'URL dit laquelle est active, le pathname seul ne suffit plus.
+  const pilotageTab = new URLSearchParams(location.search).get('tab');
+  const isAlertesActive = location.pathname === '/pilotage' && pilotageTab !== 'actions';
   const backRoute = user
     ? BACK_ROUTES.find((r) => r.roles.includes(user.role) && matchPath({ path: r.pattern, end: true }, location.pathname))
     : undefined;
@@ -186,7 +199,7 @@ export default function DashboardLayout() {
     if (location.pathname.includes('/apercu')) return 'Agence';
     if (location.pathname.includes('/admin/dashboard')) return 'Dashboard';
     if (location.pathname.includes('/siege')) return 'Vue Siège';
-    if (location.pathname.includes('/agence')) return 'Dashboard Agence';
+    if (location.pathname.includes('/agence')) return 'Vue d\'ensemble';
     if (location.pathname.includes('/feedbacks')) return 'Feedbacks';
     if (location.pathname.includes('/pilotage')) return 'Pilotage';
     if (location.pathname.includes('/veille')) return 'Veille';
@@ -304,13 +317,26 @@ export default function DashboardLayout() {
               <ul style={{ display: 'flex', flexDirection: 'column', gap: '4px', listStyle: 'none', margin: 0, padding: 0 }}>
                 {section.items.map((item) => {
                   // Le badge de "Pilotage" reflète le nombre d'alertes actives en temps réel
+                  // — uniquement sur l'entrée "Alertes" (path exact '/pilotage'), jamais sur
+                  // "Actions" (path '/pilotage?tab=actions', chaîne différente).
                   const badgeValue = item.path === '/pilotage' ? alertCount : item.badge;
                   const badgeUrgent = item.path === '/pilotage' ? alertCount > 0 : item.badgeUrgent;
+
+                  // NavLink ne compare que le pathname : "Actions" et "Alertes" pointent
+                  // toutes deux vers /pilotage et seraient actives ensemble sans ce calcul
+                  // manuel basé sur le paramètre ?tab= réellement présent dans l'URL.
+                  const overrideActive =
+                    item.path === '/pilotage?tab=actions'
+                      ? location.pathname === '/pilotage' && pilotageTab === 'actions'
+                      : item.path === '/pilotage'
+                        ? location.pathname === '/pilotage' && pilotageTab !== 'actions'
+                        : undefined;
+
                   return (
                     <li key={item.path}>
                       <NavLink
                         to={item.path}
-                        className={({ isActive }) => `ikan-nav-link${isActive ? ' ikan-nav-link--active' : ''}`}
+                        className={({ isActive }) => `ikan-nav-link${(overrideActive ?? isActive) ? ' ikan-nav-link--active' : ''}`}
                       >
                         {({ isActive }) => (
                           <>

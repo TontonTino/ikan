@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { User } from '../../types';
 import { ChevronDownIcon } from '../common/Icons';
 
@@ -104,6 +105,7 @@ const AdminProfessionalAvatar: React.FC = () => (
 );
 
 export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps) {
+  const navigate = useNavigate();
   const [imgError, setImgError] = useState(false);
   const logoUrl = user?.organisation_logo;
   useEffect(() => setImgError(false), [logoUrl]);
@@ -111,6 +113,9 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
   if (!user) return null;
 
   const isAdmin = user.role === 'admin';
+  // Seul l'Agency Manager a une page "Mon agence" pertinente sans paramètre (/mon-agence
+  // résout sur user.agence_id) : pour le CX Manager ou l'Admin, la carte reste informative.
+  const isAgencyManager = user.role === 'agency_manager';
   const orgName = isAdmin ? 'IKAN AI' : (user.organisation_nom || 'Organisation');
   const orgLogo = (!isAdmin && !imgError && user.organisation_logo) ? user.organisation_logo : null;
 
@@ -134,9 +139,21 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
   const palette = getPalette(orgName);
   const initial = orgName.trim().charAt(0).toUpperCase() || 'O';
 
-  // Carte purement informative : aucun comportement de bouton, texte toujours affiché en entier.
+  // Cliquable uniquement pour l'Agency Manager (vers /mon-agence) ; pour les autres rôles,
+  // reste une carte purement informative — aucun comportement de bouton, texte toujours
+  // affiché en entier.
   return (
     <div
+      onClick={isAgencyManager ? () => navigate('/mon-agence') : undefined}
+      role={isAgencyManager ? 'button' : undefined}
+      tabIndex={isAgencyManager ? 0 : undefined}
+      onKeyDown={
+        isAgencyManager
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') navigate('/mon-agence');
+            }
+          : undefined
+      }
       style={{
         background: '#FFFFFF',
         border: '1px solid #EEF0F2',
@@ -146,7 +163,7 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
         alignItems: 'center',
         gap: '12px',
         marginBottom: '24px',
-        cursor: 'default',
+        cursor: isAgencyManager ? 'pointer' : 'default',
         userSelect: 'none',
         boxShadow: '0 2px 8px rgba(2, 48, 45, 0.10)',
       }}
@@ -214,7 +231,7 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
         </div>
       </div>
 
-      {/* Chevron purement décoratif : la carte n'a aucun comportement de bouton (voir commentaire ci-dessus). */}
+      {/* Chevron décoratif (indique le clic possible pour l'Agency Manager, voir commentaire ci-dessus). */}
       <span style={{ display: 'flex', alignItems: 'center', color: '#94A3B8', flexShrink: 0 }} aria-hidden="true">
         <ChevronDownIcon size={16} />
       </span>
