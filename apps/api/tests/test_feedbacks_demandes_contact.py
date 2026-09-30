@@ -52,16 +52,18 @@ def ctx():
     db.flush()
 
     agence_a = Agence(id=uuid4(), organisation_id=org_a.id, nom="Agence A", active=True)
+    agence_a2 = Agence(id=uuid4(), organisation_id=org_a.id, nom="Agence A2", active=True)
     agence_b = Agence(id=uuid4(), organisation_id=org_b.id, nom="Agence B", active=True)
-    db.add_all([agence_a, agence_b])
+    db.add_all([agence_a, agence_a2, agence_b])
     db.flush()
 
     qr_a = QRCode(id=uuid4(), agence_id=agence_a.id, code="QR-A", url="http://test/a", actif=True)
+    qr_a2 = QRCode(id=uuid4(), agence_id=agence_a2.id, code="QR-A2", url="http://test/a2", actif=True)
     qr_b = QRCode(id=uuid4(), agence_id=agence_b.id, code="QR-B", url="http://test/b", actif=True)
-    db.add_all([qr_a, qr_b])
+    db.add_all([qr_a, qr_a2, qr_b])
     db.flush()
 
-    # Org A : 2 feedbacks avec demande de contact (1 non traitée, 1 traitée).
+    # Org A / Agence A : 2 feedbacks avec demande de contact (1 non traitée, 1 traitée).
     fb_a1 = Feedback(id=uuid4(), qr_code_id=qr_a.id, note=2, commentaire="A1 non traite", statut_traitement="nouveau", date_soumission=NOW)
     fb_a2 = Feedback(id=uuid4(), qr_code_id=qr_a.id, note=1, commentaire="A2 deja traite", statut_traitement="nouveau", date_soumission=NOW)
     db.add_all([fb_a1, fb_a2])
@@ -69,6 +71,13 @@ def ctx():
     dc_a1 = DemandeContact(id=uuid4(), feedback_id=fb_a1.id, nom="Client A1", telephone="0100000001", souhaite_etre_rappele=True, traitee=False, date_demande=NOW)
     dc_a2 = DemandeContact(id=uuid4(), feedback_id=fb_a2.id, nom="Client A2", telephone="0100000002", souhaite_etre_rappele=True, traitee=True, date_demande=NOW)
     db.add_all([dc_a1, dc_a2])
+
+    # Org A / Agence A2 : 1 feedback non traité, pour tester le filtre agence_id du CX Manager.
+    fb_a2_ag2 = Feedback(id=uuid4(), qr_code_id=qr_a2.id, note=3, commentaire="A2-bis non traite", statut_traitement="nouveau", date_soumission=NOW)
+    db.add(fb_a2_ag2)
+    db.flush()
+    dc_a2_ag2 = DemandeContact(id=uuid4(), feedback_id=fb_a2_ag2.id, nom="Client Agence A2", souhaite_etre_rappele=True, traitee=False, date_demande=NOW)
+    db.add(dc_a2_ag2)
 
     # Org B : 1 feedback avec demande de contact non traitée (donnees tres differentes de
     # A pour detecter facilement toute fuite).
@@ -80,7 +89,7 @@ def ctx():
     db.commit()
 
     ids = SimpleNamespace(
-        org_a=org_a.id, org_b=org_b.id, agence_a=agence_a.id, agence_b=agence_b.id,
+        org_a=org_a.id, org_b=org_b.id, agence_a=agence_a.id, agence_a2=agence_a2.id, agence_b=agence_b.id,
         fb_a1=fb_a1.id, fb_a2=fb_a2.id, fb_b1=fb_b1.id,
         dc_a1=dc_a1.id, dc_a2=dc_a2.id, dc_b1=dc_b1.id,
     )
@@ -118,7 +127,25 @@ def test_cx_a_liste_uniquement_org_a_non_traitees_par_defaut(ctx):
     r = ctx.call("cx_a", "get", "/feedbacks/demandes-contact")
     assert r.status_code == 200, r.text
     noms = {d["nom"] for d in r.json()}
-    assert noms == {"Client A1"}  # A2 est déjà traitée (exclue par défaut), B jamais visible
+    # Toute l'organisation A (agence_a + agence_a2), A2 déjà traitée exclue, B jamais visible.
+    assert noms == {"Client A1", "Client Agence A2"}
+
+
+def test_cx_a_avec_agence_id_restreint_a_une_seule_agence(ctx):
+    r = ctx.call("cx_a", "get", "/feedbacks/demandes-contact", params={"agence_id": str(ctx.agence_a2)})
+    assert r.status_code == 200, r.text
+    noms = {d["nom"] for d in r.json()}
+    assert noms == {"Client Agence A2"}
+
+
+def test_am_a_agence_id_est_ignore_reste_force_sur_sa_propre_agence(ctx):
+    """Le paramètre agence_id n'est appliqué que pour le CX Manager (voir list_feedbacks,
+    même convention) : pour l'Agency Manager, le périmètre reste sa propre agence quel que
+    soit ce qui est passé en query."""
+    r = ctx.call("am_a", "get", "/feedbacks/demandes-contact", params={"agence_id": str(ctx.agence_a2)})
+    assert r.status_code == 200, r.text
+    noms = {d["nom"] for d in r.json()}
+    assert noms == {"Client A1"}
 
 
 def test_cx_a_avec_traitee_true_voit_a2(ctx):
@@ -151,8 +178,10 @@ def test_cx_b_ne_voit_jamais_les_donnees_de_a(ctx):
 
 
 def test_item_contient_le_contexte_feedback(ctx):
-    r = ctx.call("cx_a", "get", "/feedbacks/demandes-contact")
-    item = r.json()[0]
+    r = ctx.call("cx_a", "get", "/feedbacks/demandes-contact", params={"agence_id": str(ctx.agence_a)})
+    items = r.json()
+    assert len(items) == 1
+    item = items[0]
     assert item["feedback_id"] == str(ctx.fb_a1)
     assert item["feedback_note"] == 2
     assert item["feedback_commentaire"] == "A1 non traite"

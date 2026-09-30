@@ -27,6 +27,7 @@ import {
   MegaphoneIcon,
   CheckCircleIcon,
   LightbulbIcon,
+  PhoneIcon,
 } from '../common/Icons';
 
 interface NavItem {
@@ -82,6 +83,7 @@ const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
       title: 'CLIENTS',
       items: [
         { path: '/suggestions', label: 'Suggestions', icon: <LightbulbIcon size={18} /> },
+        { path: '/demandes-rappel', label: 'Demandes de rappel', icon: <PhoneIcon size={18} /> },
       ],
     },
   ],

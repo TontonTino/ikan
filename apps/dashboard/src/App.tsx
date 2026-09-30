@@ -20,6 +20,7 @@ import AdminFacturationPage from './pages/admin/AdminFacturationPage';
 import StatistiquesPage from './pages/stats/StatistiquesPage';
 import ParametresPage from './pages/ParametresPage';
 import MonAgencePage from './pages/agency/MonAgencePage';
+import DemandesRappelPage from './pages/agency/DemandesRappelPage';
 
 import { useParams } from 'react-router-dom';
 import { getFeedbackUrl } from './config';
@@ -102,6 +103,8 @@ export default function App() {
         <Route path="agences/:agenceId/apercu" element={<MonAgencePage />} />
         <Route path="feedbacks" element={<FeedbacksPage />} />
         <Route path="suggestions" element={<SuggestionsRoute />} />
+        {/* CX Manager & Agency Manager (scoping organisation/agence géré côté API) */}
+        <Route path="demandes-rappel" element={<DemandesRappelPage />} />
         <Route path="alertes" element={<Navigate to="/pilotage" replace />} />
 
         {/* Pilotage CX Manager & Agency Manager (Alertes + Actions + Boîte à idées fusionnés) */}

@@ -631,3 +631,18 @@ export interface KPICollectionResponse {
   jours: number;
   kpis: KPIResult[];
 }
+
+// ── Demandes de contact (app/schemas/feedback.py::DemandeContactListItem) ──
+export interface DemandeContactListItem {
+  id: string;
+  nom?: string;
+  telephone?: string;
+  email?: string;
+  souhaite_etre_rappele: boolean;
+  traitee: boolean;
+  feedback_id: string;
+  date_demande: string;
+  feedback_commentaire?: string;
+  feedback_note: number;
+  agence_nom?: string;
+}

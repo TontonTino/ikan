@@ -300,11 +300,13 @@ def lister_demandes_contact(
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
     traitee: Optional[bool] = Query(False, description="Par défaut, ne montre que les demandes non traitées (traitee=false)."),
+    agence_id: Optional[UUID] = Query(None, description="CX Manager uniquement : restreint à une agence de son organisation."),
 ):
     """
-    Liste les demandes de rappel/contact — CX Manager (organisation) ou Agency Manager
-    (sa seule agence, forcée). Déclarée AVANT GET /{feedback_id} : même forme de chemin
-    à un seul segment, sinon FastAPI la ferait matcher comme un feedback_id invalide.
+    Liste les demandes de rappel/contact — CX Manager (organisation, avec filtre agence_id
+    optionnel) ou Agency Manager (sa seule agence, forcée). Déclarée AVANT GET
+    /{feedback_id} : même forme de chemin à un seul segment, sinon FastAPI la ferait
+    matcher comme un feedback_id invalide.
     """
     query = (
         db.query(DemandeContact)
@@ -320,6 +322,8 @@ def lister_demandes_contact(
             query = query.join(Agence, QRCode.agence_id == Agence.id).filter(
                 Agence.organisation_id == current_user.organisation_id
             )
+        if agence_id:
+            query = query.filter(QRCode.agence_id == agence_id)
 
     if traitee is not None:
         query = query.filter(DemandeContact.traitee == traitee)

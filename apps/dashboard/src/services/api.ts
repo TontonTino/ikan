@@ -217,6 +217,14 @@ export const issuesApi = {
     api.post<import('../types').Issue>(`/issues/${issueId}/verifier`),
 };
 
+// ── Demandes de contact (rappel client) ────────────────
+export const demandesContactApi = {
+  list: (params?: { traitee?: boolean; agence_id?: string }) =>
+    api.get<import('../types').DemandeContactListItem[]>('/feedbacks/demandes-contact', { params }),
+  traiter: (id: string) =>
+    api.patch(`/feedbacks/demandes-contact/${id}/traiter`),
+};
+
 // ── KPI ───────────────────────────────────────────────
 export const kpisApi = {
   list: (params?: { jours?: number; agence_id?: string }) =>
