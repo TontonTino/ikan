@@ -131,8 +131,9 @@ export default function DashboardAgencePage() {
 
       {/* ── En-tête avec sélecteur de période (toujours affiché, y compris pendant le chargement) ── */}
       <PageHeader
-        title={data?.agence_nom ?? user?.agence_nom ?? 'Mon agence'}
-        subtitle={`Pilotage opérationnel de votre point de vente — ${jours} derniers jours.`}
+        greetingUser={user?.prenom}
+        subtitle="Voici la situation de votre agence aujourd'hui."
+        showDateBesideActions
       >
         <div
           style={{

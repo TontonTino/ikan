@@ -55,6 +55,7 @@ import {
   WifiHigh,
   WifiSlash,
   SmileyMeh,
+  CalendarBlank,
 } from '@phosphor-icons/react';
 
 export interface IconProps extends React.SVGProps<SVGSVGElement> {
@@ -139,6 +140,7 @@ export const InfoIcon = wrap(Info, 18);
 export const WifiHighIcon = wrap(WifiHigh, 16);
 export const WifiSlashIcon = wrap(WifiSlash, 16);
 export const SmileyMehIcon = wrap(SmileyMeh, 18);
+export const CalendarIcon = wrap(CalendarBlank, 16);
 
 // Sparkline SVG Graphique pour le coin supérieur des cartes — hors périmètre du
 // remplacement Phosphor (pas une icône, un mini-graphique dessiné à la main).

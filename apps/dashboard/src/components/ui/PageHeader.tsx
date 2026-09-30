@@ -1,5 +1,5 @@
 import React from 'react';
-import { ClockIcon, DownloadIcon, LightningIcon } from '../common/Icons';
+import { ClockIcon, DownloadIcon, LightningIcon, CalendarIcon } from '../common/Icons';
 
 export interface PageHeaderProps {
   title?: string;
@@ -13,6 +13,10 @@ export interface PageHeaderProps {
     onClick: () => void;
     icon?: React.ReactNode;
   };
+  /** Affiche la date du jour en toutes lettres (ex. "Lundi 28 septembre 2026") à côté
+      des actions (sélecteur de période, etc.), en lecture seule — aucune interaction de
+      calendrier. Optionnel pour ne pas changer l'affichage des pages qui ne le passent pas. */
+  showDateBesideActions?: boolean;
   children?: React.ReactNode;
 }
 
@@ -24,10 +28,13 @@ export default function PageHeader({
   onRefresh,
   onExport,
   primaryAction,
+  showDateBesideActions = false,
   children,
 }: PageHeaderProps) {
-  // Format standard date en français si non fournie (ex: SAMEDI, 22 AOÛT 2026)
-  const defaultDate = React.useMemo(() => {
+  // Date du jour en français, casse phrase (ex: "Lundi 28 septembre 2026") — l'eyebrow
+  // ci-dessous l'affiche en majuscules via CSS (textTransform), pour pouvoir réutiliser
+  // la même chaîne telle quelle à côté des actions (showDateBesideActions).
+  const todayLabel = React.useMemo(() => {
     try {
       const now = new Date();
       const options: Intl.DateTimeFormatOptions = {
@@ -36,13 +43,14 @@ export default function PageHeader({
         month: 'long',
         year: 'numeric',
       };
-      return now.toLocaleDateString('fr-FR', options).toUpperCase();
+      const str = now.toLocaleDateString('fr-FR', options);
+      return str.charAt(0).toUpperCase() + str.slice(1);
     } catch {
-      return 'VENDREDI, 22 AOÛT 2026';
+      return 'Vendredi 22 août 2026';
     }
   }, []);
 
-  const displayDate = dateText || defaultDate;
+  const displayDate = dateText || todayLabel;
 
   return (
     <div
@@ -92,7 +100,7 @@ export default function PageHeader({
               lineHeight: 1.2,
             }}
           >
-            {greetingUser ? `Bonjour ${greetingUser}` : title}
+            {greetingUser ? `Bonjour, ${greetingUser} 👋` : title}
           </h1>
         </div>
 
@@ -111,6 +119,28 @@ export default function PageHeader({
 
       {/* Right side: Action buttons */}
       <div className="page-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+        {/* Date du jour en toutes lettres, lecture seule — aucune interaction de calendrier. */}
+        {showDateBesideActions && (
+          <div
+            style={{
+              background: '#FFFFFF',
+              border: '1px solid #E2E8F0',
+              borderRadius: '9999px',
+              padding: '8px 14px',
+              fontSize: '0.82rem',
+              color: '#334155',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+            }}
+          >
+            <CalendarIcon size={14} color="#64748B" />
+            <span>{displayDate}</span>
+          </div>
+        )}
+
         {/* Status Pill : Mis à jour à l'instant */}
         <div
           onClick={onRefresh}
