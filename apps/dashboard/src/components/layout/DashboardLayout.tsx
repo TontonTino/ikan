@@ -25,7 +25,6 @@ import {
   LandmarkIcon,
   XCloseIcon,
   MegaphoneIcon,
-  CheckCircleIcon,
   LightbulbIcon,
   PhoneIcon,
 } from '../common/Icons';
@@ -59,12 +58,20 @@ const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
   ],
   cx_manager: [
     {
-      title: 'WORKSPACE',
+      title: 'RÉSEAU',
       items: [
-        { path: '/siege', label: 'Dashboard', icon: <LayoutGridIcon size={18} /> },
-        { path: '/statistiques', label: 'Statistiques & Analyses', icon: <BarChartIcon size={18} /> },
+        { path: '/siege', label: 'Vue d\'ensemble', icon: <LayoutGridIcon size={18} /> },
+        { path: '/statistiques', label: 'Performance CX', icon: <BarChartIcon size={18} /> },
+        { path: '/feedbacks', label: 'Feedbacks', icon: <MessageSquareIcon size={18} /> },
         { path: '/veille', label: 'Veille', icon: <MegaphoneIcon size={18} /> },
         { path: '/admin/gestion-agences', label: 'Gestion des agences', icon: <StoreIcon size={18} /> },
+      ],
+    },
+    {
+      title: 'CLIENTS',
+      items: [
+        { path: '/suggestions', label: 'Suggestions', icon: <LightbulbIcon size={18} /> },
+        { path: '/demandes-rappel', label: 'Demandes de rappel', icon: <PhoneIcon size={18} /> },
       ],
     },
   ],
@@ -75,8 +82,6 @@ const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
         { path: '/agence', label: 'Vue d\'ensemble', icon: <LayoutGridIcon size={18} /> },
         { path: '/statistiques', label: 'Performance CX', icon: <BarChartIcon size={18} /> },
         { path: '/feedbacks', label: 'Feedbacks', icon: <MessageSquareIcon size={18} /> },
-        { path: '/pilotage?tab=actions', label: 'Actions', icon: <CheckCircleIcon size={18} /> },
-        { path: '/pilotage', label: 'Alertes', icon: <BellIcon size={18} /> },
       ],
     },
     {
@@ -114,8 +119,6 @@ const BACK_ROUTES: BackRoute[] = [
   },
   { pattern: '/pilotage', roles: ['cx_manager', 'agency_manager'], fallback: dashboardDuRole },
   { pattern: '/parametres', roles: ['cx_manager', 'agency_manager'], fallback: dashboardDuRole },
-  // Route sans entrée de menu pour le CX Manager : seule origine plausible = le Dashboard.
-  { pattern: '/feedbacks', roles: ['cx_manager'], fallback: dashboardDuRole },
 ];
 
 // Un bug d'affichage du chat ne doit jamais casser le reste du dashboard :
@@ -178,9 +181,9 @@ export default function DashboardLayout() {
   };
 
   const navSections = user ? ROLE_NAV_SECTIONS[user.role] || [] : [];
-  // /pilotage porte maintenant deux entrées de menu distinctes pour l'Agency Manager
-  // ("Actions" via ?tab=actions, "Alertes" sans paramètre) : seul le paramètre réellement
-  // présent dans l'URL dit laquelle est active, le pathname seul ne suffit plus.
+  // La cloche du header navigue toujours vers /pilotage (onglet Alertes, sans paramètre) :
+  // elle ne doit s'allumer que sur cet onglet précis, pas sur Actions/Boîte à idées/Issues
+  // (même pathname /pilotage, distingués uniquement par le paramètre ?tab=).
   const pilotageTab = new URLSearchParams(location.search).get('tab');
   const isAlertesActive = location.pathname === '/pilotage' && pilotageTab !== 'actions';
   const backRoute = user
@@ -190,7 +193,7 @@ export default function DashboardLayout() {
 
   // Fil d'Ariane dynamique
   const getBreadcrumb = () => {
-    if (location.pathname.includes('/statistiques')) return user?.role === 'admin' ? 'Statistiques de la plateforme' : 'Statistiques & Analyses';
+    if (location.pathname.includes('/statistiques')) return user?.role === 'admin' ? 'Statistiques de la plateforme' : 'Performance CX';
     if (location.pathname.includes('/admin/organisations')) return 'Organisations';
     if (location.pathname.includes('/admin/facturation')) return 'Facturation';
     if (location.pathname.includes('/admin/gestion-agences')) return 'Gestion des agences';
@@ -200,12 +203,13 @@ export default function DashboardLayout() {
     if (location.pathname.includes('/mon-agence')) return 'Mon agence';
     if (location.pathname.includes('/apercu')) return 'Agence';
     if (location.pathname.includes('/admin/dashboard')) return 'Dashboard';
-    if (location.pathname.includes('/siege')) return 'Vue Siège';
+    if (location.pathname.includes('/siege')) return 'Vue d\'ensemble';
     if (location.pathname.includes('/agence')) return 'Vue d\'ensemble';
     if (location.pathname.includes('/feedbacks')) return 'Feedbacks';
     if (location.pathname.includes('/pilotage')) return 'Pilotage';
     if (location.pathname.includes('/veille')) return 'Veille';
     if (location.pathname.includes('/suggestions')) return 'Boîte à idées';
+    if (location.pathname.includes('/demandes-rappel')) return 'Demandes de rappel';
     return 'Dashboard';
   };
 
@@ -318,29 +322,13 @@ export default function DashboardLayout() {
               )}
               <ul style={{ display: 'flex', flexDirection: 'column', gap: '4px', listStyle: 'none', margin: 0, padding: 0 }}>
                 {section.items.map((item) => {
-                  // Le badge de "Pilotage" reflète le nombre d'alertes actives en temps réel
-                  // — uniquement sur l'entrée "Alertes" (path exact '/pilotage'), jamais sur
-                  // "Actions" (path '/pilotage?tab=actions', chaîne différente).
-                  const badgeValue = item.path === '/pilotage' ? alertCount : item.badge;
-                  const badgeUrgent = item.path === '/pilotage' ? alertCount > 0 : item.badgeUrgent;
-
-                  // NavLink ne compare que le pathname : "Actions" et "Alertes" pointent
-                  // toutes deux vers /pilotage et seraient actives ensemble sans ce calcul
-                  // manuel basé sur le paramètre ?tab= réellement présent dans l'URL.
-                  const overrideActive =
-                    item.path === '/pilotage?tab=actions'
-                      ? location.pathname === '/pilotage' && pilotageTab === 'actions'
-                      : item.path === '/pilotage'
-                        ? location.pathname === '/pilotage' && pilotageTab !== 'actions'
-                        : undefined;
-
                   return (
                     <li key={item.path}>
                       <NavLink
                         to={item.path}
-                        className={({ isActive }) => `ikan-nav-link${(overrideActive ?? isActive) ? ' ikan-nav-link--active' : ''}`}
+                        className={({ isActive }) => `ikan-nav-link${isActive ? ' ikan-nav-link--active' : ''}`}
                       >
-                        {({ isActive }) => (
+                        {() => (
                           <>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                               <span className="ikan-nav-icon">
@@ -348,9 +336,9 @@ export default function DashboardLayout() {
                               </span>
                               <span>{item.label}</span>
                             </div>
-                            {!!badgeValue && (
-                              <span className={`ikan-nav-badge${badgeUrgent ? ' ikan-nav-badge--urgent' : ''}`}>
-                                {badgeValue}
+                            {!!item.badge && (
+                              <span className={`ikan-nav-badge${item.badgeUrgent ? ' ikan-nav-badge--urgent' : ''}`}>
+                                {item.badge}
                               </span>
                             )}
                           </>
