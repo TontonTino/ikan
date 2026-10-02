@@ -131,11 +131,13 @@ services:
       - key: PUBLIC_API_URL
         value: https://ikan-772d.onrender.com/api/v1
 
-  - type: static
+  - type: web
     name: ikanai-dashboard
+    runtime: node
     rootDir: apps/dashboard
     buildCommand: npm install && npm run build
-    staticPublishPath: dist
+    startCommand: npm start
+    healthCheckPath: /login
     buildFilter:
       paths:
         - apps/dashboard/**
