@@ -703,10 +703,10 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                 {/* Sentiments Ratio */}
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
                   <span style={{ background: '#EBF6ED', color: '#3C7730', padding: '2px 6px', borderRadius: '6px', fontSize: '0.70rem', fontWeight: 700 }}>
-                    👍 {thm.positifs} pos
+                    {thm.positifs} positifs
                   </span>
                   <span style={{ background: '#FEE2E2', color: '#DC2626', padding: '2px 6px', borderRadius: '6px', fontSize: '0.70rem', fontWeight: 700 }}>
-                    👎 {thm.negatifs} nég
+                    {thm.negatifs} négatifs
                   </span>
                   <span style={{ color: '#64748B', fontSize: '0.70rem', marginLeft: 'auto', alignSelf: 'center' }}>
                     📍 {thm.agences.size} agences concernées

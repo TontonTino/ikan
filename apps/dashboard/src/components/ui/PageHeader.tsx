@@ -104,7 +104,7 @@ export default function PageHeader({
               lineHeight: 1.2,
             }}
           >
-            {greetingUser ? `Bonjour, ${greetingUser} 👋` : title}
+            {greetingUser ? `Bonjour, ${greetingUser}` : title}
           </h1>
         </div>
 

@@ -10,8 +10,8 @@
  *             (recommandations créées/en cours/résolues) n'est chargée ici, elles vivent
  *             dans Pilotage (recommandationsApi).
  */
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   LineChart,
   Line,
@@ -35,7 +35,8 @@ import { dashboardApi, alertesApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import type { DashboardSiege, Alerte } from '../../types';
 import TabsNavigation from '../../components/ui/TabsNavigation';
-import KpiCard from '../../components/ui/KpiCard';
+import PageHeader from '../../components/ui/PageHeader';
+import KpiCoreGrid from '../../components/kpi/KpiCoreGrid';
 import EmptyState from '../../components/ui/EmptyState';
 import SkeletonBlock from '../../components/ui/SkeletonBlock';
 import SectionHeading from '../../components/ui/SectionHeading';
@@ -44,12 +45,10 @@ import EphemeralAlertsBanner from '../../components/alerts/EphemeralAlertsBanner
 import {
   StoreIcon,
   LightbulbIcon,
-  AlertTriangleIcon,
   TrendingUpIcon,
   CheckCircleIcon,
   MapIcon,
   BarChartIcon,
-  ClockIcon,
   ThumbsUpIcon,
   ThumbsDownIcon,
   ArrowUpRightIcon,
@@ -256,24 +255,6 @@ export default function DashboardSiegePage() {
   // 4 Onglets Spécifiés pour /siege
   const [activeTab, setActiveTab] = useState<'overview' | 'performance' | 'agences' | 'alertes'>('overview');
 
-  const formattedDate = useMemo(() => {
-    try {
-      const now = new Date();
-      return now.toLocaleDateString('fr-FR', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      }).toUpperCase();
-    } catch {
-      return 'AUJOURD\'HUI';
-    }
-  }, []);
-
-  const userName = user
-    ? `${user.prenom || ''} ${user.nom || ''}`.trim() || 'Responsable CX'
-    : 'Responsable CX';
-
   const load = useCallback(() => {
     setLoading(true);
     Promise.all([dashboardApi.siege(jours), alertesApi.list()])
@@ -322,144 +303,50 @@ export default function DashboardSiegePage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
       
-      {/* ── 1. Bannière d'En-tête Unifiée ── */}
-      <div
-        style={{
-          background: 'linear-gradient(135deg, #F4FAF5 0%, #EBF6ED 100%)',
-          borderRadius: '24px',
-          border: '1px solid #D6E8D9',
-          boxShadow: '0 4px 20px rgba(2, 48, 45, 0.04)',
-          padding: '24px 32px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          position: 'relative',
-          overflow: 'hidden',
-          gap: '24px',
-          width: '100%',
-          maxWidth: '100%',
-          minWidth: 0,
-          boxSizing: 'border-box',
-          flexWrap: 'wrap',
-        }}
+      {/* ── 1. En-tête (salutation + date + sélecteur de période) ── */}
+      <PageHeader
+        greetingUser={user?.prenom}
+        subtitle="Voici la situation de votre réseau aujourd'hui."
+        showDateBesideActions
+        onRefresh={load}
       >
-        <div style={{ zIndex: 2, maxWidth: '580px', minWidth: 0, flex: '1 1 320px' }}>
-          <div
-            style={{
-              fontSize: '0.74rem',
-              fontWeight: 800,
-              color: '#4B7B47',
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              marginBottom: '6px',
-            }}
-          >
-            {formattedDate}
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h1
-              style={{
-                fontSize: '1.8rem',
-                fontWeight: 800,
-                color: '#02302D',
-                margin: 0,
-                letterSpacing: '-0.02em',
-                lineHeight: 1.2,
-              }}
-            >
-              Bonjour {userName}
-            </h1>
-          </div>
-
-          <p
-            style={{
-              color: '#526E60',
-              fontSize: '0.88rem',
-              marginTop: '6px',
-              marginBottom: 0,
-              fontWeight: 500,
-            }}
-          >
-            Supervision de l'expérience client et pilotage des agences en temps réel.
-          </p>
-        </div>
-
-        {/* Côté Droit : Contrôles */}
         <div
           style={{
-            zIndex: 2,
             display: 'flex',
-            alignItems: 'center',
-            gap: '20px',
-            flexWrap: 'wrap',
-            justifyContent: 'flex-end',
-            flexShrink: 0,
+            background: '#F1F5F2',
+            padding: '3px',
+            borderRadius: '12px',
+            gap: '2px',
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+          {[
+            { v: 7, l: '7 jours' },
+            { v: 30, l: '30 jours' },
+            { v: 90, l: '90 jours' },
+            { v: 365, l: '12 mois' },
+          ].map((item) => (
             <button
-              onClick={load}
-              title="Actualiser les données"
+              key={item.v}
+              onClick={() => setJours(item.v)}
               style={{
-                background: '#FFFFFF',
-                border: '1px solid #D5E8D3',
-                borderRadius: '9999px',
+                background: jours === item.v ? '#FFFFFF' : 'transparent',
+                color: jours === item.v ? '#02302D' : '#64748B',
+                border: 'none',
+                borderRadius: '9px',
                 padding: '6px 14px',
-                fontSize: '0.76rem',
-                color: '#3C7730',
-                fontWeight: 700,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                cursor: 'pointer',
+                fontSize: '0.8rem',
+                fontWeight: jours === item.v ? 700 : 600,
                 fontFamily: 'inherit',
+                cursor: 'pointer',
+                boxShadow: jours === item.v ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                transition: 'all 0.15s ease',
               }}
             >
-              <ClockIcon size={13} color="#3C7730" />
-              <span>Mis à jour <strong>à l'instant</strong></span>
+              {item.l}
             </button>
-
-            {/* Sélecteur de période */}
-            <div
-              style={{
-                display: 'flex',
-                background: 'rgba(255, 255, 255, 0.9)',
-                padding: '3px',
-                borderRadius: '12px',
-                gap: '2px',
-                border: '1px solid #D5E8D3',
-              }}
-            >
-              {[
-                { v: 7, l: '7 jours' },
-                { v: 30, l: '30 jours' },
-                { v: 90, l: '90 jours' },
-                { v: 365, l: '12 mois' },
-              ].map((item) => (
-                <button
-                  key={item.v}
-                  onClick={() => setJours(item.v)}
-                  style={{
-                    background: jours === item.v ? '#FFFFFF' : 'transparent',
-                    color: jours === item.v ? '#02302D' : '#64748B',
-                    border: 'none',
-                    borderRadius: '9px',
-                    padding: '5px 11px',
-                    fontSize: '0.76rem',
-                    fontWeight: jours === item.v ? 800 : 600,
-                    fontFamily: 'inherit',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {item.l}
-                </button>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
-      </div>
+      </PageHeader>
 
       {/* ── 2. Alertes Réseau Éphémères ── */}
       <EphemeralAlertsBanner alerts={alertes} userId={user?.id} />
@@ -492,33 +379,16 @@ export default function DashboardSiegePage() {
           <section aria-labelledby="siege-situation" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div id="siege-situation"><SectionHeading>Comment vont nos clients ?</SectionHeading></div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
-              <KpiCard
-                compact
-                highlight
-                icon={<ThumbsUpIcon size={14} />}
-                label="Satisfaction réseau"
-                value={`${data.taux_satisfaction_global}%`}
-                trend={data.evolution_satisfaction ? { value: data.evolution_satisfaction, isPositive: data.evolution_satisfaction_positive, period: 'vs. période précédente' } : undefined}
-                sparklineType={data.evolution_satisfaction_positive === false ? 'down' : 'up'}
-              />
-              <KpiCard
-                compact
-                icon={<BarChartIcon size={14} />}
-                label="Avis collectés"
-                value={data.feedbacks_total}
-                trend={data.evolution_feedbacks_total ? { value: data.evolution_feedbacks_total, isPositive: data.evolution_feedbacks_total_positive, period: 'vs. période précédente' } : undefined}
-                sparklineType="neutral"
-              />
-              <KpiCard
-                compact
-                icon={<AlertTriangleIcon size={14} />}
-                label="Avis critiques"
-                value={data.nombre_critiques}
-                badgeColor={data.nombre_critiques > 0 ? 'red' : 'green'}
-                subtitle="sur la période"
-                sparklineType="neutral"
-              />
+            <KpiCoreGrid jours={jours} />
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Link
+                to="/pilotage?tab=issues"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.84rem', fontWeight: 700, color: '#3C7730', textDecoration: 'none' }}
+              >
+                Voir le détail des Issues et actions
+                <ArrowUpRightIcon size={13} color="#3C7730" />
+              </Link>
             </div>
 
           {/* Graphique Unique d'Évolution CSAT */}

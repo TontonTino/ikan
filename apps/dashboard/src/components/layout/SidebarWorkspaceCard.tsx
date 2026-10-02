@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { User } from '../../types';
-import { ChevronDownIcon } from '../common/Icons';
+import { ChevronDownIcon, ChevronRightIcon } from '../common/Icons';
 
 interface SidebarWorkspaceCardProps {
   user: User | null;
@@ -107,6 +107,8 @@ const AdminProfessionalAvatar: React.FC = () => (
 export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps) {
   const navigate = useNavigate();
   const [imgError, setImgError] = useState(false);
+  const [contextHovered, setContextHovered] = useState(false);
+  const [contextFocused, setContextFocused] = useState(false);
   const logoUrl = user?.organisation_logo;
   useEffect(() => setImgError(false), [logoUrl]);
 
@@ -138,6 +140,148 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
 
   const palette = getPalette(orgName);
   const initial = orgName.trim().charAt(0).toUpperCase() || 'O';
+
+  if (isAgencyManager) {
+    const tooltipId = 'agency-context-tooltip';
+    const tooltipVisible = contextHovered || contextFocused;
+
+    return (
+      <div className="agency-context-wrap">
+        <button
+          type="button"
+          className="agency-context-button"
+          aria-label={`Contexte actuel : ${orgName}, ${spaceSub}. Ouvrir Mon agence.`}
+          aria-describedby={tooltipVisible ? tooltipId : undefined}
+          onClick={() => navigate('/mon-agence')}
+          onMouseEnter={() => setContextHovered(true)}
+          onMouseLeave={() => setContextHovered(false)}
+          onFocus={() => setContextFocused(true)}
+          onBlur={() => setContextFocused(false)}
+        >
+          <span className="agency-context-logo">
+            {orgLogo ? (
+              <img src={orgLogo} alt="" onError={() => setImgError(true)} />
+            ) : (
+              <span aria-hidden="true">{initial}</span>
+            )}
+          </span>
+          <span className="agency-context-chevron" aria-hidden="true">
+            <ChevronRightIcon size={16} />
+          </span>
+        </button>
+
+        {tooltipVisible && (
+          <div className="agency-context-tooltip" id={tooltipId} role="tooltip">
+            <span className="agency-context-tooltip-org">{orgName}</span>
+            <span className="agency-context-tooltip-agency">{spaceSub}</span>
+          </div>
+        )}
+
+        <style>{`
+          .agency-context-wrap {
+            position: relative;
+            margin-bottom: 24px;
+            z-index: 2;
+          }
+          .agency-context-button {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            min-height: 68px;
+            padding: 9px 36px;
+            color: #FFFFFF;
+            background: rgba(255, 255, 255, 0.055);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 14px;
+            cursor: pointer;
+            transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+          }
+          .agency-context-button:hover {
+            background: rgba(255, 255, 255, 0.11);
+            border-color: rgba(188, 207, 0, 0.42);
+            box-shadow: 0 5px 16px rgba(0, 0, 0, 0.16);
+          }
+          .agency-context-button:focus-visible {
+            outline: 3px solid #BCCF00;
+            outline-offset: 3px;
+          }
+          .agency-context-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 46px;
+            height: 46px;
+            padding: 4px;
+            box-sizing: border-box;
+            overflow: hidden;
+            color: ${palette.text};
+            background: ${orgLogo ? '#FFFFFF' : palette.bg};
+            border: 1px solid ${orgLogo ? '#E5E7EB' : palette.border};
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 800;
+          }
+          .agency-context-logo img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+          }
+          .agency-context-chevron {
+            position: absolute;
+            right: 12px;
+            display: flex;
+            align-items: center;
+            color: rgba(255, 255, 255, 0.48);
+            transition: color 180ms ease, transform 180ms ease;
+          }
+          .agency-context-button:hover .agency-context-chevron,
+          .agency-context-button:focus-visible .agency-context-chevron {
+            color: #BCCF00;
+            transform: translateX(2px);
+          }
+          .agency-context-tooltip {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            z-index: 40;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            width: 100%;
+            padding: 11px 13px;
+            box-sizing: border-box;
+            color: #FFFFFF;
+            background: #064E3B;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.24);
+            pointer-events: none;
+          }
+          .agency-context-tooltip-org {
+            font-size: 0.78rem;
+            font-weight: 700;
+            line-height: 1.35;
+          }
+          .agency-context-tooltip-agency {
+            color: #C4D5D0;
+            font-size: 0.72rem;
+            font-weight: 500;
+            line-height: 1.4;
+            overflow-wrap: anywhere;
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .agency-context-button,
+            .agency-context-chevron {
+              transition: none;
+            }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   // Cliquable uniquement pour l'Agency Manager (vers /mon-agence) ; pour les autres rôles,
   // reste une carte purement informative — aucun comportement de bouton, texte toujours
