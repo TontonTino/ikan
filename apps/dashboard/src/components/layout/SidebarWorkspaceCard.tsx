@@ -118,6 +118,7 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
   // Seul l'Agency Manager a une page "Mon agence" pertinente sans paramètre (/mon-agence
   // résout sur user.agence_id) : pour le CX Manager ou l'Admin, la carte reste informative.
   const isAgencyManager = user.role === 'agency_manager';
+  const isCxManager = user.role === 'cx_manager';
   const orgName = isAdmin ? 'IKAN AI' : (user.organisation_nom || 'Organisation');
   const orgLogo = (!isAdmin && !imgError && user.organisation_logo) ? user.organisation_logo : null;
 
@@ -141,34 +142,50 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
   const palette = getPalette(orgName);
   const initial = orgName.trim().charAt(0).toUpperCase() || 'O';
 
-  if (isAgencyManager) {
+  if (isAgencyManager || isCxManager) {
     const tooltipId = 'agency-context-tooltip';
     const tooltipVisible = contextHovered || contextFocused;
+    const contextLogo = (
+      <span className="agency-context-logo">
+        {orgLogo ? (
+          <img src={orgLogo} alt="" onError={() => setImgError(true)} />
+        ) : (
+          <span aria-hidden="true">{initial}</span>
+        )}
+      </span>
+    );
 
     return (
       <div className="agency-context-wrap">
-        <button
-          type="button"
-          className="agency-context-button"
-          aria-label={`Contexte actuel : ${orgName}, ${spaceSub}. Ouvrir Mon agence.`}
-          aria-describedby={tooltipVisible ? tooltipId : undefined}
-          onClick={() => navigate('/mon-agence')}
-          onMouseEnter={() => setContextHovered(true)}
-          onMouseLeave={() => setContextHovered(false)}
-          onFocus={() => setContextFocused(true)}
-          onBlur={() => setContextFocused(false)}
-        >
-          <span className="agency-context-logo">
-            {orgLogo ? (
-              <img src={orgLogo} alt="" onError={() => setImgError(true)} />
-            ) : (
-              <span aria-hidden="true">{initial}</span>
-            )}
-          </span>
-          <span className="agency-context-chevron" aria-hidden="true">
-            <ChevronRightIcon size={16} />
-          </span>
-        </button>
+        {isAgencyManager ? (
+          <button
+            type="button"
+            className="agency-context-button"
+            aria-label={`Contexte actuel : ${orgName}, ${spaceSub}. Ouvrir Mon agence.`}
+            aria-describedby={tooltipVisible ? tooltipId : undefined}
+            onClick={() => navigate('/mon-agence')}
+            onMouseEnter={() => setContextHovered(true)}
+            onMouseLeave={() => setContextHovered(false)}
+            onFocus={() => setContextFocused(true)}
+            onBlur={() => setContextFocused(false)}
+          >
+            {contextLogo}
+            <span className="agency-context-chevron" aria-hidden="true">
+              <ChevronRightIcon size={16} />
+            </span>
+          </button>
+        ) : (
+          <div
+            className="cx-context-card"
+            role="img"
+            aria-label={`Contexte actuel : ${orgName}, ${spaceSub}.`}
+            aria-describedby={tooltipVisible ? tooltipId : undefined}
+            onMouseEnter={() => setContextHovered(true)}
+            onMouseLeave={() => setContextHovered(false)}
+          >
+            {contextLogo}
+          </div>
+        )}
 
         {tooltipVisible && (
           <div className="agency-context-tooltip" id={tooltipId} role="tooltip">
@@ -183,7 +200,8 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
             margin-bottom: 24px;
             z-index: 2;
           }
-          .agency-context-button {
+          .agency-context-button,
+          .cx-context-card {
             position: relative;
             display: flex;
             align-items: center;
@@ -206,6 +224,9 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
           .agency-context-button:focus-visible {
             outline: 3px solid #BCCF00;
             outline-offset: 3px;
+          }
+          .cx-context-card {
+            cursor: default;
           }
           .agency-context-logo {
             display: flex;
@@ -274,6 +295,7 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
           }
           @media (prefers-reduced-motion: reduce) {
             .agency-context-button,
+            .cx-context-card,
             .agency-context-chevron {
               transition: none;
             }
