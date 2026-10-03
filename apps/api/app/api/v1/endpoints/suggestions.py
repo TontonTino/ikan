@@ -4,7 +4,7 @@ Endpoints Suggestions/Idées — gestion du statut (BF-11).
 from uuid import UUID
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session, joinedload
 from datetime import datetime, timezone
 
@@ -33,8 +33,11 @@ router = APIRouter()
 
 @router.get("/", response_model=List[SuggestionResponse])
 def list_suggestions(
+    response: Response,
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
 ):
     """Liste les suggestions (CX Manager / Agency Manager uniquement, Admin exclu)."""
     from app.models.feedback import Feedback
@@ -61,7 +64,8 @@ def list_suggestions(
             .filter(Agence.organisation_id == current_user.organisation_id)
         )
 
-    return query.order_by(Suggestion.date_soumission.desc()).all()
+    response.headers["X-Total-Count"] = str(query.order_by(None).count())
+    return query.order_by(Suggestion.date_soumission.desc()).offset(offset).limit(limit).all()
 
 
 @router.get("/{suggestion_id}", response_model=SuggestionResponse)

@@ -1,26 +1,27 @@
-import React, { useEffect } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './stores/authStore';
+import RouteLoadingFallback from './components/ui/RouteLoadingFallback';
 
-// Pages
-import LoginPage from './pages/LoginPage';
-import DashboardLayout from './components/layout/DashboardLayout';
-import DashboardSiegePage from './pages/cx/DashboardSiegePage';
-import DashboardAgencePage from './pages/agency/DashboardAgencePage';
-import FeedbacksPage from './pages/agency/FeedbacksPage';
-import SuggestionsPage from './pages/agency/SuggestionsPage';
-import PilotagePage from './pages/cx/PilotagePage';
-import VeillePage from './pages/cx/VeillePage';
-import AdminOrgsPage from './pages/admin/AdminOrgsPage';
-import GestionAgencesPage from './pages/admin/GestionAgencesPage';
-import AdminSettingsPage from './pages/admin/AdminSettingsPage';
-import AdminPermissionsPage from './pages/admin/AdminPermissionsPage';
-import AdminDashboardPage from './pages/admin/AdminDashboardPage';
-import AdminFacturationPage from './pages/admin/AdminFacturationPage';
-import StatistiquesPage from './pages/stats/StatistiquesPage';
-import ParametresPage from './pages/ParametresPage';
-import MonAgencePage from './pages/agency/MonAgencePage';
-import DemandesRappelPage from './pages/agency/DemandesRappelPage';
+// Pages are loaded only when their route is visited.
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const DashboardLayout = lazy(() => import('./components/layout/DashboardLayout'));
+const DashboardSiegePage = lazy(() => import('./pages/cx/DashboardSiegePage'));
+const DashboardAgencePage = lazy(() => import('./pages/agency/DashboardAgencePage'));
+const FeedbacksPage = lazy(() => import('./pages/agency/FeedbacksPage'));
+const SuggestionsPage = lazy(() => import('./pages/agency/SuggestionsPage'));
+const PilotagePage = lazy(() => import('./pages/cx/PilotagePage'));
+const VeillePage = lazy(() => import('./pages/cx/VeillePage'));
+const AdminOrgsPage = lazy(() => import('./pages/admin/AdminOrgsPage'));
+const GestionAgencesPage = lazy(() => import('./pages/admin/GestionAgencesPage'));
+const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage'));
+const AdminPermissionsPage = lazy(() => import('./pages/admin/AdminPermissionsPage'));
+const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage'));
+const AdminFacturationPage = lazy(() => import('./pages/admin/AdminFacturationPage'));
+const StatistiquesPage = lazy(() => import('./pages/stats/StatistiquesPage'));
+const ParametresPage = lazy(() => import('./pages/ParametresPage'));
+const MonAgencePage = lazy(() => import('./pages/agency/MonAgencePage'));
+const DemandesRappelPage = lazy(() => import('./pages/agency/DemandesRappelPage'));
 
 import { useParams } from 'react-router-dom';
 import { getFeedbackUrl } from './config';
@@ -71,6 +72,7 @@ export default function App() {
   }, [fetchMe]);
 
   return (
+    <Suspense fallback={<RouteLoadingFallback />}>
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/feedback/:code" element={<FeedbackRedirect />} />
@@ -127,5 +129,6 @@ export default function App() {
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 }

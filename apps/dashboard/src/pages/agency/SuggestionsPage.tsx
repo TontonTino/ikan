@@ -28,19 +28,35 @@ const NEXT_STATUS: Record<IdeaStatus, IdeaStatus | null> = {
 
 export default function SuggestionsPage() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'toutes' | 'a_etudier' | 'decisions'>('toutes');
   const [toast, setToast] = useState('');
 
   useEffect(() => {
     suggestionsApi
-      .list()
+      .list({ limit: 50, offset: 0 })
       .then((r) => {
-        setSuggestions(r.data);
+        setSuggestions(r.data || []);
+        setTotal(Number(r.headers?.['x-total-count'] || 0));
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
+
+  const loadMore = async () => {
+    if (loadingMore || suggestions.length >= total) return;
+    setLoadingMore(true);
+    try {
+      const response = await suggestionsApi.list({ limit: 50, offset: suggestions.length });
+      setSuggestions((current) => [...current, ...(response.data || [])]);
+    } catch {
+      showToast('Impossible de charger les suggestions suivantes');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -110,6 +126,11 @@ export default function SuggestionsPage() {
         >
           {toast}
         </div>
+      )}
+      {suggestions.length < total && (
+        <button type="button" onClick={loadMore} disabled={loadingMore} className="btn-secondary" style={{ alignSelf: 'center' }}>
+          {loadingMore ? 'Chargement…' : `Charger plus (${suggestions.length}/${total})`}
+        </button>
       )}
 
       {/* Page Header */}

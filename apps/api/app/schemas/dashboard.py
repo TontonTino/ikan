@@ -33,6 +33,12 @@ class ThemeStats(BaseModel):
     pourcentage: float
 
 
+class SentimentStats(BaseModel):
+    sentiment: str
+    count: int
+    pourcentage: float
+
+
 class DashboardAgence(BaseModel):
     """Vue dashboard pour un Agency Manager."""
     agence_id: uuid.UUID
@@ -43,15 +49,13 @@ class DashboardAgence(BaseModel):
     nombre_negatifs: int
     nombre_critiques: int
     nombre_suggestions: int
+    feedbacks_a_traiter: int = 0
+    taux_prise_en_charge: float | None = None
+    actions_ouvertes: int = 0
     tendances: List[TendanceSatisfaction]
     themes: List[ThemeStats]
+    sentiments: List[SentimentStats] = []
     discordances: int
-
-
-class SentimentStats(BaseModel):
-    sentiment: str
-    count: int
-    pourcentage: float
 
 
 class DashboardSiege(BaseModel):

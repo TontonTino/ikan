@@ -1,5 +1,5 @@
 import React from 'react';
-import { ClockIcon, DownloadIcon, LightningIcon, CalendarIcon } from '../common/Icons';
+import { RefreshIcon, DownloadIcon, LightningIcon, CalendarIcon } from '../common/Icons';
 
 export interface PageHeaderProps {
   title?: string;
@@ -145,29 +145,34 @@ export default function PageHeader({
           </div>
         )}
 
-        {/* Status Pill : Mis à jour à l'instant */}
-        <div
-          onClick={onRefresh}
-          style={{
-            background: '#FFFFFF',
-            border: '1px solid #E2E8F0',
-            borderRadius: '9999px',
-            padding: '8px 14px',
-            fontSize: '0.82rem',
-            color: '#64748B',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-            cursor: onRefresh ? 'pointer' : 'default',
-          }}
-        >
-          <ClockIcon size={14} color="#64748B" />
-          <span>
-            Mis à jour <strong style={{ color: '#02302D' }}>à l'instant</strong>
-          </span>
-        </div>
+        {onRefresh && (
+          <button
+            type="button"
+            className="page-refresh-button"
+            onClick={onRefresh}
+            aria-label="Actualiser les données"
+            title="Actualiser les données"
+            style={{
+              background: '#FFFFFF',
+              border: '1px solid #E2E8F0',
+              borderRadius: '9999px',
+              padding: '8px 14px',
+              fontSize: '0.82rem',
+              color: '#334155',
+              fontWeight: 700,
+              fontFamily: 'inherit',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '7px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+              cursor: 'pointer',
+              transition: 'background 0.15s ease, border-color 0.15s ease',
+            }}
+          >
+            <RefreshIcon size={15} color="#3C7730" />
+            <span>Actualiser</span>
+          </button>
+        )}
 
         {/* Bouton Exporter */}
         {onExport && (
@@ -247,6 +252,21 @@ export default function PageHeader({
           .page-header-actions > * {
             flex: 1 1 auto;
           }
+          .page-refresh-button {
+            justify-content: center;
+          }
+          .page-refresh-button:focus-visible {
+            outline: 3px solid #75B72A;
+            outline-offset: 2px;
+          }
+        }
+        .page-refresh-button:hover {
+          background: #F4FAF5 !important;
+          border-color: #B7D7B5 !important;
+        }
+        .page-refresh-button:focus-visible {
+          outline: 3px solid #75B72A;
+          outline-offset: 2px;
         }
       `}</style>
     </div>

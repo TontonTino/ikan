@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { feedbacksApi, agencesApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import type { Feedback, Agence, StatutTraitement } from '../../types';
@@ -24,6 +25,7 @@ import {
   SmileIcon,
   XCloseIcon,
 } from '../../components/common/Icons';
+import { themeLabel } from '../../utils/themeLabels';
 
 const STATUT_BADGES: Record<StatutTraitement, { label: string; bg: string; text: string; icon: React.ReactNode }> = {
   nouveau: { label: 'Nouveau', bg: '#FEE2E2', text: '#DC2626', icon: <AlertTriangleIcon size={12} color="#DC2626" /> },
@@ -45,27 +47,8 @@ const CRITICITE_STYLE: Record<string, { bg: string; text: string }> = {
   critique: { bg: '#FEE2E2', text: '#DC2626' },
 };
 
-const THEME_LABELS: Record<string, string> = {
-  attente: 'Attente & Délais en caisse',
-  accueil: 'Accueil & Conseillers',
-  disponibilite_accessibilite: 'Accessibilité & Horaires',
-  tarifs: 'Tarifs & Frais',
-  qualite_produit: 'Qualité Produit & Forfaits',
-  proprete_cadre: 'Propreté & Cadre agence',
-  application_mobile: 'Application Mobile & E-espace',
-  reseau: 'Réseau 4G/5G & Connexion',
-  facturation: 'Facturation & Prélèvements',
-  communication_information: 'Communication & Conseils',
-  livraison_logistique: 'Livraison & Disponibilité SIM',
-  resolution_probleme: 'SAV & Résolution',
-  securite_confidentialite: 'Sécurité & Confidentialité',
-  disponibilite_produit: 'Disponibilité Stocks / Terminaux',
-  personnalisation_besoin: 'Écoute & Personnalisation',
-};
-
-// L'API renvoie au plus FETCH_LIMIT feedbacks (les plus récents) ; la pagination ci-dessous est côté client
-// car les filtres sentiment/thème ne sont pas des paramètres de l'API.
-const FETCH_LIMIT = 250;
+// Les filtres sentiment/thème restent côté client, sur les pages chargées progressivement.
+const FETCH_LIMIT = 50;
 const PAGE_SIZE = 25;
 
 const formatDate = (dateStr?: string) => {
@@ -107,6 +90,7 @@ interface FeedbacksPageProps {
 }
 
 export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
+  const [searchParams] = useSearchParams();
   const currentUser = useAuthStore((s) => s.user);
   const isCXOrAdmin = currentUser?.role === 'cx_manager' || currentUser?.role === 'admin';
   const isAllowedToTreat = currentUser?.role === 'agency_manager' || currentUser?.role === 'cx_manager';
@@ -114,28 +98,46 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
   const showAgenceSelector = isCXOrAdmin && !agenceId;
 
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [feedbackTotal, setFeedbackTotal] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [agences, setAgences] = useState<Agence[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState('');
   const [selectedFeedbackForTreatment, setSelectedFeedbackForTreatment] = useState<Feedback | null>(null);
 
   // 4 Onglets Spécifiés
-  const [activeTab, setActiveTab] = useState<'tous' | 'a_traiter' | 'critiques' | 'thematiques'>('tous');
+  const tabsValides = ['tous', 'a_traiter', 'critiques', 'thematiques'] as const;
+  type FeedbackTab = (typeof tabsValides)[number];
+  const [activeTab, setActiveTab] = useState<FeedbackTab>(() => {
+    const requestedTab = searchParams.get('tab');
+    return tabsValides.includes(requestedTab as FeedbackTab) ? (requestedTab as FeedbackTab) : 'tous';
+  });
 
   // Filtres
   const [selectedAgenceId, setSelectedAgenceId] = useState<string>(agenceId || 'all');
   const [filterSentiment, setFilterSentiment] = useState<string>('all');
-  const [filterTheme, setFilterTheme] = useState<string>('all');
+  const [filterTheme, setFilterTheme] = useState<string>(() => searchParams.get('theme') || 'all');
   const [search, setSearch] = useState<string>('');
   const [page, setPage] = useState(0);
+
+  useEffect(() => {
+    const requestedTab = searchParams.get('tab');
+    setActiveTab(tabsValides.includes(requestedTab as FeedbackTab) ? (requestedTab as FeedbackTab) : 'tous');
+    setFilterTheme(searchParams.get('theme') || 'all');
+    setPage(0);
+  }, [searchParams]);
 
   useEffect(() => {
     let cancelled = false;
     async function loadData() {
       setLoading(true);
       try {
-        const fRes = await feedbacksApi.list({ limit: FETCH_LIMIT, ...(agenceId ? { agence_id: agenceId } : {}) });
-        if (!cancelled) setFeedbacks(fRes?.data || []);
+        const agenceFiltre = agenceId || (selectedAgenceId !== 'all' ? selectedAgenceId : undefined);
+        const fRes = await feedbacksApi.list({ limit: FETCH_LIMIT, offset: 0, ...(agenceFiltre ? { agence_id: agenceFiltre } : {}) });
+        if (!cancelled) {
+          setFeedbacks(fRes?.data || []);
+          setFeedbackTotal(Number(fRes?.headers?.['x-total-count'] || 0));
+        }
 
         if (showAgenceSelector) {
           const aRes = await agencesApi.list();
@@ -149,7 +151,22 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
     }
     loadData();
     return () => { cancelled = true; };
-  }, [showAgenceSelector, agenceId]);
+  }, [showAgenceSelector, agenceId, selectedAgenceId]);
+
+  const loadMoreFeedbacks = async () => {
+    if (loadingMore || feedbacks.length >= feedbackTotal) return;
+    setLoadingMore(true);
+    try {
+      const agenceFiltre = agenceId || (selectedAgenceId !== 'all' ? selectedAgenceId : undefined);
+      const response = await feedbacksApi.list({ limit: FETCH_LIMIT, offset: feedbacks.length, ...(agenceFiltre ? { agence_id: agenceFiltre } : {}) });
+      setFeedbacks((current) => [...current, ...(response?.data || [])]);
+    } catch (err) {
+      console.error('Erreur chargement des feedbacks suivants:', err);
+      showToast('Impossible de charger les feedbacks suivants');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -206,15 +223,14 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
 
   // Thèmes réellement présents dans les feedbacks : catégories libres définies par le
   // CX Manager par agence (plus les anciennes clés IA à 15 thèmes pour les feedbacks legacy).
-  const themeLabel = (theme: string) => THEME_LABELS[theme] || theme;
-
   const themesDisponibles = useMemo(() => {
     const set = new Set<string>();
     feedbacks.forEach((f) => {
       if (f.analyse_ia?.theme_principal) set.add(f.analyse_ia.theme_principal);
     });
+    if (filterTheme !== 'all') set.add(filterTheme);
     return Array.from(set).sort((a, b) => themeLabel(a).localeCompare(themeLabel(b)));
-  }, [feedbacks]);
+  }, [feedbacks, filterTheme]);
 
   // Agrégation dynamique par catégorie/thème (plus de liste figée à 15 entrées)
   const themesAggregated = useMemo(() => {
@@ -277,10 +293,10 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
   // Retour à la première page quand l'onglet, un filtre ou le nombre de feedbacks change (pas quand un feedback est simplement mis à jour depuis la modale).
   useEffect(() => {
     setPage(0);
-  }, [activeTab, selectedAgenceId, filterSentiment, filterTheme, search, feedbacks.length]);
+  }, [activeTab, selectedAgenceId, filterSentiment, filterTheme, search]);
 
   const tabsConfig = [
-    { id: 'tous', label: 'Tous les feedbacks', icon: <MessageSquareIcon size={16} />, badge: loading ? undefined : feedbacks.length },
+    { id: 'tous', label: 'Tous les feedbacks', icon: <MessageSquareIcon size={16} />, badge: loading ? undefined : feedbackTotal },
     {
       id: 'a_traiter',
       label: 'À traiter',
@@ -309,9 +325,10 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
       {/* Filtre agence */}
       {showAgenceSelector && (
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <select
-            value={selectedAgenceId}
-            onChange={(e) => setSelectedAgenceId(e.target.value)}
+              <select
+                value={selectedAgenceId}
+                onChange={(e) => setSelectedAgenceId(e.target.value)}
+                aria-label="Filtrer par agence"
             style={{
               background: '#FFFFFF',
               border: '1px solid #E2E8F0',
@@ -360,6 +377,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
               <input
                 type="text"
                 placeholder="Rechercher un mot-clé dans les commentaires..."
+                aria-label="Rechercher dans les commentaires"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 style={{
@@ -377,6 +395,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
               <select
                 value={filterSentiment}
                 onChange={(e) => setFilterSentiment(e.target.value)}
+                aria-label="Filtrer par sentiment"
                 style={{
                   background: '#F8FAFC',
                   border: '1px solid #E2E8F0',
@@ -397,6 +416,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
               <select
                 value={filterTheme}
                 onChange={(e) => setFilterTheme(e.target.value)}
+                aria-label="Filtrer par thème"
                 style={{
                   background: '#F8FAFC',
                   border: '1px solid #E2E8F0',
@@ -624,8 +644,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
           {!loading && tabFeedbacks.length > 0 && (
             <nav aria-label="Pagination des feedbacks" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
-                {pageCourante * PAGE_SIZE + 1}–{Math.min((pageCourante + 1) * PAGE_SIZE, tabFeedbacks.length)} sur {tabFeedbacks.length}
-                {feedbacks.length >= FETCH_LIMIT && ` · limité aux ${FETCH_LIMIT} feedbacks les plus récents`}
+                {pageCourante * PAGE_SIZE + 1}–{Math.min((pageCourante + 1) * PAGE_SIZE, tabFeedbacks.length)} affichés · {feedbacks.length} chargés sur {feedbackTotal}
               </span>
               {totalPages > 1 && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -651,6 +670,11 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                     Suivant
                   </button>
                 </div>
+              )}
+              {feedbacks.length < feedbackTotal && (
+                <button type="button" onClick={loadMoreFeedbacks} disabled={loadingMore} className="btn-secondary">
+                  {loadingMore ? 'Chargement…' : 'Charger plus de feedbacks'}
+                </button>
               )}
             </nav>
           )}

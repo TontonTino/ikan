@@ -134,3 +134,17 @@ def test_categories_creation_agency_manager_interdite_hors_de_sa_propre_agence()
     cible = SimpleNamespace(id=autre_agence, organisation_id=uuid4())
     client = _client(agences.router, "/agences", user, _Db(cible))
     assert client.post(f"/agences/{autre_agence}/categories", json={"nom": "Intrusion"}).status_code == 403
+
+
+def test_liste_contexte_agences_est_reservee_au_cx_manager():
+    user = _agency_manager(uuid4())
+    client = _client(agences.router, "/agences", user)
+    assert client.get("/agences/contexte").status_code == 403
+
+
+def test_liste_contexte_agences_cx_retourne_une_liste_sans_enrichissement_qr():
+    user = _cx_manager(uuid4())
+    client = _client(agences.router, "/agences", user)
+    response = client.get("/agences/contexte")
+    assert response.status_code == 200
+    assert response.json() == []

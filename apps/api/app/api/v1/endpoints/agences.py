@@ -19,7 +19,7 @@ from app.models.feedback import Feedback
 from app.models.suggestion import Suggestion, HistoriqueSuggestion
 from app.models.historique_feedback import HistoriqueFeedback
 from app.models.enums import UserRole
-from app.schemas.agence import AgenceCreate, AgenceUpdate, AgenceResponse, AgencePhotoUpdate, ActiviteAgenceItem
+from app.schemas.agence import AgenceCreate, AgenceUpdate, AgenceResponse, AgencePhotoUpdate, ActiviteAgenceItem, AgenceContexteItem
 from app.schemas.categorie import CategorieCreate, CategorieUpdate, CategorieResponse
 from app.services.plan_catalog import FEATURE_CATEGORIES
 from app.services.plan_service import organisation_a_la_fonctionnalite
@@ -156,6 +156,22 @@ def list_agences(
         agences = db.query(Agence).filter(Agence.id == current_user.agence_id).all()
 
     return [_enrich_agence_qr(a, db) for a in agences]
+
+
+@router.get("/contexte", response_model=List[AgenceContexteItem])
+def list_agences_contexte(
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_active_user),
+):
+    """Liste légère et sans effet de bord pour changer d'agence dans le réseau CX."""
+    if current_user.role != UserRole.CX_MANAGER or not current_user.organisation_id:
+        raise HTTPException(status_code=403, detail="Réservé au CX Manager de l'organisation.")
+    return (
+        db.query(Agence)
+        .filter(Agence.organisation_id == current_user.organisation_id, Agence.active == True)
+        .order_by(Agence.nom.asc())
+        .all()
+    )
 
 
 @router.post("/", response_model=AgenceResponse, status_code=status.HTTP_201_CREATED)

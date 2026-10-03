@@ -7,7 +7,7 @@ from uuid import UUID
 from typing import List, Optional
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Response, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload
 
 logger = logging.getLogger(__name__)
@@ -239,6 +239,7 @@ def submit_feedback(
 
 @router.get("/", response_model=List[FeedbackResponse])
 def list_feedbacks(
+    response: Response,
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_feedback_viewer_user),
     agence_id: Optional[UUID] = Query(None),
@@ -247,8 +248,8 @@ def list_feedbacks(
     date_fin: Optional[datetime] = Query(None),
     avec_action: Optional[bool] = Query(None),
     action_realisee: Optional[bool] = Query(None),
-    limit: int = Query(250, le=1000),
-    offset: int = Query(0),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
 ):
     """
     Liste les feedbacks pour CX Manager et Agency Manager.
@@ -290,6 +291,7 @@ def list_feedbacks(
     if action_realisee is not None:
         query = query.filter(Feedback.action_realisee == action_realisee)
 
+    response.headers["X-Total-Count"] = str(query.order_by(None).count())
     feedbacks = query.order_by(Feedback.date_soumission.desc()).offset(offset).limit(limit).all()
 
     return [_format_feedback_response(f) for f in feedbacks]
@@ -297,10 +299,13 @@ def list_feedbacks(
 
 @router.get("/demandes-contact", response_model=List[DemandeContactListItem])
 def lister_demandes_contact(
+    response: Response,
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
     traitee: Optional[bool] = Query(False, description="Par défaut, ne montre que les demandes non traitées (traitee=false)."),
     agence_id: Optional[UUID] = Query(None, description="CX Manager uniquement : restreint à une agence de son organisation."),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
 ):
     """
     Liste les demandes de rappel/contact — CX Manager (organisation, avec filtre agence_id
@@ -328,7 +333,8 @@ def lister_demandes_contact(
     if traitee is not None:
         query = query.filter(DemandeContact.traitee == traitee)
 
-    demandes = query.order_by(DemandeContact.date_demande.desc()).all()
+    response.headers["X-Total-Count"] = str(query.order_by(None).count())
+    demandes = query.order_by(DemandeContact.date_demande.desc()).offset(offset).limit(limit).all()
     return [_format_demande_contact(d) for d in demandes]
 
 

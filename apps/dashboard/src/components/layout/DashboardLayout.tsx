@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation, matchPath } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { alertesApi } from '../../services/api';
@@ -27,6 +27,7 @@ import {
   MegaphoneIcon,
   LightbulbIcon,
   PhoneIcon,
+  TargetIcon,
 } from '../common/Icons';
 
 interface NavItem {
@@ -52,6 +53,7 @@ const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
         { path: '/admin/organisations', label: 'Organisations', icon: <BuildingIcon size={18} /> },
         { path: '/admin/facturation', label: 'Facturation', icon: <LandmarkIcon size={18} /> },
         { path: '/admin/gestion-agences', label: 'Gestion des agences', icon: <UsersIcon size={18} /> },
+        { path: '/admin/permissions', label: 'Rôles & permissions', icon: <ShieldCheckIcon size={18} /> },
         { path: '/admin/settings', label: 'Paramètres', icon: <SettingsIcon size={18} /> },
       ],
     },
@@ -64,6 +66,7 @@ const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
         { path: '/statistiques', label: 'Performance CX', icon: <BarChartIcon size={18} /> },
         { path: '/feedbacks', label: 'Feedbacks', icon: <MessageSquareIcon size={18} /> },
         { path: '/veille', label: 'Veille', icon: <MegaphoneIcon size={18} /> },
+        { path: '/pilotage', label: 'Pilotage réseau', icon: <TargetIcon size={18} /> },
         { path: '/admin/gestion-agences', label: 'Gestion des agences', icon: <StoreIcon size={18} /> },
       ],
     },
@@ -82,6 +85,7 @@ const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
         { path: '/agence', label: 'Vue d\'ensemble', icon: <LayoutGridIcon size={18} /> },
         { path: '/statistiques', label: 'Performance CX', icon: <BarChartIcon size={18} /> },
         { path: '/feedbacks', label: 'Feedbacks', icon: <MessageSquareIcon size={18} /> },
+        { path: '/pilotage?tab=actions', label: 'Actions & alertes', icon: <TargetIcon size={18} /> },
       ],
     },
     {
@@ -143,8 +147,24 @@ export default function DashboardLayout() {
   const [alertCount, setAlertCount] = useState<number>(0);
   const [yamOpen, setYamOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(() => {
+    try {
+      return typeof window !== 'undefined' && window.localStorage.getItem('ikan-sidebar-collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const hamburgerRef = useRef<HTMLButtonElement>(null);
   // YAM : CX Manager et Agency Manager uniquement (l'Admin n'est jamais proposé, même si l'API le refuse aussi).
   const canUseYam = user?.role === 'cx_manager' || user?.role === 'agency_manager';
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('ikan-sidebar-collapsed', String(desktopSidebarCollapsed));
+    } catch {
+      // La préférence reste utilisable en mémoire si le stockage est bloqué.
+    }
+  }, [desktopSidebarCollapsed]);
 
   // La sidebar mobile (tiroir) se ferme dès qu'on change de page — couvre le
   // clic sur un lien de nav sans avoir besoin d'un handler par lien.
@@ -152,14 +172,56 @@ export default function DashboardLayout() {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
-  // Fermeture au clavier (Échap), comme les autres panneaux du dashboard.
+  // Sur mobile, le menu est un tiroir modal : focus contenu, tabulation contenue,
+  // fermeture Échap et restitution du focus au bouton qui l'a ouvert.
   useEffect(() => {
     if (!mobileMenuOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMobileMenuOpen(false);
+    const sidebar = document.getElementById('dashboard-sidebar');
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const getFocusable = () =>
+      Array.from(
+        sidebar?.querySelectorAll<HTMLElement>(
+          'a[href], button:not(:disabled), [tabindex]:not([tabindex="-1"])'
+        ) ?? []
+      ).filter((element) => element.getAttribute('aria-hidden') !== 'true');
+
+    (sidebar?.querySelector<HTMLElement>('.dashboard-mobile-close') ?? getFocusable()[0])?.focus();
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMobileMenuOpen(false);
+        hamburgerRef.current?.focus();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+
+      const focusable = getFocusable();
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) {
+        event.preventDefault();
+        sidebar?.focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    const onResize = () => {
+      if (window.innerWidth > 1024) setMobileMenuOpen(false);
     };
     document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    window.addEventListener('resize', onResize);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', onResize);
+      document.body.style.overflow = previousOverflow;
+      hamburgerRef.current?.focus();
+    };
   }, [mobileMenuOpen]);
 
   useEffect(() => {
@@ -256,7 +318,11 @@ export default function DashboardLayout() {
       {/* ── Sidebar Latérale (Style SaaS Épuré Bolt.new) ── */}
       <aside
         id="dashboard-sidebar"
-        className={`dashboard-sidebar${mobileMenuOpen ? ' dashboard-sidebar--open' : ''} ikan-sidebar--dark on-dark`}
+        role={mobileMenuOpen ? 'dialog' : undefined}
+        aria-modal={mobileMenuOpen ? true : undefined}
+        aria-label={mobileMenuOpen ? 'Menu principal' : undefined}
+        tabIndex={mobileMenuOpen ? -1 : undefined}
+        className={`dashboard-sidebar${mobileMenuOpen ? ' dashboard-sidebar--open' : ''}${desktopSidebarCollapsed ? ' dashboard-sidebar--collapsed' : ''} ikan-sidebar--dark on-dark`}
         style={{
           width: '270px',
           display: 'flex',
@@ -281,8 +347,11 @@ export default function DashboardLayout() {
             padding: '0 6px 22px',
           }}
         >
-          <IkanLogo variant="light" size={28} showText />
+          <div className="dashboard-sidebar-brand-logo">
+            <IkanLogo variant="light" size={28} showText={!desktopSidebarCollapsed} />
+          </div>
           <div
+            className="dashboard-role-label"
             style={{
               background: 'rgba(188, 207, 0, 0.14)',
               color: 'var(--color-lime)',
@@ -296,15 +365,38 @@ export default function DashboardLayout() {
           >
             {roleLabel}
           </div>
+          {mobileMenuOpen && (
+            <button
+              type="button"
+              className="dashboard-mobile-close"
+              onClick={() => setMobileMenuOpen(false)}
+              aria-label="Fermer le menu"
+              style={{
+                display: 'none',
+                width: 36,
+                height: 36,
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid rgba(255,255,255,0.18)',
+                borderRadius: 10,
+                background: 'rgba(255,255,255,0.08)',
+                color: '#FFFFFF',
+                cursor: 'pointer',
+              }}
+            >
+              <XCloseIcon size={18} color="#FFFFFF" />
+            </button>
+          )}
         </div>
 
         {/* 2. Card Sélecteur d'Espace / Organisation Dynamique */}
-        <SidebarWorkspaceCard user={user} />
+        <SidebarWorkspaceCard user={user} collapsed={desktopSidebarCollapsed} />
 
 
         {/* 3. Navigation Links */}
         <nav
           aria-label="Navigation principale"
+          className="dashboard-primary-nav"
           style={{
             flex: 1,
             overflowY: 'auto',
@@ -326,15 +418,17 @@ export default function DashboardLayout() {
                     <li key={item.path}>
                       <NavLink
                         to={item.path}
+                        aria-label={item.label}
+                        title={desktopSidebarCollapsed ? item.label : undefined}
                         className={({ isActive }) => `ikan-nav-link${isActive ? ' ikan-nav-link--active' : ''}`}
                       >
                         {() => (
                           <>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div className="ikan-nav-link-content" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                               <span className="ikan-nav-icon">
                                 {item.icon}
                               </span>
-                              <span>{item.label}</span>
+                              <span className="ikan-nav-link-label">{item.label}</span>
                             </div>
                             {!!item.badge && (
                               <span className={`ikan-nav-badge${item.badgeUrgent ? ' ikan-nav-badge--urgent' : ''}`}>
@@ -359,12 +453,12 @@ export default function DashboardLayout() {
             onClick={() => setYamOpen((o) => !o)}
             aria-expanded={yamOpen}
             aria-controls={YAM_PANEL_ID}
-            title="Discuter avec YAM, l'assistant IA"
+            title={desktopSidebarCollapsed ? 'Demander à YAM' : 'Discuter avec YAM, l’assistant IA'}
             className="ikan-yam-button"
           >
             <YamAvatar size={34} />
             <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25, minWidth: 0 }}>
-              <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--sidebar-text-strong)' }}>Demander à YAM</span>
+              <span className="ikan-yam-button-label" style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--sidebar-text-strong)' }}>Demander à YAM</span>
               <span className="ikan-yam-subtitle" style={{ fontWeight: 600, fontSize: '0.72rem' }}>Assistant IA</span>
             </span>
             <span className="ikan-yam-chevron" aria-hidden="true">
@@ -372,6 +466,17 @@ export default function DashboardLayout() {
             </span>
           </button>
         )}
+        <button
+          type="button"
+          className="dashboard-sidebar-toggle"
+          onClick={() => setDesktopSidebarCollapsed((collapsed) => !collapsed)}
+          aria-label={desktopSidebarCollapsed ? 'Agrandir la barre latérale' : 'Réduire la barre latérale'}
+          aria-expanded={!desktopSidebarCollapsed}
+          title={desktopSidebarCollapsed ? 'Agrandir' : 'Réduire'}
+        >
+          <ChevronRightIcon size={17} />
+          <span>{desktopSidebarCollapsed ? 'Agrandir' : 'Réduire'}</span>
+        </button>
       </aside>
 
       {/* ── Zone Contenu Principal ── */}
@@ -408,6 +513,7 @@ export default function DashboardLayout() {
             {/* Bouton hamburger : caché sur desktop, visible ≤768px (voir <style> plus bas). */}
             <button
               type="button"
+              ref={hamburgerRef}
               className="dashboard-hamburger"
               onClick={() => setMobileMenuOpen((o) => !o)}
               aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
@@ -587,7 +693,30 @@ export default function DashboardLayout() {
           ailleurs dans le dashboard (AdminDashboardPage, MonAgencePage, ParametresPage). */}
       <style>{`
         .dashboard-hamburger { display: none; }
+        .dashboard-mobile-close { display: none; }
         .dashboard-sidebar-overlay { display: none; }
+
+        .dashboard-sidebar-toggle {
+          display: inline-flex;
+          align-items: center;
+          justify-content: flex-start;
+          gap: 10px;
+          width: 100%;
+          min-height: 42px;
+          margin-top: 10px;
+          padding: 8px 12px;
+          border: 1px solid rgba(255,255,255,0.14);
+          border-radius: 12px;
+          background: rgba(255,255,255,0.055);
+          color: var(--sidebar-text);
+          font: inherit;
+          font-size: 0.82rem;
+          font-weight: 700;
+          cursor: pointer;
+        }
+        .dashboard-sidebar-toggle:hover { background: rgba(255,255,255,0.11); color: #FFFFFF; }
+        .dashboard-sidebar-toggle:focus-visible { outline: 3px solid #BCCF00; outline-offset: 2px; }
+        .dashboard-sidebar-toggle svg { transform: rotate(180deg); }
 
         @media (max-width: 1024px) {
           .dashboard-hamburger { display: flex !important; }
@@ -596,12 +725,15 @@ export default function DashboardLayout() {
             left: 0 !important;
             top: 0 !important;
             height: 100vh !important;
+            height: 100dvh !important;
             width: min(280px, 82vw) !important;
             border-radius: 0 !important;
             transform: translateX(-100%);
             transition: transform 0.25s ease;
           }
           .dashboard-sidebar--open { transform: translateX(0); }
+          .dashboard-mobile-close { display: flex !important; }
+          .dashboard-sidebar-toggle { display: none; }
 
           .dashboard-sidebar-overlay.is-open {
             display: block;
@@ -621,6 +753,49 @@ export default function DashboardLayout() {
         @media (max-width: 640px) {
           .dashboard-header-inner { padding: 0 16px !important; }
           .dashboard-main-inner { padding: 12px 16px 28px !important; }
+        }
+
+        @media (min-width: 1025px) {
+          .dashboard-sidebar--collapsed {
+            width: 76px !important;
+            padding: 20px 10px !important;
+            overflow: visible !important;
+          }
+          .dashboard-sidebar--collapsed + .dashboard-content {
+            margin-left: 108px !important;
+            width: calc(100% - 108px) !important;
+            max-width: calc(100% - 108px) !important;
+          }
+          .dashboard-sidebar--collapsed .dashboard-sidebar-brand-logo { display: flex; justify-content: center; width: 100%; }
+          .dashboard-sidebar--collapsed .dashboard-sidebar-brand-logo > * { margin-inline: auto; }
+          .dashboard-sidebar--collapsed .dashboard-role-label,
+          .dashboard-sidebar--collapsed .ikan-nav-section-title,
+          .dashboard-sidebar--collapsed .ikan-nav-link-label,
+          .dashboard-sidebar--collapsed .ikan-nav-badge,
+          .dashboard-sidebar--collapsed .ikan-yam-button-label,
+          .dashboard-sidebar--collapsed .ikan-yam-subtitle,
+          .dashboard-sidebar--collapsed .ikan-yam-chevron { display: none !important; }
+          .dashboard-sidebar--collapsed .dashboard-primary-nav { gap: 10px !important; overflow: visible !important; }
+          .dashboard-sidebar--collapsed .ikan-nav-link { justify-content: center; padding: 12px 8px; }
+          .dashboard-sidebar--collapsed .ikan-nav-link-content { justify-content: center; }
+          .dashboard-sidebar--collapsed .agency-context-wrap { margin-bottom: 14px; }
+          .dashboard-sidebar--collapsed .agency-context-button,
+          .dashboard-sidebar--collapsed .cx-context-card { min-height: 52px; padding: 4px; }
+          .dashboard-sidebar--collapsed .agency-context-chevron { display: none; }
+          .dashboard-sidebar--collapsed .agency-context-logo { width: 42px; height: 42px; }
+          .dashboard-sidebar--collapsed .agency-context-tooltip { width: 220px; left: calc(100% + 8px); top: 0; }
+          .dashboard-sidebar--collapsed .sidebar-admin-context { justify-content: center; padding: 6px; background: transparent; border-color: transparent; box-shadow: none; }
+          .dashboard-sidebar--collapsed .sidebar-admin-context > div:not(:first-child) { display: none !important; }
+          .dashboard-sidebar--collapsed .sidebar-admin-context > div:first-child { width: 44px; height: 44px; }
+          .dashboard-sidebar--collapsed .ikan-yam-button { justify-content: center; padding: 8px; }
+          .dashboard-sidebar--collapsed .dashboard-sidebar-toggle { justify-content: center; padding: 8px; }
+          .dashboard-sidebar--collapsed .dashboard-sidebar-toggle span { display: none; }
+          .dashboard-sidebar--collapsed .dashboard-sidebar-toggle svg { transform: none; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .dashboard-sidebar { transition: none !important; }
+          .dashboard-sidebar-toggle { transition: none !important; }
         }
       `}</style>
     </div>

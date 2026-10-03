@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_cx_or_agency_manager, get_db
@@ -169,11 +169,14 @@ def creer_issue(
 
 @router.get("/", response_model=List[IssueResponse])
 def lister_issues(
+    response: Response,
     statut: Optional[str] = Query(None),
     severite: Optional[CriticiteType] = Query(None),
     agence_id: Optional[UUID] = Query(None),
     categorie_id: Optional[UUID] = Query(None),
     tri: Optional[str] = Query("recent", description="'recent' (défaut, décroissant) ou 'ancien' (croissant) sur premiere_detection. Toute autre valeur ou absence : comportement par défaut, inchangé."),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ):
@@ -194,8 +197,9 @@ def lister_issues(
     if categorie_id:
         query = query.filter(Issue.categorie_id == categorie_id)
 
+    response.headers["X-Total-Count"] = str(query.order_by(None).count())
     ordre = Issue.premiere_detection.asc() if tri == "ancien" else Issue.premiere_detection.desc()
-    issues = query.order_by(ordre).all()
+    issues = query.order_by(ordre).offset(offset).limit(limit).all()
     return [_format_issue_response(i) for i in issues]
 
 

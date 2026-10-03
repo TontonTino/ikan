@@ -15,6 +15,8 @@ export interface KpiCardProps {
   subtitle?: string;
   onClick?: () => void;
   compact?: boolean;
+  /** Désactive la vague décorative lorsqu'aucune série réelle n'est associée au KPI. */
+  showSparkline?: boolean;
   /** Met en avant CE KPI (barre lime décorative sous la valeur) — doit rester
       rare, un seul KPI par page, contrairement à la pastille de tendance qui
       est systématique pour toute tendance positive. */
@@ -31,6 +33,7 @@ export default function KpiCard({
   subtitle,
   onClick,
   compact = false,
+  showSparkline = true,
   highlight = false,
 }: KpiCardProps) {
   const isNegative = badgeColor === 'red' || (trend && trend.isPositive === false);
@@ -109,9 +112,11 @@ export default function KpiCard({
             </span>
           </div>
 
-          <div style={{ flexShrink: 0, opacity: 0.85, display: 'flex', alignItems: 'center' }}>
-            <SparklineWave type={sparklineType} color={sparkColor} width={46} height={16} />
-          </div>
+          {showSparkline && (
+            <div style={{ flexShrink: 0, opacity: 0.85, display: 'flex', alignItems: 'center' }}>
+              <SparklineWave type={sparklineType} color={sparkColor} width={46} height={16} />
+            </div>
+          )}
         </div>
 
         {/* Ligne 2 : Valeur principale + [Variation] vs. mois dernier */}
@@ -230,9 +235,11 @@ export default function KpiCard({
           {icon}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', opacity: 0.85 }}>
-          <SparklineWave type={sparklineType} color={sparkColor} width={64} height={22} />
-        </div>
+        {showSparkline && (
+          <div style={{ display: 'flex', alignItems: 'center', opacity: 0.85 }}>
+            <SparklineWave type={sparklineType} color={sparkColor} width={64} height={22} />
+          </div>
+        )}
       </div>
 
       {/* 2. Middle Row: Label + Large Value */}

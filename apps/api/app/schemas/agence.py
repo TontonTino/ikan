@@ -51,6 +51,15 @@ class AgenceResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class AgenceContexteItem(BaseModel):
+    """Informations minimales pour le sélecteur de contexte du CX Manager."""
+    id: uuid.UUID
+    nom: str
+    ville: str | None = None
+
+    model_config = {"from_attributes": True}
+
+
 class AgencePhotoUpdate(BaseModel):
     photo: str | None = None
 

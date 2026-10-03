@@ -3,7 +3,7 @@
  * Manager). Backend déjà scopé par rôle (organisation pour le CX Manager, agence forcée
  * pour l'Agency Manager) — voir GET /feedbacks/demandes-contact.
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { demandesContactApi, agencesApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import type { DemandeContactListItem, Agence } from '../../types';
@@ -23,9 +23,12 @@ export default function DemandesRappelPage() {
 
   const [toggle, setToggle] = useState<'attente' | 'traitees'>('attente');
   const [demandes, setDemandes] = useState<DemandeContactListItem[]>([]);
+  const [demandesTotal, setDemandesTotal] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [firstLoadDone, setFirstLoadDone] = useState(false);
+  const requestIdRef = useRef(0);
 
   const [agencesList, setAgencesList] = useState<Agence[]>([]);
   const [selectedAgenceId, setSelectedAgenceId] = useState<string | null>(null);
@@ -48,23 +51,49 @@ export default function DemandesRappelPage() {
   }, [isCXManager]);
 
   const fetchDemandes = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
+    setLoadingMore(false);
     setError(false);
     try {
-      const params: { traitee: boolean; agence_id?: string } = { traitee: toggle === 'traitees' };
+      const params: { traitee: boolean; agence_id?: string; limit: number; offset: number } = { traitee: toggle === 'traitees', limit: 50, offset: 0 };
       if (isCXManager && selectedAgenceId) params.agence_id = selectedAgenceId;
       const res = await demandesContactApi.list(params);
-      setDemandes(res.data || []);
+      if (requestId === requestIdRef.current) {
+        setDemandes(res.data || []);
+        setDemandesTotal(Number(res.headers?.['x-total-count'] || 0));
+      }
     } catch {
-      setError(true);
+      if (requestId === requestIdRef.current) setError(true);
     } finally {
-      setLoading(false);
-      setFirstLoadDone(true);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+        setFirstLoadDone(true);
+      }
     }
   }, [toggle, isCXManager, selectedAgenceId]);
 
+  const loadMoreDemandes = async () => {
+    if (loadingMore || demandes.length >= demandesTotal) return;
+    const requestId = requestIdRef.current;
+    setLoadingMore(true);
+    try {
+      const params: { traitee: boolean; agence_id?: string; limit: number; offset: number } = {
+        traitee: toggle === 'traitees', limit: 50, offset: demandes.length,
+      };
+      if (isCXManager && selectedAgenceId) params.agence_id = selectedAgenceId;
+      const response = await demandesContactApi.list(params);
+      if (requestId === requestIdRef.current) setDemandes((current) => [...current, ...(response.data || [])]);
+    } catch {
+      if (requestId === requestIdRef.current) showToast('Impossible de charger les demandes suivantes');
+    } finally {
+      if (requestId === requestIdRef.current) setLoadingMore(false);
+    }
+  };
+
   useEffect(() => {
     fetchDemandes();
+    return () => { requestIdRef.current += 1; };
   }, [fetchDemandes]);
 
   const marquerTraitee = async (id: string) => {
@@ -75,6 +104,7 @@ export default function DemandesRappelPage() {
       // de la faire "basculer" côté Traitées, ce qui exigerait un état à deux listes tenues
       // en parallèle pour un bénéfice minime.
       setDemandes((prev) => prev.filter((d) => d.id !== id));
+      setDemandesTotal((total) => Math.max(0, total - 1));
       showToast('Demande marquée comme traitée');
     } catch {
       showToast('Erreur lors de la mise à jour');
@@ -140,7 +170,7 @@ export default function DemandesRappelPage() {
         )}
       </div>
 
-      <SectionHeading>Demandes de rappel ({firstLoadDone ? demandes.length : '…'})</SectionHeading>
+      <SectionHeading>Demandes de rappel ({firstLoadDone ? `${demandes.length}/${demandesTotal}` : '…'})</SectionHeading>
 
       {error ? (
         <StatsErrorState message="Impossible de charger les demandes de rappel." onRetry={fetchDemandes} />
@@ -250,6 +280,11 @@ export default function DemandesRappelPage() {
             </div>
           ))}
         </div>
+      )}
+      {!loading && !error && demandes.length < demandesTotal && (
+        <button type="button" onClick={loadMoreDemandes} disabled={loadingMore} className="btn-secondary" style={{ alignSelf: 'center' }}>
+          {loadingMore ? 'Chargement…' : 'Charger plus de demandes'}
+        </button>
       )}
     </div>
   );

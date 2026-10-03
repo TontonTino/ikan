@@ -2,72 +2,23 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { alertesApi, suggestionsApi, recommandationsApi, agencesApi, feedbacksApi, issuesApi } from '../../services/api';
-import type { Alerte, AlerteFeedback, Suggestion, IdeaStatus, RecommandationOrg, Agence, Feedback, Issue, IssueStatut, IssueDetail, CriticiteType } from '../../types';
+import PilotageIssuesTab from './PilotageIssuesTab';
+import PilotageIdeasTab from './PilotageIdeasTab';
+import PilotageActionsCorrectivesTab from './PilotageActionsCorrectivesTab';
+import PilotageAlertesActionsTab from './PilotageAlertesActionsTab';
+import type { Alerte, AlerteFeedback, Suggestion, IdeaStatus, RecommandationOrg, Agence, Feedback, Issue, IssueDetail } from '../../types';
+import { ISSUE_STATUT_LABELS, ISSUE_STATUT_BADGE_VARIANT, ISSUE_SEVERITE_LABELS, STATUS_LABELS } from './pilotageConstants';
 import TabsNavigation, { TabItem } from '../../components/ui/TabsNavigation';
-import RecommandationCard from '../../components/stats/RecommandationCard';
-import AgenceFilterSelect from '../../components/stats/AgenceFilterSelect';
-import PeriodSelector from '../../components/stats/PeriodSelector';
-import { StatsErrorState } from '../../components/stats/StatsStates';
-import EmptyState from '../../components/ui/EmptyState';
-import SkeletonBlock from '../../components/ui/SkeletonBlock';
 import SectionHeading from '../../components/ui/SectionHeading';
-import Badge from '../../components/ui/Badge';
-import IssueDetailModal from '../../components/issues/IssueDetailModal';
-import KpiCoreGrid from '../../components/kpi/KpiCoreGrid';
 import {
   BellIcon,
-  LightningIcon,
-  LightbulbIcon,
   AlertTriangleIcon,
-  CheckCircleIcon,
+  LightbulbIcon,
   ClockIcon,
+  LightningIcon,
   TargetIcon,
   ActivityIcon,
 } from '../../components/common/Icons';
-
-const ISSUE_STATUT_LABELS: Record<IssueStatut, string> = {
-  ouverte: 'Ouverte',
-  action_en_cours: 'Action en cours',
-  resolue: 'Résolue',
-  verifiee: 'Vérifiée',
-  reouverte: 'Réouverte',
-};
-
-const ISSUE_STATUT_BADGE_VARIANT: Record<IssueStatut, 'info' | 'elevee' | 'positif'> = {
-  ouverte: 'info',
-  action_en_cours: 'elevee',
-  resolue: 'positif',
-  verifiee: 'positif',
-  reouverte: 'elevee',
-};
-
-const ISSUE_SEVERITE_LABELS: Record<CriticiteType, string> = {
-  faible: 'Faible',
-  moyenne: 'Moyenne',
-  elevee: 'Élevée',
-  critique: 'Critique',
-};
-
-const STATUS_LABELS: Record<IdeaStatus, string> = {
-  nouveau: 'Nouveau',
-  en_cours: 'En cours',
-  traite: 'Traité',
-  rejete: 'Rejeté',
-};
-
-const STATUS_STYLE: Record<IdeaStatus, { bg: string; text: string; border: string }> = {
-  nouveau: { bg: '#E0F2FE', text: '#0369A1', border: '#BAE6FD' },
-  en_cours: { bg: '#FEF3C7', text: '#B45309', border: '#FDE68A' },
-  traite: { bg: '#EBF5E9', text: '#3C7730', border: '#D5E8D3' },
-  rejete: { bg: '#FEE2E2', text: '#B91C1C', border: '#FCA5A5' },
-};
-
-const NEXT_STATUS: Record<IdeaStatus, IdeaStatus | null> = {
-  nouveau: 'en_cours',
-  en_cours: 'traite',
-  traite: null,
-  rejete: null,
-};
 
 type PilotageTab = 'alertes_actions' | 'idees' | 'actions_correctives' | 'issues';
 
@@ -143,6 +94,8 @@ export default function PilotagePage() {
 
   // ── Action (recommandations IA consolidées réseau) ───
   const [recos, setRecos] = useState<RecommandationOrg[]>([]);
+  const [recosTotal, setRecosTotal] = useState(0);
+  const [recosLoadingMore, setRecosLoadingMore] = useState(false);
   const [recosLoading, setRecosLoading] = useState(true);
   const [agencesList, setAgencesList] = useState<Agence[]>([]);
   const [selectedAgenceId, setSelectedAgenceId] = useState<string | null>(null);
@@ -161,14 +114,28 @@ export default function PilotagePage() {
   const fetchRecos = useCallback(async () => {
     setRecosLoading(true);
     try {
-      const res = await recommandationsApi.listOrganisation();
+      const res = await recommandationsApi.listOrganisation(undefined, { limit: 50, offset: 0 });
       setRecos(res.data || []);
+      setRecosTotal(Number(res.headers?.['x-total-count'] || 0));
     } catch {
       setRecos([]);
     } finally {
       setRecosLoading(false);
     }
   }, []);
+
+  const loadMoreRecos = async () => {
+    if (recosLoadingMore || recos.length >= recosTotal) return;
+    setRecosLoadingMore(true);
+    try {
+      const res = await recommandationsApi.listOrganisation(undefined, { limit: 50, offset: recos.length });
+      setRecos((current) => [...current, ...(res.data || [])]);
+    } catch {
+      showToast('Impossible de charger les recommandations suivantes');
+    } finally {
+      setRecosLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
     fetchRecos();
@@ -178,6 +145,7 @@ export default function PilotagePage() {
     try {
       await recommandationsApi.marquerTraitee(id);
       setRecos((prev) => prev.filter((r) => r.id !== id));
+      setRecosTotal((total) => Math.max(0, total - 1));
     } catch {
       // Silencieux : la recommandation reste visible, l'utilisateur peut réessayer
     }
@@ -189,16 +157,34 @@ export default function PilotagePage() {
 
   // ── Boîte à idées ─────────────────────────────────────
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [suggestionsTotal, setSuggestionsTotal] = useState(0);
+  const [suggestionsLoadingMore, setSuggestionsLoadingMore] = useState(false);
   const [suggestionsLoading, setSuggestionsLoading] = useState(true);
   const [ideesSubTab, setIdeesSubTab] = useState<'toutes' | 'a_etudier' | 'decisions'>('toutes');
 
   useEffect(() => {
     suggestionsApi
-      .list()
-      .then((r) => setSuggestions(r.data || []))
+      .list({ limit: 50, offset: 0 })
+      .then((r) => {
+        setSuggestions(r.data || []);
+        setSuggestionsTotal(Number(r.headers?.['x-total-count'] || 0));
+      })
       .catch(() => setSuggestions([]))
       .finally(() => setSuggestionsLoading(false));
   }, []);
+
+  const loadMoreSuggestions = async () => {
+    if (suggestionsLoadingMore || suggestions.length >= suggestionsTotal) return;
+    setSuggestionsLoadingMore(true);
+    try {
+      const res = await suggestionsApi.list({ limit: 50, offset: suggestions.length });
+      setSuggestions((current) => [...current, ...(res.data || [])]);
+    } catch {
+      showToast('Impossible de charger les suggestions suivantes');
+    } finally {
+      setSuggestionsLoadingMore(false);
+    }
+  };
 
   const updateStatut = async (id: string, statut: IdeaStatus) => {
     try {
@@ -210,36 +196,13 @@ export default function PilotagePage() {
     }
   };
 
-  const aEtudierCount = useMemo(
-    () => suggestions.filter((s) => s.statut === 'nouveau' || s.statut === 'en_cours').length,
-    [suggestions]
-  );
-  const decisionsCount = useMemo(
-    () => suggestions.filter((s) => s.statut === 'traite' || s.statut === 'rejete').length,
-    [suggestions]
-  );
-  const filteredSuggestions = useMemo(() => {
-    if (ideesSubTab === 'a_etudier') return suggestions.filter((s) => s.statut === 'nouveau' || s.statut === 'en_cours');
-    if (ideesSubTab === 'decisions') return suggestions.filter((s) => s.statut === 'traite' || s.statut === 'rejete');
-    return suggestions;
-  }, [suggestions, ideesSubTab]);
-
-  const ideesTabsConfig: TabItem[] = [
-    { id: 'toutes', label: 'Toutes les idées', icon: <LightbulbIcon size={16} />, badge: suggestions.length },
-    {
-      id: 'a_etudier',
-      label: 'À étudier',
-      icon: <ClockIcon size={16} />,
-      badge: aEtudierCount,
-      badgeColor: aEtudierCount > 0 ? 'red' : 'default',
-    },
-    { id: 'decisions', label: 'Décisions prises', icon: <CheckCircleIcon size={16} />, badge: decisionsCount },
-  ];
-
   // ── Actions correctives (suivi + confirmation, pas de création ici) ──
   const [actionsToggle, setActionsToggle] = useState<'en_cours' | 'terminees'>('en_cours');
   const [actionsEnCours, setActionsEnCours] = useState<Feedback[]>([]);
   const [actionsTerminees, setActionsTerminees] = useState<Feedback[]>([]);
+  const [actionsEnCoursTotal, setActionsEnCoursTotal] = useState(0);
+  const [actionsTermineesTotal, setActionsTermineesTotal] = useState(0);
+  const [actionsLoadingMore, setActionsLoadingMore] = useState(false);
   const [actionsLoading, setActionsLoading] = useState(true);
   const [actionsFirstLoadDone, setActionsFirstLoadDone] = useState(false);
   const [actionsAgenceId, setActionsAgenceId] = useState<string | null>(null);
@@ -249,11 +212,13 @@ export default function PilotagePage() {
     try {
       const agenceParam = actionsAgenceId ? { agence_id: actionsAgenceId } : {};
       const [enCoursRes, termineesRes] = await Promise.all([
-        feedbacksApi.list({ avec_action: true, action_realisee: false, ...agenceParam }),
-        feedbacksApi.list({ avec_action: true, action_realisee: true, ...agenceParam }),
+        feedbacksApi.list({ avec_action: true, action_realisee: false, limit: 50, offset: 0, ...agenceParam }),
+        feedbacksApi.list({ avec_action: true, action_realisee: true, limit: 50, offset: 0, ...agenceParam }),
       ]);
       setActionsEnCours(enCoursRes?.data || []);
       setActionsTerminees(termineesRes?.data || []);
+      setActionsEnCoursTotal(Number(enCoursRes?.headers?.['x-total-count'] || 0));
+      setActionsTermineesTotal(Number(termineesRes?.headers?.['x-total-count'] || 0));
     } catch {
       setActionsEnCours([]);
       setActionsTerminees([]);
@@ -267,17 +232,39 @@ export default function PilotagePage() {
     fetchActions();
   }, [fetchActions]);
 
+  const loadMoreActions = async () => {
+    const current = actionsToggle === 'en_cours' ? actionsEnCours : actionsTerminees;
+    const total = actionsToggle === 'en_cours' ? actionsEnCoursTotal : actionsTermineesTotal;
+    if (actionsLoadingMore || current.length >= total) return;
+    setActionsLoadingMore(true);
+    try {
+      const res = await feedbacksApi.list({
+        avec_action: true,
+        action_realisee: actionsToggle === 'terminees',
+        limit: 50,
+        offset: current.length,
+        ...(actionsAgenceId ? { agence_id: actionsAgenceId } : {}),
+      });
+      if (actionsToggle === 'en_cours') setActionsEnCours((items) => [...items, ...(res.data || [])]);
+      else setActionsTerminees((items) => [...items, ...(res.data || [])]);
+    } catch {
+      showToast('Impossible de charger les actions suivantes');
+    } finally {
+      setActionsLoadingMore(false);
+    }
+  };
+
   const marquerActionRealisee = async (feedbackId: string) => {
     try {
       await feedbacksApi.confirmerActionRealisee(feedbackId);
       setActionsEnCours((prev) => prev.filter((f) => f.id !== feedbackId));
+      setActionsEnCoursTotal((total) => Math.max(0, total - 1));
       showToast('Action marquée comme réalisée');
     } catch {
       showToast("Erreur lors de la confirmation de l'action");
     }
   };
 
-  const actionsAffichees = actionsToggle === 'en_cours' ? actionsEnCours : actionsTerminees;
 
   // ── Issues (KPI P0 + liste + détail) ──────────────────
   const [issuesJours, setIssuesJours] = useState(30);
@@ -291,6 +278,8 @@ export default function PilotagePage() {
   const [issuesKpisRefreshToken, setIssuesKpisRefreshToken] = useState(0);
 
   const [issuesListRaw, setIssuesListRaw] = useState<Issue[]>([]);
+  const [issuesTotal, setIssuesTotal] = useState(0);
+  const [issuesLoadingMore, setIssuesLoadingMore] = useState(false);
   const [issuesListLoading, setIssuesListLoading] = useState(true);
   const [issuesListError, setIssuesListError] = useState(false);
   const [issuesFirstLoadDone, setIssuesFirstLoadDone] = useState(false);
@@ -303,11 +292,12 @@ export default function PilotagePage() {
     setIssuesListLoading(true);
     setIssuesListError(false);
     try {
-      const params: { agence_id?: string; tri?: string } = {};
+      const params: { agence_id?: string; tri?: string; limit: number; offset: number } = { limit: 50, offset: 0 };
       if (issuesAgenceId) params.agence_id = issuesAgenceId;
       if (backlogActif) params.tri = 'ancien';
       const res = await issuesApi.list(params);
       setIssuesListRaw(res.data || []);
+      setIssuesTotal(Number(res.headers?.['x-total-count'] || 0));
     } catch {
       setIssuesListError(true);
     } finally {
@@ -315,6 +305,24 @@ export default function PilotagePage() {
       setIssuesFirstLoadDone(true);
     }
   }, [issuesAgenceId, backlogActif]);
+
+  const loadMoreIssues = async () => {
+    if (issuesLoadingMore || issuesListRaw.length >= issuesTotal) return;
+    setIssuesLoadingMore(true);
+    try {
+      const params: { agence_id?: string; tri?: string; limit: number; offset: number } = {
+        limit: 50, offset: issuesListRaw.length,
+      };
+      if (issuesAgenceId) params.agence_id = issuesAgenceId;
+      if (backlogActif) params.tri = 'ancien';
+      const response = await issuesApi.list(params);
+      setIssuesListRaw((current) => [...current, ...(response.data || [])]);
+    } catch {
+      showToast('Impossible de charger les issues suivantes');
+    } finally {
+      setIssuesLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
     fetchIssuesList();
@@ -404,17 +412,6 @@ export default function PilotagePage() {
     }
   };
 
-  const extraitCommentaire = (texte?: string, max = 140) => {
-    if (!texte) return 'Aucun commentaire.';
-    return texte.length > max ? `${texte.slice(0, max)}…` : texte;
-  };
-
-  const formatDate = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('fr-FR') : null);
-
-  // Badge combiné : total des éléments nécessitant une action dans cet onglet
-  // fusionné (alertes actives + recommandations en attente), plus lisible
-  // qu'un seul des deux compteurs isolément puisque le contenu des deux est
-  // désormais présenté ensemble.
   const alertesActionsCount = totalAlertes + recos.length;
 
   const tabsConfig: TabItem[] = [
@@ -453,486 +450,20 @@ export default function PilotagePage() {
       <TabsNavigation tabs={tabsConfig} activeTab={activeTab} onChange={handleTabChange} />
 
       {/* ── ONGLET ALERTES & ACTIONS (fusion : alertes réseau + recommandations IA) ── */}
-      {activeTab === 'alertes_actions' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-          {/* ── Sous-section : Alertes ── */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <AlertTriangleIcon size={18} color="#DC2626" />
-              <SectionHeading>Alertes réseau ({alertesLoading ? '…' : totalAlertes})</SectionHeading>
-            </div>
-            {alertesLoading ? (
-            <div aria-busy="true" aria-label="Chargement des alertes" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {[0, 1].map((i) => (
-                <SkeletonBlock key={i} height={84} radius="var(--radius-2xl)" />
-              ))}
-            </div>
-          ) : totalAlertes === 0 ? (
-            <div className="saas-card saas-card--success">
-              <EmptyState
-                illustration="no-alert"
-                title="Aucune alerte critique active"
-                message={
-                  isAgencyManager
-                    ? "Votre agence maintient un taux de satisfaction supérieur à son seuil d'alerte."
-                    : "Toutes les agences du réseau maintiennent un taux de satisfaction supérieur à leurs seuils d'alerte."
-                }
-              />
-            </div>
-          ) : (
-            <div className="saas-card saas-card--critical" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {alertes.map((a, i) => (
-                <div
-                  key={i}
-                  style={{
-                    background: '#FFFFFF',
-                    border: '1px solid #E8ECE6',
-                    borderLeft: '6px solid #DC2626',
-                    borderRadius: '24px',
-                    padding: '22px 26px',
-                    boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <AlertTriangleIcon size={20} color="#DC2626" />
-                      <h3 style={{ fontWeight: 800, color: '#02302D', margin: 0, fontSize: '1rem' }}>{a.agence_nom}</h3>
-                    </div>
-                    <span style={{ background: '#FEE2E2', color: '#DC2626', padding: '4px 12px', borderRadius: '9999px', fontSize: '0.78rem', fontWeight: 800 }}>
-                      Taux actuel : {a.taux_actuel}% / Seuil {a.seuil}%
-                    </span>
-                  </div>
-                  <p style={{ color: '#64748B', fontSize: '0.9rem', margin: 0, lineHeight: 1.5 }}>{a.message}</p>
-                </div>
-              ))}
-              {alertesFeedback.map((af) => (
-                <div
-                  key={af.feedback_id}
-                  style={{
-                    background: '#FFFFFF',
-                    border: '1px solid #E8ECE6',
-                    borderLeft: '6px solid #DC2626',
-                    borderRadius: '24px',
-                    padding: '22px 26px',
-                    boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <AlertTriangleIcon size={20} color="#DC2626" />
-                      <h3 style={{ fontWeight: 800, color: '#02302D', margin: 0, fontSize: '1rem' }}>{af.agence_nom}</h3>
-                    </div>
-                    <span style={{ background: '#FEE2E2', color: '#DC2626', padding: '4px 12px', borderRadius: '9999px', fontSize: '0.78rem', fontWeight: 800 }}>
-                      {RAISON_LABELS[af.raison] || af.raison} — Note {af.note}/5
-                    </span>
-                  </div>
-                  <p style={{ color: '#64748B', fontSize: '0.9rem', margin: 0, lineHeight: 1.5 }}>
-                    {af.categorie_nom ? `Catégorie « ${af.categorie_nom} » — ` : ''}
-                    {af.commentaire || 'Aucun commentaire.'}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* ── Sous-section : Actions (recommandations IA — réseau pour le CX Manager, agence pour l'Agency Manager) ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <LightningIcon size={18} color="#75B72A" />
-              <SectionHeading>Recommandations IA ({recosLoading ? '…' : recos.length})</SectionHeading>
-            </div>
-            {!isAgencyManager && (
-              <AgenceFilterSelect agences={agencesList} selectedId={selectedAgenceId} onChange={setSelectedAgenceId} />
-            )}
-          </div>
-
-          {recosLoading ? (
-            <div aria-busy="true" aria-label="Chargement des recommandations" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {[0, 1, 2].map((i) => (
-                <SkeletonBlock key={i} height={96} radius="var(--radius-xl)" />
-              ))}
-            </div>
-          ) : recosAffichees.length === 0 ? (
-            <div className="saas-card saas-card--success">
-              <EmptyState
-                illustration="no-alert"
-                title="Aucune recommandation en attente"
-                message="Sur ce périmètre, toutes les actions suggérées ont été traitées."
-              />
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {recosAffichees.map((r) => (
-                <RecommandationCard key={r.id} recommandation={r} agenceNom={r.agence_nom} onMarquerTraitee={marquerRecoTraitee} />
-              ))}
-            </div>
-          )}
-        </div>
-        </div>
-      )}
+      {activeTab === 'alertes_actions' && <PilotageAlertesActionsTab alertes={alertes} alertesFeedback={alertesFeedback} alertesLoading={alertesLoading} totalAlertes={totalAlertes} isAgencyManager={isAgencyManager} recos={recos} recosAffichees={recosAffichees} recosTotal={recosTotal} recosLoading={recosLoading} recosLoadingMore={recosLoadingMore} loadMoreRecos={loadMoreRecos} agencesList={agencesList} selectedAgenceId={selectedAgenceId} setSelectedAgenceId={setSelectedAgenceId} marquerRecoTraitee={marquerRecoTraitee} />}
 
       {/* ── ONGLET BOÎTE À IDÉES ── */}
-      {activeTab === 'idees' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {suggestionsLoading ? (
-            <div style={{ color: '#64748B', padding: '32px', fontWeight: 600 }}>Chargement des suggestions...</div>
-          ) : (
-            <>
-              <TabsNavigation tabs={ideesTabsConfig} activeTab={ideesSubTab} onChange={(id) => setIdeesSubTab(id as any)} />
+      {activeTab === 'idees' && <PilotageIdeasTab suggestions={suggestions} suggestionsTotal={suggestionsTotal} suggestionsLoading={suggestionsLoading} suggestionsLoadingMore={suggestionsLoadingMore} loadMoreSuggestions={loadMoreSuggestions} updateStatut={updateStatut} activeSubTab={ideesSubTab} setActiveSubTab={setIdeesSubTab} />}
 
-              {filteredSuggestions.length === 0 ? (
-                <div style={{ background: '#FFFFFF', borderRadius: '24px', padding: '48px', textAlign: 'center', color: '#64748B', border: '1px solid #E8ECE6', fontWeight: 600 }}>
-                  Aucune suggestion dans cette catégorie.
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
-                  {filteredSuggestions.map((s) => {
-                    const st = STATUS_STYLE[s.statut] || { bg: '#F8FAFB', text: '#475569', border: '#E2E8F0' };
-                    const next = NEXT_STATUS[s.statut];
-                    return (
-                      <div
-                        key={s.id}
-                        style={{
-                          background: '#FFFFFF',
-                          borderRadius: '20px',
-                          padding: '22px',
-                          border: '1px solid #E8ECE6',
-                          boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'space-between',
-                          gap: '16px',
-                        }}
-                      >
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                            <span style={{ background: st.bg, color: st.text, border: `1px solid ${st.border}`, padding: '3px 10px', borderRadius: '9999px', fontSize: '0.74rem', fontWeight: 800 }}>
-                              {STATUS_LABELS[s.statut]}
-                            </span>
-                            <span style={{ fontSize: '0.76rem', color: '#94A3B8', fontWeight: 600 }}>
-                              {new Date(s.date_soumission).toLocaleDateString('fr-FR')}
-                            </span>
-                          </div>
-                          <p style={{ margin: 0, fontSize: '0.88rem', color: '#1E293B', lineHeight: 1.5, fontWeight: 500 }}>"{s.contenu}"</p>
-                        </div>
 
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', borderTop: '1px solid #F1F4EE', paddingTop: '12px' }}>
-                          {next && (
-                            <button
-                              type="button"
-                              onClick={() => updateStatut(s.id, next)}
-                              className="btn-primary"
-                              style={{ padding: '6px 12px', fontSize: '0.78rem', borderRadius: '10px' }}
-                            >
-                              → Passer à "{STATUS_LABELS[next]}"
-                            </button>
-                          )}
-                          {s.statut !== 'rejete' && (
-                            <button
-                              type="button"
-                              onClick={() => updateStatut(s.id, 'rejete')}
-                              style={{ background: '#FFFFFF', color: '#DC2626', border: '1px solid #FEE2E2', borderRadius: '10px', padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
-                            >
-                              Rejeter
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
 
       {/* ── ONGLET ACTIONS CORRECTIVES (suivi + confirmation uniquement — la définition d'une action reste dans FeedbackTreatmentModal) ── */}
-      {activeTab === 'actions_correctives' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-            <div
-              style={{
-                display: 'inline-flex',
-                padding: '4px',
-                background: '#F8FAFB',
-                border: '1px solid #E2E8F0',
-                borderRadius: '12px',
-                width: 'fit-content',
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setActionsToggle('en_cours')}
-                style={{
-                  padding: '7px 16px',
-                  borderRadius: '9px',
-                  border: 'none',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                  background: actionsToggle === 'en_cours' ? '#FEF3C7' : 'transparent',
-                  color: actionsToggle === 'en_cours' ? '#B45309' : '#64748B',
-                }}
-              >
-                En cours {actionsFirstLoadDone ? `(${actionsEnCours.length})` : ''}
-              </button>
-              <button
-                type="button"
-                onClick={() => setActionsToggle('terminees')}
-                style={{
-                  padding: '7px 16px',
-                  borderRadius: '9px',
-                  border: 'none',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                  background: actionsToggle === 'terminees' ? '#EBF5E9' : 'transparent',
-                  color: actionsToggle === 'terminees' ? '#3C7730' : '#64748B',
-                }}
-              >
-                Terminées {actionsFirstLoadDone ? `(${actionsTerminees.length})` : ''}
-              </button>
-            </div>
-            {!isAgencyManager && (
-              <AgenceFilterSelect agences={agencesList} selectedId={actionsAgenceId} onChange={setActionsAgenceId} />
-            )}
-          </div>
+      {activeTab === 'actions_correctives' && <PilotageActionsCorrectivesTab isAgencyManager={isAgencyManager} agencesList={agencesList} actionsToggle={actionsToggle} setActionsToggle={setActionsToggle} actionsEnCours={actionsEnCours} actionsTerminees={actionsTerminees} actionsEnCoursTotal={actionsEnCoursTotal} actionsTermineesTotal={actionsTermineesTotal} actionsLoading={actionsLoading} actionsFirstLoadDone={actionsFirstLoadDone} actionsLoadingMore={actionsLoadingMore} loadMoreActions={loadMoreActions} actionsAgenceId={actionsAgenceId} setActionsAgenceId={setActionsAgenceId} marquerActionRealisee={marquerActionRealisee} />}
 
-          {actionsLoading ? (
-            <div aria-busy="true" aria-label="Chargement des actions correctives" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {[0, 1, 2].map((i) => (
-                <SkeletonBlock key={i} height={90} radius="var(--radius-2xl)" />
-              ))}
-            </div>
-          ) : actionsAffichees.length === 0 ? (
-            <div className="saas-card saas-card--success">
-              <EmptyState
-                illustration="no-alert"
-                title={actionsToggle === 'en_cours' ? 'Aucune action en cours' : 'Aucune action terminée pour l’instant'}
-                message={
-                  actionsToggle === 'en_cours'
-                    ? 'Toutes les actions correctives définies ont été confirmées comme réalisées.'
-                    : 'Les actions confirmées comme réalisées apparaîtront ici.'
-                }
-              />
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {actionsAffichees.map((f) => (
-                <div
-                  key={f.id}
-                  style={{
-                    background: '#FFFFFF',
-                    border: '1px solid #E8ECE6',
-                    borderLeft: `6px solid ${actionsToggle === 'en_cours' ? '#D97706' : '#3C7730'}`,
-                    borderRadius: '24px',
-                    padding: '22px 26px',
-                    boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '10px',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      {!isAgencyManager && f.agence_nom && (
-                        <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#3C7730', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          {f.agence_nom}
-                        </span>
-                      )}
-                      <p style={{ margin: 0, fontSize: '0.88rem', color: '#1E293B', lineHeight: 1.5, fontWeight: 500 }}>
-                        "{extraitCommentaire(f.commentaire)}"
-                      </p>
-                    </div>
-                    <span
-                      style={{
-                        background: actionsToggle === 'en_cours' ? '#FEF3C7' : '#EBF5E9',
-                        color: actionsToggle === 'en_cours' ? '#B45309' : '#3C7730',
-                        padding: '4px 12px',
-                        borderRadius: '9999px',
-                        fontSize: '0.76rem',
-                        fontWeight: 800,
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {actionsToggle === 'en_cours' ? 'En cours' : 'Terminée'}
-                    </span>
-                  </div>
 
-                  <div style={{ background: '#F8FAFB', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px 14px' }}>
-                    <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      Action à prendre
-                    </div>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '0.86rem', color: '#02302D', fontWeight: 600 }}>
-                      {f.action_a_prendre || '—'}
-                    </p>
-                  </div>
-
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>
-                    {f.assigne_a_nom && <span>Assigné à : {f.assigne_a_nom}</span>}
-                    {formatDate(f.date_assignation) && <span>Assignée le {formatDate(f.date_assignation)}</span>}
-                    {actionsToggle === 'terminees' && formatDate(f.date_resolution) && (
-                      <span>Résolue le {formatDate(f.date_resolution)}</span>
-                    )}
-                  </div>
-
-                  {actionsToggle === 'en_cours' && (
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #F1F4EE', paddingTop: '12px' }}>
-                      <button
-                        type="button"
-                        onClick={() => marquerActionRealisee(f.id)}
-                        className="btn-primary"
-                        style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '10px', fontWeight: 800 }}
-                      >
-                        <CheckCircleIcon size={15} />
-                        Marquer réalisée
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ── ONGLET ISSUES (KPI P0 + liste + détail — pas de création ici, voir rapport) ── */}
-      {activeTab === 'issues' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-            <PeriodSelector
-              value={issuesJours}
-              onChange={setIssuesJours}
-              options={[
-                { label: '7 jours', jours: 7 },
-                { label: '30 jours', jours: 30 },
-                { label: '90 jours', jours: 90 },
-              ]}
-            />
-            {!isAgencyManager && (
-              <AgenceFilterSelect agences={agencesList} selectedId={issuesAgenceId} onChange={setIssuesAgenceId} />
-            )}
-            <button
-              type="button"
-              onClick={() => setBacklogActif((v) => !v)}
-              title="Trie les Issues non closes par ancienneté (les plus anciennes d'abord)"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 14px',
-                borderRadius: '9999px',
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                fontFamily: 'inherit',
-                cursor: 'pointer',
-                border: backlogActif ? '1px solid #3C7730' : '1px solid #E2E8F0',
-                background: backlogActif ? '#EBF5E9' : '#FFFFFF',
-                color: backlogActif ? '#3C7730' : '#64748B',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-              }}
-            >
-              <ClockIcon size={14} color={backlogActif ? '#3C7730' : '#64748B'} />
-              Vue Backlog
-            </button>
-          </div>
-
-          {/* KPI P0 */}
-          <KpiCoreGrid jours={issuesJours} agenceId={issuesAgenceId} refreshToken={issuesKpisRefreshToken} />
-
-          {/* Liste des Issues */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', flexWrap: 'wrap' }}>
-              <SectionHeading>Issues ({issuesFirstLoadDone ? issuesAffichees.length : '…'})</SectionHeading>
-              {ancienneteTexte && (
-                <span style={{ fontSize: '0.78rem', color: '#B45309', fontWeight: 700 }}>{ancienneteTexte}</span>
-              )}
-            </div>
-
-            {issuesListError ? (
-              <StatsErrorState message="Impossible de charger la liste des Issues." onRetry={fetchIssuesList} />
-            ) : issuesListLoading ? (
-              <div aria-busy="true" aria-label="Chargement des Issues" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {[0, 1, 2].map((i) => (
-                  <SkeletonBlock key={i} height={100} radius="var(--radius-2xl)" />
-                ))}
-              </div>
-            ) : issuesAffichees.length === 0 ? (
-              <div className="saas-card saas-card--success">
-                <EmptyState
-                  illustration="no-alert"
-                  title="Aucune Issue sur cette période"
-                  message="Aucun problème récurrent n'a été identifié pour les filtres sélectionnés."
-                />
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {issuesAffichees.map((issue) => (
-                  <div
-                    key={issue.id}
-                    onClick={() => openIssueDetail(issue.id)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') openIssueDetail(issue.id);
-                    }}
-                    style={{
-                      background: '#FFFFFF',
-                      border: '1px solid #E8ECE6',
-                      borderRadius: '24px',
-                      padding: '20px 24px',
-                      boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '10px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
-                        {!isAgencyManager && issue.agence_nom && (
-                          <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#3C7730', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                            {issue.agence_nom}
-                          </span>
-                        )}
-                        <h3 style={{ margin: 0, fontSize: '0.96rem', fontWeight: 800, color: '#02302D' }}>{issue.titre}</h3>
-                        {issue.description && (
-                          <p style={{ margin: 0, fontSize: '0.84rem', color: '#64748B', lineHeight: 1.5 }}>
-                            {extraitCommentaire(issue.description, 160)}
-                          </p>
-                        )}
-                      </div>
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', flexShrink: 0 }}>
-                        <Badge label={ISSUE_SEVERITE_LABELS[issue.severite]} value={issue.severite} />
-                        <Badge label={ISSUE_STATUT_LABELS[issue.statut]} variant={ISSUE_STATUT_BADGE_VARIANT[issue.statut]} />
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '0.78rem', color: '#64748B', fontWeight: 600, borderTop: '1px solid #F1F4EE', paddingTop: '10px' }}>
-                      <span>Détectée le {formatDate(issue.premiere_detection)}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {selectedIssueId && (
-            <IssueDetailModal
-              issue={issueDetail}
-              loading={issueDetailLoading}
-              onClose={closeIssueDetail}
-              onTerminerAction={terminerActionIssue}
-              onVerifier={verifierIssue}
-            />
-          )}
-        </div>
-      )}
+      {activeTab === 'issues' && <PilotageIssuesTab isAgencyManager={isAgencyManager} agencesList={agencesList} issuesJours={issuesJours} setIssuesJours={setIssuesJours} issuesAgenceId={issuesAgenceId} setIssuesAgenceId={setIssuesAgenceId} backlogActif={backlogActif} setBacklogActif={setBacklogActif} issuesKpisRefreshToken={issuesKpisRefreshToken} issuesFirstLoadDone={issuesFirstLoadDone} issuesAffichees={issuesAffichees} issuesListRaw={issuesListRaw} issuesTotal={issuesTotal} ancienneteTexte={ancienneteTexte} issuesListError={issuesListError} issuesListLoading={issuesListLoading} fetchIssuesList={fetchIssuesList} openIssueDetail={openIssueDetail} issuesLoadingMore={issuesLoadingMore} loadMoreIssues={loadMoreIssues} selectedIssueId={selectedIssueId} issueDetail={issueDetail} issueDetailLoading={issueDetailLoading} closeIssueDetail={closeIssueDetail} terminerActionIssue={terminerActionIssue} verifierIssue={verifierIssue} />}
     </div>
   );
 }

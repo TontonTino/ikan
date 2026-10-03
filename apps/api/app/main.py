@@ -1,6 +1,8 @@
 """
 Point d'entrée principal de l'API IKAN AI.
 """
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,6 +23,8 @@ import app.models.demande_contact
 import app.models.historique_action
 import app.models.system_settings
 
+logger = logging.getLogger(__name__)
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="Plateforme SaaS de Feedback Client — IKAN AI",
@@ -35,12 +39,15 @@ scheduler = BackgroundScheduler()
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    import traceback
-    err_trace = traceback.format_exc()
-    print(f"[GLOBAL EXCEPTION] {err_trace}")
+    logger.error(
+        "Erreur non gérée pendant %s %s",
+        request.method,
+        request.url.path,
+        exc_info=(type(exc), exc, exc.__traceback__),
+    )
     return JSONResponse(
         status_code=500,
-        content={"detail": f"Erreur serveur interne: {str(exc)}", "trace": err_trace[-400:]}
+        content={"detail": "Une erreur interne est survenue."},
     )
 
 @app.on_event("startup")
@@ -155,10 +162,11 @@ def on_startup():
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"https?://.*",
+    allow_origins=settings.allowed_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Total-Count"],
 )
 
 # Inclusion des routes
@@ -188,16 +196,3 @@ def root():
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
-
-
-@app.get("/debug-db")
-def debug_db():
-    try:
-        from app.db.session import engine
-        from sqlalchemy import text
-        with engine.connect() as conn:
-            res = conn.execute(text("SELECT 1")).fetchone()
-            return {"status": "connected", "result": res[0]}
-    except Exception as e:
-        import traceback
-        return {"status": "error", "error": str(e), "trace": traceback.format_exc()}

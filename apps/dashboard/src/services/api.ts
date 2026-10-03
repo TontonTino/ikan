@@ -111,17 +111,17 @@ export const feedbacksApi = {
 
 // ── Suggestions ───────────────────────────────────────
 export const suggestionsApi = {
-  list: () => api.get('/suggestions/'),
+  list: (params?: { limit?: number; offset?: number }) => api.get('/suggestions/', { params }),
   updateStatut: (id: string, statut: string, commentaire?: string) =>
     api.patch(`/suggestions/${id}/statut`, { statut, commentaire }),
 };
 
 // ── Recommandations ───────────────────────────────────
 export const recommandationsApi = {
-  listAgence: (agenceId: string) =>
-    api.get(`/recommandations/agences/${agenceId}`),
-  listOrganisation: (traitee?: boolean) =>
-    api.get('/recommandations/organisation', { params: traitee !== undefined ? { traitee } : undefined }),
+  listAgence: (agenceId: string, params?: { limit?: number; offset?: number }) =>
+    api.get(`/recommandations/agences/${agenceId}`, { params }),
+  listOrganisation: (traitee?: boolean, pagination?: { limit?: number; offset?: number }) =>
+    api.get('/recommandations/organisation', { params: { ...(traitee !== undefined ? { traitee } : {}), ...pagination } }),
   marquerTraitee: (id: string) =>
     api.patch(`/recommandations/${id}/traiter`),
 };
@@ -160,6 +160,7 @@ export const adminFacturationApi = {
 // ── Agences ───────────────────────────────────────────
 export const agencesApi = {
   list: () => api.get('/agences/'),
+  listContext: () => api.get<import('../types').AgenceContexteItem[]>('/agences/contexte'),
   get: (id: string) => api.get(`/agences/${id}`),
   create: (orgId: string, data: object) => api.post('/agences/', data, { params: orgId ? { org_id: orgId } : undefined }),
   update: (id: string, data: object) => api.patch(`/agences/${id}`, data),
@@ -203,7 +204,7 @@ export const veilleApi = {
 
 // ── Issues ────────────────────────────────────────────
 export const issuesApi = {
-  list: (params?: { statut?: string; severite?: string; agence_id?: string; categorie_id?: string; tri?: string }) =>
+  list: (params?: { statut?: string; severite?: string; agence_id?: string; categorie_id?: string; tri?: string; limit?: number; offset?: number }) =>
     api.get<import('../types').Issue[]>('/issues/', { params }),
   get: (issueId: string) =>
     api.get<import('../types').IssueDetail>(`/issues/${issueId}`),
@@ -221,7 +222,7 @@ export const issuesApi = {
 
 // ── Demandes de contact (rappel client) ────────────────
 export const demandesContactApi = {
-  list: (params?: { traitee?: boolean; agence_id?: string }) =>
+  list: (params?: { traitee?: boolean; agence_id?: string; limit?: number; offset?: number }) =>
     api.get<import('../types').DemandeContactListItem[]>('/feedbacks/demandes-contact', { params }),
   traiter: (id: string) =>
     api.patch(`/feedbacks/demandes-contact/${id}/traiter`),

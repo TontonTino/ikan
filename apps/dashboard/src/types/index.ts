@@ -57,6 +57,12 @@ export interface Agence {
   manager_nom?: string | null;
 }
 
+export interface AgenceContexteItem {
+  id: string;
+  nom: string;
+  ville: string | null;
+}
+
 export interface Categorie {
   id: string;
   agence_id: string;
@@ -219,8 +225,12 @@ export interface DashboardAgence {
   nombre_negatifs: number;
   nombre_critiques: number;
   nombre_suggestions: number;
+  feedbacks_a_traiter: number;
+  taux_prise_en_charge: number | null;
+  actions_ouvertes: number;
   tendances: TendanceSatisfaction[];
   themes: { theme: string; count: number; pourcentage: number }[];
+  sentiments: { sentiment: SentimentType; count: number; pourcentage: number }[];
   discordances: number;
 }
 

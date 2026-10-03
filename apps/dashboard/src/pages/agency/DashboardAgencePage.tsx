@@ -7,7 +7,7 @@
  *   Niveau 3  Compréhension         → « Que disent mes clients ? » (répartition des thèmes)
  *   Niveau 4  Action                → « Actions » (recommandations IA à traiter)
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AreaChart,
@@ -25,7 +25,7 @@ import { dashboardApi, recommandationsApi, alertesApi } from '../../services/api
 import { useAuthStore } from '../../stores/authStore';
 import type { DashboardAgence, Recommandation, Alerte } from '../../types';
 import PageHeader from '../../components/ui/PageHeader';
-import KpiCoreGrid from '../../components/kpi/KpiCoreGrid';
+import AgencyDecisionKpis from '../../components/agency/AgencyDecisionKpis';
 import EmptyState from '../../components/ui/EmptyState';
 import SkeletonBlock from '../../components/ui/SkeletonBlock';
 import SectionHeading from '../../components/ui/SectionHeading';
@@ -33,6 +33,7 @@ import AlerteRow from '../../components/alerts/AlerteRow';
 import EphemeralAlertsBanner from '../../components/alerts/EphemeralAlertsBanner';
 import RecommandationCard from '../../components/stats/RecommandationCard';
 import { ArrowUpRightIcon } from '../../components/common/Icons';
+import { themeLabel } from '../../utils/themeLabels';
 
 const THEME_COLORS = [
   '#02302D', '#3C7730', '#75B72A', '#BCCF00', '#0284C7',
@@ -53,30 +54,48 @@ export default function DashboardAgencePage() {
   const [data, setData] = useState<DashboardAgence | null>(null);
   const [alertes, setAlertes] = useState<Alerte[]>([]);
   const [recos, setRecos] = useState<Recommandation[]>([]);
+  const [recosTotal, setRecosTotal] = useState(0);
+  const [recosLoadingMore, setRecosLoadingMore] = useState(false);
   const [jours, setJours] = useState(30);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState('');
+  const requestIdRef = useRef(0);
 
   const agenceId = user?.agence_id;
 
   const load = useCallback(() => {
     if (!agenceId) return;
+    const requestId = ++requestIdRef.current;
     setLoading(true);
+    setRecosLoadingMore(false);
     Promise.all([
       dashboardApi.agence(agenceId, jours),
-      recommandationsApi.listAgence(agenceId),
+      recommandationsApi.listAgence(agenceId, { limit: 50, offset: 0 }),
       alertesApi.list(),
     ])
       .then(([d, r, a]) => {
+        if (requestId !== requestIdRef.current) return;
         setData(d.data);
         setRecos(r.data);
+        setRecosTotal(Number(r.headers?.['x-total-count'] || 0));
         setAlertes(a.data?.alertes_seuil || []);
       })
-      .finally(() => setLoading(false));
+      .catch((error) => {
+        if (requestId !== requestIdRef.current) return;
+        console.error('Erreur chargement du dashboard agence:', error);
+        setData(null);
+        setRecos([]);
+        setRecosTotal(0);
+        setAlertes([]);
+      })
+      .finally(() => {
+        if (requestId === requestIdRef.current) setLoading(false);
+      });
   }, [agenceId, jours]);
 
   useEffect(() => {
     load();
+    return () => { requestIdRef.current += 1; };
   }, [load]);
 
   const showToast = (msg: string) => {
@@ -88,9 +107,27 @@ export default function DashboardAgencePage() {
     try {
       await recommandationsApi.marquerTraitee(id);
       setRecos((prev) => prev.filter((r) => r.id !== id));
+      setRecosTotal((total) => Math.max(0, total - 1));
       showToast('✅ Recommandation marquée comme traitée');
     } catch {
       showToast('❌ Erreur lors de la mise à jour');
+    }
+  };
+
+  const loadMoreRecos = async () => {
+    if (!agenceId || recosLoadingMore || recos.length >= recosTotal) return;
+    const requestId = requestIdRef.current;
+    setRecosLoadingMore(true);
+    try {
+      const response = await recommandationsApi.listAgence(agenceId, { limit: 50, offset: recos.length });
+      if (requestId === requestIdRef.current) setRecos((current) => [...current, ...(response.data || [])]);
+    } catch (error) {
+      if (requestId === requestIdRef.current) {
+        console.error('Erreur chargement des recommandations suivantes:', error);
+        showToast('Impossible de charger les recommandations suivantes');
+      }
+    } finally {
+      if (requestId === requestIdRef.current) setRecosLoadingMore(false);
     }
   };
 
@@ -133,8 +170,9 @@ export default function DashboardAgencePage() {
       {/* ── En-tête avec sélecteur de période (toujours affiché, y compris pendant le chargement) ── */}
       <PageHeader
         greetingUser={user?.prenom}
-        subtitle="Voici la situation de votre agence aujourd'hui."
+        subtitle={`${data?.agence_nom || user?.agence_nom || 'Mon agence'} · ${data?.periode || `${jours} derniers jours`}`}
         showDateBesideActions
+        onRefresh={load}
       >
         <div
           style={{
@@ -214,7 +252,27 @@ export default function DashboardAgencePage() {
           <section aria-labelledby="agence-situation" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div id="agence-situation"><SectionHeading>Comment va mon agence ?</SectionHeading></div>
 
-            <KpiCoreGrid jours={jours} />
+            <AgencyDecisionKpis data={data} jours={jours} />
+
+            <section aria-labelledby="agence-urgent" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div id="agence-urgent"><SectionHeading>À surveiller</SectionHeading></div>
+              {alertes.length > 0 ? (
+                alertes.map((al) => <AlerteRow key={al.agence_id} alerte={al} />)
+              ) : (
+                <p style={{ margin: 0, fontSize: '0.86rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                  Aucune alerte de satisfaction pour cette période.
+                </p>
+              )}
+              {data.feedbacks_a_traiter > 0 && (
+                <Link
+                  to="/feedbacks?tab=a_traiter"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', alignSelf: 'flex-start', fontSize: '0.84rem', fontWeight: 700, color: '#3C7730', textDecoration: 'none' }}
+                >
+                  Voir les {data.feedbacks_a_traiter} feedbacks à traiter
+                  <ArrowUpRightIcon size={13} color="#3C7730" />
+                </Link>
+              )}
+            </section>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <Link
@@ -230,24 +288,8 @@ export default function DashboardAgencePage() {
             <div style={cardStyle}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
                 <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#02302D' }}>
-                  Évolution de la satisfaction de l'agence
+                  Évolution de la satisfaction · {data.periode}
                 </h3>
-                <div
-                  style={{
-                    background: '#EBF5E9',
-                    color: '#3C7730',
-                    borderRadius: '9999px',
-                    padding: '3px 9px',
-                    fontSize: '0.74rem',
-                    fontWeight: 700,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <span className="live-dot" />
-                  <span>En direct</span>
-                </div>
               </div>
 
               <div style={{ width: '100%', height: 230 }}>
@@ -277,21 +319,40 @@ export default function DashboardAgencePage() {
             </div>
           </section>
 
-          {/* ── Niveau 2 : urgent pour cette agence ── */}
-          <section aria-labelledby="agence-urgent" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div id="agence-urgent"><SectionHeading>Urgent</SectionHeading></div>
-            {alertes.length > 0 ? (
-              alertes.map((al) => <AlerteRow key={al.agence_id} alerte={al} />)
-            ) : (
-              <p style={{ margin: 0, fontSize: '0.86rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
-                Votre agence est au-dessus de son seuil d'alerte de satisfaction.
-              </p>
-            )}
-          </section>
-
           {/* ── Niveau 3 : compréhension ── */}
           <section aria-labelledby="agence-comprehension" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div id="agence-comprehension"><SectionHeading>Que disent mes clients ?</SectionHeading></div>
+            <div style={cardStyle}>
+              <h3 style={{ margin: '0 0 16px', fontSize: '1.05rem', fontWeight: 800, color: '#02302D' }}>Ressenti client</h3>
+              {data.sentiments.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 170px), 1fr))', gap: '12px' }}>
+                  {[
+                    { key: 'positif', label: 'Positif', color: '#3C7730', bg: '#EBF5E9' },
+                    { key: 'neutre', label: 'Neutre', color: '#B45309', bg: '#FEF3C7' },
+                    { key: 'negatif', label: 'Négatif', color: '#B91C1C', bg: '#FEE2E2' },
+                  ].map((item) => {
+                    const sentiment = data.sentiments.find((s) => s.sentiment === item.key);
+                    const percentage = sentiment?.pourcentage ?? 0;
+                    return (
+                      <div key={item.key} style={{ padding: '14px 16px', background: item.bg, borderRadius: '14px', color: item.color }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'baseline' }}>
+                          <strong style={{ fontSize: '0.84rem' }}>{item.label}</strong>
+                          <strong style={{ fontSize: '1.1rem' }}>{percentage}%</strong>
+                        </div>
+                        <div style={{ marginTop: '5px', fontSize: '0.76rem', fontWeight: 600 }}>
+                          {sentiment?.count ?? 0} feedbacks analysés
+                        </div>
+                        <div role="presentation" style={{ height: '5px', marginTop: '10px', background: 'rgba(255,255,255,0.75)', borderRadius: '999px', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${Math.max(0, Math.min(100, percentage))}%`, background: item.color, borderRadius: '999px' }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.86rem' }}>Les feedbacks de cette période n’ont pas encore été analysés.</p>
+              )}
+            </div>
             <div style={cardStyle}>
               <h3 style={{ margin: '0 0 18px', fontSize: '1.05rem', fontWeight: 800, color: '#02302D' }}>
                 Répartition des thèmes
@@ -324,9 +385,10 @@ export default function DashboardAgencePage() {
                   {/* Légende : pastille + catégorie (choisie par le client) + pourcentage */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, minWidth: '200px', maxHeight: '210px', overflowY: 'auto' }}>
                     {data.themes.map((t, i) => (
-                      <div
+                      <Link
                         key={t.theme}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', padding: '5px 10px', background: '#F8FAFC', borderRadius: '9px' }}
+                        to={`/feedbacks?theme=${encodeURIComponent(t.theme)}`}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', padding: '7px 10px', background: '#F8FAFC', borderRadius: '9px', textDecoration: 'none', minHeight: '36px' }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                           <span
@@ -339,11 +401,11 @@ export default function DashboardAgencePage() {
                             }}
                           />
                           <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0F172A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {t.theme}
+                            {themeLabel(t.theme)}
                           </span>
                         </div>
                         <strong style={{ fontSize: '0.8rem', color: '#02302D', flexShrink: 0 }}>{t.pourcentage}%</strong>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -359,15 +421,24 @@ export default function DashboardAgencePage() {
 
           {/* ── Niveau 4 : actions ── */}
           <section aria-labelledby="agence-actions" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div id="agence-actions"><SectionHeading>Actions</SectionHeading></div>
+            <div id="agence-actions"><SectionHeading>Mes actions</SectionHeading></div>
             <div style={{ ...cardStyle, padding: '26px 28px' }}>
-              <div style={{ marginBottom: '18px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', marginBottom: '18px' }}>
+                <div>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#02302D' }}>
-                  Plan d'action & Recommandations IA ({recos.length})
+                  Recommandations à suivre ({recosTotal})
                 </h3>
                 <p style={{ margin: '3px 0 0', fontSize: '0.84rem', color: '#64748B', fontWeight: 500 }}>
                   Actions concrètes suggérées automatiquement par l'IA pour traiter les points de douleur récurrents.
                 </p>
+                </div>
+                <Link
+                  to="/pilotage?tab=actions"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.84rem', fontWeight: 700, color: '#3C7730', textDecoration: 'none' }}
+                >
+                  {data.actions_ouvertes} action{data.actions_ouvertes !== 1 ? 's' : ''} en cours
+                  <ArrowUpRightIcon size={13} color="#3C7730" />
+                </Link>
               </div>
 
               {recos.length === 0 ? (
@@ -381,6 +452,11 @@ export default function DashboardAgencePage() {
                   {recos.map((r) => (
                     <RecommandationCard key={r.id} recommandation={r} onMarquerTraitee={marquerTraitee} />
                   ))}
+                  {recos.length < recosTotal && (
+                    <button type="button" onClick={loadMoreRecos} disabled={recosLoadingMore} className="btn-secondary" style={{ alignSelf: 'center' }}>
+                      {recosLoadingMore ? 'Chargement…' : `Charger plus (${recos.length}/${recosTotal})`}
+                    </button>
+                  )}
                 </div>
               )}
             </div>

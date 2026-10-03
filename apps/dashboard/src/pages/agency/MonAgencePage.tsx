@@ -1,12 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { lazy, useEffect, useState } from 'react';
 import { Navigate, useParams, useSearchParams } from 'react-router-dom';
-import jsPDF from 'jspdf';
 import { agencesApi, statisticsApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import { getFeedbackUrl } from '../../config';
 import type { Agence, Categorie, ActiviteAgenceItem, StatsAgenceResponse } from '../../types';
 import TabsNavigation, { TabItem } from '../../components/ui/TabsNavigation';
-import FeedbacksPage from './FeedbacksPage';
+const FeedbacksPage = lazy(() => import('./FeedbacksPage'));
 import {
   CopyIcon,
   DownloadIcon,
@@ -74,6 +73,7 @@ async function imageUrlEnDataUrl(url: string): Promise<string> {
 async function genererPdfQrCode(agence: Agence, lien: string) {
   const qrDataUrl = await imageUrlEnDataUrl(qrImageUrl(lien, 600));
 
+  const { default: jsPDF } = await import('jspdf');
   const doc = new jsPDF({ unit: 'mm', format: 'a6', orientation: 'portrait' });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();

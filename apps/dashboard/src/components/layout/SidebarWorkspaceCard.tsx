@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import type { User } from '../../types';
-import { ChevronDownIcon, ChevronRightIcon } from '../common/Icons';
+import React, { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { agencesApi } from '../../services/api';
+import type { AgenceContexteItem, User } from '../../types';
+import { ChevronDownIcon, ChevronRightIcon, SearchIcon } from '../common/Icons';
 
 interface SidebarWorkspaceCardProps {
   user: User | null;
+  collapsed?: boolean;
 }
 
 const FALLBACK_PALETTES = [
@@ -104,13 +106,44 @@ const AdminProfessionalAvatar: React.FC = () => (
   </svg>
 );
 
-export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps) {
+export default function SidebarWorkspaceCard({ user, collapsed = false }: SidebarWorkspaceCardProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [imgError, setImgError] = useState(false);
   const [contextHovered, setContextHovered] = useState(false);
   const [contextFocused, setContextFocused] = useState(false);
+  const [contextOpen, setContextOpen] = useState(false);
+  const [contextAgences, setContextAgences] = useState<AgenceContexteItem[]>([]);
+  const [contextLoading, setContextLoading] = useState(false);
+  const [contextError, setContextError] = useState('');
+  const [contextSearch, setContextSearch] = useState('');
+  const contextRef = useRef<HTMLDivElement>(null);
   const logoUrl = user?.organisation_logo;
   useEffect(() => setImgError(false), [logoUrl]);
+  useEffect(() => {
+    if (!contextOpen) return;
+    const closeOnOutside = (event: PointerEvent) => {
+      if (!contextRef.current?.contains(event.target as Node)) setContextOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setContextOpen(false); };
+    document.addEventListener('pointerdown', closeOnOutside);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutside);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [contextOpen]);
+
+  const toggleAgencyContext = async () => {
+    if (contextOpen) { setContextOpen(false); return; }
+    setContextOpen(true);
+    if (contextAgences.length || contextLoading) return;
+    setContextLoading(true);
+    setContextError('');
+    try { setContextAgences((await agencesApi.listContext()).data); }
+    catch { setContextError('Impossible de charger les agences. Réessayez.'); }
+    finally { setContextLoading(false); }
+  };
 
   if (!user) return null;
 
@@ -144,7 +177,7 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
 
   if (isAgencyManager || isCxManager) {
     const tooltipId = 'agency-context-tooltip';
-    const tooltipVisible = contextHovered || contextFocused;
+    const tooltipVisible = !contextOpen && (contextHovered || contextFocused);
     const contextLogo = (
       <span className="agency-context-logo">
         {orgLogo ? (
@@ -156,7 +189,7 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
     );
 
     return (
-      <div className="agency-context-wrap">
+      <div ref={contextRef} className={`agency-context-wrap${collapsed ? ' agency-context-wrap--collapsed' : ''}`}>
         {isAgencyManager ? (
           <button
             type="button"
@@ -175,22 +208,44 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
             </span>
           </button>
         ) : (
-          <div
-            className="cx-context-card"
-            role="img"
-            aria-label={`Contexte actuel : ${orgName}, ${spaceSub}.`}
-            aria-describedby={tooltipVisible ? tooltipId : undefined}
-            onMouseEnter={() => setContextHovered(true)}
-            onMouseLeave={() => setContextHovered(false)}
-          >
+          <button type="button" className="cx-context-card" aria-haspopup="dialog" aria-expanded={contextOpen}
+            aria-label={`Sélectionner une agence dans ${orgName}`} onClick={toggleAgencyContext}
+            onMouseEnter={() => setContextHovered(true)} onMouseLeave={() => setContextHovered(false)}>
             {contextLogo}
-          </div>
+            <span className="agency-context-chevron" aria-hidden="true"><ChevronDownIcon size={16} /></span>
+          </button>
         )}
 
         {tooltipVisible && (
           <div className="agency-context-tooltip" id={tooltipId} role="tooltip">
             <span className="agency-context-tooltip-org">{orgName}</span>
             <span className="agency-context-tooltip-agency">{spaceSub}</span>
+          </div>
+        )}
+
+        {isCxManager && contextOpen && (
+          <div className="cx-context-menu" role="dialog" aria-label="Choisir une agence">
+            <label className="cx-context-search"><SearchIcon size={15} aria-hidden="true" /><input autoFocus value={contextSearch} onChange={(event) => setContextSearch(event.target.value)} placeholder="Rechercher une agence" aria-label="Rechercher une agence" /></label>
+            <button type="button" className={`cx-context-option${!location.pathname.startsWith('/agences/') ? ' is-selected' : ''}`} onClick={() => { setContextOpen(false); navigate('/siege'); }}>Toutes les agences</button>
+            {contextLoading && <div className="cx-context-message" role="status">Chargement des agences…</div>}
+            {contextError && <div className="cx-context-message cx-context-error" role="alert">{contextError}</div>}
+            {!contextLoading && !contextError && contextAgences.filter((agence) => `${agence.nom} ${agence.ville ?? ''}`.toLocaleLowerCase().includes(contextSearch.trim().toLocaleLowerCase())).map((agence) => (
+              <button key={agence.id} type="button" className={`cx-context-option${location.pathname.includes(agence.id) ? ' is-selected' : ''}`} onClick={() => { setContextOpen(false); navigate(`/agences/${agence.id}/apercu`); }}>
+                <span>{agence.nom}</span><small>{agence.ville || 'Ville non renseignée'}</small>
+              </button>
+            ))}
+            {!contextLoading && !contextError && contextAgences.length > 0 && contextAgences.filter((agence) => `${agence.nom} ${agence.ville ?? ''}`.toLocaleLowerCase().includes(contextSearch.trim().toLocaleLowerCase())).length === 0 && <div className="cx-context-message">Aucune agence ne correspond.</div>}
+            <style>{`
+              .cx-context-menu { position:absolute; top:0; left:calc(100% + 10px); z-index:60; width:min(300px, calc(100vw - 100px)); max-height:min(420px, 70vh); overflow:auto; padding:10px; box-sizing:border-box; background:#fff; color:#0f172a; border:1px solid #e2e8f0; border-radius:14px; box-shadow:0 16px 40px rgba(2,48,45,.22); }
+              .cx-context-search { display:flex; align-items:center; gap:8px; padding:9px 10px; margin-bottom:7px; border:1px solid #dbe3df; border-radius:9px; color:#64748b; }
+              .cx-context-search input { min-width:0; width:100%; border:0; outline:0; font:inherit; font-size:.82rem; }
+              .cx-context-option { display:flex; flex-direction:column; align-items:flex-start; gap:2px; width:100%; padding:9px 10px; border:0; border-radius:8px; background:transparent; color:#0f172a; text-align:left; font:inherit; font-size:.82rem; cursor:pointer; }
+              .cx-context-option:hover,.cx-context-option:focus-visible,.cx-context-option.is-selected { background:#eef5e8; outline:none; }
+              .cx-context-option small { color:#64748b; font-size:.72rem; }
+              .cx-context-message { padding:10px; color:#64748b; font-size:.78rem; }
+              .cx-context-error { color:#b91c1c; }
+              @media(max-width:1024px) { .cx-context-menu { left:0; top:calc(100% + 8px); width:100%; } }
+            `}</style>
           </div>
         )}
 
@@ -320,6 +375,7 @@ export default function SidebarWorkspaceCard({ user }: SidebarWorkspaceCardProps
             }
           : undefined
       }
+      className={`sidebar-admin-context${collapsed ? ' sidebar-admin-context--collapsed' : ''}`}
       style={{
         background: '#FFFFFF',
         border: '1px solid #EEF0F2',

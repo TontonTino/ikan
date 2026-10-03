@@ -5,9 +5,10 @@ consolidée multi-agences pour le CX Manager (aide à la décision stratégique)
 from uuid import UUID
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from sqlalchemy import case
 from datetime import datetime
 
 from app.api.deps import get_cx_or_agency_manager, get_db
@@ -36,19 +37,14 @@ class RecommandationOrgResponse(RecommandationResponse):
 
 
 # Ordre de criticité décroissante pour le tri par défaut de la vue consolidée
-_PRIORITE_ORDRE = {
-    PriorityLevel.CRITICAL: 0,
-    PriorityLevel.HIGH: 1,
-    PriorityLevel.MEDIUM: 2,
-    PriorityLevel.LOW: 3,
-}
-
-
 @router.get("/agences/{agence_id}", response_model=List[RecommandationResponse])
 def list_recommandations_agence(
     agence_id: UUID,
+    response: Response,
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
 ):
     """Liste les recommandations non traitées pour une agence (CX Manager / Agency Manager)."""
     verifier_acces_agence(db, current_user, agence_id)
@@ -68,16 +64,20 @@ def list_recommandations_agence(
         )
         .order_by(Recommandation.date_generation.desc())
     )
-    return query.all()
+    response.headers["X-Total-Count"] = str(query.order_by(None).count())
+    return query.offset(offset).limit(limit).all()
 
 
 @router.get("/organisation", response_model=List[RecommandationOrgResponse])
 def list_recommandations_organisation(
+    response: Response,
     traitee: Optional[bool] = Query(
         None, description="Filtre par statut : true=traitées, false ou absent=non traitées (défaut)"
     ),
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
 ):
     """
     Vue consolidée des recommandations IA de toutes les agences de l'organisation
@@ -105,9 +105,15 @@ def list_recommandations_organisation(
         query = query.filter(Agence.id == current_user.agence_id)
 
     query = query.filter(Recommandation.traitee == (traitee if traitee is not None else False))
-
-    rows = query.all()
-    rows.sort(key=lambda row: (_PRIORITE_ORDRE.get(row[0].priorite, 99), -row[0].date_generation.timestamp()))
+    response.headers["X-Total-Count"] = str(query.order_by(None).count())
+    priority_order = case(
+        (Recommandation.priorite == PriorityLevel.CRITICAL, 0),
+        (Recommandation.priorite == PriorityLevel.HIGH, 1),
+        (Recommandation.priorite == PriorityLevel.MEDIUM, 2),
+        (Recommandation.priorite == PriorityLevel.LOW, 3),
+        else_=99,
+    )
+    rows = query.order_by(priority_order, Recommandation.date_generation.desc()).offset(offset).limit(limit).all()
 
     return [
         RecommandationOrgResponse(

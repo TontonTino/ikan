@@ -441,6 +441,37 @@ body {
   .skeleton-block { animation: none; }
 }
 
+.route-loading {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  box-sizing: border-box;
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.route-loading__spinner {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  box-sizing: border-box;
+  border: 2px solid #D6E8D9;
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: route-loading-spin 0.8s linear infinite;
+}
+@keyframes route-loading-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .route-loading__spinner { animation: none; }
+}
+
 /* Usage du Lime Vif (--color-lime) : couleur d'accent la plus vive de la
    charte. JAMAIS en couleur de texte : sur fond blanc, le lime ne passe qu'à
    1.74:1 de contraste, sous le seuil WCAG même pour du grand texte (3:1

@@ -1,16 +1,16 @@
-/**
- * Vue Siège (CX Manager) — hiérarchie de lecture en 4 niveaux, un <h2> par groupe :
- *   Niveau 1  Situation globale  → « Comment vont nos clients ? » (onglet Vue d'ensemble :
- *             KPI de tête + évolution du CSAT)
- *   Niveau 2  Attention          → « Urgent » (résumé des alertes en Vue d'ensemble,
- *             détail dans l'onglet Alertes)
- *   Niveau 3  Compréhension      → « Que disent nos clients ? » (onglet Performance CX :
- *             sentiments, thèmes) et « Où sont les problèmes ? » (onglet Agences)
- *   Niveau 4  Action             → non présent sur cette page : aucune donnée d'actions
- *             (recommandations créées/en cours/résolues) n'est chargée ici, elles vivent
+﻿/**
+ * Vue SiÃ¨ge (CX Manager) â€” hiÃ©rarchie de lecture en 4 niveaux, un <h2> par groupe :
+ *   Niveau 1  Situation globale  â†’ Â« Comment vont nos clients ? Â» (onglet Vue d'ensemble :
+ *             KPI de tÃªte + Ã©volution du CSAT)
+ *   Niveau 2  Attention          â†’ Â« Urgent Â» (rÃ©sumÃ© des alertes en Vue d'ensemble,
+ *             dÃ©tail dans l'onglet Alertes)
+ *   Niveau 3  ComprÃ©hension      â†’ Â« Que disent nos clients ? Â» (onglet Performance CX :
+ *             sentiments, thÃ¨mes) et Â« OÃ¹ sont les problÃ¨mes ? Â» (onglet Agences)
+ *   Niveau 4  Action             â†’ non prÃ©sent sur cette page : aucune donnÃ©e d'actions
+ *             (recommandations crÃ©Ã©es/en cours/rÃ©solues) n'est chargÃ©e ici, elles vivent
  *             dans Pilotage (recommandationsApi).
  */
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { lazy, Suspense, useEffect, useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   LineChart,
@@ -27,13 +27,11 @@ import {
   Cell,
   Legend,
 } from 'recharts';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import { MapPin } from '@phosphor-icons/react';
-import { pinIcon } from '../../components/map/pinIcon';
-import 'leaflet/dist/leaflet.css';
 import { dashboardApi, alertesApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
-import type { DashboardSiege, Alerte } from '../../types';
+import type { DashboardSiege, Alerte, KPIAgence } from '../../types';
+
+const DashboardSiegeMap = lazy(() => import('./DashboardSiegeMap'));
 import TabsNavigation from '../../components/ui/TabsNavigation';
 import PageHeader from '../../components/ui/PageHeader';
 import KpiCoreGrid from '../../components/kpi/KpiCoreGrid';
@@ -57,7 +55,7 @@ import {
   BellIcon,
 } from '../../components/common/Icons';
 
-// ── Types enrichis ─────────────────────────────────────
+// â”€â”€ Types enrichis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface ThemeStats {
   theme: string;
   count: number;
@@ -75,7 +73,7 @@ interface DashboardSiegeFull extends DashboardSiege {
   nombre_critiques: number;
 }
 
-// ── Constantes Design ──────────────────────────────────
+// â”€â”€ Constantes Design â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const SENTIMENT_COLORS: Record<string, string> = {
   positif: '#3C7730',
   neutre: '#F59E0B',
@@ -83,27 +81,27 @@ const SENTIMENT_COLORS: Record<string, string> = {
 };
 
 const THEME_LABELS: Record<string, string> = {
-  attente: "Attente & Délais en caisse",
+  attente: "Attente & DÃ©lais en caisse",
   accueil: "Accueil & Courtoisie conseillers",
-  disponibilite_accessibilite: "Accessibilité & Horaires d'ouverture",
+  disponibilite_accessibilite: "AccessibilitÃ© & Horaires d'ouverture",
   tarifs: "Tarifs & Transparence offres",
-  qualite_produit: "Qualité Réseau & Forfaits",
-  proprete_cadre: "Propreté & Cadre agence",
+  qualite_produit: "QualitÃ© RÃ©seau & Forfaits",
+  proprete_cadre: "PropretÃ© & Cadre agence",
   application_mobile: "Application Mobile & E-espace",
   reseau: "Couverture 4G/5G & Fibre",
-  facturation: "Facturation & Prélèvements",
-  communication_information: "Conseils & Clarté information",
-  livraison_logistique: "Disponibilité Cartes SIM / Box",
+  facturation: "Facturation & PrÃ©lÃ¨vements",
+  communication_information: "Conseils & ClartÃ© information",
+  livraison_logistique: "DisponibilitÃ© Cartes SIM / Box",
   resolution_probleme: "Service Client & SAV",
-  securite_confidentialite: "Sécurité & Confidentialité",
+  securite_confidentialite: "SÃ©curitÃ© & ConfidentialitÃ©",
   disponibilite_produit: "Stock Terminaux & Accessoires",
-  personnalisation_besoin: "Écoute & Personnalisation",
+  personnalisation_besoin: "Ã‰coute & Personnalisation",
 };
 
 const AGENCE_COLOR = (taux: number) =>
   taux >= 80 ? '#3C7730' : taux >= 60 ? '#F59E0B' : '#DC2626';
 
-// ── Section Card Moderne ────────────────────────────────
+// â”€â”€ Section Card Moderne â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function SectionCard({
   title,
   subtitle,
@@ -115,8 +113,8 @@ function SectionCard({
   subtitle?: string;
   children: React.ReactNode;
   action?: React.ReactNode;
-  /** Équivalent visuel de .saas-card--critical (SectionCard est en styles
-      inline, pas en classes) — réservé aux cartes véritablement critiques
+  /** Ã‰quivalent visuel de .saas-card--critical (SectionCard est en styles
+      inline, pas en classes) â€” rÃ©servÃ© aux cartes vÃ©ritablement critiques
       (alertes actives), jamais aux cartes neutres. */
   critical?: boolean;
 }) {
@@ -170,7 +168,7 @@ function SectionCard({
   );
 }
 
-// ── Squelette de chargement : reproduit la structure de chaque onglet ──
+// â”€â”€ Squelette de chargement : reproduit la structure de chaque onglet â”€â”€
 function SiegeSkeleton({ tab }: { tab: 'overview' | 'performance' | 'agences' | 'alertes' }) {
   const card = (h: number) => (
     <div
@@ -187,7 +185,7 @@ function SiegeSkeleton({ tab }: { tab: 'overview' | 'performance' | 'agences' | 
     </div>
   );
   return (
-    <div aria-busy="true" aria-label="Chargement des données du réseau" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div aria-busy="true" aria-label="Chargement des donnÃ©es du rÃ©seau" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {tab === 'overview' && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
@@ -219,7 +217,7 @@ function SiegeSkeleton({ tab }: { tab: 'overview' | 'performance' | 'agences' | 
   );
 }
 
-// ── Tooltip personnalisé Recharts ───────────────────────
+// â”€â”€ Tooltip personnalisÃ© Recharts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
@@ -246,13 +244,13 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export default function DashboardSiegePage() {
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
-  const voirAgence = (agenceId: string) => navigate(`/agences/${agenceId}/apercu`, { state: { retour: 'Vue Siège' } });
+  const voirAgence = (agenceId: string) => navigate(`/agences/${agenceId}/apercu`, { state: { retour: 'Vue SiÃ¨ge' } });
   const [data, setData] = useState<DashboardSiegeFull | null>(null);
   const [alertes, setAlertes] = useState<Alerte[]>([]);
   const [jours, setJours] = useState(30);
   const [loading, setLoading] = useState(true);
-  
-  // 4 Onglets Spécifiés pour /siege
+
+  // 4 Onglets SpÃ©cifiÃ©s pour /siege
   const [activeTab, setActiveTab] = useState<'overview' | 'performance' | 'agences' | 'alertes'>('overview');
 
   const load = useCallback(() => {
@@ -269,18 +267,13 @@ export default function DashboardSiegePage() {
     load();
   }, [load]);
 
-  // Aucune donnée (échec du chargement) : la structure de la page n'est pas remplacée par un texte brut.
+  // Aucune donnÃ©e (Ã©chec du chargement) : la structure de la page n'est pas remplacÃ©e par un texte brut.
   const loadFailed = !loading && !data;
 
-  // Calculs & métriques dérivées
+  // Calculs & mÃ©triques dÃ©rivÃ©es
   const agences = data?.agences ?? [];
-  const agencesAvecCoords = agences.filter((a) => a.latitude && a.longitude);
-  const centerLat = agencesAvecCoords.length > 0
-    ? agencesAvecCoords.reduce((s, a) => s + (a.latitude || 0), 0) / agencesAvecCoords.length
-    : 34.0;
-  const centerLng = agencesAvecCoords.length > 0
-    ? agencesAvecCoords.reduce((s, a) => s + (a.longitude || 0), 0) / agencesAvecCoords.length
-    : 9.0;
+  const agencesAvecCoords = agences.filter((a): a is KPIAgence & { latitude: number; longitude: number } => a.latitude != null && a.longitude != null);
+  const agencesSansCoords = agences.filter((a) => a.latitude == null || a.longitude == null);
 
   // Top & Flop agences
   const sortedAgences = [...agences].sort((a, b) => b.wilson_score - a.wilson_score);
@@ -302,11 +295,11 @@ export default function DashboardSiegePage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-      
-      {/* ── 1. En-tête (salutation + date + sélecteur de période) ── */}
+
+      {/* â”€â”€ 1. En-tÃªte (salutation + date + sÃ©lecteur de pÃ©riode) â”€â”€ */}
       <PageHeader
         greetingUser={user?.prenom}
-        subtitle="Voici la situation de votre réseau aujourd'hui."
+        subtitle="Voici la situation de votre rÃ©seau aujourd'hui."
         showDateBesideActions
         onRefresh={load}
       >
@@ -348,10 +341,10 @@ export default function DashboardSiegePage() {
         </div>
       </PageHeader>
 
-      {/* ── 2. Alertes Réseau Éphémères ── */}
+      {/* â”€â”€ 2. Alertes RÃ©seau Ã‰phÃ©mÃ¨res â”€â”€ */}
       <EphemeralAlertsBanner alerts={alertes} userId={user?.id} />
 
-      {/* ── 3. Navigation par Onglets Spécialisés ── */}
+      {/* â”€â”€ 3. Navigation par Onglets SpÃ©cialisÃ©s â”€â”€ */}
       <TabsNavigation
         tabs={tabsConfig}
         activeTab={activeTab}
@@ -361,19 +354,19 @@ export default function DashboardSiegePage() {
       {loadFailed && (
         <EmptyState
           illustration="no-data"
-          title="Impossible de charger les données du réseau"
-          message="Vérifiez votre connexion puis réessayez."
-          action={{ label: 'Réessayer', onClick: load }}
+          title="Impossible de charger les donnÃ©es du rÃ©seau"
+          message="VÃ©rifiez votre connexion puis rÃ©essayez."
+          action={{ label: 'RÃ©essayer', onClick: load }}
         />
       )}
       {!data && !loadFailed && <SiegeSkeleton tab={activeTab} />}
 
-      {/* Pendant une actualisation (changement de période), les données précédentes restent affichées, atténuées. */}
+      {/* Pendant une actualisation (changement de pÃ©riode), les donnÃ©es prÃ©cÃ©dentes restent affichÃ©es, attÃ©nuÃ©es. */}
       {data && (
       <div aria-busy={loading} style={{ display: 'flex', flexDirection: 'column', gap: '20px', opacity: loading ? 0.55 : 1, transition: 'opacity 0.2s ease' }}>
-      {/* ══════════════════════════════════════════════════════
-          ONGLET 1 : VUE D'ENSEMBLE — niveau 1 (situation) puis niveau 2 (urgent)
-      ══════════════════════════════════════════════════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+          ONGLET 1 : VUE D'ENSEMBLE â€” niveau 1 (situation) puis niveau 2 (urgent)
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       {activeTab === 'overview' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
           <section aria-labelledby="siege-situation" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -386,15 +379,15 @@ export default function DashboardSiegePage() {
                 to="/pilotage?tab=issues"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.84rem', fontWeight: 700, color: '#3C7730', textDecoration: 'none' }}
               >
-                Voir le détail des Issues et actions
+                Voir le dÃ©tail des Issues et actions
                 <ArrowUpRightIcon size={13} color="#3C7730" />
               </Link>
             </div>
 
-          {/* Graphique Unique d'Évolution CSAT */}
+          {/* Graphique Unique d'Ã‰volution CSAT */}
           <SectionCard
-            title="Évolution du CSAT Réseau"
-            subtitle="Tendance globale de satisfaction client sur la période sélectionnée"
+            title="Ã‰volution du CSAT RÃ©seau"
+            subtitle="Tendance globale de satisfaction client sur la pÃ©riode sÃ©lectionnÃ©e"
           >
             <div style={{ width: '100%', height: 260 }}>
               <ResponsiveContainer width="100%" height="100%">
@@ -415,7 +408,7 @@ export default function DashboardSiegePage() {
             </div>
           </SectionCard>
 
-          {/* Résumé Exécutif Compact du Réseau */}
+          {/* RÃ©sumÃ© ExÃ©cutif Compact du RÃ©seau */}
           <div
             style={{
               background: '#FFFFFF',
@@ -432,7 +425,7 @@ export default function DashboardSiegePage() {
                 <StoreIcon size={20} />
               </div>
               <div>
-                <div style={{ fontSize: '0.76rem', color: '#64748B', fontWeight: 600 }}>Réseau Connecté</div>
+                <div style={{ fontSize: '0.76rem', color: '#64748B', fontWeight: 600 }}>RÃ©seau ConnectÃ©</div>
                 <div style={{ fontSize: '1rem', fontWeight: 800, color: '#02302D' }}>
                   {data.agences_actives} / {data.agences.length} agences actives
                 </div>
@@ -444,7 +437,7 @@ export default function DashboardSiegePage() {
                 <LightbulbIcon size={20} />
               </div>
               <div>
-                <div style={{ fontSize: '0.76rem', color: '#64748B', fontWeight: 600 }}>Boîte à Idées</div>
+                <div style={{ fontSize: '0.76rem', color: '#64748B', fontWeight: 600 }}>BoÃ®te Ã  IdÃ©es</div>
                 <div style={{ fontSize: '1rem', fontWeight: 800, color: '#02302D' }}>
                   {data.idees_en_attente} suggestions clients
                 </div>
@@ -458,7 +451,7 @@ export default function DashboardSiegePage() {
               <div>
                 <div style={{ fontSize: '0.76rem', color: '#64748B', fontWeight: 600 }}>Moteur IA NLP</div>
                 <div style={{ fontSize: '1rem', fontWeight: 800, color: '#02302D' }}>
-                  {data.nombre_discordances} discordances signalées
+                  {data.nombre_discordances} discordances signalÃ©es
                 </div>
               </div>
             </div>
@@ -477,7 +470,7 @@ export default function DashboardSiegePage() {
                   onClick={() => setActiveTab('alertes')}
                   style={{ alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.84rem', fontWeight: 700, color: 'var(--color-primary)' }}
                 >
-                  {alertes.length > 3 ? `Voir les ${alertes.length} alertes →` : 'Voir le détail des alertes →'}
+                  {alertes.length > 3 ? `Voir les ${alertes.length} alertes â†’` : 'Voir le dÃ©tail des alertes â†’'}
                 </button>
               </>
             ) : (
@@ -489,16 +482,16 @@ export default function DashboardSiegePage() {
         </div>
       )}
 
-      {/* ══════════════════════════════════════════════════════
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
           ONGLET 2 : PERFORMANCE CX (Analyses Approfondies)
-      ══════════════════════════════════════════════════════ */}
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       {activeTab === 'performance' && (
         <section aria-labelledby="siege-comprehension" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div id="siege-comprehension"><SectionHeading>Que disent nos clients ?</SectionHeading></div>
-          {/* Row 1: Sentiments (l'évolution temporelle du CSAT est dans Statistiques & Analyses) */}
+          {/* Row 1: Sentiments (l'Ã©volution temporelle du CSAT est dans Statistiques & Analyses) */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '20px' }}>
-            {/* Répartition des Sentiments */}
-            <SectionCard title="Distribution des Sentiments" subtitle="Classification émotionnelle par le modèle IA">
+            {/* RÃ©partition des Sentiments */}
+            <SectionCard title="Distribution des Sentiments" subtitle="Classification Ã©motionnelle par le modÃ¨le IA">
               {data.sentiments_globaux.length > 0 ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px', flexWrap: 'wrap' }}>
                   <div style={{ width: '180px', height: 180 }}>
@@ -551,16 +544,16 @@ export default function DashboardSiegePage() {
                 </div>
               ) : (
                 <div style={{ textAlign: 'center', color: '#94A3B8', paddingTop: '40px' }}>
-                  Pas encore de données.
+                  Pas encore de donnÃ©es.
                 </div>
               )}
             </SectionCard>
           </div>
 
-          {/* Row 2: Top 5 Pain Points & Thèmes IA */}
+          {/* Row 2: Top 5 Pain Points & ThÃ¨mes IA */}
           <SectionCard
-            title="Thématiques & Pain Points Majeurs"
-            subtitle="Extraction sémantique automatique des points d'attention"
+            title="ThÃ©matiques & Pain Points Majeurs"
+            subtitle="Extraction sÃ©mantique automatique des points d'attention"
           >
             {data.themes_globaux.length > 0 ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '14px' }}>
@@ -593,26 +586,26 @@ export default function DashboardSiegePage() {
                       />
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '6px' }}>
-                      {t.count} retours enregistrés
+                      {t.count} retours enregistrÃ©s
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
               <div style={{ textAlign: 'center', color: '#94A3B8', padding: '40px 0' }}>
-                Pas de thèmes détectés pour cette période.
+                Pas de thÃ¨mes dÃ©tectÃ©s pour cette pÃ©riode.
               </div>
             )}
           </SectionCard>
         </section>
       )}
 
-      {/* ══════════════════════════════════════════════════════
-          ONGLET 3 : AGENCES (Cartographie & Benchmark Réseau)
-      ══════════════════════════════════════════════════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+          ONGLET 3 : AGENCES (Cartographie & Benchmark RÃ©seau)
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       {activeTab === 'agences' && (
         <section aria-labelledby="siege-agences" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div id="siege-agences"><SectionHeading>Où sont les problèmes ?</SectionHeading></div>
+          <div id="siege-agences"><SectionHeading>OÃ¹ sont les problÃ¨mes ?</SectionHeading></div>
           {/* Top & Flop Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
             <div
@@ -627,7 +620,7 @@ export default function DashboardSiegePage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <ThumbsUpIcon size={16} color="#3C7730" />
                 <h3 style={{ margin: 0, fontWeight: 800, fontSize: '0.90rem', color: '#02302D' }}>
-                  Top 3 Agences — Satisfaction
+                  Top 3 Agences â€” Satisfaction
                 </h3>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -658,7 +651,7 @@ export default function DashboardSiegePage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <ThumbsDownIcon size={16} color="#DC2626" />
                 <h3 style={{ margin: 0, fontWeight: 800, fontSize: '0.90rem', color: '#02302D' }}>
-                  Agences à surveiller
+                  Agences Ã  surveiller
                 </h3>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -680,73 +673,41 @@ export default function DashboardSiegePage() {
 
           {/* Carte Interactive */}
           <SectionCard
-            title="Cartographie Géographique du Réseau"
+            title="Cartographie GÃ©ographique du RÃ©seau"
             subtitle="Localisation des agences avec code couleur selon le niveau de satisfaction"
           >
             {agencesAvecCoords.length > 0 ? (
               <>
-                <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid #E8ECE6' }}>
-                  <MapContainer center={[centerLat, centerLng]} zoom={7} style={{ height: '420px', width: '100%' }}>
-                    <TileLayer
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                      attribution='&copy; OpenStreetMap'
-                    />
-                    {agencesAvecCoords.map((a) => (
-                      <Marker
-                        key={a.agence_id}
-                        position={[a.latitude!, a.longitude!]}
-                        icon={pinIcon(AGENCE_COLOR(a.taux_satisfaction))}
-                        title={a.agence_nom}
-                      >
-                        <Popup>
-                          <div style={{ minWidth: '160px' }}>
-                            <strong style={{ color: '#02302D' }}>{a.agence_nom}</strong>
-                            <div style={{ fontSize: '0.78rem', color: '#64748B' }}>{a.ville}</div>
-                            <div style={{ marginTop: '6px', fontSize: '0.80rem' }}>
-                              Satisfaction : <strong style={{ color: AGENCE_COLOR(a.taux_satisfaction) }}>{a.taux_satisfaction}%</strong>
-                            </div>
-                            <div style={{ fontSize: '0.78rem' }}>Avis : {a.nombre_feedbacks}</div>
-                            <button
-                              type="button"
-                              onClick={() => voirAgence(a.agence_id)}
-                              className="btn-primary"
-                              style={{ marginTop: '8px', padding: '5px 10px', fontSize: '0.76rem', borderRadius: '8px' }}
-                            >
-                              Voir l'agence
-                            </button>
-                          </div>
-                        </Popup>
-                      </Marker>
-                    ))}
-                  </MapContainer>
-                </div>
-                <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', marginTop: '14px', flexWrap: 'wrap' }}>
-                  {[
-                    { color: '#3C7730', label: '≥ 80% — Excellent' },
-                    { color: '#F59E0B', label: '60-80% — À surveiller' },
-                    { color: '#DC2626', label: '< 60% — Critique' },
-                  ].map(({ color, label }) => (
-                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '0.80rem', fontWeight: 600 }}>
-                      <MapPin size={18} weight="fill" color={color} aria-hidden="true" />
-                      {label}
-                    </div>
-                  ))}
-                </div>
+                <Suspense fallback={<div role="status" style={{ height: 420, display: 'grid', placeItems: 'center', color: '#64748B' }}>Chargement de la carte?</div>}>
+                  <DashboardSiegeMap agences={agencesAvecCoords} onVoirAgence={voirAgence} />
+                </Suspense>
               </>
             ) : (
               <div style={{ textAlign: 'center', padding: '60px 0', color: '#94A3B8' }}>
-                Aucune coordonnée géographique disponible.
+                Aucune coordonnÃ©e gÃ©ographique disponible.
               </div>
             )}
           </SectionCard>
 
-          {/* Tableau Répertoire et Benchmark */}
-          <SectionCard title="Classement et Métriques par Agence" subtitle="Performances opérationnelles détaillées">
+          {agencesSansCoords.length > 0 && (
+            <SectionCard title="Agences sans coordonnées" subtitle="Elles restent accessibles dans le classement, mais ne peuvent pas être placées sur la carte.">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {agencesSansCoords.map((agence) => (
+                  <button key={agence.agence_id} type="button" onClick={() => voirAgence(agence.agence_id)} className="btn-secondary" style={{ padding: '8px 12px', borderRadius: 9 }}>
+                    {agence.agence_nom}{agence.ville ? ` · ${agence.ville}` : ''}
+                  </button>
+                ))}
+              </div>
+            </SectionCard>
+          )}
+
+          {/* Tableau RÃ©pertoire et Benchmark */}
+          <SectionCard title="Classement et MÃ©triques par Agence" subtitle="Le score Wilson estime la satisfaction basse plausible à 95 % de confiance, en tenant compte du nombre d’avis. Il aide à comparer les agences sans surévaluer les petits échantillons.">
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #E8ECE6', background: '#F8FAFB' }}>
-                    {['Agence', 'Ville', 'Avis', 'Satisfaction', 'Avis Négatifs', 'Suggestions'].map((h) => (
+                    {['Agence', 'Ville', 'Avis', 'Satisfaction', 'Score Wilson à 95 %', 'Avis NÃ©gatifs', 'Suggestions'].map((h) => (
                       <th
                         key={h}
                         style={{
@@ -764,14 +725,13 @@ export default function DashboardSiegePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.agences.map((a) => (
+                  {sortedAgences.map((a) => (
                     <tr
                       key={a.agence_id}
-                      onClick={() => voirAgence(a.agence_id)}
-                      style={{ borderBottom: '1px solid #F1F4EE', cursor: 'pointer' }}
+                      style={{ borderBottom: '1px solid #F1F4EE' }}
                     >
-                      <td style={{ padding: '12px 14px', fontWeight: 700, color: '#02302D' }}>{a.agence_nom}</td>
-                      <td style={{ padding: '12px 14px', color: '#64748B' }}>{a.ville || '—'}</td>
+                      <td style={{ padding: '12px 14px', fontWeight: 700 }}><button type="button" onClick={() => voirAgence(a.agence_id)} style={{ padding: 0, border: 0, background: 'none', color: '#02302D', font: 'inherit', fontWeight: 700, textAlign: 'left', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>{a.agence_nom}</button></td>
+                      <td style={{ padding: '12px 14px', color: '#64748B' }}>{a.ville || 'â€”'}</td>
                       <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700 }}>{a.nombre_feedbacks}</td>
                       <td style={{ padding: '12px 14px', textAlign: 'right' }}>
                         <span
@@ -786,6 +746,7 @@ export default function DashboardSiegePage() {
                           {a.taux_satisfaction}%
                         </span>
                       </td>
+                      <td title="Borne inférieure de satisfaction à 95 %" style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#475569' }}>{(a.wilson_score * 100).toFixed(1)}%</td>
                       <td style={{ padding: '12px 14px', textAlign: 'right', color: '#DC2626', fontWeight: 700 }}>
                         {a.nombre_negatifs}
                       </td>
@@ -801,15 +762,15 @@ export default function DashboardSiegePage() {
         </section>
       )}
 
-      {/* ══════════════════════════════════════════════════════
-          ONGLET 4 : ALERTES — détail du niveau 2 (seuil de satisfaction par agence)
-      ══════════════════════════════════════════════════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+          ONGLET 4 : ALERTES â€” dÃ©tail du niveau 2 (seuil de satisfaction par agence)
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       {activeTab === 'alertes' && (
         <section aria-labelledby="siege-alertes" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div id="siege-alertes"><SectionHeading>Urgent</SectionHeading></div>
           <SectionCard
             title="Agences sous leur seuil d'alerte"
-            subtitle="Satisfaction de la semaine inférieure au seuil configuré pour l'agence"
+            subtitle="Satisfaction de la semaine infÃ©rieure au seuil configurÃ© pour l'agence"
             critical={alertes.length > 0}
           >
             {alertes.length > 0 ? (
@@ -822,7 +783,7 @@ export default function DashboardSiegePage() {
               <EmptyState
                 illustration="no-alert"
                 title="Aucune agence sous son seuil d'alerte"
-                message="La satisfaction de chaque agence est au-dessus du seuil configuré pour elle."
+                message="La satisfaction de chaque agence est au-dessus du seuil configurÃ© pour elle."
               />
             )}
           </SectionCard>
