@@ -1,4 +1,5 @@
 import React from 'react';
+import Button from './Button';
 
 // ── Illustrations SVG inline par thème ──────────────────────────
 function IllustrationNoData() {
@@ -102,106 +103,69 @@ const ILLUSTRATIONS: Record<string, React.ReactNode> = {
 };
 
 // ── Props ────────────────────────────────────────────────────────
+interface EmptyStateAction {
+  label: string;
+  onClick: () => void;
+}
+
 export interface EmptyStateProps {
-  /** Titre principal affiché en gras */
+  /** Ce qui manque, formulé simplement (« Aucun feedback critique sur cette période »). */
   title: string;
-  /** Sous-texte explicatif */
+  /** Pourquoi il n'y a rien, et ce que l'utilisateur peut faire. */
   message?: string;
   /**
    * Clé de l'illustration :
-   *  'no-data' | 'no-alert' | 'no-feedback' | ReactNode personnalisé
+   *  'no-data' | 'no-alert' | 'no-feedback' | ReactNode personnalisé | null (aucune)
    */
   illustration?: string | React.ReactNode;
-  /** Bouton d'action optionnel */
-  action?: {
-    label: string;
-    onClick: () => void;
-  };
+  /** Action principale optionnelle. */
+  action?: EmptyStateAction;
+  /** Action secondaire optionnelle (ex. « Changer la période »). */
+  secondaryAction?: EmptyStateAction;
   /** Centrage vertical si dans un plein écran */
   fullHeight?: boolean;
+  /** Version réduite pour une carte ou un graphique (sans illustration par défaut). */
+  compact?: boolean;
 }
 
 // ── Composant ────────────────────────────────────────────────────
 export default function EmptyState({
   title,
   message,
-  illustration = 'no-data',
+  illustration,
   action,
+  secondaryAction,
   fullHeight = false,
+  compact = false,
 }: EmptyStateProps) {
+  const key = illustration === undefined ? (compact ? null : 'no-data') : illustration;
   const illu =
-    typeof illustration === 'string'
-      ? ILLUSTRATIONS[illustration] ?? <IllustrationDefault />
-      : illustration;
+    key === null
+      ? null
+      : typeof key === 'string'
+        ? ILLUSTRATIONS[key] ?? <IllustrationDefault />
+        : key;
+
+  const classes = ['ui-empty', compact && 'ui-empty--compact', fullHeight && 'ui-empty--full'].filter(Boolean).join(' ');
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        textAlign: 'center',
-        padding: '48px 24px',
-        gap: '16px',
-        ...(fullHeight ? { minHeight: '360px' } : {}),
-      }}
-    >
-      {/* Illustration */}
-      <div style={{ marginBottom: '4px' }}>{illu}</div>
-
-      {/* Titre */}
-      <p
-        style={{
-          margin: 0,
-          fontSize: '1rem',
-          fontWeight: 800,
-          color: 'var(--color-text-main)',
-          lineHeight: 1.3,
-        }}
-      >
-        {title}
-      </p>
-
-      {/* Message */}
-      {message && (
-        <p
-          style={{
-            margin: 0,
-            fontSize: '0.88rem',
-            color: 'var(--color-text-muted)',
-            lineHeight: 1.55,
-            maxWidth: '340px',
-            fontWeight: 500,
-          }}
-        >
-          {message}
-        </p>
-      )}
-
-      {/* Action */}
-      {action && (
-        <button
-          type="button"
-          onClick={action.onClick}
-          style={{
-            marginTop: '4px',
-            padding: '10px 22px',
-            background: 'var(--color-text-main)',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 'var(--radius-pill)',
-            fontSize: '0.88rem',
-            fontWeight: 700,
-            fontFamily: 'inherit',
-            cursor: 'pointer',
-            transition: 'opacity 0.15s',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.85')}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
-        >
-          {action.label}
-        </button>
+    <div className={classes}>
+      {illu && <div className="ui-empty__illu" aria-hidden="true">{illu}</div>}
+      <p className="ui-empty__title">{title}</p>
+      {message && <p className="ui-empty__message">{message}</p>}
+      {(action || secondaryAction) && (
+        <div className="ui-empty__actions">
+          {action && (
+            <Button size={compact ? 'sm' : 'md'} onClick={action.onClick}>
+              {action.label}
+            </Button>
+          )}
+          {secondaryAction && (
+            <Button size={compact ? 'sm' : 'md'} variant="secondary" onClick={secondaryAction.onClick}>
+              {secondaryAction.label}
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );

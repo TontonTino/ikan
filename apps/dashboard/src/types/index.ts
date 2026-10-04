@@ -269,7 +269,7 @@ export interface AlerteFeedback {
   agence_nom: string;
   note: number;
   categorie_nom?: string | null;
-  /** 'negatif' | 'suggestion' | 'negatif_et_suggestion' */
+  /** 'note_basse' | 'sentiment_negatif' | 'note_basse_et_sentiment_negatif' (GET /alertes) */
   raison: string;
   commentaire?: string | null;
   date_soumission: string;

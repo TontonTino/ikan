@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { alertesApi, suggestionsApi, recommandationsApi, agencesApi, feedbacksApi, issuesApi } from '../../services/api';
 import PilotageIssuesTab from './PilotageIssuesTab';
@@ -7,20 +6,35 @@ import PilotageIdeasTab from './PilotageIdeasTab';
 import PilotageActionsCorrectivesTab from './PilotageActionsCorrectivesTab';
 import PilotageAlertesActionsTab from './PilotageAlertesActionsTab';
 import type { Alerte, AlerteFeedback, Suggestion, IdeaStatus, RecommandationOrg, Agence, Feedback, Issue, IssueDetail } from '../../types';
-import { ISSUE_STATUT_LABELS, ISSUE_STATUT_BADGE_VARIANT, ISSUE_SEVERITE_LABELS, STATUS_LABELS } from './pilotageConstants';
-import TabsNavigation, { TabItem } from '../../components/ui/TabsNavigation';
-import SectionHeading from '../../components/ui/SectionHeading';
-import {
-  BellIcon,
-  AlertTriangleIcon,
-  LightbulbIcon,
-  ClockIcon,
-  LightningIcon,
-  TargetIcon,
-  ActivityIcon,
-} from '../../components/common/Icons';
+import { STATUS_LABELS } from './pilotageConstants';
+import PageTitle from '../../components/ui/PageTitle';
+import { useToast } from '../../components/ui/Toast';
 
-type PilotageTab = 'alertes_actions' | 'idees' | 'actions_correctives' | 'issues';
+/** Une section = une page de la navigation (une destination = une fonction). */
+export type PilotageSection = 'alertes' | 'suggestions' | 'actions' | 'issues';
+
+const SECTION_HEADER: Record<PilotageSection, { title: string; cx: string; agency: string }> = {
+  alertes: {
+    title: 'Alertes',
+    cx: 'Agences sous leur seuil de satisfaction, feedbacks à risque et recommandations IA du réseau : filtrer, analyser, traiter.',
+    agency: 'Ce qui demande votre attention dans votre agence : seuil de satisfaction, feedbacks à risque, recommandations IA.',
+  },
+  suggestions: {
+    title: 'Suggestions',
+    cx: 'Idées remontées par les clients de tout le réseau : étudier, décider, suivre.',
+    agency: 'Idées remontées par les clients de votre agence : étudier, décider, suivre.',
+  },
+  actions: {
+    title: 'Actions correctives',
+    cx: 'Suivi des actions décidées dans le réseau, en cours et réalisées.',
+    agency: 'Suivi de vos actions, en cours et réalisées.',
+  },
+  issues: {
+    title: 'Issues',
+    cx: 'Problèmes récurrents détectés à partir des feedbacks, avec leurs actions et leur vérification.',
+    agency: 'Problèmes récurrents détectés dans votre agence, avec leurs actions et leur vérification.',
+  },
+};
 
 /**
  * Page fusionnée "Pilotage" : regroupe Alertes & Actions (alertes réseau +
@@ -28,42 +42,12 @@ type PilotageTab = 'alertes_actions' | 'idees' | 'actions_correctives' | 'issues
  * et Boîte à idées en une seule page à 2 onglets, pour le CX Manager (réseau)
  * et l'Agency Manager (limité à sa seule agence — le scoping est fait par l'API).
  */
-export default function PilotagePage() {
+export default function PilotagePage({ section }: { section: PilotageSection }) {
   const currentUser = useAuthStore((s) => s.user);
   const isAgencyManager = currentUser?.role === 'agency_manager';
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  const requestedTab = searchParams.get('tab');
-  // Un ancien lien "?tab=action" (onglet désormais fusionné) retombe simplement
-  // sur l'onglet par défaut "Alertes & Recommandations".
-  const initialTab: PilotageTab =
-    requestedTab === 'idees' ? 'idees' :
-    requestedTab === 'actions' ? 'actions_correctives' :
-    requestedTab === 'issues' ? 'issues' :
-    'alertes_actions';
-  const [activeTab, setActiveTab] = useState<PilotageTab>(initialTab);
-
-  // Alias URL court pour l'onglet "Actions correctives" (?tab=actions plutôt
-  // que ?tab=actions_correctives), même logique que ?tab=idees existant.
-  const TAB_URL_PARAM: Record<PilotageTab, string | null> = {
-    alertes_actions: null,
-    idees: 'idees',
-    actions_correctives: 'actions',
-    issues: 'issues',
-  };
-
-  const handleTabChange = (id: string) => {
-    const tab = id as PilotageTab;
-    setActiveTab(tab);
-    const param = TAB_URL_PARAM[tab];
-    setSearchParams(param ? { tab: param } : {}, { replace: true });
-  };
-
-  const [toast, setToast] = useState('');
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(''), 3000);
-  };
+  const toastApi = useToast();
+  const showToast = (msg: string) => toastApi.show({ message: msg, tone: /erreur|impossible/i.test(msg) ? 'critical' : 'success' });
 
   // ── Alertes ──────────────────────────────────────────
   const [alertes, setAlertes] = useState<Alerte[]>([]);
@@ -71,6 +55,7 @@ export default function PilotagePage() {
   const [alertesLoading, setAlertesLoading] = useState(true);
 
   useEffect(() => {
+    if (section !== 'alertes') return;
     alertesApi
       .list()
       .then((r) => {
@@ -84,12 +69,6 @@ export default function PilotagePage() {
       .finally(() => setAlertesLoading(false));
   }, []);
 
-  const RAISON_LABELS: Record<string, string> = {
-    negatif: 'Négatif',
-    suggestion: 'Suggestion',
-    negatif_et_suggestion: 'Négatif + Suggestion',
-  };
-
   const totalAlertes = alertes.length + alertesFeedback.length;
 
   // ── Action (recommandations IA consolidées réseau) ───
@@ -102,7 +81,7 @@ export default function PilotagePage() {
 
   useEffect(() => {
     // Le filtre par agence n'a de sens que pour le CX Manager (réseau multi-agences).
-    if (isAgencyManager) return;
+    if (isAgencyManager || section === 'suggestions') return;
     agencesApi
       .list()
       .then((res) => {
@@ -138,8 +117,9 @@ export default function PilotagePage() {
   };
 
   useEffect(() => {
+    if (section !== 'alertes') return;
     fetchRecos();
-  }, [fetchRecos]);
+  }, [fetchRecos, section]);
 
   const marquerRecoTraitee = async (id: string) => {
     try {
@@ -163,6 +143,7 @@ export default function PilotagePage() {
   const [ideesSubTab, setIdeesSubTab] = useState<'toutes' | 'a_etudier' | 'decisions'>('toutes');
 
   useEffect(() => {
+    if (section !== 'suggestions') return;
     suggestionsApi
       .list({ limit: 50, offset: 0 })
       .then((r) => {
@@ -229,8 +210,9 @@ export default function PilotagePage() {
   }, [actionsAgenceId]);
 
   useEffect(() => {
+    if (section !== 'actions') return;
     fetchActions();
-  }, [fetchActions]);
+  }, [fetchActions, section]);
 
   const loadMoreActions = async () => {
     const current = actionsToggle === 'en_cours' ? actionsEnCours : actionsTerminees;
@@ -325,8 +307,9 @@ export default function PilotagePage() {
   };
 
   useEffect(() => {
+    if (section !== 'issues') return;
     fetchIssuesList();
-  }, [fetchIssuesList]);
+  }, [fetchIssuesList, section]);
 
   // GET /issues/ ne prend pas de paramètre de période (contrairement à GET /kpis) : le
   // filtre "jours" de cet onglet s'applique donc côté client sur premiere_detection,
@@ -412,58 +395,27 @@ export default function PilotagePage() {
     }
   };
 
-  const alertesActionsCount = totalAlertes + recos.length;
-
-  const tabsConfig: TabItem[] = [
-    {
-      id: 'alertes_actions',
-      label: 'Alertes & Recommandations',
-      icon: <BellIcon size={16} />,
-      badge: alertesActionsCount,
-      badgeColor: alertesActionsCount > 0 ? 'red' : 'default',
-    },
-    { id: 'idees', label: 'Boîte à idées', icon: <LightbulbIcon size={16} />, badge: suggestions.length },
-    {
-      id: 'actions_correctives',
-      label: 'Actions correctives',
-      icon: <TargetIcon size={16} />,
-      badge: actionsFirstLoadDone ? actionsEnCours.length : undefined,
-      badgeColor: actionsEnCours.length > 0 ? 'red' : 'default',
-    },
-    {
-      id: 'issues',
-      label: 'Issues',
-      icon: <ActivityIcon size={16} />,
-      badge: issuesFirstLoadDone ? issuesOuvertesCount : undefined,
-      badgeColor: issuesOuvertesCount > 0 ? 'red' : 'default',
-    },
-  ];
+  const header = SECTION_HEADER[section];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-      {toast && (
-        <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 1000, background: '#02302D', color: 'white', padding: '12px 20px', borderRadius: '12px', fontWeight: 700 }}>
-          {toast}
-        </div>
-      )}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)', width: '100%', maxWidth: '100%', minWidth: 0 }}>
+      <PageTitle title={header.title} description={isAgencyManager ? header.agency : header.cx} />
 
-      <TabsNavigation tabs={tabsConfig} activeTab={activeTab} onChange={handleTabChange} />
+      {/* ── SECTION ALERTES & ACTIONS (fusion : alertes réseau + recommandations IA) ── */}
+      {section === 'alertes' && <PilotageAlertesActionsTab alertes={alertes} alertesFeedback={alertesFeedback} alertesLoading={alertesLoading} totalAlertes={totalAlertes} isAgencyManager={isAgencyManager} recos={recos} recosAffichees={recosAffichees} recosTotal={recosTotal} recosLoading={recosLoading} recosLoadingMore={recosLoadingMore} loadMoreRecos={loadMoreRecos} agencesList={agencesList} selectedAgenceId={selectedAgenceId} setSelectedAgenceId={setSelectedAgenceId} marquerRecoTraitee={marquerRecoTraitee} />}
 
-      {/* ── ONGLET ALERTES & ACTIONS (fusion : alertes réseau + recommandations IA) ── */}
-      {activeTab === 'alertes_actions' && <PilotageAlertesActionsTab alertes={alertes} alertesFeedback={alertesFeedback} alertesLoading={alertesLoading} totalAlertes={totalAlertes} isAgencyManager={isAgencyManager} recos={recos} recosAffichees={recosAffichees} recosTotal={recosTotal} recosLoading={recosLoading} recosLoadingMore={recosLoadingMore} loadMoreRecos={loadMoreRecos} agencesList={agencesList} selectedAgenceId={selectedAgenceId} setSelectedAgenceId={setSelectedAgenceId} marquerRecoTraitee={marquerRecoTraitee} />}
-
-      {/* ── ONGLET BOÎTE À IDÉES ── */}
-      {activeTab === 'idees' && <PilotageIdeasTab suggestions={suggestions} suggestionsTotal={suggestionsTotal} suggestionsLoading={suggestionsLoading} suggestionsLoadingMore={suggestionsLoadingMore} loadMoreSuggestions={loadMoreSuggestions} updateStatut={updateStatut} activeSubTab={ideesSubTab} setActiveSubTab={setIdeesSubTab} />}
+      {/* ── SECTION BOÎTE À IDÉES ── */}
+      {section === 'suggestions' && <PilotageIdeasTab suggestions={suggestions} suggestionsTotal={suggestionsTotal} suggestionsLoading={suggestionsLoading} suggestionsLoadingMore={suggestionsLoadingMore} loadMoreSuggestions={loadMoreSuggestions} updateStatut={updateStatut} activeSubTab={ideesSubTab} setActiveSubTab={setIdeesSubTab} />}
 
 
 
-      {/* ── ONGLET ACTIONS CORRECTIVES (suivi + confirmation uniquement — la définition d'une action reste dans FeedbackTreatmentModal) ── */}
-      {activeTab === 'actions_correctives' && <PilotageActionsCorrectivesTab isAgencyManager={isAgencyManager} agencesList={agencesList} actionsToggle={actionsToggle} setActionsToggle={setActionsToggle} actionsEnCours={actionsEnCours} actionsTerminees={actionsTerminees} actionsEnCoursTotal={actionsEnCoursTotal} actionsTermineesTotal={actionsTermineesTotal} actionsLoading={actionsLoading} actionsFirstLoadDone={actionsFirstLoadDone} actionsLoadingMore={actionsLoadingMore} loadMoreActions={loadMoreActions} actionsAgenceId={actionsAgenceId} setActionsAgenceId={setActionsAgenceId} marquerActionRealisee={marquerActionRealisee} />}
+      {/* ── SECTION ACTIONS CORRECTIVES (suivi + confirmation uniquement — la définition d'une action reste dans FeedbackTreatmentModal) ── */}
+      {section === 'actions' && <PilotageActionsCorrectivesTab isAgencyManager={isAgencyManager} agencesList={agencesList} actionsToggle={actionsToggle} setActionsToggle={setActionsToggle} actionsEnCours={actionsEnCours} actionsTerminees={actionsTerminees} actionsEnCoursTotal={actionsEnCoursTotal} actionsTermineesTotal={actionsTermineesTotal} actionsLoading={actionsLoading} actionsFirstLoadDone={actionsFirstLoadDone} actionsLoadingMore={actionsLoadingMore} loadMoreActions={loadMoreActions} actionsAgenceId={actionsAgenceId} setActionsAgenceId={setActionsAgenceId} marquerActionRealisee={marquerActionRealisee} />}
 
 
 
-      {/* ── ONGLET ISSUES (KPI P0 + liste + détail — pas de création ici, voir rapport) ── */}
-      {activeTab === 'issues' && <PilotageIssuesTab isAgencyManager={isAgencyManager} agencesList={agencesList} issuesJours={issuesJours} setIssuesJours={setIssuesJours} issuesAgenceId={issuesAgenceId} setIssuesAgenceId={setIssuesAgenceId} backlogActif={backlogActif} setBacklogActif={setBacklogActif} issuesKpisRefreshToken={issuesKpisRefreshToken} issuesFirstLoadDone={issuesFirstLoadDone} issuesAffichees={issuesAffichees} issuesListRaw={issuesListRaw} issuesTotal={issuesTotal} ancienneteTexte={ancienneteTexte} issuesListError={issuesListError} issuesListLoading={issuesListLoading} fetchIssuesList={fetchIssuesList} openIssueDetail={openIssueDetail} issuesLoadingMore={issuesLoadingMore} loadMoreIssues={loadMoreIssues} selectedIssueId={selectedIssueId} issueDetail={issueDetail} issueDetailLoading={issueDetailLoading} closeIssueDetail={closeIssueDetail} terminerActionIssue={terminerActionIssue} verifierIssue={verifierIssue} />}
+      {/* ── SECTION ISSUES (KPI P0 + liste + détail — pas de création ici, voir rapport) ── */}
+      {section === 'issues' && <PilotageIssuesTab isAgencyManager={isAgencyManager} agencesList={agencesList} issuesJours={issuesJours} setIssuesJours={setIssuesJours} issuesAgenceId={issuesAgenceId} setIssuesAgenceId={setIssuesAgenceId} backlogActif={backlogActif} setBacklogActif={setBacklogActif} issuesKpisRefreshToken={issuesKpisRefreshToken} issuesFirstLoadDone={issuesFirstLoadDone} issuesAffichees={issuesAffichees} issuesListRaw={issuesListRaw} issuesTotal={issuesTotal} ancienneteTexte={ancienneteTexte} issuesListError={issuesListError} issuesListLoading={issuesListLoading} fetchIssuesList={fetchIssuesList} openIssueDetail={openIssueDetail} issuesLoadingMore={issuesLoadingMore} loadMoreIssues={loadMoreIssues} selectedIssueId={selectedIssueId} issueDetail={issueDetail} issueDetailLoading={issueDetailLoading} closeIssueDetail={closeIssueDetail} terminerActionIssue={terminerActionIssue} verifierIssue={verifierIssue} />}
     </div>
   );
 }

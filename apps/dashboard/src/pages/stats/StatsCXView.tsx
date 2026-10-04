@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { lazy, Suspense, useEffect, useMemo, useState, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { statisticsApi, agencesApi } from '../../services/api';
 import type { StatsCXResponse, Agence } from '../../types';
 import TabsNavigation from '../../components/ui/TabsNavigation';
@@ -11,6 +12,14 @@ import ThemesBarList from '../../components/stats/ThemesBarList';
 import AgencesRankingTable from '../../components/stats/AgencesRankingTable';
 import AlertesSyntheseCard from '../../components/stats/AlertesSyntheseCard';
 import AiInsightsSummary from '../../components/stats/AiInsightsSummary';
+import type { AgenceCarte } from '../../components/map/AgencesMap';
+import { statutSeuil, satisfactionTexte, STATUT_SEUIL_LABEL } from '../cx/siege/siegeData';
+
+// Carte des agences (déplacée depuis le Dashboard CX) : chargée à la demande, Leaflet est lourd.
+const AgencesMap = lazy(() => import('../../components/map/AgencesMap'));
+
+type StatsTab = 'satisfaction' | 'feedbacks' | 'sentiments' | 'thematiques' | 'agences' | 'tendances';
+const STATS_TABS: StatsTab[] = ['satisfaction', 'feedbacks', 'sentiments', 'thematiques', 'agences', 'tendances'];
 import {
   StatsLoadingState,
   StatsErrorState,
@@ -28,9 +37,13 @@ import {
 } from '../../components/common/Icons';
 
 export default function StatsCXView() {
-  const [activeTab, setActiveTab] = useState<
-    'satisfaction' | 'feedbacks' | 'sentiments' | 'thematiques' | 'agences' | 'tendances'
-  >('satisfaction');
+  // Onglet piloté par l'URL (?tab=agences…) : le Dashboard CX peut pointer directement
+  // sur Performance > Agences ou > Thématiques.
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab') as StatsTab | null;
+  const activeTab: StatsTab = tabParam && STATS_TABS.includes(tabParam) ? tabParam : 'satisfaction';
+  const setActiveTab = (tab: StatsTab) => setSearchParams(tab === 'satisfaction' ? {} : { tab }, { replace: true });
 
   const [jours, setJours] = useState<number>(30);
   const [selectedAgenceId, setSelectedAgenceId] = useState<string | null>(null);
@@ -74,6 +87,25 @@ export default function StatsCXView() {
 
   const kpis = data?.kpis || {};
 
+  // Carte : coordonnées et seuil configuré viennent de /agences/, satisfaction et volume du classement.
+  const agencesCarte = useMemo(() => {
+    const meta = new Map(agencesList.map((a) => [a.id, a]));
+    const avec: AgenceCarte[] = [];
+    const sans: { id: string; nom: string; ville?: string | null; texte: string }[] = [];
+    for (const r of data?.agences_ranking ?? []) {
+      const m = meta.get(r.agence_id);
+      const seuil = m?.seuil_alerte ?? null;
+      const statut = statutSeuil(r.satisfaction_rate, r.total_feedbacks, seuil);
+      if (m?.latitude != null && m?.longitude != null) {
+        avec.push({ id: r.agence_id, nom: r.agence_nom, ville: r.ville, latitude: m.latitude, longitude: m.longitude, satisfaction: r.satisfaction_rate, avis: r.total_feedbacks, seuil, statut });
+      } else {
+        sans.push({ id: r.agence_id, nom: r.agence_nom, ville: r.ville, texte: `${satisfactionTexte(r.satisfaction_rate, r.total_feedbacks)} · ${STATUT_SEUIL_LABEL[statut]}` });
+      }
+    }
+    return { avec, sans };
+  }, [agencesList, data]);
+  const voirAgence = (id: string) => navigate(`/agences/${id}/apercu`);
+
   const tabsConfig = [
     { id: 'satisfaction', label: 'Satisfaction', icon: <SmileIcon size={16} /> },
     { id: 'feedbacks', label: 'Feedbacks', icon: <MessageSquareIcon size={16} /> },
@@ -110,7 +142,7 @@ export default function StatsCXView() {
       <TabsNavigation
         tabs={tabsConfig}
         activeTab={activeTab}
-        onChange={(id) => setActiveTab(id as any)}
+        onChange={(id) => setActiveTab(id as StatsTab)}
       />
 
       {/* ── Gestion des États (Loading / Error) ── */}
@@ -238,6 +270,35 @@ export default function StatsCXView() {
                   onSelectAgence={(id) => setSelectedAgenceId(id)}
                 />
               </StatsSectionCard>
+
+              <StatsSectionCard
+                title="Carte du réseau"
+                subtitle="Statut de chaque agence sur la période, comparé à son seuil d'alerte configuré."
+              >
+                {agencesCarte.avec.length > 0 ? (
+                  <Suspense fallback={<div role="status" style={{ height: 420, display: 'grid', placeItems: 'center', color: 'var(--color-text-muted)' }}>Chargement de la carte…</div>}>
+                    <AgencesMap agences={agencesCarte.avec} onVoirAgence={voirAgence} />
+                  </Suspense>
+                ) : (
+                  <p style={{ margin: 0, textAlign: 'center', padding: 'var(--space-7) 0', color: 'var(--color-text-muted)' }}>
+                    Aucune agence n'a de coordonnées géographiques : renseignez-les dans Gestion des agences.
+                  </p>
+                )}
+              </StatsSectionCard>
+
+              {agencesCarte.sans.length > 0 && (
+                <StatsSectionCard title="Agences sans coordonnées" subtitle="Absentes de la carte, elles restent consultables ici et dans le classement.">
+                  <ul style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)', margin: 0, padding: 0, listStyle: 'none' }}>
+                    {agencesCarte.sans.map((a) => (
+                      <li key={a.id}>
+                        <button type="button" className="ui-btn ui-btn--secondary ui-btn--sm" onClick={() => voirAgence(a.id)}>
+                          {a.nom}{a.ville ? ` · ${a.ville}` : ''} — {a.texte}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </StatsSectionCard>
+              )}
             </div>
           )}
 

@@ -1,317 +1,197 @@
 import React from 'react';
-import { ArrowUpRightIcon, ArrowDownRightIcon, SparklineWave } from '../common/Icons';
+import { ArrowDownRightIcon, ArrowUpRightIcon } from '../common/Icons';
+import Skeleton from './Skeleton';
+import Tooltip from './Tooltip';
+
+export type KpiTone = 'positive' | 'critical' | 'warning' | 'neutral';
 
 export interface KpiCardProps {
   icon: React.ReactNode;
   label: string;
   value: string | number;
   trend?: {
+    /** Delta affiché tel quel (ex. "+3 pts", "-12 %"). */
     value: string;
+    /**
+     * Valence : l'évolution est-elle favorable ? (vert si true, rouge si false).
+     * Distincte du sens : une baisse des feedbacks critiques est favorable.
+     */
     isPositive?: boolean;
+    /** Sens de la variation. Déduit de `value` (+/-) si absent. */
+    direction?: 'up' | 'down' | 'flat';
     period?: string;
   };
-  sparklineType?: 'up' | 'down' | 'neutral';
+  /** Série réelle (ordre chronologique) pour la sparkline. Aucune sparkline sans données. */
+  sparkline?: number[];
+  /** Ton de la carte. Prioritaire sur `badgeColor`. */
+  tone?: KpiTone;
+  /** @deprecated utiliser `tone` (green → positive, red → critical, neutral → neutral). */
   badgeColor?: 'green' | 'red' | 'neutral';
   subtitle?: string;
+  /** Progressive Disclosure : ouvre le détail du KPI. Rend la carte activable au clavier. */
   onClick?: () => void;
   compact?: boolean;
-  /** Désactive la vague décorative lorsqu'aucune série réelle n'est associée au KPI. */
-  showSparkline?: boolean;
-  /** Met en avant CE KPI (barre lime décorative sous la valeur) — doit rester
-      rare, un seul KPI par page, contrairement à la pastille de tendance qui
-      est systématique pour toute tendance positive. */
+  /** Explication du calcul (affichée en tooltip à côté du libellé). */
+  hint?: string;
+  loading?: boolean;
+  /** Met en avant CE KPI (un seul par page) : barre lime décorative sous la valeur. */
   highlight?: boolean;
+  /** @deprecated la vague décorative a été retirée : seule `sparkline` (données réelles) est tracée. */
+  showSparkline?: boolean;
+  /** @deprecated voir `showSparkline`. */
+  sparklineType?: 'up' | 'down' | 'neutral';
 }
 
+function Sparkline({ data, width, height }: { data: number[]; width: number; height: number }) {
+  if (data.length < 2) return null;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const span = max - min || 1;
+  const pad = 2;
+  const pts = data.map((v, i) => {
+    const x = pad + (i / (data.length - 1)) * (width - pad * 2);
+    const y = pad + (1 - (v - min) / span) * (height - pad * 2);
+    return [x, y] as const;
+  });
+  const line = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
+  const [lx, ly] = pts[pts.length - 1];
+  return (
+    <svg className="ui-kpi__spark" width={width} height={height} viewBox={`0 0 ${width} ${height}`} fill="none" aria-hidden="true">
+      <path d={line} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={lx} cy={ly} r="2.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+function resolveTone(tone?: KpiTone, badgeColor?: KpiCardProps['badgeColor'], trendPositive?: boolean): KpiTone {
+  if (tone) return tone;
+  if (badgeColor === 'red') return 'critical';
+  if (badgeColor === 'neutral') return 'neutral';
+  if (trendPositive === false) return 'critical';
+  return 'positive';
+}
+
+function resolveDirection(trend: NonNullable<KpiCardProps['trend']>): 'up' | 'down' | 'flat' {
+  if (trend.direction) return trend.direction;
+  const v = trend.value.trim();
+  if (v.startsWith('-') || v.startsWith('−')) return 'down';
+  if (v.startsWith('+')) return 'up';
+  if (/^0([.,]0+)?(\s|%|$)/.test(v)) return 'flat';
+  return trend.isPositive === false ? 'down' : 'up';
+}
+
+/**
+ * KPI de synthèse : valeur + évolution + delta + sparkline.
+ * Le sens de l'évolution est porté par flèche + signe + texte, jamais par la couleur seule.
+ */
 export default function KpiCard({
   icon,
   label,
   value,
   trend,
-  sparklineType = 'up',
-  badgeColor = 'green',
+  sparkline,
+  tone,
+  badgeColor,
   subtitle,
   onClick,
   compact = false,
-  showSparkline = true,
+  hint,
+  loading = false,
   highlight = false,
 }: KpiCardProps) {
-  const isNegative = badgeColor === 'red' || (trend && trend.isPositive === false);
-  
-  const iconBg = isNegative ? '#FEE2E2' : '#EDF7E8';
-  const iconColor = isNegative ? '#DC2626' : '#3C7730';
-  const badgeBg = isNegative ? '#FEE2E2' : '#EBF5E9';
-  const badgeTextColor = isNegative ? '#DC2626' : '#3C7730';
-  const sparkColor = isNegative ? '#DC2626' : '#3C7730';
+  const resolvedTone = resolveTone(tone, badgeColor, trend?.isPositive);
+  const direction = trend ? resolveDirection(trend) : 'flat';
+  const deltaClass = !trend ? '' : trend.isPositive === false ? 'down' : direction === 'flat' ? 'flat' : 'up';
+  // Pas de période de comparaison affichée sans delta : elle suggérerait une comparaison inexistante.
+  const period = trend ? trend.period || subtitle || 'vs. mois dernier' : subtitle;
+  const iconSize = compact ? 14 : 20;
 
-  if (compact) {
+  const classes = [
+    'ui-card',
+    'ui-kpi',
+    `ui-kpi--${resolvedTone}`,
+    compact && 'ui-kpi--compact',
+    onClick && 'ui-card--interactive',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  if (loading) {
     return (
-      <div
-        onClick={onClick}
-        style={{
-          background: '#FFFFFF',
-          borderRadius: '16px',
-          padding: '11px 16px',
-          border: isNegative && badgeColor === 'red' ? '1px solid #FECACA' : '1px solid #E8ECE6',
-          boxShadow: '0 3px 16px rgba(20, 60, 40, 0.05)',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          minHeight: '82px',
-          maxHeight: '90px',
-          position: 'relative',
-          cursor: onClick ? 'pointer' : 'default',
-          transition: 'transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'translateY(-1px)';
-          e.currentTarget.style.boxShadow = '0 6px 22px rgba(20, 60, 40, 0.09)';
-          if (onClick) {
-            e.currentTarget.style.borderColor = '#DDE4DB';
-          }
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.boxShadow = '0 3px 16px rgba(20, 60, 40, 0.05)';
-          e.currentTarget.style.borderColor =
-            isNegative && badgeColor === 'red' ? '#FECACA' : '#E8ECE6';
-        }}
-      >
-        {/* Ligne 1 : [Icône] Nom du KPI ... [Sparkline] */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-            <div
-              style={{
-                width: '26px',
-                height: '26px',
-                borderRadius: '8px',
-                background: iconBg,
-                color: iconColor,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              {React.isValidElement(icon)
-                ? React.cloneElement(icon as React.ReactElement<any>, { size: 14 })
-                : icon}
-            </div>
-
-            <span
-              style={{
-                fontSize: '0.78rem',
-                color: '#64748B',
-                fontWeight: 700,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {label}
-            </span>
-          </div>
-
-          {showSparkline && (
-            <div style={{ flexShrink: 0, opacity: 0.85, display: 'flex', alignItems: 'center' }}>
-              <SparklineWave type={sparklineType} color={sparkColor} width={46} height={16} />
-            </div>
-          )}
-        </div>
-
-        {/* Ligne 2 : Valeur principale + [Variation] vs. mois dernier */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'baseline',
-            justifyContent: 'space-between',
-            marginTop: '2px',
-          }}
-        >
-          <div
-            style={{
-              fontSize: '1.38rem',
-              fontWeight: 800,
-              color: isNegative && badgeColor === 'red' ? '#DC2626' : '#02302D',
-              letterSpacing: '-0.02em',
-              lineHeight: 1,
-            }}
-          >
-            {value}
-            {highlight && <div className="accent-lime-underline" />}
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {trend && (
-              <div
-                style={{
-                  background: badgeBg,
-                  color: badgeTextColor,
-                  borderRadius: '9999px',
-                  padding: '2px 6px',
-                  fontSize: '0.68rem',
-                  fontWeight: 800,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '2px',
-                  lineHeight: 1,
-                }}
-              >
-                {isNegative ? (
-                  <ArrowDownRightIcon size={10} color={badgeTextColor} />
-                ) : (
-                  <>
-                    <ArrowUpRightIcon size={10} color={badgeTextColor} />
-                    <span className="accent-lime-dot" />
-                  </>
-                )}
-                <span>{trend.value}</span>
-              </div>
-            )}
-
-            <span
-              style={{
-                fontSize: '0.68rem',
-                color: '#64748B',
-                fontWeight: 500,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {trend?.period || subtitle || 'vs. mois dernier'}
-            </span>
+      <div className={classes} aria-busy="true" aria-label={`${label} : chargement`}>
+        <div className="ui-kpi__top">
+          <div className="ui-kpi__label-wrap">
+            <Skeleton variant="rect" width={compact ? 28 : 40} height={compact ? 28 : 40} />
+            <Skeleton variant="text" width={110} />
           </div>
         </div>
+        <Skeleton variant="text" width="45%" height={compact ? 24 : 32} />
+        <Skeleton variant="text" width="60%" />
       </div>
     );
   }
 
+  const interactiveProps = onClick
+    ? {
+        role: 'button' as const,
+        tabIndex: 0,
+        onClick,
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.target !== e.currentTarget) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick();
+          }
+        },
+        'aria-label': `${label} : ${value}. Voir le détail`,
+      }
+    : {};
+
+  const DirIcon = direction === 'down' ? ArrowDownRightIcon : ArrowUpRightIcon;
+
   return (
-    <div
-      onClick={onClick}
-      style={{
-        background: '#FFFFFF',
-        borderRadius: '24px',
-        padding: '24px',
-        border: '1px solid #E8ECE6',
-        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.02)',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        minHeight: '190px',
-        position: 'relative',
-        cursor: onClick ? 'pointer' : 'default',
-        transition: 'transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease',
-      }}
-      onMouseEnter={(e) => {
-        if (onClick) {
-          e.currentTarget.style.transform = 'translateY(-2px)';
-          e.currentTarget.style.boxShadow = '0 8px 24px rgba(2, 48, 45, 0.06)';
-          e.currentTarget.style.borderColor = '#DDE4DB';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (onClick) {
-          e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.02)';
-          e.currentTarget.style.borderColor = '#E8ECE6';
-        }
-      }}
-    >
-      {/* 1. Top Row: Icon Container + Sparkline */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div
-          style={{
-            width: '44px',
-            height: '44px',
-            borderRadius: '14px',
-            background: iconBg,
-            color: iconColor,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}
-        >
-          {icon}
+    <div className={classes} {...interactiveProps}>
+      <div className="ui-kpi__top">
+        <div className="ui-kpi__label-wrap">
+          <span className="ui-kpi__icon" aria-hidden="true">
+            {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<{ size?: number }>, { size: iconSize }) : icon}
+          </span>
+          <span className="ui-kpi__label">{label}</span>
+          {hint && (
+            <Tooltip content={hint}>
+              <button
+                type="button"
+                className="ui-info-btn"
+                aria-label={`À propos : ${label}`}
+                // L'aide ne doit pas déclencher l'ouverture du détail de la carte.
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
+                ?
+              </button>
+            </Tooltip>
+          )}
         </div>
-
-        {showSparkline && (
-          <div style={{ display: 'flex', alignItems: 'center', opacity: 0.85 }}>
-            <SparklineWave type={sparklineType} color={sparkColor} width={64} height={22} />
-          </div>
-        )}
+        {sparkline && <Sparkline data={sparkline} width={compact ? 48 : 72} height={compact ? 18 : 26} />}
       </div>
 
-      {/* 2. Middle Row: Label + Large Value */}
-      <div style={{ marginTop: '14px' }}>
-        <div
-          style={{
-            fontSize: '0.84rem',
-            color: '#64748B',
-            fontWeight: 600,
-            lineHeight: 1.3,
-          }}
-        >
-          {label}
-        </div>
-        <div
-          style={{
-            fontSize: '2.35rem',
-            fontWeight: 800,
-            color: '#02302D',
-            lineHeight: 1.1,
-            marginTop: '4px',
-            letterSpacing: '-0.02em',
-          }}
-        >
-          {value}
-        </div>
-        {highlight && <div className="accent-lime-underline" />}
+      <div>
+        <div className="ui-kpi__value">{value}</div>
+        {highlight && <div className="ui-kpi__accent" aria-hidden="true" />}
       </div>
 
-      {/* 3. Bottom Row: Trend Capsule + Period or Subtitle */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '14px' }}>
+      <div className="ui-kpi__bottom">
         {trend && (
-          <div
-            style={{
-              background: badgeBg,
-              color: badgeTextColor,
-              borderRadius: '9999px',
-              padding: '3px 9px',
-              fontSize: '0.74rem',
-              fontWeight: 700,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '3px',
-              flexShrink: 0,
-            }}
-          >
-            {isNegative ? (
-              <ArrowDownRightIcon size={12} color={badgeTextColor} />
-            ) : (
-              <>
-                <ArrowUpRightIcon size={12} color={badgeTextColor} />
-                <span className="accent-lime-dot" />
-              </>
-            )}
+          <span className={`ui-kpi__delta ui-kpi__delta--${deltaClass}`}>
+            {direction !== 'flat' && <DirIcon size={compact ? 10 : 12} aria-hidden="true" />}
             <span>{trend.value}</span>
-          </div>
+            <span className="ui-sr-only">
+              {trend.isPositive === false ? ', évolution défavorable' : direction === 'flat' ? ', stable' : ', évolution favorable'}
+            </span>
+          </span>
         )}
-
-        <div
-          style={{
-            fontSize: '0.74rem',
-            color: '#64748B',
-            fontWeight: 500,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {trend?.period || subtitle || 'vs. mois dernier'}
-        </div>
+        {period && <span className="ui-kpi__period">{period}</span>}
       </div>
     </div>
   );
 }
-

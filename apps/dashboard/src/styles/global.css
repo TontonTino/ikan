@@ -1,76 +1,12 @@
 /* Design System IKAN AI — Style Visuel SaaS Moderne & Épuré (Inspiré de Bolt.new) */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
+@import './tokens.css';
+@import './ui.css';
+@import './layout.css';
+@import './siege.css';
 
-:root {
-  /* Charte Graphique Officielle IKAN AI */
-  --color-primary-dark: #02302D;   /* Midnight Green Profond */
-  --color-primary: #3C7730;        /* Forest Green */
-  --color-accent: #75B72A;         /* Lime Green Vif */
-  --color-lime: #BCCF00;           /* Electric Lime */
-  --color-surface: #FFFFFF;        /* Blanc Pur */
-  
-  /* Nuances Neutres & Arrière-plans Doux */
-  --color-bg: #F8FAFB;             /* Fond d'application doux et lumineux */
-  --color-bg-subtle: #F1F5F2;      /* Fond secondaire conteneurs */
-  --color-bg-hover: #F4F7F5;       /* Hover léger */
-  --color-active-item: #EAF5EC;    /* Vert sauge / menthe douce pour items actifs */
-  
-  /* Bordures */
-  --color-border: #E8ECE6;         /* Bordure fine et discrète */
-  --color-border-subtle: #F1F4EE;
-  --color-border-focus: #3C7730;
-  
-  /* Typographie & Textes */
-  --color-text-main: #02302D;      /* Texte principal foncé */
-  --color-text-body: #1E293B;      /* Corps de texte */
-  --color-text-muted: #64748B;     /* Texte secondaire gris */
-  --color-text-subtle: #94A3B8;    /* Texte discret / placeholders */
-  --color-text-on-dark-muted: #9FB0AB; /* texte secondaire lisible sur fond sombre, contraste vérifié ~6.3:1 sur --color-primary-dark */
-
-  /* Statuts & Badges */
-  --color-success: #3C7730;
-  --color-success-bg: #EBF5E9;
-  --color-warning: #D97706;
-  --color-warning-bg: #FEF3C7;
-  --color-error: #DC2626;
-  --color-error-bg: #FEE2E2;
-  --color-info: #0369A1;
-  --color-info-bg: #E0F2FE;
-
-  /* Sidebar (thème sombre) — ratios de contraste réels (formule WCAG),
-     calculés sur les DEUX extrémités du dégradé :
-       --sidebar-text   sur --sidebar-bg-from : 10.6:1 | sur --sidebar-bg-to : 9.5:1
-       --sidebar-muted  sur --sidebar-bg-from : 6.3:1  | sur --sidebar-bg-to : 5.7:1
-     NE PAS éclaircir --sidebar-bg-to davantage : la marge de --sidebar-muted
-     se réduit déjà en s'approchant de 4.5:1 à cette extrémité. */
-  --sidebar-bg-from: #02302D;
-  --sidebar-bg-to: #06392F;
-  --sidebar-text: #D5E0DC;
-  --sidebar-text-strong: #FFFFFF;
-  --sidebar-muted: var(--color-text-on-dark-muted);
-  --sidebar-hover-bg: rgba(255, 255, 255, 0.06);
-  --sidebar-active-bg: rgba(255, 255, 255, 0.10);
-  --sidebar-active-border: rgba(255, 255, 255, 0.16);
-
-  /* Dimensions & Rayons de courbure */
-  --sidebar-width: 270px;
-  --header-height: 70px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --radius-2xl: 24px;
-  --radius-pill: 9999px;
-  
-  /* Ombres Subtiles */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.03);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
-  --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.025), 0 1px 3px rgba(0, 0, 0, 0.02);
-  --shadow-hover: 0 8px 24px rgba(2, 48, 45, 0.06);
-  --shadow-dropdown: 0 10px 30px rgba(0, 0, 0, 0.08);
-
-  --font-main: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
-}
+/* Les variables (couleurs, espacements, rayons, motion, z-index…) vivent
+   dans ./tokens.css — source unique de vérité du design system. */
 
 *, *::before, *::after {
   box-sizing: border-box;

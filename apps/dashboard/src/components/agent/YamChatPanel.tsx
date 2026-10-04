@@ -3,6 +3,7 @@ import { PlusIcon, SendIcon, XCloseIcon } from '../common/Icons';
 import RichText from './RichText';
 import YamAvatar from './YamAvatar';
 import { MAX_QUESTION_LENGTH, useYamChat } from './useYamChat';
+import { useYamStore } from '../../stores/yamStore';
 
 export const YAM_PANEL_ID = 'yam-chat-panel';
 
@@ -58,6 +59,20 @@ export default function YamChatPanel({ open, onClose }: Props) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
+  const prefill = useYamStore((s) => s.prefill);
+
+  // Question contextuelle (ex. depuis le dashboard) : pré-remplie, jamais envoyée automatiquement.
+  useEffect(() => {
+    if (!prefill) return;
+    setDraft(prefill.text.slice(0, MAX_QUESTION_LENGTH));
+    const t = window.setTimeout(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+    }, 260);
+    return () => window.clearTimeout(t);
+  }, [prefill]);
 
   // Focus sur le champ à l'ouverture ; Échap ferme le panneau.
   useEffect(() => {

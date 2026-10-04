@@ -30,7 +30,6 @@ import EmptyState from '../../components/ui/EmptyState';
 import SkeletonBlock from '../../components/ui/SkeletonBlock';
 import SectionHeading from '../../components/ui/SectionHeading';
 import AlerteRow from '../../components/alerts/AlerteRow';
-import EphemeralAlertsBanner from '../../components/alerts/EphemeralAlertsBanner';
 import RecommandationCard from '../../components/stats/RecommandationCard';
 import { ArrowUpRightIcon } from '../../components/common/Icons';
 import { themeLabel } from '../../utils/themeLabels';
@@ -212,7 +211,6 @@ export default function DashboardAgencePage() {
       </PageHeader>
 
       {/* Alertes éphémères (nouvelles alertes non vues — 15s) */}
-      <EphemeralAlertsBanner alerts={alertes} userId={user?.id} />
 
       {loadFailed && (
         <EmptyState
@@ -276,7 +274,7 @@ export default function DashboardAgencePage() {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <Link
-                to="/pilotage?tab=issues"
+                to="/issues"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.84rem', fontWeight: 700, color: '#3C7730', textDecoration: 'none' }}
               >
                 Voir le détail des Issues et actions
@@ -433,7 +431,7 @@ export default function DashboardAgencePage() {
                 </p>
                 </div>
                 <Link
-                  to="/pilotage?tab=actions"
+                  to="/actions"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.84rem', fontWeight: 700, color: '#3C7730', textDecoration: 'none' }}
                 >
                   {data.actions_ouvertes} action{data.actions_ouvertes !== 1 ? 's' : ''} en cours

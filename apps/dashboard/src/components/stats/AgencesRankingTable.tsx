@@ -1,6 +1,7 @@
 import React from 'react';
 import type { AgenceRankDetail } from '../../types';
 import { ArrowUpRightIcon, ArrowDownRightIcon, StoreIcon } from '../common/Icons';
+import { tendancePts } from '../../pages/cx/siege/siegeData';
 
 interface AgencesRankingTableProps {
   agences: AgenceRankDetail[];
@@ -64,10 +65,14 @@ export default function AgencesRankingTable({
         <tbody>
           {agences.map((ag, idx) => {
             const isSelected = selectedAgenceId === ag.agence_id;
+            // 0 avis = « Pas d'avis », jamais « 0 % » ni une mauvaise performance (règle data-first).
+            const sansAvis = ag.total_feedbacks === 0;
+            // tendance_val est une différence en POINTS ; « +100% » = période précédente sans avis (pas une comparaison).
+            const tendance = tendancePts(ag.tendance_val);
             const satColor =
-              ag.satisfaction_rate >= 80 ? '#3C7730' : ag.satisfaction_rate >= 60 ? '#D97706' : '#DC2626';
+              sansAvis ? '#475569' : ag.satisfaction_rate >= 80 ? '#3C7730' : ag.satisfaction_rate >= 60 ? '#D97706' : '#DC2626';
             const satBg =
-              ag.satisfaction_rate >= 80 ? '#EBF6ED' : ag.satisfaction_rate >= 60 ? '#FEF3C7' : '#FEE2E2';
+              sansAvis ? '#F1F5F9' : ag.satisfaction_rate >= 80 ? '#EBF6ED' : ag.satisfaction_rate >= 60 ? '#FEF3C7' : '#FEE2E2';
 
             return (
               <tr
@@ -119,7 +124,7 @@ export default function AgencesRankingTable({
                     style={{ fontWeight: 700, color: '#0F172A', cursor: 'help' }}
                     title="Borne inférieure de l'intervalle de confiance de Wilson (95%) — favorise les agences avec un volume d'avis fiable plutôt qu'un petit nombre d'avis parfaits."
                   >
-                    {Math.round(ag.wilson_score * 100)}%
+                    {sansAvis ? '—' : `${Math.round(ag.wilson_score * 100)}%`}
                   </span>
                 </td>
 
@@ -141,7 +146,7 @@ export default function AgencesRankingTable({
                       display: 'inline-block',
                     }}
                   >
-                    {ag.satisfaction_rate}%
+                    {sansAvis ? "Pas d'avis" : `${ag.satisfaction_rate}%`}
                   </span>
                 </td>
 
@@ -152,7 +157,7 @@ export default function AgencesRankingTable({
 
                 {/* Taux de traitement */}
                 <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                  <span style={{ fontWeight: 700, color: '#02302D' }}>{ag.taux_traitement}%</span>
+                  <span style={{ fontWeight: 700, color: '#02302D' }}>{sansAvis ? '—' : `${ag.taux_traitement}%`}</span>
                   <span style={{ color: '#94A3B8', fontSize: '0.72rem', marginLeft: '4px' }}>
                     ({ag.feedbacks_traites})
                   </span>
@@ -180,26 +185,26 @@ export default function AgencesRankingTable({
 
                 {/* Tendance */}
                 <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                  {ag.tendance_val ? (
+                  {tendance != null ? (
                     <div
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '2px',
-                        color: ag.tendance_positive ? '#3C7730' : '#DC2626',
+                        color: tendance >= 0 ? '#3C7730' : '#DC2626',
                         fontWeight: 700,
                         fontSize: '0.76rem',
                       }}
                     >
-                      {ag.tendance_positive ? (
+                      {tendance >= 0 ? (
                         <ArrowUpRightIcon size={12} color="#3C7730" />
                       ) : (
                         <ArrowDownRightIcon size={12} color="#DC2626" />
                       )}
-                      <span>{ag.tendance_val}</span>
+                      <span>{`${tendance > 0 ? '+' : tendance < 0 ? '−' : ''}${Math.abs(tendance).toLocaleString('fr-FR')} pts`}</span>
                     </div>
                   ) : (
-                    <span style={{ color: '#CBD5E1' }}>—</span>
+                    <span style={{ color: '#5B6B7F' }} title="Pas de comparaison possible : aucun avis sur l'une des deux périodes">—</span>
                   )}
                 </td>
 

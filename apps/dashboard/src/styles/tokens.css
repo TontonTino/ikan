@@ -1,0 +1,205 @@
+/* ════════════════════════════════════════════════════════════════════
+   IKAN AI — Design tokens (source unique de vérité)
+
+   Tout composant de components/ui consomme ces variables : aucune couleur,
+   aucun radius, aucun espacement ni aucune durée en dur dans un composant.
+
+   Contrastes (formule WCAG 2.x, vérifiés au calcul) indiqués à côté de
+   chaque couple texte/fond. Seuils : 4.5:1 texte courant, 3:1 éléments
+   graphiques (icônes, traits de graphique, anneau de focus).
+   ════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Espacements : 4 / 8 / 12 / 16 / 24 / 32 / 48 / 64 ─────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* ── Rayons : 8 / 12 / 16 / 20 ──────────────────────────────────────── */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pill: 9999px;
+  /* Hérité (ex-24px) : ramené sur l'échelle. Ne plus utiliser dans du nouveau code. */
+  --radius-2xl: var(--radius-xl);
+
+  /* ── Motion : 120 / 200 / 300 ms ────────────────────────────────────── */
+  --duration-fast: 120ms;   /* hover, focus, couleur */
+  --duration-base: 200ms;   /* dropdown, tooltip, toast */
+  --duration-slow: 300ms;   /* modale, drawer, panneau */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);       /* changement d'état */
+  --ease-enter: cubic-bezier(0.22, 1, 0.36, 1);      /* apparition (décélère) */
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);           /* disparition (accélère) */
+
+  /* ── Typographie ────────────────────────────────────────────────────── */
+  --font-main: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  --text-2xs: 0.6875rem;  /* 11px — micro-légendes uniquement */
+  --text-xs: 0.75rem;     /* 12px */
+  --text-sm: 0.8125rem;   /* 13px */
+  --text-md: 0.875rem;    /* 14px — corps par défaut */
+  --text-lg: 1rem;        /* 16px */
+  --text-xl: 1.25rem;     /* 20px */
+  --text-2xl: 1.5rem;     /* 24px */
+  --text-3xl: 2rem;       /* 32px — valeur KPI */
+  --weight-regular: 500;
+  --weight-medium: 600;
+  --weight-bold: 700;
+  --weight-black: 800;
+  --leading-tight: 1.2;
+  --leading-normal: 1.5;
+
+  /* ── Marque IKAN AI ─────────────────────────────────────────────────── */
+  --color-primary-dark: #02302D;   /* Midnight Green — 14.35:1 avec blanc */
+  --color-primary: #3C7730;        /* Forest Green — 5.42:1 sur blanc */
+  --color-primary-hover: #2F5F26;
+  --color-accent: #75B72A;         /* Lime Green — JAMAIS de texte blanc dessus (2.45:1) ; texte --color-primary-dark : 5.85:1 */
+  --color-lime: #BCCF00;           /* Electric Lime — décoratif uniquement, jamais en couleur de texte (1.74:1 sur blanc) */
+  --color-active-item: #EAF5EC;    /* Menthe : fond d'item actif — --color-primary-dark dessus : 12.83:1 */
+
+  /* ── Neutres ────────────────────────────────────────────────────────── */
+  --color-surface: #FFFFFF;
+  --color-bg: #F8FAFB;
+  --color-bg-subtle: #F1F5F2;
+  --color-bg-hover: #F4F7F5;
+  --color-border: #E8ECE6;
+  --color-border-strong: #D5DCD2;
+  --color-border-subtle: #F1F4EE;
+  --color-border-focus: var(--color-primary);
+
+  --color-text-main: #02302D;      /* titres, valeurs */
+  --color-text-body: #1E293B;      /* corps */
+  --color-text-muted: #5B6B7F;     /* secondaire — 5.45:1 blanc, 5.20:1 sur --color-bg, 4.95:1 sur --color-bg-subtle, 4.87:1 sur --color-active-item */
+  --color-text-subtle: #94A3B8;    /* placeholders / décoratif — NE PAS utiliser pour du texte informatif (2.56:1) */
+  --color-text-inverse: #FFFFFF;
+  --color-text-on-dark-muted: #9FB0AB; /* 6.3:1 sur --color-primary-dark */
+
+  /* ── Sémantique ─────────────────────────────────────────────────────
+     Chaque statut a 4 rôles :
+       -solid  : remplissage / icône / trait (≥ 3:1 sur blanc)
+       -text   : texte sur fond clair (≥ 4.5:1 sur -bg ET sur blanc)
+       -bg     : fond teinté
+       -border : bordure du fond teinté                                    */
+  --color-success-solid: #3C7730;
+  --color-success-text: #2F6B25;   /* 5.77:1 sur -bg */
+  --color-success-bg: #EBF5E9;
+  --color-success-border: #D5E8D3;
+
+  --color-warning-solid: #D97706;  /* 3.19:1 sur blanc : graphique seulement */
+  --color-warning-text: #9A4A08;   /* 5.62:1 sur -bg */
+  --color-warning-bg: #FEF3C7;
+  --color-warning-border: #FDE68A;
+
+  --color-critical-solid: #DC2626; /* 4.83:1 sur blanc */
+  --color-critical-text: #B91C1C;  /* 5.30:1 sur -bg */
+  --color-critical-bg: #FEE2E2;
+  --color-critical-border: #FECACA;
+
+  --color-info-solid: #0369A1;     /* 5.93:1 sur blanc */
+  --color-info-text: #0369A1;      /* 5.17:1 sur -bg */
+  --color-info-bg: #E0F2FE;
+  --color-info-border: #BAE6FD;
+
+  --color-neutral-solid: #64748B;
+  --color-neutral-text: #475569;   /* 6.92:1 sur -bg */
+  --color-neutral-bg: #F1F5F9;
+  --color-neutral-border: #E2E8F0;
+
+  /* Alias historiques (ne pas supprimer : utilisés par les pages existantes) */
+  --color-success: var(--color-success-solid);
+  --color-warning: var(--color-warning-text);
+  --color-error: var(--color-critical-solid);
+  --color-error-bg: var(--color-critical-bg);
+  --color-info: var(--color-info-text);
+
+  /* ── Data visualization ────────────────────────────────────────────
+     3-4 couleurs max par graphique. Le sens est FIXE :
+       positive  = satisfaction / succès / progression
+       critical  = critique / négatif
+       attention = à surveiller / neutre-dégradé
+       info      = volume / information
+       neutral   = série de référence (période précédente, moyenne réseau)
+     La couleur ne porte jamais seule l'information : légende + libellé.   */
+  --dataviz-positive: var(--color-success-solid);
+  --dataviz-critical: var(--color-critical-solid);
+  /* Ambre ≠ --color-warning-solid : l'orange #D97706 était trop proche du rouge
+     (ΔE 14.4 < 15 en vision normale, validate_palette.js). #B88300 : ΔE 18.4,
+     3:1+ sur blanc. Vert/rouge restent en zone plancher CVD (ΔE 6.3–7.3) :
+     légende + libellés directs OBLIGATOIRES, jamais la couleur seule. */
+  --dataviz-attention: #B88300;
+  --dataviz-info: var(--color-info-solid);
+  --dataviz-neutral: #64748B;
+  --dataviz-grid: #EEF1EC;
+  --dataviz-axis: var(--color-text-muted);
+  --dataviz-area-opacity: 0.14;
+
+  /* ── Élévation ─────────────────────────────────────────────────────── */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.025), 0 1px 3px rgba(0, 0, 0, 0.02);
+  --shadow-hover: 0 8px 24px rgba(2, 48, 45, 0.06);
+  --shadow-dropdown: 0 10px 30px rgba(0, 0, 0, 0.08);
+  --shadow-overlay: 0 24px 64px rgba(2, 45, 42, 0.22);
+  --focus-ring: 0 0 0 3px rgba(60, 119, 48, 0.18);
+  --overlay-scrim: rgba(2, 30, 28, 0.42);
+
+  /* ── Couches ───────────────────────────────────────────────────────── */
+  --z-sidebar: 30;
+  --z-dropdown: 50;
+  --z-yam: 60;
+  --z-drawer: 70;
+  --z-modal: 80;
+  --z-toast: 90;
+  --z-tooltip: 100;
+
+  /* ── Dimensions ────────────────────────────────────────────────────── */
+  --sidebar-width: 270px;
+  --sidebar-width-collapsed: 76px;
+  --layout-gutter: var(--space-4);   /* marge autour de la sidebar flottante */
+  --header-height: 70px;
+  --touch-target: 44px;     /* cible tactile minimale WCAG 2.5.5 */
+  --control-sm: 32px;
+  --control-md: 40px;
+  --control-lg: 44px;
+  --drawer-width: 480px;
+
+  /* ── Sidebar sombre (contrastes vérifiés sur les 2 extrémités du dégradé) */
+  --sidebar-bg-from: #02302D;
+  --sidebar-bg-to: #06392F;
+  --sidebar-text: #D5E0DC;          /* 10.6:1 / 9.5:1 */
+  --sidebar-text-strong: #FFFFFF;
+  --sidebar-muted: var(--color-text-on-dark-muted); /* 6.3:1 / 5.7:1 */
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.06);
+  --sidebar-active-bg: rgba(255, 255, 255, 0.10);
+  --sidebar-active-border: rgba(255, 255, 255, 0.16);
+
+  /* ── Alias --ikan-* : référencés par l'ancien Badge (fichier tokens.css
+     jamais créé, d'où des badges sans couleur). Conservés pour compat. ── */
+  --ikan-bg: var(--color-bg);
+  --ikan-border: var(--color-border);
+  --ikan-ink: var(--color-text-main);
+  --ikan-text-soft: var(--color-text-muted);
+  --ikan-primary: var(--color-primary);
+  --ikan-primary-soft: var(--color-active-item);
+  --ikan-lime-soft: #F4F8D6;
+  --ikan-success: var(--color-success-text);
+  --ikan-success-bg: var(--color-success-bg);
+  --ikan-warning: var(--color-warning-text);
+  --ikan-warning-bg: var(--color-warning-bg);
+  --ikan-danger: var(--color-critical-text);
+  --ikan-danger-bg: var(--color-critical-bg);
+  --ikan-radius-pill: var(--radius-pill);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+}

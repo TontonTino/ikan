@@ -1,4 +1,5 @@
 import React from 'react';
+import Skeleton from './Skeleton';
 
 export interface SkeletonBlockProps {
   width?: number | string;
@@ -9,17 +10,9 @@ export interface SkeletonBlockProps {
 }
 
 /**
- * Rectangle de chargement (animation pulse légère, désactivée si l'utilisateur
- * préfère réduire les animations — voir .skeleton-block dans styles/global.css).
- * Sert à conserver la structure d'une page pendant le fetch plutôt que de la
- * remplacer par un texte "Chargement…".
+ * @deprecated Alias historique de <Skeleton variant="rect" />, conservé pour
+ * les pages existantes. Utiliser Skeleton dans le nouveau code.
  */
-export default function SkeletonBlock({ width = '100%', height = 16, radius = 'var(--radius-md)', style }: SkeletonBlockProps) {
-  return (
-    <span
-      className="skeleton-block"
-      aria-hidden="true"
-      style={{ width, height, borderRadius: radius, ...style }}
-    />
-  );
+export default function SkeletonBlock({ width = '100%', height = 16, radius, style }: SkeletonBlockProps) {
+  return <Skeleton variant="rect" width={width} height={height} radius={radius} style={style} />;
 }
