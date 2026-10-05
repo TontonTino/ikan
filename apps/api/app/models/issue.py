@@ -7,7 +7,19 @@ clustering automatique, pas de dashboard ni de KPI dédiés (voir app/api/v1/end
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, Text, Boolean, DateTime, Enum, ForeignKey, func
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    Enum,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Index,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -17,6 +29,22 @@ from app.models.enums import CriticiteType
 
 class Issue(Base):
     __tablename__ = "issues"
+    __table_args__ = (
+        UniqueConstraint("organisation_id", "id", name="uq_issues_organisation_id_id"),
+        ForeignKeyConstraint(
+            ["organisation_id", "issue_origine_id"],
+            ["issues.organisation_id", "issues.id"],
+            name="fk_issues_issue_origine_same_organisation",
+            ondelete="NO ACTION",
+            deferrable=True,
+            initially="DEFERRED",
+        ),
+        CheckConstraint(
+            "issue_origine_id IS NULL OR issue_origine_id <> id",
+            name="ck_issues_issue_origine_not_self",
+        ),
+        Index("idx_issues_issue_origine_id", "issue_origine_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     organisation_id: Mapped[uuid.UUID] = mapped_column(
@@ -39,6 +67,7 @@ class Issue(Base):
     derniere_detection: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     date_resolution: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     date_limite_sla: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    issue_origine_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     date_verification: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

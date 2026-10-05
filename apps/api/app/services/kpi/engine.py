@@ -291,6 +291,27 @@ def calculer_sla_compliance_rate(db: Session, organisation_id: UUID, agence_id: 
     )
 
 
+def calculer_issue_recurrence_rate(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
+    """Share of Issues detected in the period explicitly linked to an earlier root Issue."""
+    total, recurrentes = (
+        _base_issue_query(db, organisation_id, agence_id, jours)
+        .with_entities(
+            func.count(Issue.id),
+            func.sum(case((Issue.issue_origine_id.isnot(None), 1), else_=0)),
+        )
+        .one()
+    )
+    total = total or 0
+    recurrentes = recurrentes or 0
+    if total == 0:
+        return _no_data("ISSUE_RECURRENCE_RATE", numerator=0, denominator=0)
+    d = KPI_DEFINITIONS["ISSUE_RECURRENCE_RATE"]
+    return KPIResult(
+        code="ISSUE_RECURRENCE_RATE", label=d.label, unit=d.unit, status="ok",
+        value=round(recurrentes / total * 100, 1), numerator=recurrentes, denominator=total,
+    )
+
+
 def calculer_nps(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
     """Net Promoter Score for valid NPS responses submitted during the rolling period."""
     total, promoteurs, detracteurs = (
@@ -329,5 +350,6 @@ KPI_FUNCTIONS = {
     "BACKLOG_AGE": calculer_backlog_age,
     "ACTION_COMPLETION_RATE": calculer_action_completion_rate,
     "SLA_COMPLIANCE_RATE": calculer_sla_compliance_rate,
+    "ISSUE_RECURRENCE_RATE": calculer_issue_recurrence_rate,
     "NPS": calculer_nps,
 }

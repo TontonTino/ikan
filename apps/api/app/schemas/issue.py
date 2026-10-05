@@ -18,6 +18,7 @@ class IssueCreate(BaseModel):
     categorie_id: Optional[uuid.UUID] = None
     severite: CriticiteType = CriticiteType.FAIBLE
     date_limite_sla: Optional[datetime] = None
+    issue_origine_id: Optional[uuid.UUID] = None
     # Rattachement initial optionnel, en plus de PATCH /issues/{id}/rattacher-feedback/{feedback_id}.
     feedback_ids: List[uuid.UUID] = []
 
@@ -39,6 +40,7 @@ class IssueResponse(BaseModel):
     derniere_detection: Optional[datetime] = None
     date_resolution: Optional[datetime] = None
     date_limite_sla: Optional[datetime] = None
+    issue_origine_id: Optional[uuid.UUID] = None
     date_verification: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime

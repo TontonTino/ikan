@@ -3,7 +3,7 @@ Endpoints Issues — fondation V1 (manuelle) : un CX Manager ou Agency Manager c
 l'Issue et y rattache des feedbacks à la main. Pas de suggestion IA de regroupement,
 pas de clustering, pas de dashboard ni de KPI dédiés (voir le rapport de la tâche).
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
 
@@ -99,6 +99,13 @@ def _get_issue_or_404(db: Session, issue_id: UUID) -> Issue:
     return issue
 
 
+def _as_utc(value: datetime) -> datetime:
+    """SQLite can return a naive value for timezone-aware timestamps."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 
 @router.post("/", response_model=IssueResponse, status_code=status.HTTP_201_CREATED)
@@ -121,6 +128,23 @@ def creer_issue(
         if not categorie:
             raise HTTPException(status_code=400, detail="Catégorie invalide pour cette agence")
 
+    issue_origine = None
+    if data.issue_origine_id is not None:
+        query_origine = db.query(Issue).filter(
+            Issue.id == data.issue_origine_id,
+            Issue.organisation_id == agence.organisation_id,
+        )
+        if current_user.role == UserRole.AGENCY_MANAGER:
+            query_origine = query_origine.filter(Issue.agence_id == current_user.agence_id)
+        issue_origine = query_origine.with_for_update().first()
+        if issue_origine is None:
+            # Same response for a missing source and one outside the caller's scope.
+            raise HTTPException(status_code=400, detail="Issue origine invalide pour ce périmètre")
+        if issue_origine.issue_origine_id is not None:
+            raise HTTPException(status_code=400, detail="Une Issue récurrente ne peut pas servir de source")
+        if issue_origine.statut not in ("resolue", "verifiee"):
+            raise HTTPException(status_code=400, detail="La source doit être résolue ou vérifiée")
+
     issue = Issue(
         organisation_id=agence.organisation_id,
         agence_id=agence.id,
@@ -133,8 +157,17 @@ def creer_issue(
     )
     db.add(issue)
     db.flush()
+    if issue_origine is not None:
+        db.refresh(issue, attribute_names=["premiere_detection"])
+        if _as_utc(issue_origine.premiere_detection) >= _as_utc(issue.premiere_detection):
+            raise HTTPException(status_code=400, detail="L'Issue origine doit être antérieure à l'occurrence")
+        issue.issue_origine_id = issue_origine.id
+        db.flush()
 
-    _log_issue_event(db, issue, current_user, "creation", nouveau_statut="ouverte", details=data.description)
+    details = data.description
+    if issue_origine is not None:
+        details = f"Occurrence de l'Issue {issue_origine.id}" + (f" — {details}" if details else "")
+    _log_issue_event(db, issue, current_user, "creation", nouveau_statut="ouverte", details=details)
 
     if data.feedback_ids:
         feedbacks = (

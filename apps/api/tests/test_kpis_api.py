@@ -156,7 +156,7 @@ def test_tous_les_kpis_presents_avec_bons_codes(ctx):
     assert data["jours"] == 30
     codes = {k["code"] for k in data["kpis"]}
     assert codes == set(KPI_DEFINITIONS.keys())
-    assert len(data["kpis"]) == 13
+    assert len(data["kpis"]) == 14
 
 
 def test_champs_kpi_result_presents(ctx):

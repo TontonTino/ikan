@@ -18,7 +18,8 @@ os.environ.setdefault("SECRET_KEY", "test-secret-key-for-issues-tests-0123456789
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -60,19 +61,22 @@ def ctx():
     db.flush()
 
     agence_a = Agence(id=uuid4(), organisation_id=org_a.id, nom="Agence A", active=True)
+    agence_a2 = Agence(id=uuid4(), organisation_id=org_a.id, nom="Agence A2", active=True)
     agence_b = Agence(id=uuid4(), organisation_id=org_b.id, nom="Agence B", active=True)
-    db.add_all([agence_a, agence_b])
+    db.add_all([agence_a, agence_a2, agence_b])
     db.flush()
 
     cx_a = Utilisateur(id=uuid4(), organisation_id=org_a.id, nom="N", prenom="CX-A", email="cxa@test.bf",
                         mot_de_passe_hash="x", role=UserRole.CX_MANAGER, active=True)
     am_a = Utilisateur(id=uuid4(), organisation_id=org_a.id, agence_id=agence_a.id, nom="N", prenom="AM-A",
                         email="ama@test.bf", mot_de_passe_hash="x", role=UserRole.AGENCY_MANAGER, active=True)
+    am_a2 = Utilisateur(id=uuid4(), organisation_id=org_a.id, agence_id=agence_a2.id, nom="N", prenom="AM-A2",
+                        email="ama2@test.bf", mot_de_passe_hash="x", role=UserRole.AGENCY_MANAGER, active=True)
     cx_b = Utilisateur(id=uuid4(), organisation_id=org_b.id, nom="N", prenom="CX-B", email="cxb@test.bf",
                         mot_de_passe_hash="x", role=UserRole.CX_MANAGER, active=True)
     am_b = Utilisateur(id=uuid4(), organisation_id=org_b.id, agence_id=agence_b.id, nom="N", prenom="AM-B",
                         email="amb@test.bf", mot_de_passe_hash="x", role=UserRole.AGENCY_MANAGER, active=True)
-    db.add_all([cx_a, am_a, cx_b, am_b])
+    db.add_all([cx_a, am_a, am_a2, cx_b, am_b])
     db.flush()
 
     qr_a = QRCode(id=uuid4(), agence_id=agence_a.id, code="QR-A", url="http://test/a", actif=True)
@@ -86,8 +90,8 @@ def ctx():
     db.commit()
 
     ids = SimpleNamespace(
-        org_a=org_a.id, org_b=org_b.id, agence_a=agence_a.id, agence_b=agence_b.id,
-        cx_a=cx_a.id, am_a=am_a.id, cx_b=cx_b.id, am_b=am_b.id, fb_a=fb_a.id, fb_b=fb_b.id,
+        org_a=org_a.id, org_b=org_b.id, agence_a=agence_a.id, agence_a2=agence_a2.id, agence_b=agence_b.id,
+        cx_a=cx_a.id, am_a=am_a.id, am_a2=am_a2.id, cx_b=cx_b.id, am_b=am_b.id, fb_a=fb_a.id, fb_b=fb_b.id,
     )
     db.close()
 
@@ -105,6 +109,7 @@ def ctx():
     users = {
         "cx_a": SimpleNamespace(id=ids.cx_a, role=UserRole.CX_MANAGER, active=True, agence_id=None, organisation_id=ids.org_a, nom="A", prenom="CX"),
         "am_a": SimpleNamespace(id=ids.am_a, role=UserRole.AGENCY_MANAGER, active=True, agence_id=ids.agence_a, organisation_id=ids.org_a, nom="A", prenom="AM"),
+        "am_a2": SimpleNamespace(id=ids.am_a2, role=UserRole.AGENCY_MANAGER, active=True, agence_id=ids.agence_a2, organisation_id=ids.org_a, nom="A2", prenom="AM"),
         "cx_b": SimpleNamespace(id=ids.cx_b, role=UserRole.CX_MANAGER, active=True, agence_id=None, organisation_id=ids.org_b, nom="B", prenom="CX"),
         "am_b": SimpleNamespace(id=ids.am_b, role=UserRole.AGENCY_MANAGER, active=True, agence_id=ids.agence_b, organisation_id=ids.org_b, nom="B", prenom="AM"),
     }
@@ -160,6 +165,154 @@ def test_creation_et_reouverture_conservent_deadline_sla(ctx):
     assert reopened.status_code == 200
     assert reopened.json()["statut"] == "reouverte"
     assert reopened.json()["date_limite_sla"] == deadline_stockee
+
+
+def _creer_source(ctx, statut="resolue", agence_id=None, jours_detection_avant=2, user_key="cx_a"):
+    issue_id = _creer_issue(ctx, user_key=user_key, agence_id=agence_id, titre="Issue racine")
+    db = ctx.Session()
+    issue = db.get(Issue, UUID(issue_id))
+    issue.statut = statut
+    issue.premiere_detection = datetime.now().astimezone() - timedelta(days=jours_detection_avant)
+    db.commit()
+    db.close()
+    return issue_id
+
+
+@pytest.mark.parametrize("source_statut", ["resolue", "verifiee"])
+def test_creation_occurrence_source_valide(ctx, source_statut):
+    source_id = _creer_source(ctx, statut=source_statut)
+
+    response = ctx.call("cx_a", "post", "/issues/", json={
+        "titre": "Nouvelle occurrence", "agence_id": str(ctx.agence_a), "issue_origine_id": source_id,
+    })
+
+    assert response.status_code == 201, response.text
+    data = response.json()
+    assert data["issue_origine_id"] == source_id
+    assert data["organisation_id"] == str(ctx.org_a)
+    assert data["agence_id"] == str(ctx.agence_a)
+
+
+@pytest.mark.parametrize("source_statut", ["ouverte", "action_en_cours", "reouverte"])
+def test_creation_occurrence_refuse_source_non_resolue(ctx, source_statut):
+    source_id = _creer_source(ctx, statut=source_statut)
+    response = ctx.call("cx_a", "post", "/issues/", json={
+        "titre": "Occurrence invalide", "agence_id": str(ctx.agence_a), "issue_origine_id": source_id,
+    })
+    assert response.status_code == 400
+
+
+def test_creation_occurrence_refuse_source_inexistante_sans_fuite(ctx):
+    response = ctx.call("cx_a", "post", "/issues/", json={
+        "titre": "Occurrence invalide", "agence_id": str(ctx.agence_a), "issue_origine_id": str(uuid4()),
+    })
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Issue origine invalide pour ce périmètre"
+
+
+def test_creation_occurrence_refuse_source_autre_organisation_sans_fuite(ctx):
+    # La source est créée par le CX Manager de l'organisation B (un CX de A n'a pas le
+    # droit de créer une Issue chez B : isolation multi-organisation, 5B-1).
+    source_id = _creer_source(ctx, agence_id=ctx.agence_b, user_key="cx_b")
+    response = ctx.call("cx_a", "post", "/issues/", json={
+        "titre": "Occurrence invalide", "agence_id": str(ctx.agence_a), "issue_origine_id": source_id,
+    })
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Issue origine invalide pour ce périmètre"
+
+
+def test_creation_occurrence_refuse_source_future(ctx):
+    source_id = _creer_source(ctx)
+    db = ctx.Session()
+    source = db.get(Issue, UUID(source_id))
+    source.premiere_detection = datetime.now().astimezone() + timedelta(days=1)
+    db.commit()
+    db.close()
+
+    response = ctx.call("cx_a", "post", "/issues/", json={
+        "titre": "Occurrence invalide", "agence_id": str(ctx.agence_a), "issue_origine_id": source_id,
+    })
+    assert response.status_code == 400
+    assert response.json()["detail"] == "L'Issue origine doit être antérieure à l'occurrence"
+
+
+def test_creation_occurrence_refuse_chaine_de_recurrence(ctx):
+    racine_id = _creer_source(ctx)
+    occurrence = ctx.call("cx_a", "post", "/issues/", json={
+        "titre": "Occurrence B", "agence_id": str(ctx.agence_a), "issue_origine_id": racine_id,
+    })
+    assert occurrence.status_code == 201, occurrence.text
+
+    response = ctx.call("cx_a", "post", "/issues/", json={
+        "titre": "Occurrence C", "agence_id": str(ctx.agence_a), "issue_origine_id": occurrence.json()["id"],
+    })
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Une Issue récurrente ne peut pas servir de source"
+
+
+def test_cx_peut_lier_occurrence_inter_agence_dans_son_organisation(ctx):
+    source_id = _creer_source(ctx, agence_id=ctx.agence_a)
+    response = ctx.call("cx_a", "post", "/issues/", json={
+        "titre": "Occurrence agence A2", "agence_id": str(ctx.agence_a2), "issue_origine_id": source_id,
+    })
+    assert response.status_code == 201, response.text
+    assert response.json()["agence_id"] == str(ctx.agence_a2)
+    assert response.json()["issue_origine_id"] == source_id
+
+
+def test_agency_manager_ne_peut_pas_lier_source_dune_autre_agence(ctx):
+    source_id = _creer_source(ctx, agence_id=ctx.agence_a)
+    response = ctx.call("am_a2", "post", "/issues/", json={
+        "titre": "Occurrence invalide", "agence_id": str(ctx.agence_a2), "issue_origine_id": source_id,
+    })
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Issue origine invalide pour ce périmètre"
+
+
+def test_statut_source_modifie_apres_lien_ne_supprime_pas_le_fait_historique(ctx):
+    source_id = _creer_source(ctx)
+    occurrence = ctx.call("cx_a", "post", "/issues/", json={
+        "titre": "Occurrence valide", "agence_id": str(ctx.agence_a), "issue_origine_id": source_id,
+    })
+    assert occurrence.status_code == 201, occurrence.text
+
+    db = ctx.Session()
+    source = db.get(Issue, UUID(source_id))
+    source.statut = "reouverte"
+    db.commit()
+    db.close()
+
+    detail = ctx.call("cx_a", "get", f"/issues/{occurrence.json()['id']}")
+    assert detail.status_code == 200
+    assert detail.json()["issue_origine_id"] == source_id
+
+
+def test_source_utilisee_ne_peut_pas_etre_supprimee_et_issue_sans_occurrence_reste_supprimable(ctx):
+    source_id = _creer_source(ctx)
+    occurrence = ctx.call("cx_a", "post", "/issues/", json={
+        "titre": "Occurrence valide", "agence_id": str(ctx.agence_a), "issue_origine_id": source_id,
+    })
+    assert occurrence.status_code == 201, occurrence.text
+
+    db = ctx.Session()
+    # SQLite n'applique les clés étrangères que si on l'active explicitement (PostgreSQL
+    # les applique toujours) : nécessaire pour vérifier fk_issues_issue_origine_same_organisation.
+    db.execute(text("PRAGMA foreign_keys=ON"))
+    db.delete(db.get(Issue, UUID(source_id)))
+    with pytest.raises(IntegrityError):
+        db.commit()
+    db.rollback()
+
+    # Une fois l'occurrence supprimée, la source n'est plus référencée et redevient supprimable.
+    db.execute(text("PRAGMA foreign_keys=ON"))
+    occurrence_row = db.get(Issue, UUID(occurrence.json()["id"]))
+    db.delete(occurrence_row)
+    db.commit()
+    db.delete(db.get(Issue, UUID(source_id)))
+    db.commit()
+    orphan = db.query(Issue).filter(Issue.titre == "Issue racine").first()
+    assert orphan is None
+    db.close()
 
 
 def test_detail_et_liste(ctx):

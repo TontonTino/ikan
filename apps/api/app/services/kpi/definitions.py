@@ -133,6 +133,15 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
         ),
         unit="percent",
     ),
+    "ISSUE_RECURRENCE_RATE": KPIDefinition(
+        code="ISSUE_RECURRENCE_RATE",
+        label="Issue Recurrence Rate",
+        description=(
+            "Pourcentage des Issues détectées dans la période explicitement reliées à une "
+            "Issue racine antérieure, parmi toutes les Issues détectées dans la période."
+        ),
+        unit="percent",
+    ),
     "NPS": KPIDefinition(
         code="NPS",
         label="NPS",

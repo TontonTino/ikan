@@ -45,6 +45,7 @@ from app.services.kpi.engine import (
     calculer_negative_sentiment_rate,
     calculer_nps,
     calculer_sla_compliance_rate,
+    calculer_issue_recurrence_rate,
 )
 
 NOW = datetime.now(timezone.utc)
@@ -94,13 +95,14 @@ def _feedback(db, qr_id, note, sentiment=None, criticite=None, jours_avant=0, np
 
 def _issue(db, organisation_id, agence_id, statut="ouverte", severite=CriticiteType.FAIBLE,
            necessite_action=False, jours_detection_avant=0, premiere_detection=None, date_resolution=None,
-           date_limite_sla=None):
+           date_limite_sla=None, issue_origine_id=None):
     issue = Issue(
         id=uuid4(), organisation_id=organisation_id, agence_id=agence_id, titre="Issue test",
         statut=statut, severite=severite, necessite_action=necessite_action,
         premiere_detection=premiere_detection or (NOW - timedelta(days=jours_detection_avant)),
         date_resolution=date_resolution,
         date_limite_sla=date_limite_sla,
+        issue_origine_id=issue_origine_id,
     )
     db.add(issue)
     return issue
@@ -659,6 +661,76 @@ def test_sla_compliance_no_data_sans_issue_evaluable(ctx):
     result = calculer_sla_compliance_rate(db, ctx.org_a)
 
     assert (result.status, result.value, result.denominator) == ("no_data", None, None)
+    db.close()
+
+
+def test_issue_recurrence_rate_sans_issue_no_data_avec_comptes_nuls(ctx):
+    db = ctx.Session()
+    result = calculer_issue_recurrence_rate(db, ctx.org_a)
+    assert (result.status, result.value, result.numerator, result.denominator) == ("no_data", None, 0, 0)
+    db.close()
+
+
+def test_issue_recurrence_rate_zero_ok_et_statuts_inclus(ctx):
+    db = ctx.Session()
+    for statut in ("ouverte", "action_en_cours", "resolue", "verifiee", "reouverte"):
+        _issue(db, ctx.org_a, ctx.agence_a1, statut=statut, premiere_detection=NOW)
+    db.commit()
+    result = calculer_issue_recurrence_rate(db, ctx.org_a)
+    assert (result.status, result.value, result.numerator, result.denominator) == ("ok", 0.0, 0, 5)
+    db.close()
+
+
+def test_issue_recurrence_rate_plusieurs_racines_et_occurrences(ctx):
+    db = ctx.Session()
+    root_a = _issue(db, ctx.org_a, ctx.agence_a1, statut="resolue", premiere_detection=NOW - timedelta(days=60))
+    root_b = _issue(db, ctx.org_a, ctx.agence_a2, statut="verifiee", premiere_detection=NOW - timedelta(days=45))
+    db.flush()
+    _issue(db, ctx.org_a, ctx.agence_a1, issue_origine_id=root_a.id, statut="ouverte", premiere_detection=NOW)
+    _issue(db, ctx.org_a, ctx.agence_a2, issue_origine_id=root_a.id, statut="reouverte", premiere_detection=NOW)
+    _issue(db, ctx.org_a, ctx.agence_a1, issue_origine_id=root_b.id, statut="resolue", premiere_detection=NOW)
+    _issue(db, ctx.org_a, ctx.agence_a1, statut="action_en_cours", premiere_detection=NOW)
+    db.commit()
+
+    result = calculer_issue_recurrence_rate(db, ctx.org_a)
+
+    assert (result.numerator, result.denominator, result.value) == (3, 4, 75.0)
+    db.close()
+
+
+def test_issue_recurrence_rate_cohorte_et_filtre_agence_occurrence(ctx):
+    db = ctx.Session()
+    root = _issue(db, ctx.org_a, ctx.agence_a1, statut="resolue", premiere_detection=NOW - timedelta(days=90))
+    db.flush()
+    _issue(db, ctx.org_a, ctx.agence_a2, issue_origine_id=root.id,
+           premiere_detection=NOW - timedelta(days=29))
+    _issue(db, ctx.org_a, ctx.agence_a2, statut="ouverte", premiere_detection=NOW - timedelta(days=31))
+    db.commit()
+
+    organisation = calculer_issue_recurrence_rate(db, ctx.org_a, jours=30)
+    agence_occurrence = calculer_issue_recurrence_rate(db, ctx.org_a, agence_id=ctx.agence_a2, jours=30)
+    agence_source = calculer_issue_recurrence_rate(db, ctx.org_a, agence_id=ctx.agence_a1, jours=30)
+
+    assert (organisation.numerator, organisation.denominator, organisation.value) == (1, 1, 100.0)
+    assert (agence_occurrence.numerator, agence_occurrence.denominator, agence_occurrence.value) == (1, 1, 100.0)
+    assert (agence_source.status, agence_source.numerator, agence_source.denominator) == ("no_data", 0, 0)
+    db.close()
+
+
+def test_issue_recurrence_rate_ne_compte_pas_les_feedbacks_rattaches(ctx):
+    db = ctx.Session()
+    root = _issue(db, ctx.org_a, ctx.agence_a1, premiere_detection=NOW - timedelta(days=60))
+    db.flush()
+    occurrence = _issue(db, ctx.org_a, ctx.agence_a1, issue_origine_id=root.id, premiere_detection=NOW)
+    db.flush()
+    for _ in range(3):
+        feedback = _feedback(db, ctx.qr_a1, note=3)
+        feedback.issue_id = occurrence.id
+    db.commit()
+
+    result = calculer_issue_recurrence_rate(db, ctx.org_a)
+
+    assert (result.numerator, result.denominator, result.value) == (1, 1, 100.0)
     db.close()
 
 
