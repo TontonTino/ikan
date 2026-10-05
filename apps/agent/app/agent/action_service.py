@@ -73,9 +73,11 @@ _SYSTEM_PROMPT_TICKET_INTERNE = (
 def _build_user_prompt(analyse: dict) -> str:
     import json
 
+    from app.agent.minimisation import pour_llm  # téléphone client jamais envoyé au LLM
+
     return (
         "Voici le feedback et son analyse IA, au format JSON :\n"
-        f"{json.dumps(analyse, ensure_ascii=False)}"
+        f"{json.dumps(pour_llm(analyse), ensure_ascii=False)}"
     )
 
 

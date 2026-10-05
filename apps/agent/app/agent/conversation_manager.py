@@ -95,8 +95,12 @@ def _resumer_donnees(donnees: Any) -> Any:
     Condense `donnees` pour stockage dans ConversationTurn.donnees_resumees :
     ne garde jamais la totalité (une liste de dizaines de feedbacks
     gonflerait l'historique conversationnel pour rien), seulement un aperçu
-    exploitable + le compte total.
+    exploitable + le compte total. Les champs personnels (téléphone client) ne sont
+    jamais conservés (voir app/agent/minimisation.py).
     """
+    from app.agent.minimisation import pour_llm
+
+    donnees = pour_llm(donnees)
     if isinstance(donnees, list):
         return {
             "nombre_total": len(donnees),

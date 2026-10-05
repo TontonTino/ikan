@@ -31,6 +31,7 @@ from typing import Any, Optional
 from sqlalchemy.orm import Session
 
 from app.agent import conversation_manager, queries
+from app.agent.minimisation import pour_llm
 from app.agent.intent_classifier import (
     MOTS_CLES_INTENTIONS, _strip_accents, classifier_intention, detect_followup_question,
 )
@@ -337,7 +338,7 @@ def repondre_question(
         user_prompt = (
             f"Question du manager : « {question} »\n\n"
             "Voici le classement des agences (rang 1 = la moins satisfaisante) sur la période, "
-            f"au format JSON :\n{json.dumps(donnees, ensure_ascii=False)}"
+            f"au format JSON :\n{json.dumps(pour_llm(donnees), ensure_ascii=False)}"
         )
         if est_relance_avec_contexte:
             user_prompt = (
@@ -386,7 +387,7 @@ def repondre_question(
             "élevée ou critique) des derniers jours, DÉJÀ TRIÉE par ordre "
             "de priorité décroissant (champ 'score_priorite', qui combine "
             "criticité, fraîcheur et fréquence du thème), au format JSON :\n"
-            f"{json.dumps(donnees, ensure_ascii=False)}\n\n"
+            f"{json.dumps(pour_llm(donnees), ensure_ascii=False)}\n\n"
             "Commence par identifier le problème dominant et son urgence. "
             "Explique POURQUOI ces alertes sont préoccupantes (volume, "
             "concentration, récurrence). Identifie l'agence ou le thème le "
@@ -398,7 +399,7 @@ def repondre_question(
         donnees = queries.query_statistiques_theme(db, organisation_id, agence_id=agence_id, jours=jours)
         user_prompt = (
             "Voici la répartition des feedbacks par thème sur la période, "
-            f"au format JSON :\n{json.dumps(donnees, ensure_ascii=False)}\n\n"
+            f"au format JSON :\n{json.dumps(pour_llm(donnees), ensure_ascii=False)}\n\n"
             "Commence par identifier le thème dominant et ce qu'il révèle "
             "sur la satisfaction client. Explique si la répartition est "
             "normale ou préoccupante. Donne une recommandation sur quoi "
@@ -410,7 +411,7 @@ def repondre_question(
         user_prompt = (
             "Voici les feedbacks signalés comme nécessitant une "
             f"vérification manuelle, au format JSON :\n"
-            f"{json.dumps(donnees, ensure_ascii=False)}\n\n"
+            f"{json.dumps(pour_llm(donnees), ensure_ascii=False)}\n\n"
             "Commence par expliquer pourquoi ces feedbacks nécessitent "
             "attention (discordance entre note et sentiment). Évalue le "
             "risque que ces cas représentent. Recommande une action de "
@@ -422,7 +423,7 @@ def repondre_question(
         donnees = _resume_agregats(feedbacks)
         user_prompt = (
             "Voici les agrégats de l'activité feedbacks sur la période, au "
-            f"format JSON :\n{json.dumps(donnees, ensure_ascii=False)}\n\n"
+            f"format JSON :\n{json.dumps(pour_llm(donnees), ensure_ascii=False)}\n\n"
             "Commence par le verdict global de la période en une phrase. "
             "Identifie la tendance principale (amélioration, dégradation, "
             "stable). Mets en avant le fait le plus important que le "
@@ -434,7 +435,7 @@ def repondre_question(
         user_prompt = (
             "Voici les problèmes récurrents détectés (même thème signalé "
             "plusieurs fois dans la même agence), au format JSON :\n"
-            f"{json.dumps(donnees, ensure_ascii=False)}\n\n"
+            f"{json.dumps(pour_llm(donnees), ensure_ascii=False)}\n\n"
             "Commence par identifier le problème récurrent le plus grave. "
             "Explique ce que la récurrence signifie (problème systémique, "
             "pas un incident isolé). Recommande une action pour briser le "
@@ -447,7 +448,7 @@ def repondre_question(
             "Voici une comparaison entre la période actuelle et la période "
             "précédente de même durée, avec les anomalies déjà détectées "
             f"(champ 'anomalies'), au format JSON :\n"
-            f"{json.dumps(donnees, ensure_ascii=False)}\n\n"
+            f"{json.dumps(pour_llm(donnees), ensure_ascii=False)}\n\n"
             "Commence par identifier si la situation s'améliore ou se "
             "dégrade. Mets en avant l'anomalie la plus significative si "
             "elle existe. Explique ce que cette tendance implique si elle "
@@ -459,7 +460,7 @@ def repondre_question(
         user_prompt = (
             "Voici l'évolution du sentiment moyen sur plusieurs périodes "
             f"consécutives, de la plus ancienne à la plus récente, au format JSON :\n"
-            f"{json.dumps(donnees, ensure_ascii=False)}\n\n"
+            f"{json.dumps(pour_llm(donnees), ensure_ascii=False)}\n\n"
             "Calcule toi-même la tendance à partir des valeurs 'sentiment_moyen' "
             "successives ('null' = pas assez de feedbacks sur cette période, "
             "dis-le si c'est le cas plutôt que de l'ignorer). Commence par le "
@@ -482,7 +483,7 @@ def repondre_question(
         user_prompt = (
             "Voici les risques et opportunités détectés par comparaison entre "
             "la période actuelle et la période précédente, au format JSON :\n"
-            f"{json.dumps(donnees, ensure_ascii=False)}\n\n"
+            f"{json.dumps(pour_llm(donnees), ensure_ascii=False)}\n\n"
             "Le champ 'donnees_insuffisantes' indique si l'analyse est fiable. "
             "Pour chaque RISQUE : commence par l'urgence, explique le signal "
             "détecté et recommande une action préventive spécifique. Pour "
@@ -533,7 +534,7 @@ def repondre_question(
         user_prompt_recommandations = (
             "Voici les données agrégées (alertes prioritaires, problèmes "
             "systémiques, risques détectés, tendance globale), au format "
-            f"JSON :\n{json.dumps(donnees, ensure_ascii=False)}"
+            f"JSON :\n{json.dumps(pour_llm(donnees), ensure_ascii=False)}"
         )
         messages_recommandations = conversation_manager.build_messages_history(
             turns_precedents, system_prompt_recommandations, user_prompt_recommandations
@@ -716,7 +717,7 @@ def generer_resume_proactif(
         user_prompt = (
             f"Niveau détecté par le système : {niveau}.\n"
             "Contexte de l'analyse, au format JSON :\n"
-            f"{json.dumps(contexte_proactif, ensure_ascii=False)}"
+            f"{json.dumps(pour_llm(contexte_proactif), ensure_ascii=False)}"
         )
         insight = llm_provider.generate_text(_SYSTEM_PROMPT_PROACTIF, user_prompt, max_tokens=300)
 
