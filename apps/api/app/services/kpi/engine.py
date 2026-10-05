@@ -20,15 +20,18 @@ from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from app.models.agence import Agence
+from app.models.action_corrective import ActionCorrective
 from app.models.analyse_ia import AnalyseIA
 from app.models.enums import CriticiteType, SentimentType
 from app.models.feedback import Feedback
 from app.models.issue import Issue
+from app.models.historique_issue import HistoriqueIssue
 from app.models.qr_code import QRCode
 from app.schemas.kpi import KPIResult
 from app.services.kpi.definitions import KPI_DEFINITIONS
 
 ISSUE_STATUTS_RESOLUS = ("resolue", "verifiee")
+ISSUE_STATUTS_BACKLOG = ("ouverte", "action_en_cours", "reouverte")
 
 
 def _date_debut(jours: int) -> datetime:
@@ -200,6 +203,119 @@ def calculer_loop_closure_rate(db: Session, organisation_id: UUID, agence_id: Op
 
 
 # Registre pour dispatch par code (utilisé par la future KPI API).
+def calculer_issue_backlog(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
+    """Stock courant d'Issues ouvertes. `jours` est ignoré pour cette mesure de stock."""
+    q = db.query(Issue).filter(Issue.organisation_id == organisation_id, Issue.statut.in_(ISSUE_STATUTS_BACKLOG))
+    if agence_id:
+        q = q.filter(Issue.agence_id == agence_id)
+    total = q.with_entities(func.count(Issue.id)).scalar() or 0
+    d = KPI_DEFINITIONS["ISSUE_BACKLOG"]
+    return KPIResult(code="ISSUE_BACKLOG", label=d.label, unit=d.unit, status="ok",
+                     value=float(total), numerator=total, denominator=total)
+
+
+def _as_utc(value: datetime) -> datetime:
+    """SQLite may return naive datetimes for timezone-aware columns; interpret them as UTC."""
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def calculer_backlog_age(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
+    """Median age in hours of the current backlog cycle; `jours` does not limit the stock."""
+    q = db.query(Issue).filter(Issue.organisation_id == organisation_id, Issue.statut.in_(ISSUE_STATUTS_BACKLOG))
+    if agence_id:
+        q = q.filter(Issue.agence_id == agence_id)
+    issues = q.with_entities(Issue.id, Issue.premiere_detection).all()
+    if not issues:
+        return _no_data("BACKLOG_AGE")
+    issue_ids = [issue_id for issue_id, _ in issues]
+    reopened_events = (
+        db.query(HistoriqueIssue.issue_id, func.max(HistoriqueIssue.date_evenement))
+        .filter(HistoriqueIssue.issue_id.in_(issue_ids), HistoriqueIssue.nouveau_statut == "reouverte")
+        .group_by(HistoriqueIssue.issue_id).all()
+    )
+    reopened_at = {issue_id: date for issue_id, date in reopened_events}
+    now = datetime.now(timezone.utc)
+    ages_hours = [(now - _as_utc(reopened_at.get(issue_id) or detected)).total_seconds() / 3600
+                  for issue_id, detected in issues]
+    d = KPI_DEFINITIONS["BACKLOG_AGE"]
+    return KPIResult(code="BACKLOG_AGE", label=d.label, unit=d.unit, status="ok",
+                     value=round(statistics.median(ages_hours), 2), denominator=len(ages_hours))
+
+
+def calculer_action_completion_rate(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
+    q = (db.query(ActionCorrective).join(Issue, ActionCorrective.issue_id == Issue.id)
+         .filter(Issue.organisation_id == organisation_id,
+                 ActionCorrective.created_at >= _date_debut(jours), ActionCorrective.statut != "annulee"))
+    if agence_id:
+        q = q.filter(Issue.agence_id == agence_id)
+    total, terminees = q.with_entities(
+        func.count(ActionCorrective.id), func.sum(case((ActionCorrective.statut == "terminee", 1), else_=0))
+    ).one()
+    total = total or 0
+    if total == 0:
+        return _no_data("ACTION_COMPLETION_RATE")
+    terminees = terminees or 0
+    d = KPI_DEFINITIONS["ACTION_COMPLETION_RATE"]
+    return KPIResult(code="ACTION_COMPLETION_RATE", label=d.label, unit=d.unit, status="ok",
+                     value=round(terminees / total * 100, 1), numerator=terminees, denominator=total)
+
+
+def calculer_sla_compliance_rate(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
+    """Share of SLA-bearing Issues resolved within their absolute deadline during the period."""
+    maintenant = datetime.now(timezone.utc)
+    date_debut = maintenant - timedelta(days=jours)
+    q = db.query(Issue).filter(
+        Issue.organisation_id == organisation_id,
+        Issue.statut.in_(ISSUE_STATUTS_RESOLUS),
+        Issue.date_resolution.isnot(None),
+        Issue.date_limite_sla.isnot(None),
+        Issue.date_resolution >= date_debut,
+        Issue.date_resolution <= maintenant,
+    )
+    if agence_id:
+        q = q.filter(Issue.agence_id == agence_id)
+    total, conformes = q.with_entities(
+        func.count(Issue.id),
+        func.sum(case((Issue.date_resolution <= Issue.date_limite_sla, 1), else_=0)),
+    ).one()
+    total = total or 0
+    if total == 0:
+        return _no_data("SLA_COMPLIANCE_RATE")
+    conformes = conformes or 0
+    d = KPI_DEFINITIONS["SLA_COMPLIANCE_RATE"]
+    return KPIResult(
+        code="SLA_COMPLIANCE_RATE", label=d.label, unit=d.unit, status="ok",
+        value=round(conformes / total * 100, 1), numerator=conformes, denominator=total,
+    )
+
+
+def calculer_nps(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
+    """Net Promoter Score for valid NPS responses submitted during the rolling period."""
+    total, promoteurs, detracteurs = (
+        _base_feedback_query(db, organisation_id, agence_id, jours)
+        .filter(Feedback.nps_note.isnot(None))
+        .with_entities(
+            func.count(Feedback.id),
+            func.sum(case((Feedback.nps_note >= 9, 1), else_=0)),
+            func.sum(case((Feedback.nps_note <= 6, 1), else_=0)),
+        )
+        .one()
+    )
+    total = total or 0
+    if total == 0:
+        return _no_data("NPS")
+    promoteurs = promoteurs or 0
+    detracteurs = detracteurs or 0
+    solde_net = promoteurs - detracteurs
+    d = KPI_DEFINITIONS["NPS"]
+    return KPIResult(
+        code="NPS", label=d.label, unit=d.unit, status="ok",
+        value=round(solde_net / total * 100, 1), numerator=solde_net, denominator=total,
+    )
+
+
 KPI_FUNCTIONS = {
     "CSAT": calculer_csat,
     "NEGATIVE_SENTIMENT_RATE": calculer_negative_sentiment_rate,
@@ -209,4 +325,9 @@ KPI_FUNCTIONS = {
     "ISSUE_RESOLUTION_RATE": calculer_issue_resolution_rate,
     "MEDIAN_RESOLUTION_TIME": calculer_median_resolution_time,
     "LOOP_CLOSURE_RATE": calculer_loop_closure_rate,
+    "ISSUE_BACKLOG": calculer_issue_backlog,
+    "BACKLOG_AGE": calculer_backlog_age,
+    "ACTION_COMPLETION_RATE": calculer_action_completion_rate,
+    "SLA_COMPLIANCE_RATE": calculer_sla_compliance_rate,
+    "NPS": calculer_nps,
 }

@@ -38,6 +38,7 @@ class Issue(Base):
     premiere_detection: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     derniere_detection: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     date_resolution: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    date_limite_sla: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     date_verification: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

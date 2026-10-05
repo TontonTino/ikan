@@ -39,9 +39,12 @@ def _resolve_qr(clean_code: str, db: Session) -> QRCode | None:
     if qr:
         return qr
 
+    # Repli par UUID d'agence : légitime (liens générés par le dashboard sous la forme
+    # /feedback/{qr_code_token || agence.id}) et non énumérable (UUID aléatoire).
+    # Uniquement pour une agence ACTIVE.
     try:
         possible_uuid = UUID(clean_code)
-        agence = db.query(Agence).filter(Agence.id == possible_uuid).first()
+        agence = db.query(Agence).filter(Agence.id == possible_uuid, Agence.active == True).first()  # noqa: E712
         if agence:
             qr = db.query(QRCode).filter(QRCode.agence_id == agence.id, QRCode.actif == True).first()
             if not qr:
@@ -62,28 +65,10 @@ def _resolve_qr(clean_code: str, db: Session) -> QRCode | None:
     except ValueError:
         pass
 
-    agence = db.query(Agence).filter(
-        (func.lower(Agence.nom).ilike(f"%{clean_code.lower()}%")) |
-        (func.lower(Agence.ville).ilike(f"%{clean_code.lower()}%"))
-    ).first()
-    if agence:
-        qr = db.query(QRCode).filter(QRCode.agence_id == agence.id, QRCode.actif == True).first()
-        if not qr:
-            clean_name = agence.nom.upper().replace(" ", "-")[:12]
-            code_str = f"QR-{clean_name}-{uuid.uuid4().hex[:6].upper()}"
-            qr = QRCode(
-                id=uuid.uuid4(),
-                agence_id=agence.id,
-                code=code_str,
-                url=f"{CLIENT_BASE_URL}/feedback/{code_str}",
-                label=f"Borne Accueil - {agence.nom}",
-                actif=True
-            )
-            db.add(qr)
-            db.commit()
-            db.refresh(qr)
-        return qr
-
+    # SÉCURITÉ (5B-1) : plus de résolution par nom ou ville d'agence (recherche ILIKE sur
+    # TOUTES les organisations). Elle permettait à un anonyme d'énumérer les agences de
+    # tous les clients et d'obtenir leurs catégories pour leur soumettre des feedbacks.
+    # Aucun lien généré par l'application n'utilise ce format.
     return None
 
 
@@ -93,10 +78,17 @@ def ping_qr_codes():
 
 
 @router.get("/public-agences")
-def list_public_agences(db: Session = Depends(get_db)):
+def list_public_agences(
+    db: Session = Depends(get_db),
+    _: Utilisateur = Depends(get_admin_user),
+):
     """
-    Retourne la liste publique des agences actives et de leurs QR Codes.
-    Permet à l'application cliente d'afficher ou sélectionner n'importe quelle agence existante ou nouvellement créée.
+    Liste des agences actives et de leurs QR Codes — RÉSERVÉE À L'ADMIN (5B-1).
+
+    Anciennement publique : elle exposait sans authentification les agences (et leurs
+    UUID) de toutes les organisations. Aucun consommateur dans l'application (le parcours
+    client résout un seul QR via /qr-codes/{code}/validate). Conservée pour l'Admin, qui
+    a déjà une vue structurelle de toutes les organisations.
     """
     agences = db.query(Agence).filter(Agence.active == True).all()
     result = []

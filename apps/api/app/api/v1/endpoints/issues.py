@@ -28,7 +28,7 @@ from app.schemas.issue import (
     IssueDetailResponse,
     IssueResponse,
 )
-from app.services.acces_agence import verifier_acces_agence
+from app.services.acces_agence import verifier_acces_agence, verifier_acces_feedback, verifier_acces_issue
 
 router = APIRouter()
 
@@ -36,28 +36,14 @@ router = APIRouter()
 # ── Accès & formatage (dupliqués volontairement de feedbacks.py, non modifié — voir rapport) ──
 
 def _check_issue_access(issue: Issue, user: Utilisateur) -> None:
-    """Vérifie que l'utilisateur a accès à l'Issue selon son périmètre RBAC (même règle
-    que _check_feedback_access, feedbacks.py)."""
-    if user.role == UserRole.AGENCY_MANAGER:
-        if issue.agence_id != user.agence_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès refusé à cette Issue hors de votre agence")
-    elif user.role == UserRole.CX_MANAGER:
-        if user.organisation_id and issue.organisation_id != user.organisation_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès refusé à cette Issue hors de votre organisation")
+    """Accès à une Issue — délégué au contrôle central (refus par défaut)."""
+    verifier_acces_issue(user, issue)
 
 
-def _check_feedback_access_scope(feedback: Feedback, user: Utilisateur) -> None:
-    """Même règle que _check_feedback_access (feedbacks.py) — dupliquée ici pour ne pas
-    modifier feedbacks.py (hors périmètre de cette tâche)."""
-    if not feedback.qr_code:
-        return
-    if user.role == UserRole.AGENCY_MANAGER:
-        if feedback.qr_code.agence_id != user.agence_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès refusé à ce feedback hors de votre agence")
-    elif user.role == UserRole.CX_MANAGER:
-        if user.organisation_id and feedback.qr_code.agence:
-            if feedback.qr_code.agence.organisation_id != user.organisation_id:
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès refusé à ce feedback hors de votre organisation")
+def _check_feedback_access_scope(feedback: Feedback, user: Utilisateur, db: Session) -> None:
+    """Accès à un feedback — délégué au contrôle central (refus par défaut : un feedback
+    sans agence résoluble est refusé, au lieu d'être autorisé comme auparavant)."""
+    verifier_acces_feedback(db, user, feedback)
 
 
 def _format_issue_response(issue: Issue) -> IssueResponse:
@@ -142,6 +128,7 @@ def creer_issue(
         description=data.description,
         severite=data.severite,
         categorie_id=data.categorie_id,
+        date_limite_sla=data.date_limite_sla,
         statut="ouverte",
     )
     db.add(issue)
@@ -157,7 +144,7 @@ def creer_issue(
             .all()
         )
         for fb in feedbacks:
-            _check_feedback_access_scope(fb, current_user)
+            _check_feedback_access_scope(fb, current_user, db)
             fb.issue_id = issue.id
             _log_issue_event(db, issue, current_user, "feedback_rattache", feedback_id=fb.id)
         issue.derniere_detection = datetime.now()
@@ -264,7 +251,7 @@ def rattacher_feedback(
     )
     if not feedback:
         raise HTTPException(status_code=404, detail="Feedback introuvable")
-    _check_feedback_access_scope(feedback, current_user)
+    _check_feedback_access_scope(feedback, current_user, db)
 
     ancienne_issue = None
     if feedback.issue_id and feedback.issue_id != issue.id:
@@ -322,7 +309,7 @@ def detacher_feedback(
     )
     if not feedback:
         raise HTTPException(status_code=404, detail="Feedback introuvable ou non rattaché à cette Issue")
-    _check_feedback_access_scope(feedback, current_user)
+    _check_feedback_access_scope(feedback, current_user, db)
 
     feedback.issue_id = None
     _log_issue_event(db, issue, current_user, "feedback_detache", feedback_id=feedback.id)

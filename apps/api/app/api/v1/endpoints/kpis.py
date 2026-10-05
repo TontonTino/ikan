@@ -25,12 +25,23 @@ def _resoudre_perimetre(db: Session, current_user: Utilisateur, agence_id: Optio
     si l'agence_id demandé est hors périmètre — jamais un no_data silencieux pour masquer
     un défaut d'autorisation (no_data signifie : requête autorisée, aucune donnée)."""
     if current_user.role == UserRole.AGENCY_MANAGER:
+        # Un Agency Manager sans agence ne doit JAMAIS retomber sur agence_id=None, qui
+        # signifie « toute l'organisation » pour le moteur KPI : refus explicite.
+        if current_user.agence_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Accès refusé : aucune agence n'est rattachée à votre compte",
+            )
         if agence_id is not None and agence_id != current_user.agence_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Accès refusé : cette agence n'appartient pas à votre périmètre",
             )
         return current_user.agence_id
+
+    # Refus par défaut : seul le CX Manager voit l'organisation (la dépendance exclut déjà l'Admin).
+    if current_user.role != UserRole.CX_MANAGER:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès refusé")
 
     if agence_id is not None:
         agence = db.query(Agence).filter(Agence.id == agence_id).first()

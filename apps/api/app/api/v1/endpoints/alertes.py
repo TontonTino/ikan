@@ -228,7 +228,9 @@ def update_seuil_alerte(
         raise HTTPException(status_code=404, detail="Agence introuvable")
     # Un CX Manager ne configure que les agences de SON organisation (l'Admin, lui,
     # configure les seuils d'alerte par droit structurel — matrice des permissions).
-    verifier_acces_agence(db, current_user, agence_id)
+    # Droit STRUCTUREL explicite de l'Admin (politique existante, inchangée) ; le CX Manager
+    # reste limité aux agences de son organisation.
+    verifier_acces_agence(db, current_user, agence_id, autoriser_admin=True)
     agence.seuil_alerte = data.seuil_alerte
     db.commit()
     return {"message": f"Seuil mis à jour : {data.seuil_alerte}%"}

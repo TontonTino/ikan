@@ -177,6 +177,7 @@ def submit_feedback(
             qr_code_id=qr.id,
             categorie_id=categorie.id,
             note=note_val,
+            nps_note=data.nps_note,
             commentaire=data.commentaire,
             statut_traitement="nouveau",
         )

@@ -11,7 +11,7 @@ from pydantic import BaseModel
 class KPIResult(BaseModel):
     code: str
     label: str
-    unit: str  # "percent" | "count" | "hours"
+    unit: str  # "percent" | "count" | "hours" | "points"
     # "ok" : value/numerator/denominator significatifs. "no_data" : dénominateur nul ou
     # aucune donnée exploitable — value reste alors None, jamais artificiellement 0.
     status: str = "ok"

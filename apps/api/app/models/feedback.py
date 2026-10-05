@@ -5,7 +5,7 @@ Le feedback est anonyme et accessible uniquement après le scan du QR Code.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, Text, Integer, DateTime, ForeignKey, func
+from sqlalchemy import CheckConstraint, String, Text, Integer, DateTime, ForeignKey, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -14,6 +14,12 @@ from app.db.session import Base
 
 class Feedback(Base):
     __tablename__ = "feedbacks"
+    __table_args__ = (
+        CheckConstraint(
+            "nps_note IS NULL OR (nps_note >= 0 AND nps_note <= 10)",
+            name="ck_feedbacks_nps_note_range",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -27,6 +33,8 @@ class Feedback(Base):
     )
     # Note de satisfaction (1 à 5 étoiles)
     note: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Réponse NPS facultative, distincte de la note CSAT 1–5.
+    nps_note: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # Commentaire libre (max 1000 caractères — BF-03)
     commentaire: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     date_soumission: Mapped[datetime] = mapped_column(
@@ -86,4 +94,3 @@ class Feedback(Base):
 
     def __repr__(self) -> str:
         return f"<Feedback note={self.note} statut={self.statut_traitement} qr={self.qr_code_id}>"
-

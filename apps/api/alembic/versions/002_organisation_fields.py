@@ -31,15 +31,23 @@ def upgrade() -> None:
     except Exception:
         pass
 
-    # 2. Rendre la colonne logo en TEXT pour supporter les images Base64
-    try:
-        op.alter_column('organisations', 'logo', type_=sa.Text(), existing_type=sa.String(500), nullable=True)
-    except Exception:
-        pass
-    try:
+    # 2. Rendre la colonne logo en TEXT pour supporter les images Base64.
+    # La révision initiale ne la crée pas : inspecter le schéma avant tout DDL
+    # évite de laisser la transaction PostgreSQL en échec sur une colonne absente.
+    colonnes_organisations = {
+        colonne['name']
+        for colonne in sa.inspect(op.get_bind()).get_columns('organisations')
+    }
+    if 'logo' not in colonnes_organisations:
         op.add_column('organisations', sa.Column('logo', sa.Text(), nullable=True))
-    except Exception:
-        pass
+    else:
+        op.alter_column(
+            'organisations',
+            'logo',
+            type_=sa.Text(),
+            existing_type=sa.String(500),
+            nullable=True,
+        )
 
     # 3. Ajouter secteur_activite
     op.add_column('organisations', sa.Column('secteur_activite', sa.String(length=100), nullable=True))

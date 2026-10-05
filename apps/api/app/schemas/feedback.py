@@ -12,6 +12,7 @@ class FeedbackCreate(BaseModel):
     """Payload envoyé par le formulaire client."""
     categorie_id: uuid.UUID = Field(..., description="Catégorie choisie par le client parmi celles définies pour cette agence")
     note: Optional[int] = Field(None, ge=1, le=5, description="Note de satisfaction (1=Négatif, 3=Neutre, 5=Positif)")
+    nps_note: Optional[int] = Field(None, ge=0, le=10, description="Réponse NPS facultative (0 à 10)")
     sentiment: Optional[str] = Field(None, description="Sentiment sélectionné (negatif, neutre, positif)")
     commentaire: Optional[str] = Field(None, max_length=1000)
     # Suggestion optionnelle (BF-04)
@@ -110,6 +111,7 @@ class FeedbackResponse(BaseModel):
     categorie_id: Optional[uuid.UUID] = None
     categorie_nom: Optional[str] = None
     note: int
+    nps_note: Optional[int] = None
     commentaire: Optional[str] = None
     date_soumission: datetime
     statut_traitement: str = "nouveau"

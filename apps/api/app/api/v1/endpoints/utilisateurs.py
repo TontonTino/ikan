@@ -12,6 +12,7 @@ from app.core.security import get_password_hash
 from app.models.utilisateur import Utilisateur
 from app.models.enums import UserRole
 from app.schemas.utilisateur import UtilisateurCreate, UtilisateurUpdate, UtilisateurResponse
+from app.services.acces_agence import verifier_agence_dans_organisation
 
 router = APIRouter()
 
@@ -64,6 +65,10 @@ def create_utilisateur(
             raise HTTPException(status_code=403, detail="Un CX Manager ne peut créer que des comptes Agency Manager")
         target_org_id = current_user.organisation_id
         target_agence_id = data.agence_id
+        # Isolation : l'agence doit appartenir à l'organisation du CX Manager (jamais un
+        # agence_id d'une autre organisation, même valide).
+        if target_agence_id is not None:
+            verifier_agence_dans_organisation(db, target_agence_id, target_org_id)
     else:
         # Admin
         if data.role != UserRole.CX_MANAGER:
@@ -81,7 +86,10 @@ def create_utilisateur(
             raise HTTPException(status_code=404, detail="Organisation introuvable ou non autorisée")
         
         target_org_id = data.organisation_id
-        target_agence_id = None
+        # L'Admin peut rattacher l'utilisateur à une agence, uniquement de l'organisation cible.
+        target_agence_id = data.agence_id
+        if target_agence_id is not None:
+            verifier_agence_dans_organisation(db, target_agence_id, target_org_id)
 
     user = Utilisateur(
         organisation_id=target_org_id,
@@ -153,6 +161,10 @@ def update_utilisateur(
             raise HTTPException(status_code=403, detail="Modification de rôle non autorisée")
         elif current_user.role == UserRole.CX_MANAGER and updates["role"] != UserRole.AGENCY_MANAGER:
             raise HTTPException(status_code=403, detail="Modification de rôle non autorisée")
+    # Isolation : réaffectation uniquement vers une agence de l'organisation de l'utilisateur
+    # modifié (None = désaffectation, autorisée). L'organisation n'est jamais modifiable ici.
+    if updates.get("agence_id") is not None:
+        verifier_agence_dans_organisation(db, updates["agence_id"], user.organisation_id)
     if "password" in updates and updates["password"]:
         updates["mot_de_passe_hash"] = get_password_hash(updates.pop("password"))
 

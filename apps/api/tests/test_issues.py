@@ -118,8 +118,8 @@ def ctx():
     return SimpleNamespace(Session=Session, call=call, **vars(ids))
 
 
-def _creer_issue(ctx, user_key="cx_a", agence_id=None, titre="Issue test"):
-    r = ctx.call(user_key, "post", "/issues/", json={"titre": titre, "agence_id": str(agence_id or ctx.agence_a)})
+def _creer_issue(ctx, user_key="cx_a", agence_id=None, titre="Issue test", **extra):
+    r = ctx.call(user_key, "post", "/issues/", json={"titre": titre, "agence_id": str(agence_id or ctx.agence_a), **extra})
     assert r.status_code == 201, r.text
     return r.json()["id"]
 
@@ -143,6 +143,23 @@ def test_creation_issue_valide(ctx):
 def test_creation_par_agency_manager(ctx):
     r = ctx.call("am_a", "post", "/issues/", json={"titre": "Bruit en salle", "agence_id": str(ctx.agence_a)})
     assert r.status_code == 201, r.text
+
+
+def test_creation_et_reouverture_conservent_deadline_sla(ctx):
+    deadline = (datetime.now().astimezone() + timedelta(days=2)).isoformat()
+    issue_id = _creer_issue(ctx, date_limite_sla=deadline)
+    created = ctx.call("cx_a", "get", f"/issues/{issue_id}").json()
+    assert created["date_limite_sla"] is not None
+    deadline_stockee = created["date_limite_sla"]
+
+    action_id = _creer_action(ctx, issue_id).json()["id"]
+    ctx.call("cx_a", "post", f"/issues/{issue_id}/actions/{action_id}/terminer")
+    ctx.call("cx_a", "post", f"/issues/{issue_id}/verifier")
+    reopened = ctx.call("cx_a", "patch", f"/issues/{issue_id}/rattacher-feedback/{ctx.fb_a}")
+
+    assert reopened.status_code == 200
+    assert reopened.json()["statut"] == "reouverte"
+    assert reopened.json()["date_limite_sla"] == deadline_stockee
 
 
 def test_detail_et_liste(ctx):

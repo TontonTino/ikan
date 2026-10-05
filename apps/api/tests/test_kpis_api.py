@@ -25,10 +25,12 @@ from app.api.deps import get_current_active_user
 from app.api.v1.endpoints import kpis
 from app.db.session import Base, get_db
 from app.models.agence import Agence
+from app.models.action_corrective import ActionCorrective
 from app.models.analyse_ia import AnalyseIA
 from app.models.enums import CriticiteType, SentimentType, UserRole
 from app.models.feedback import Feedback
 from app.models.issue import Issue
+from app.models.historique_issue import HistoriqueIssue
 from app.models.organisation import Organisation
 from app.models.plan import Plan
 from app.models.qr_code import QRCode
@@ -44,7 +46,7 @@ def ctx():
     Base.metadata.create_all(
         engine,
         tables=[Plan.__table__, Organisation.__table__, Agence.__table__, QRCode.__table__,
-                Feedback.__table__, AnalyseIA.__table__, Issue.__table__],
+                Feedback.__table__, AnalyseIA.__table__, Issue.__table__, HistoriqueIssue.__table__, ActionCorrective.__table__],
     )
     Session = sessionmaker(bind=engine)
     db = Session()
@@ -70,17 +72,20 @@ def ctx():
 
     # Agence A1 : 4 feedbacks récents (2 positifs, 1 négatif analysés, 1 non analysé) +
     # 1 feedback vieux de 40 jours (positif) pour distinguer jours=7/30 (l'exclut) de jours=90 (l'inclut).
-    for note, sentiment in [(5, SentimentType.POSITIF), (5, SentimentType.POSITIF), (1, SentimentType.NEGATIF), (2, None)]:
-        fb = Feedback(id=uuid4(), qr_code_id=qr_a1.id, note=note, commentaire="A1", statut_traitement="nouveau", date_soumission=NOW)
+    for (note, sentiment), nps_note in zip(
+        [(5, SentimentType.POSITIF), (5, SentimentType.POSITIF), (1, SentimentType.NEGATIF), (2, None)],
+        [9, 10, 7, 8],
+    ):
+        fb = Feedback(id=uuid4(), qr_code_id=qr_a1.id, note=note, nps_note=nps_note, commentaire="A1", statut_traitement="nouveau", date_soumission=NOW)
         db.add(fb)
         db.flush()
         if sentiment:
             db.add(AnalyseIA(id=uuid4(), feedback_id=fb.id, sentiment=sentiment, criticite=CriticiteType.FAIBLE, score_sentiment=0.5))
-    fb_vieux = Feedback(id=uuid4(), qr_code_id=qr_a1.id, note=5, commentaire="A1 vieux", statut_traitement="nouveau", date_soumission=IL_Y_A_40_JOURS)
+    fb_vieux = Feedback(id=uuid4(), qr_code_id=qr_a1.id, note=5, nps_note=0, commentaire="A1 vieux", statut_traitement="nouveau", date_soumission=IL_Y_A_40_JOURS)
     db.add(fb_vieux)
 
     # Agence A2 : 1 feedback récent, positif analysé (permet de distinguer le filtre agence).
-    fb_a2 = Feedback(id=uuid4(), qr_code_id=qr_a2.id, note=5, commentaire="A2", statut_traitement="nouveau", date_soumission=NOW)
+    fb_a2 = Feedback(id=uuid4(), qr_code_id=qr_a2.id, note=5, nps_note=9, commentaire="A2", statut_traitement="nouveau", date_soumission=NOW)
     db.add(fb_a2)
     db.flush()
     db.add(AnalyseIA(id=uuid4(), feedback_id=fb_a2.id, sentiment=SentimentType.POSITIF, criticite=CriticiteType.FAIBLE, score_sentiment=0.8))
@@ -88,17 +93,17 @@ def ctx():
     # Issue org A (sur agence A1) : résolue, critique, nécessite action.
     db.add(Issue(id=uuid4(), organisation_id=org_a.id, agence_id=agence_a1.id, titre="Issue A",
                  statut="resolue", severite=CriticiteType.CRITIQUE, necessite_action=True,
-                 premiere_detection=NOW, date_resolution=NOW))
+                 premiere_detection=NOW, date_resolution=NOW, date_limite_sla=NOW + timedelta(hours=1)))
 
     # Org B : 1 feedback très négatif, 1 Issue vérifiée nécessitant action (données très
     # différentes de A pour détecter toute fuite).
-    fb_b = Feedback(id=uuid4(), qr_code_id=qr_b.id, note=1, commentaire="B", statut_traitement="nouveau", date_soumission=NOW)
+    fb_b = Feedback(id=uuid4(), qr_code_id=qr_b.id, note=1, nps_note=0, commentaire="B", statut_traitement="nouveau", date_soumission=NOW)
     db.add(fb_b)
     db.flush()
     db.add(AnalyseIA(id=uuid4(), feedback_id=fb_b.id, sentiment=SentimentType.NEGATIF, criticite=CriticiteType.CRITIQUE, score_sentiment=0.0))
     db.add(Issue(id=uuid4(), organisation_id=org_b.id, agence_id=agence_b.id, titre="Issue B",
                  statut="verifiee", severite=CriticiteType.CRITIQUE, necessite_action=True,
-                 premiere_detection=NOW, date_resolution=NOW))
+                 premiere_detection=NOW, date_resolution=NOW, date_limite_sla=NOW - timedelta(hours=1)))
 
     # Org C : aucune donnée (feedback/issue) — sert au test no_data.
     db.commit()
@@ -142,7 +147,7 @@ def _kpis_by_code(payload: dict) -> dict:
 
 # ── Contrat / 8 KPI ──────────────────────────────────────────────────────────────
 
-def test_les_8_kpis_presents_avec_bons_codes(ctx):
+def test_tous_les_kpis_presents_avec_bons_codes(ctx):
     r = ctx.call("cx_a", "get", "/kpis/")
     assert r.status_code == 200, r.text
     data = r.json()
@@ -151,7 +156,7 @@ def test_les_8_kpis_presents_avec_bons_codes(ctx):
     assert data["jours"] == 30
     codes = {k["code"] for k in data["kpis"]}
     assert codes == set(KPI_DEFINITIONS.keys())
-    assert len(data["kpis"]) == 8
+    assert len(data["kpis"]) == 13
 
 
 def test_champs_kpi_result_presents(ctx):
@@ -266,6 +271,12 @@ def test_organisation_sans_donnees_renvoie_no_data(ctx):
     assert kpis_map["FEEDBACK_VOLUME"]["value"] == 0.0
     assert kpis_map["ISSUE_VOLUME"]["status"] == "ok"
     assert kpis_map["ISSUE_VOLUME"]["value"] == 0.0
+    assert kpis_map["ISSUE_BACKLOG"]["status"] == "ok"
+    assert kpis_map["ISSUE_BACKLOG"]["value"] == 0.0
+    assert kpis_map["BACKLOG_AGE"]["status"] == "no_data"
+    assert kpis_map["ACTION_COMPLETION_RATE"]["status"] == "no_data"
+    assert kpis_map["NPS"]["status"] == "no_data"
+    assert kpis_map["SLA_COMPLIANCE_RATE"]["status"] == "no_data"
 
 
 def test_no_data_jamais_utilise_pour_masquer_un_refus_dautorisation(ctx):
@@ -283,6 +294,57 @@ def test_kpi_individuel_par_code(ctx):
     assert r.json()["code"] == "CSAT"
 
 
+def test_nps_in_collection_et_endpoint_individuel_avec_rbac(ctx):
+    collection = ctx.call("cx_a", "get", "/kpis/")
+    assert collection.status_code == 200
+    nps = _kpis_by_code(collection.json())["NPS"]
+    assert (nps["value"], nps["denominator"]) == (60.0, 5)
+
+    individual = ctx.call("cx_a", "get", "/kpis/NPS", params={"agence_id": str(ctx.agence_a1)})
+    assert individual.status_code == 200
+    assert individual.json()["value"] == 50.0
+
+    agency_manager = ctx.call("am_a1", "get", "/kpis/NPS")
+    assert agency_manager.status_code == 200
+    assert agency_manager.json()["value"] == 50.0
+
+    forbidden = ctx.call("cx_a", "get", "/kpis/NPS", params={"agence_id": str(ctx.agence_b)})
+    assert forbidden.status_code == 403
+    org_b = ctx.call("cx_b", "get", "/kpis/NPS")
+    assert org_b.status_code == 200
+    assert org_b.json()["value"] == -100.0
+
+
+def test_sla_in_collection_endpoint_individuel_et_rbac(ctx):
+    collection = ctx.call("cx_a", "get", "/kpis/")
+    assert collection.status_code == 200
+    sla = _kpis_by_code(collection.json())["SLA_COMPLIANCE_RATE"]
+    assert (sla["value"], sla["numerator"], sla["denominator"]) == (100.0, 1, 1)
+
+    individual = ctx.call("cx_a", "get", "/kpis/SLA_COMPLIANCE_RATE", params={"agence_id": str(ctx.agence_a1)})
+    assert individual.status_code == 200
+    assert individual.json()["value"] == 100.0
+
+    agency_manager = ctx.call("am_a1", "get", "/kpis/SLA_COMPLIANCE_RATE")
+    assert (agency_manager.status_code, agency_manager.json()["value"]) == (200, 100.0)
+
+    forbidden_agency = ctx.call("cx_a", "get", "/kpis/SLA_COMPLIANCE_RATE", params={"agence_id": str(ctx.agence_b)})
+    assert forbidden_agency.status_code == 403
+    org_b = ctx.call("cx_b", "get", "/kpis/SLA_COMPLIANCE_RATE")
+    assert (org_b.status_code, org_b.json()["value"]) == (200, 0.0)
+
+
+@pytest.mark.parametrize("code", ["ISSUE_BACKLOG", "BACKLOG_AGE", "ACTION_COMPLETION_RATE", "SLA_COMPLIANCE_RATE"])
+def test_nouveaux_kpis_individuels_rbac_et_collection(ctx, code):
+    r = ctx.call("cx_a", "get", f"/kpis/{code}")
+    assert r.status_code == 200, r.text
+    assert r.json()["code"] == code
+    r_am = ctx.call("am_a1", "get", f"/kpis/{code}")
+    assert r_am.status_code == 200, r_am.text
+    r_forbidden = ctx.call("am_a1", "get", f"/kpis/{code}", params={"agence_id": str(ctx.agence_a2)})
+    assert r_forbidden.status_code == 403
+
+
 def test_kpi_individuel_insensible_a_la_casse(ctx):
     r = ctx.call("cx_a", "get", "/kpis/csat")
     assert r.status_code == 200
@@ -290,7 +352,7 @@ def test_kpi_individuel_insensible_a_la_casse(ctx):
 
 
 def test_kpi_individuel_code_inconnu_404(ctx):
-    r = ctx.call("cx_a", "get", "/kpis/NPS")
+    r = ctx.call("cx_a", "get", "/kpis/UNKNOWN")
     assert r.status_code == 404
 
 

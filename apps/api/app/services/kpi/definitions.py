@@ -112,4 +112,36 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
         ),
         unit="percent",
     ),
+    "ISSUE_BACKLOG": KPIDefinition(
+        code="ISSUE_BACKLOG", label="Issue Backlog",
+        description="Nombre d'Issues actuellement ouvertes, en cours d'action ou rouvertes, dans le périmètre.", unit="count",
+    ),
+    "BACKLOG_AGE": KPIDefinition(
+        code="BACKLOG_AGE", label="Backlog Age",
+        description="Médiane en heures de l'âge du cycle ouvert actuel des Issues du backlog.", unit="hours",
+    ),
+    "ACTION_COMPLETION_RATE": KPIDefinition(
+        code="ACTION_COMPLETION_RATE", label="Action Completion Rate",
+        description="Pourcentage d'actions non annulées créées dans la période actuellement terminées.", unit="percent",
+    ),
+    "SLA_COMPLIANCE_RATE": KPIDefinition(
+        code="SLA_COMPLIANCE_RATE",
+        label="SLA Compliance Rate",
+        description=(
+            "Pourcentage des Issues résolues pendant la période avec une deadline SLA explicite "
+            "qui ont été résolues au plus tard à cette deadline. Les Issues sans SLA sont exclues."
+        ),
+        unit="percent",
+    ),
+    "NPS": KPIDefinition(
+        code="NPS",
+        label="NPS",
+        description=(
+            "Score NPS = (% de promoteurs avec nps_note 9–10) − (% de détracteurs avec "
+            "nps_note 0–6), parmi les feedbacks avec nps_note renseigné dans la période "
+            "(date_soumission). Les passifs 7–8 restent au dénominateur. Sans réponse NPS, "
+            "le statut est no_data."
+        ),
+        unit="points",
+    ),
 }

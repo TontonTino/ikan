@@ -102,7 +102,9 @@ def test_admin_recoit_403_explicite(prefixe, routeur, methode, chemin):
 
 @pytest.mark.parametrize("role", [UserRole.CX_MANAGER, UserRole.AGENCY_MANAGER])
 def test_gardes_laissent_passer_cx_et_agency(role):
-    user = SimpleNamespace(id=uuid4(), role=role, active=True)
+    # Un Agency Manager légitime est rattaché à une agence (5B-1 : sans agence → 403,
+    # couvert par tests/test_isolation_multi_org.py).
+    user = SimpleNamespace(id=uuid4(), role=role, active=True, agence_id=uuid4())
     assert get_cx_or_agency_manager(user) is user
     assert get_feedback_viewer_user(user) is user
 

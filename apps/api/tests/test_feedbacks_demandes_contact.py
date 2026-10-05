@@ -25,9 +25,12 @@ from app.api.deps import get_current_active_user
 from app.api.v1.endpoints import feedbacks
 from app.db.session import Base, get_db
 from app.models.agence import Agence
+from app.models.analyse_ia import AnalyseIA
+from app.models.categorie import Categorie
 from app.models.demande_contact import DemandeContact
 from app.models.enums import UserRole
 from app.models.feedback import Feedback
+from app.models.historique_feedback import HistoriqueFeedback
 from app.models.organisation import Organisation
 from app.models.qr_code import QRCode
 from app.models.utilisateur import Utilisateur
@@ -41,7 +44,8 @@ def ctx():
     Base.metadata.create_all(
         engine,
         tables=[Organisation.__table__, Agence.__table__, Utilisateur.__table__,
-                QRCode.__table__, Feedback.__table__, DemandeContact.__table__],
+                QRCode.__table__, Categorie.__table__, Feedback.__table__, HistoriqueFeedback.__table__,
+                DemandeContact.__table__, AnalyseIA.__table__],
     )
     Session = sessionmaker(bind=engine)
     db = Session()
@@ -62,6 +66,8 @@ def ctx():
     qr_b = QRCode(id=uuid4(), agence_id=agence_b.id, code="QR-B", url="http://test/b", actif=True)
     db.add_all([qr_a, qr_a2, qr_b])
     db.flush()
+    categorie_a = Categorie(id=uuid4(), agence_id=agence_a.id, nom="Accueil", active=True)
+    db.add(categorie_a)
 
     # Org A / Agence A : 2 feedbacks avec demande de contact (1 non traitée, 1 traitée).
     fb_a1 = Feedback(id=uuid4(), qr_code_id=qr_a.id, note=2, commentaire="A1 non traite", statut_traitement="nouveau", date_soumission=NOW)
@@ -90,6 +96,7 @@ def ctx():
 
     ids = SimpleNamespace(
         org_a=org_a.id, org_b=org_b.id, agence_a=agence_a.id, agence_a2=agence_a2.id, agence_b=agence_b.id,
+        qr_a=qr_a.id, categorie_a=categorie_a.id,
         fb_a1=fb_a1.id, fb_a2=fb_a2.id, fb_b1=fb_b1.id,
         dc_a1=dc_a1.id, dc_a2=dc_a2.id, dc_b1=dc_b1.id,
     )
@@ -119,6 +126,32 @@ def ctx():
         return getattr(client, method)(path, **kw)
 
     return SimpleNamespace(Session=Session, call=call, **vars(ids))
+
+
+def test_soumission_feedback_persiste_nps_et_le_retourne(ctx, monkeypatch):
+    monkeypatch.setattr(feedbacks, "analyser_feedback", lambda feedback_id, db: None)
+    response = ctx.call(
+        "cx_a", "post", "/feedbacks/", params={"qr_code": "QR-A"},
+        json={"categorie_id": str(ctx.categorie_a), "note": 4, "nps_note": 10},
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["note"] == 4
+    assert response.json()["nps_note"] == 10
+
+    db = ctx.Session()
+    persisted = db.query(Feedback).filter(Feedback.id == UUID(response.json()["id"])).one()
+    assert (persisted.note, persisted.nps_note) == (4, 10)
+    db.close()
+
+
+def test_soumission_feedback_sans_nps_reste_valide(ctx, monkeypatch):
+    monkeypatch.setattr(feedbacks, "analyser_feedback", lambda feedback_id, db: None)
+    response = ctx.call(
+        "cx_a", "post", "/feedbacks/", params={"qr_code": "QR-A"},
+        json={"categorie_id": str(ctx.categorie_a), "note": 3},
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["nps_note"] is None
 
 
 # ── Liste : scoping organisation / agence ─────────────────────────────────────────
