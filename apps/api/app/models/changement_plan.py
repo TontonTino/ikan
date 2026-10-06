@@ -5,7 +5,7 @@ organisation (Stripe, override manuel Admin, dégradation automatique).
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, Text, DateTime, ForeignKey, func
+from sqlalchemy import CheckConstraint, Index, String, Text, DateTime, ForeignKey, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,6 +14,10 @@ from app.db.session import Base
 
 class ChangementPlan(Base):
     __tablename__ = "changements_plan"
+    __table_args__ = (
+        CheckConstraint("source IN ('stripe', 'admin_override', 'auto_downgrade')", name="ck_changements_plan_source"),
+        Index("ix_changements_plan_organisation_id", "organisation_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     organisation_id: Mapped[uuid.UUID] = mapped_column(
