@@ -4,6 +4,10 @@ Approche basée sur des templates par thème et criticité pour les 15 catégori
 """
 from app.models.enums import CriticiteType, PriorityLevel
 
+# Origine des recommandations (transparence IA, 5B-2) : textes choisis par règles dans
+# RECOMMANDATIONS_TEMPLATES selon le thème et la criticité — aucun appel LLM.
+SOURCE_RECOMMANDATIONS = "regle"
+
 # Templates de recommandations par thème et criticité
 RECOMMANDATIONS_TEMPLATES: dict[str, dict[str, str]] = {
     "attente": {

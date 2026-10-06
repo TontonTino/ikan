@@ -82,19 +82,26 @@ Seuils **provisoires**, centralisés dans `src/pages/cx/siege/siegeData.ts` :
 À calibrer sur données réelles. Le volume de la période précédente par agence
 n'est pas exposé par `/statistics/cx` : le signal « baisse » ne peut pas le vérifier.
 
-## 7. Anomalies API observées (non corrigées, backend hors périmètre)
+## 7. Anomalies API observées — corrigées en 5B-2
 
-- `_calc_kpi_trend` renvoie « +100% » quand la période précédente n'a aucun avis,
-  y compris pour la satisfaction (écart en points suffixé « % ») : le frontend
-  recalcule les deltas et n'affiche aucune comparaison dans ce cas.
-- Tri lexical des semaines (« S10 » avant « S9 ») dans `/dashboard/siege` et
-  `/statistics/cx` ; fusion possible de semaines de deux années sur 12 mois dans
-  `/dashboard/siege`. Le frontend retrie les points de `/statistics/cx`.
-- `evolution_taux_resolution` (`/dashboard/siege`) mesure la part de feedbacks non
-  critiques, pas une résolution.
-- Satisfaction renvoyée à `0.0` pour une agence/période sans avis : le frontend
-  affiche « Pas d'avis ».
-- Les « insights IA » de `/statistics/cx` sont des règles fixes, pas une analyse IA.
+Corrigé côté API (tests : `apps/api/tests/test_data_correctness.py`) :
+
+- `_calc_kpi_trend` : 0 → N n'est plus « +100 % » (évolution null) ; écart entre
+  deux taux en « pts ».
+- Semaines : clé ISO « AAAA-Www » triée chronologiquement, sans fusion inter-années
+  (`/dashboard/siege`, `/dashboard/agence`, `/statistics/cx`, `/statistics/agency`).
+- `evolution_taux_resolution` supprimé.
+- Satisfaction / taux de traitement sans avis : `null` et `StatKPI.status = "no_data"`.
+- Insights et recommandations : champ `source` (`"regle"` aujourd'hui), libellés
+  « automatique » côté interface tant qu'aucun contenu ne provient d'un LLM.
+
+Reste à traiter :
+
+- Libellés « Analyse IA », « Thématiques IA », « détectés par l'IA » : le moteur
+  de production est déterministe (sentiment lexical, thèmes par mots-clés,
+  criticité par règles). Renommage global à décider (hors 5B-2).
+- `EvolutionPoint.satisfaction` conserve une valeur par défaut historique (0.0)
+  dans `evolution_volume`, non consommée ; nettoyage ultérieur hors 5B-2.
 
 ## 8. Seuils visuels préexistants hors dashboard CX
 

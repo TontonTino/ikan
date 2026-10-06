@@ -2,15 +2,22 @@
 Schémas Pydantic pour les données du dashboard et statistiques d'analyse (BF-09).
 """
 from pydantic import BaseModel
-from typing import List, Optional, Any
+from typing import List, Literal, Optional, Any
 import uuid
+
+# Origine d'un insight / d'une recommandation (transparence IA, 5B-2) :
+#   "regle"   = logique déterministe (seuils, templates) — AUCUN appel LLM
+#   "llm"     = texte réellement généré par un appel LLM
+#   "hybride" = détection par règles + rédaction par LLM
+SourceAnalyse = Literal["regle", "llm", "hybride"]
 
 
 class KPIAgence(BaseModel):
     agence_id: uuid.UUID
     agence_nom: str
     ville: str | None
-    taux_satisfaction: float
+    # None si aucun avis sur la période (jamais 0.0).
+    taux_satisfaction: float | None
     nombre_feedbacks: int
     nombre_negatifs: int
     nombre_suggestions: int
@@ -44,7 +51,8 @@ class DashboardAgence(BaseModel):
     agence_id: uuid.UUID
     agence_nom: str
     periode: str
-    taux_satisfaction: float
+    # None si aucun avis sur la période (jamais 0.0).
+    taux_satisfaction: float | None
     nombre_feedbacks: int
     nombre_negatifs: int
     nombre_critiques: int
@@ -63,7 +71,8 @@ class DashboardSiege(BaseModel):
     organisation_id: uuid.UUID
     periode: str
     feedbacks_total: int
-    taux_satisfaction_global: float
+    # None si aucun avis sur la période (jamais 0.0).
+    taux_satisfaction_global: float | None
     idees_en_attente: int
     agences_actives: int
     agences: List[KPIAgence]
@@ -77,8 +86,6 @@ class DashboardSiege(BaseModel):
     evolution_feedbacks_total_positive: bool = True
     evolution_satisfaction: str | None = None
     evolution_satisfaction_positive: bool = True
-    evolution_taux_resolution: str | None = None
-    evolution_taux_resolution_positive: bool = True
 
 
 # ==============================================================================
@@ -152,8 +159,12 @@ class DashboardAdminStats(BaseModel):
 # ==============================================================================
 
 class StatKPI(BaseModel):
-    valeur: str | int | float
-    valeur_num: float = 0.0
+    # "no_data" : aucune observation pour calculer la valeur (même convention que le
+    # moteur KPI). Alors valeur et valeur_num valent None — jamais un faux 0 / « 0% ».
+    status: Literal["ok", "no_data"] = "ok"
+    valeur: str | int | float | None = None
+    valeur_num: float | None = None
+    # None si la période précédente n'a aucune observation.
     valeur_precedente: float | int | None = None
     evolution: str | None = None
     is_positive: bool = True
@@ -184,10 +195,11 @@ class AgenceRankDetail(BaseModel):
     agence_id: uuid.UUID
     agence_nom: str
     ville: str | None = None
-    satisfaction_rate: float = 0.0
+    # None si aucun avis sur la période (jamais 0.0).
+    satisfaction_rate: float | None = None
     total_feedbacks: int = 0
     feedbacks_traites: int = 0
-    taux_traitement: float = 0.0
+    taux_traitement: float | None = None
     alertes_critiques: int = 0
     tendance_val: str | None = None
     tendance_positive: bool = True
@@ -203,7 +215,7 @@ class AgenceImpacteeItem(BaseModel):
     agence_nom: str
     ville: str | None = None
     alertes_count: int = 0
-    satisfaction_rate: float = 0.0
+    satisfaction_rate: float | None = None
 
 
 class AlerteSyntheseDetail(BaseModel):
@@ -221,6 +233,8 @@ class InsightIADetail(BaseModel):
     priorite: str = "medium"
     agence_nom: str | None = None
     date: str | None = None
+    # Origine réelle : obligatoire, pour qu'aucune règle ne soit présentée comme une IA.
+    source: SourceAnalyse
 
 
 class OrganisationStructure(BaseModel):

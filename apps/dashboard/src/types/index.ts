@@ -182,6 +182,9 @@ export interface Suggestion {
   notes_internes?: string;
 }
 
+/** Origine d'un insight / d'une recommandation : règles déterministes, LLM, ou les deux. */
+export type SourceAnalyse = 'regle' | 'llm' | 'hybride';
+
 export interface Recommandation {
   id: string;
   analyse_ia_id: string;
@@ -189,6 +192,7 @@ export interface Recommandation {
   priorite: PriorityLevel;
   date_generation: string;
   traitee: boolean;
+  source: SourceAnalyse;
 }
 
 export interface RecommandationOrg extends Recommandation {
@@ -200,7 +204,8 @@ export interface KPIAgence {
   agence_id: string;
   agence_nom: string;
   ville?: string;
-  taux_satisfaction: number;
+  /** null si aucun avis sur la période. */
+  taux_satisfaction: number | null;
   nombre_feedbacks: number;
   nombre_negatifs: number;
   nombre_suggestions: number;
@@ -220,7 +225,8 @@ export interface DashboardAgence {
   agence_id: string;
   agence_nom: string;
   periode: string;
-  taux_satisfaction: number;
+  /** null si aucun avis sur la période. */
+  taux_satisfaction: number | null;
   nombre_feedbacks: number;
   nombre_negatifs: number;
   nombre_critiques: number;
@@ -238,7 +244,8 @@ export interface DashboardSiege {
   organisation_id: string;
   periode: string;
   feedbacks_total: number;
-  taux_satisfaction_global: number;
+  /** null si aucun avis sur la période. */
+  taux_satisfaction_global: number | null;
   idees_en_attente: number;
   agences_actives: number;
   agences: KPIAgence[];
@@ -251,8 +258,6 @@ export interface DashboardSiege {
   evolution_feedbacks_total_positive?: boolean;
   evolution_satisfaction?: string | null;
   evolution_satisfaction_positive?: boolean;
-  evolution_taux_resolution?: string | null;
-  evolution_taux_resolution_positive?: boolean;
 }
 
 export interface Alerte {
@@ -340,8 +345,10 @@ export interface DashboardAdminStats {
 
 // ── Statistiques & Analyses Spécifiques ────────────────
 export interface StatKPI {
-  valeur: string | number;
-  valeur_num: number;
+  /** 'no_data' : aucune observation — valeur et valeur_num sont alors null. */
+  status: 'ok' | 'no_data';
+  valeur: string | number | null;
+  valeur_num: number | null;
   valeur_precedente?: number | null;
   evolution?: string | null;
   is_positive: boolean;
@@ -372,10 +379,11 @@ export interface AgenceRankDetail {
   agence_id: string;
   agence_nom: string;
   ville?: string | null;
-  satisfaction_rate: number;
+  /** null si aucun avis sur la période. */
+  satisfaction_rate: number | null;
   total_feedbacks: number;
   feedbacks_traites: number;
-  taux_traitement: number;
+  taux_traitement: number | null;
   alertes_critiques: number;
   tendance_val?: string | null;
   tendance_positive: boolean;
@@ -387,7 +395,7 @@ export interface AgenceImpacteeItem {
   agence_nom: string;
   ville?: string | null;
   alertes_count: number;
-  satisfaction_rate: number;
+  satisfaction_rate: number | null;
 }
 
 export interface AlerteSyntheseDetail {
@@ -405,6 +413,7 @@ export interface InsightIADetail {
   priorite?: 'low' | 'medium' | 'high' | 'critical';
   agence_nom?: string | null;
   date?: string | null;
+  source: SourceAnalyse;
 }
 
 export interface OrganisationStructure {

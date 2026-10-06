@@ -106,7 +106,7 @@ export default function StatsAgencyView() {
           <KpiCard
             icon={<SmileIcon size={20} />}
             label="Satisfaction locale"
-            value={kpis.satisfaction?.valeur ?? '0%'}
+            value={kpis.satisfaction?.valeur ?? "Pas d'avis"}
             trend={
               kpis.satisfaction?.evolution
                 ? {
@@ -117,7 +117,7 @@ export default function StatsAgencyView() {
                 : undefined
             }
             sparklineType={kpis.satisfaction?.is_positive ? 'up' : 'down'}
-            badgeColor={kpis.satisfaction?.is_positive ? 'green' : 'red'}
+            badgeColor={kpis.satisfaction?.status === 'no_data' ? 'neutral' : kpis.satisfaction?.is_positive ? 'green' : 'red'}
             compact={true}
             highlight
           />
@@ -142,7 +142,7 @@ export default function StatsAgencyView() {
           <KpiCard
             icon={<TrendingUpIcon size={20} />}
             label="Taux de traitement"
-            value={kpis.taux_traitement?.valeur ?? '0%'}
+            value={kpis.taux_traitement?.valeur ?? "Pas d'avis"}
             trend={
               kpis.taux_traitement?.evolution
                 ? {

@@ -1,6 +1,7 @@
 import React from 'react';
 import type { InsightIADetail } from '../../types';
 import { FileTextIcon, CheckCircleIcon, AlertTriangleIcon, LightbulbIcon } from '../common/Icons';
+import { contientIA } from '../../utils/sourceAnalyse';
 
 interface AiInsightsSummaryProps {
   insights: InsightIADetail[];
@@ -10,6 +11,9 @@ export default function AiInsightsSummary({ insights }: AiInsightsSummaryProps) 
   if (!insights || insights.length === 0) {
     return null;
   }
+
+  // Libellé selon l'origine réelle (source) : « IA » uniquement si un LLM a produit un contenu.
+  const ia = contientIA(insights);
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -63,10 +67,12 @@ export default function AiInsightsSummary({ insights }: AiInsightsSummaryProps) 
         <FileTextIcon size={20} color="#75B72A" />
         <div>
           <div style={{ fontSize: '1rem', fontWeight: 800, color: '#02302D' }}>
-            Synthèse & Recommandations IA
+            {ia ? 'Synthèse & Recommandations IA' : 'Synthèse automatique'}
           </div>
           <div style={{ fontSize: '0.76rem', color: '#64748B' }}>
-            Faits marquants et actions préconisées par l'intelligence IKAN
+            {ia
+              ? "Faits marquants et actions préconisées par l'intelligence IKAN"
+              : 'Constats calculés par règles à partir des avis de la période'}
           </div>
         </div>
       </div>

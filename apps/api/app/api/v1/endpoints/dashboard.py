@@ -27,7 +27,14 @@ from app.models.analyse_ia import AnalyseIA
 from app.models.suggestion import Suggestion
 from app.models.enums import UserRole, SentimentType, IdeaStatus
 from app.utils.stats import wilson_lower_bound
-from app.services.dashboard_helpers import _calc_kpi_trend, _compter_utilisateurs_actifs, _repartition_forfaits
+from app.services.dashboard_helpers import (
+    _calc_kpi_trend,
+    _cle_semaine_iso,
+    _compter_utilisateurs_actifs,
+    _libelles_semaines,
+    _repartition_forfaits,
+    _taux,
+)
 from app.schemas.dashboard import (
     DashboardAgence,
     DashboardSiege,
@@ -93,11 +100,8 @@ def dashboard_agence(
     actions_ouvertes = sum(
         1 for feedback in feedbacks if feedback.action_a_prendre and not feedback.action_realisee
     )
-    if total == 0:
-        taux = 0.0
-    else:
-        positifs = sum(1 for f in feedbacks if f.note >= 4)
-        taux = round(positifs / total * 100, 1)
+    # None si aucun avis : une absence de données n'est jamais un « 0 % » de satisfaction.
+    taux = _taux(sum(1 for f in feedbacks if f.note >= 4), total)
 
     # Analyses IA
     analyses_ids = [f.id for f in feedbacks]
@@ -219,7 +223,7 @@ def dashboard_siege(
     for agence in agences:
         total = feedback_count_by_agence.get(agence.id, 0)
         positifs = positive_count_by_agence.get(agence.id, 0)
-        taux = round(positifs / total * 100, 1) if total else 0.0
+        taux = _taux(positifs, total)
         kpis.append(KPIAgence(
             agence_id=agence.id,
             agence_nom=agence.nom,
@@ -234,10 +238,7 @@ def dashboard_siege(
         ))
 
     total_global = len(all_feedbacks)
-    taux_global = (
-        round(sum(1 for f in all_feedbacks if f.note >= 4) / total_global * 100, 1)
-        if total_global else 0.0
-    )
+    taux_global = _taux(sum(1 for f in all_feedbacks if f.note >= 4), total_global)
 
     from app.models.enums import IdeaStatus
     idees_attente = db.query(Suggestion).filter(
@@ -297,39 +298,22 @@ def dashboard_siege(
         if agence_ids else (0, 0)
     )
     total_prev, positifs_prev = map(int, prev_feedback_stats)
-    taux_prev = round(positifs_prev / total_prev * 100, 1) if total_prev else 0.0
-    nombre_critiques_prev = (
-        db.query(func.count(AnalyseIA.id))
-        .join(Feedback, AnalyseIA.feedback_id == Feedback.id)
-        .join(QRCode, Feedback.qr_code_id == QRCode.id)
-        .filter(
-            QRCode.agence_id.in_(agence_ids),
-            Feedback.date_soumission >= date_debut_prev,
-            Feedback.date_soumission < date_debut,
-            AnalyseIA.criticite == CriticiteType.CRITIQUE,
-        )
-        .scalar()
-        if agence_ids else 0
-    ) or 0
-
-    taux_resolution_curr = (
-        round((total_global - nombre_critiques) / total_global * 100, 1) if total_global else 100.0
-    )
-    taux_resolution_prev = (
-        round((total_prev - nombre_critiques_prev) / total_prev * 100, 1) if total_prev else 100.0
-    )
-
+    taux_prev = _taux(positifs_prev, total_prev)
     evol_feedbacks, evol_feedbacks_pos = _calc_kpi_trend(total_global, total_prev)
     evol_satisfaction, evol_satisfaction_pos = _calc_kpi_trend(taux_global, taux_prev, is_pct_diff=True)
-    evol_resolution, evol_resolution_pos = _calc_kpi_trend(taux_resolution_curr, taux_resolution_prev, is_pct_diff=True)
 
     # Classement par score de Wilson décroissant (fiabilité statistique du
     # taux de satisfaction), CSAT brut en second critère pour départager les
     # égalités ou scores très proches — pas de score composite, un tri
     # primaire/secondaire simple. Le score de Wilson est exposé dans
     # KPIAgence.wilson_score pour le tri Top/Flop du frontend, sans affichage.
+    # Les agences sans avis (taux None) ferment la marche.
     agences_triees = sorted(
-        kpis, key=lambda kpi: (-kpi.wilson_score, -kpi.taux_satisfaction),
+        kpis,
+        key=lambda kpi: (
+            -kpi.wilson_score,
+            -(kpi.taux_satisfaction if kpi.taux_satisfaction is not None else -1),
+        ),
     )
 
     return DashboardSiege(
@@ -349,8 +333,6 @@ def dashboard_siege(
         evolution_feedbacks_total_positive=evol_feedbacks_pos,
         evolution_satisfaction=evol_satisfaction,
         evolution_satisfaction_positive=evol_satisfaction_pos,
-        evolution_taux_resolution=evol_resolution,
-        evolution_taux_resolution_positive=evol_resolution_pos,
     )
 
 
@@ -446,25 +428,30 @@ def dashboard_admin(
 
 
 def _compute_tendances(feedbacks: list, jours: int) -> list[TendanceSatisfaction]:
-    """Calcule les tendances de satisfaction par semaine ou par jour."""
+    """Tendances de satisfaction par jour (≤ 30 jours) ou par semaine ISO (au-delà).
+
+    Les semaines sont regroupées par clé « AAAA-Www » (année ISO) et triées
+    chronologiquement : la semaine 52 de 2025 précède la semaine 1 de 2026, et deux
+    semaines de même numéro d'années différentes ne sont jamais fusionnées. `date`
+    porte le libellé affiché (« Semaine 9 », avec l'année si la série en couvre deux).
+    Seules les périodes contenant au moins un avis sont renvoyées (taux toujours défini).
+    """
     from collections import defaultdict
     bucket: dict[str, list] = defaultdict(list)
+    hebdomadaire = jours > 30
 
     for f in feedbacks:
-        if jours <= 30:
-            key = f.date_soumission.strftime("%Y-%m-%d")
-        else:
-            # Regrouper par semaine
-            key = f"Semaine {f.date_soumission.isocalendar()[1]}"
+        key = _cle_semaine_iso(f.date_soumission) if hebdomadaire else f.date_soumission.strftime("%Y-%m-%d")
         bucket[key].append(f.note)
 
+    libelles = _libelles_semaines(bucket.keys(), prefixe="Semaine") if hebdomadaire else {}
     return [
         TendanceSatisfaction(
-            date=date,
-            taux=round(sum(1 for n in notes if n >= 4) / len(notes) * 100, 1),
+            date=libelles.get(key, key),
+            taux=_taux(sum(1 for n in notes if n >= 4), len(notes)),
             nombre_feedbacks=len(notes),
         )
-        for date, notes in sorted(bucket.items())
+        for key, notes in sorted(bucket.items())
     ]
 
 

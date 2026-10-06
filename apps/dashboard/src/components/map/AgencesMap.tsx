@@ -11,7 +11,8 @@ export interface AgenceCarte {
   ville?: string | null;
   latitude: number;
   longitude: number;
-  satisfaction: number;
+  /** null si aucun avis sur la période. */
+  satisfaction: number | null;
   avis: number;
   seuil: number | null;
   statut: StatutSeuil;

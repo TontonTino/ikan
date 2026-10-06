@@ -54,8 +54,10 @@ from app.schemas.dashboard import (
 )
 
 from app.services.dashboard_helpers import (
-    _calc_kpi_trend, _compter_utilisateurs_actifs, _period_label, _repartition_forfaits,
+    _calc_kpi_trend, _cle_semaine_iso, _compter_utilisateurs_actifs, _est_traite, _kpi_taux,
+    _libelles_semaines, _period_label, _repartition_forfaits, _taux,
 )
+from app.services.ai.recommandations import SOURCE_RECOMMANDATIONS
 
 from app.api.v1.endpoints.dashboard_statistics_shared import THEME_LABELS_MAP
 
@@ -126,6 +128,7 @@ def get_statistics_agency(
         else []
     )
     analyses_cur_map = {a.feedback_id: a for a in analyses_current}
+    analyses_prev_ids = {a.feedback_id for a in analyses_prev}
 
     total_curr = len(fbs_current)
     total_prev = len(fbs_prev)
@@ -133,40 +136,30 @@ def get_statistics_agency(
     pos_curr = sum(1 for f in fbs_current if f.note >= 4)
     pos_prev = sum(1 for f in fbs_prev if f.note >= 4)
 
-    sat_curr = round(pos_curr / total_curr * 100, 1) if total_curr > 0 else 0.0
-    sat_prev = round(pos_prev / total_prev * 100, 1) if total_prev > 0 else 0.0
+    # None si aucun avis sur la période (jamais 0.0) — même convention que le moteur KPI.
+    sat_curr = _taux(pos_curr, total_curr)
+    sat_prev = _taux(pos_prev, total_prev)
 
+    # Feedbacks traités : MÊME définition (_est_traite) pour les deux périodes.
     def _is_treated(f: Feedback) -> bool:
-        statut = getattr(f, "statut_traitement", "nouveau")
-        if statut in ("en_cours", "en_traitement", "recontacte", "resolu", "escalade", "ferme"):
-            return True
-        return f.id in analyses_cur_map
+        return _est_traite(f, analyses_cur_map)
 
     traites_curr = sum(1 for f in fbs_current if _is_treated(f))
-    traites_prev = len(analyses_prev)
+    traites_prev = sum(1 for f in fbs_prev if _est_traite(f, analyses_prev_ids))
     attente_curr = max(0, total_curr - traites_curr)
 
-    taux_trait_curr = round(traites_curr / total_curr * 100, 1) if total_curr > 0 else 0.0
-    taux_trait_prev = round(traites_prev / total_prev * 100, 1) if total_prev > 0 else 0.0
+    taux_trait_curr = _taux(traites_curr, total_curr)
+    taux_trait_prev = _taux(traites_prev, total_prev)
 
     critiques_curr = sum(1 for a in analyses_current if a.criticite == CriticiteType.CRITIQUE)
     critiques_prev = sum(1 for a in analyses_prev if a.criticite == CriticiteType.CRITIQUE)
 
-    sat_ev, sat_pos = _calc_kpi_trend(sat_curr, sat_prev, is_pct_diff=True)
     tot_ev, tot_pos = _calc_kpi_trend(total_curr, total_prev)
     trt_ev, trt_pos = _calc_kpi_trend(traites_curr, traites_prev)
-    tx_ev, tx_pos = _calc_kpi_trend(taux_trait_curr, taux_trait_prev, is_pct_diff=True)
     crit_ev, crit_p_pos = _calc_kpi_trend(critiques_curr, critiques_prev, invert_positive=True)
 
     kpis = {
-        "satisfaction": StatKPI(
-            valeur=f"{sat_curr}%",
-            valeur_num=sat_curr,
-            valeur_precedente=sat_prev,
-            evolution=sat_ev,
-            is_positive=sat_pos,
-            sous_titre="Taux de satisfaction locale",
-        ),
+        "satisfaction": _kpi_taux(sat_curr, sat_prev, "Taux de satisfaction locale"),
         "total_feedbacks": StatKPI(
             valeur=total_curr,
             valeur_num=float(total_curr),
@@ -181,7 +174,10 @@ def get_statistics_agency(
             valeur_precedente=traites_prev,
             evolution=trt_ev,
             is_positive=trt_pos,
-            sous_titre=f"{taux_trait_curr}% des avis pris en charge",
+            sous_titre=(
+                f"{taux_trait_curr}% des avis pris en charge"
+                if taux_trait_curr is not None else "Aucun avis sur la période"
+            ),
         ),
         "feedbacks_attente": StatKPI(
             valeur=attente_curr,
@@ -191,14 +187,7 @@ def get_statistics_agency(
             is_positive=attente_curr == 0,
             sous_titre="Avis en attente de réponse locale",
         ),
-        "taux_traitement": StatKPI(
-            valeur=f"{taux_trait_curr}%",
-            valeur_num=taux_trait_curr,
-            valeur_precedente=taux_trait_prev,
-            evolution=tx_ev,
-            is_positive=tx_pos,
-            sous_titre="Rapidité et taux de résolution locale",
-        ),
+        "taux_traitement": _kpi_taux(taux_trait_curr, taux_trait_prev, "Rapidité et taux de résolution locale"),
         "alertes_critiques": StatKPI(
             valeur=critiques_curr,
             valeur_num=float(critiques_curr),
@@ -242,8 +231,8 @@ def get_statistics_agency(
             key = dt.strftime("%Y-%m-%d")
             label = dt.strftime("%d/%m")
         else:
-            key = f"S{dt.isocalendar()[1]}-{dt.year}"
-            label = f"Sem {dt.isocalendar()[1]}"
+            key = _cle_semaine_iso(dt)
+            label = ""  # « Sem N » attribué après coup (année ajoutée si la série en couvre deux)
 
         timeline_map[key]["feedbacks"] += 1
         timeline_map[key]["notes"].append(f.note)
@@ -265,12 +254,20 @@ def get_statistics_agency(
             if f.statut_traitement != "nouveau":
                 volume_map[key]["traites"] += 1
 
+    if jours > 60:
+        libelles_sem = _libelles_semaines(timeline_map.keys())
+        for k, data in timeline_map.items():
+            data["label"] = libelles_sem[k]
+        for k, data in volume_map.items():
+            data["label"] = libelles_sem[k]
+
     evolution_satisfaction: list[EvolutionPoint] = []
     evolution_volume: list[EvolutionPoint] = []
 
     for k, data in sorted(timeline_map.items()):
         notes = data["notes"]
-        sat_pct = round(sum(1 for n in notes if n >= 4) / len(notes) * 100, 1) if notes else 0.0
+        # Un point n'existe que s'il contient au moins un avis : le taux est toujours défini.
+        sat_pct = _taux(sum(1 for n in notes if n >= 4), len(notes))
         pt = EvolutionPoint(
             date=k,
             label=data["label"],
@@ -358,7 +355,9 @@ def get_statistics_agency(
         evolution_positive=crit_p_pos,
     )
 
-    # Recommandations & Insights
+    # Recommandations & constats. Les recommandations persistées proviennent des
+    # templates de services/ai/recommandations.py (règles, aucun LLM), et les constats
+    # de repli sont calculés par seuils : tout est source="regle".
     insights_ia: list[InsightIADetail] = []
     from app.models.recommandation import Recommandation
     recos = (
@@ -377,31 +376,37 @@ def get_statistics_agency(
         insights_ia.append(InsightIADetail(
             id=str(r.id),
             type="recommandation",
-            titre="Recommandation IA",
+            titre="Recommandation automatique",
             description=r.contenu,
             priorite=r.priorite.value if hasattr(r.priorite, "value") else str(r.priorite),
             agence_nom=agence.nom,
             date=r.date_generation.strftime("%d/%m/%Y"),
+            source=SOURCE_RECOMMANDATIONS,
         ))
 
     if not insights_ia:
-        if sat_curr >= 80:
+        if sat_curr is not None and sat_curr >= 80:
             insights_ia.append(InsightIADetail(
                 id="agency-positive",
                 type="point_fort",
-                titre="Performance Agence Remarquable",
-                description=f"Votre agence atteint {sat_curr}% de satisfaction sur {total_curr} avis clients.",
+                titre="Satisfaction supérieure ou égale à 80 %",
+                description=f"{sat_curr}% des {total_curr} avis de la période sont positifs (notes 4-5/5).",
                 priorite="low",
                 date=now.strftime("%d/%m/%Y"),
+                source="regle",
             ))
-        elif total_curr > 0:
+        elif sat_curr is not None:
             insights_ia.append(InsightIADetail(
                 id="agency-focus",
                 type="point_vigilance",
-                titre="Plan d'action accueil & fluidité",
-                description=f"Concentrez les efforts de l'équipe sur le traitement des {attente_curr} avis en attente.",
+                titre="Satisfaction inférieure à 80 %",
+                description=(
+                    f"{sat_curr}% des {total_curr} avis de la période sont positifs (notes 4-5/5). "
+                    f"{attente_curr} avis en attente de prise en charge."
+                ),
                 priorite="medium",
                 date=now.strftime("%d/%m/%Y"),
+                source="regle",
             ))
 
     return StatsAgenceResponse(

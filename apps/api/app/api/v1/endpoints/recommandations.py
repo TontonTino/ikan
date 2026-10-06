@@ -16,6 +16,8 @@ from app.models.utilisateur import Utilisateur
 from app.models.recommandation import Recommandation
 from app.models.enums import PriorityLevel, UserRole
 from app.services.acces_agence import verifier_acces_agence
+from app.services.ai.recommandations import SOURCE_RECOMMANDATIONS
+from app.schemas.dashboard import SourceAnalyse
 
 router = APIRouter()
 
@@ -27,6 +29,8 @@ class RecommandationResponse(BaseModel):
     priorite: PriorityLevel
     date_generation: datetime
     traitee: bool
+    # Origine réelle du contenu (templates par règles, aucun LLM).
+    source: SourceAnalyse = SOURCE_RECOMMANDATIONS
 
     model_config = {"from_attributes": True}
 

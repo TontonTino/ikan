@@ -449,6 +449,8 @@ def repondre_question(
             "précédente de même durée, avec les anomalies déjà détectées "
             f"(champ 'anomalies'), au format JSON :\n"
             f"{json.dumps(pour_llm(donnees), ensure_ascii=False)}\n\n"
+            "Une valeur 'null' signifie qu'aucun feedback n'a été reçu sur la "
+            "période : dis-le, et ne conclus alors à aucune hausse ni baisse. "
             "Commence par identifier si la situation s'améliore ou se "
             "dégrade. Mets en avant l'anomalie la plus significative si "
             "elle existe. Explique ce que cette tendance implique si elle "

@@ -28,17 +28,17 @@ function evolution(jours: number, vide: boolean) {
   return pts;
 }
 
-const kpi = (v: number, prev: number) => ({ valeur: v, valeur_num: v, valeur_precedente: prev, evolution: null, is_positive: true });
+const kpi = (v: number | null, prev: number | null) => ({ status: v === null ? 'no_data' : 'ok', valeur: v, valeur_num: v, valeur_precedente: prev, evolution: null, is_positive: true });
 
 function statsCx(jours: number, agenceId: string | undefined, vide: boolean) {
   const ranking = [
-    { agence_id: 'a1', agence_nom: 'Agence (exemple) Centre', ville: 'Ville A', satisfaction_rate: 88.2, total_feedbacks: 210, feedbacks_traites: 190, taux_traitement: 90, alertes_critiques: 0, tendance_val: '+2.1%', tendance_positive: true, wilson_score: 0.83 },
-    { agence_id: 'a2', agence_nom: 'Agence (exemple) Gare', ville: 'Ville B', satisfaction_rate: 61.5, total_feedbacks: 96, feedbacks_traites: 60, taux_traitement: 62, alertes_critiques: 5, tendance_val: '-4.0%', tendance_positive: false, wilson_score: 0.51 },
-    { agence_id: 'a3', agence_nom: 'Agence (exemple) Port', ville: 'Ville C', satisfaction_rate: 70.0, total_feedbacks: 40, feedbacks_traites: 30, taux_traitement: 75, alertes_critiques: 1, tendance_val: '-15.2%', tendance_positive: false, wilson_score: 0.55 },
-    { agence_id: 'a4', agence_nom: 'Agence (exemple) Nord', ville: 'Ville D', satisfaction_rate: 79.0, total_feedbacks: 120, feedbacks_traites: 110, taux_traitement: 92, alertes_critiques: 0, tendance_val: '+0.5%', tendance_positive: true, wilson_score: 0.71 },
-    { agence_id: 'a5', agence_nom: 'Agence (exemple) Sud', ville: 'Ville E', satisfaction_rate: 100, total_feedbacks: 2, feedbacks_traites: 2, taux_traitement: 100, alertes_critiques: 0, tendance_val: '+100%', tendance_positive: true, wilson_score: 0.34 },
-    { agence_id: 'a6', agence_nom: 'Agence (exemple) Nouvelle', ville: 'Ville F', satisfaction_rate: 0, total_feedbacks: 0, feedbacks_traites: 0, taux_traitement: 0, alertes_critiques: 0, tendance_val: null, tendance_positive: true, wilson_score: 0 },
-    { agence_id: 'a7', agence_nom: 'Agence (exemple) Ouest', ville: 'Ville G', satisfaction_rate: 74.4, total_feedbacks: 78, feedbacks_traites: 70, taux_traitement: 90, alertes_critiques: 0, tendance_val: '-1.0%', tendance_positive: false, wilson_score: 0.63 },
+    { agence_id: 'a1', agence_nom: 'Agence (exemple) Centre', ville: 'Ville A', satisfaction_rate: 88.2, total_feedbacks: 210, feedbacks_traites: 190, taux_traitement: 90, alertes_critiques: 0, tendance_val: '+2.1 pts', tendance_positive: true, wilson_score: 0.83 },
+    { agence_id: 'a2', agence_nom: 'Agence (exemple) Gare', ville: 'Ville B', satisfaction_rate: 61.5, total_feedbacks: 96, feedbacks_traites: 60, taux_traitement: 62, alertes_critiques: 5, tendance_val: '-4.0 pts', tendance_positive: false, wilson_score: 0.51 },
+    { agence_id: 'a3', agence_nom: 'Agence (exemple) Port', ville: 'Ville C', satisfaction_rate: 70.0, total_feedbacks: 40, feedbacks_traites: 30, taux_traitement: 75, alertes_critiques: 1, tendance_val: '-15.2 pts', tendance_positive: false, wilson_score: 0.55 },
+    { agence_id: 'a4', agence_nom: 'Agence (exemple) Nord', ville: 'Ville D', satisfaction_rate: 79.0, total_feedbacks: 120, feedbacks_traites: 110, taux_traitement: 92, alertes_critiques: 0, tendance_val: '+0.5 pts', tendance_positive: true, wilson_score: 0.71 },
+    { agence_id: 'a5', agence_nom: 'Agence (exemple) Sud', ville: 'Ville E', satisfaction_rate: 100, total_feedbacks: 2, feedbacks_traites: 2, taux_traitement: 100, alertes_critiques: 0, tendance_val: null, tendance_positive: true, wilson_score: 0.34 },
+    { agence_id: 'a6', agence_nom: 'Agence (exemple) Nouvelle', ville: 'Ville F', satisfaction_rate: null, total_feedbacks: 0, feedbacks_traites: 0, taux_traitement: null, alertes_critiques: 0, tendance_val: null, tendance_positive: true, wilson_score: 0 },
+    { agence_id: 'a7', agence_nom: 'Agence (exemple) Ouest', ville: 'Ville G', satisfaction_rate: 74.4, total_feedbacks: 78, feedbacks_traites: 70, taux_traitement: 90, alertes_critiques: 0, tendance_val: '-1.0 pts', tendance_positive: false, wilson_score: 0.63 },
   ];
   const one = agenceId ? ranking.find((r) => r.agence_id === agenceId) : undefined;
   const total = vide ? 0 : one ? one.total_feedbacks : 548;
@@ -46,7 +46,7 @@ function statsCx(jours: number, agenceId: string | undefined, vide: boolean) {
     periode_jours: jours,
     periode_label: `${jours} derniers jours`,
     kpis: {
-      satisfaction: kpi(vide ? 0 : one ? one.satisfaction_rate : 77.6, vide ? 0 : 74.1),
+      satisfaction: kpi(vide ? null : one ? one.satisfaction_rate : 77.6, vide ? null : 74.1),
       total_feedbacks: kpi(total, vide ? 0 : one ? Math.round(one.total_feedbacks * 0.9) : 501),
       alertes_critiques: kpi(vide ? 0 : one ? one.alertes_critiques : 6, vide ? 0 : 4),
     },
@@ -60,7 +60,7 @@ function statsCx(jours: number, agenceId: string | undefined, vide: boolean) {
           { theme: 'accueil', label: 'Accueil & Conseillers', count: 98, pourcentage: 21.7, sentiment_predominant: 'positif' },
           { theme: 'tarifs', label: 'Tarifs & Frais', count: 51, pourcentage: 11.3, sentiment_predominant: 'neutre' },
         ],
-    agences_ranking: vide ? ranking.map((r) => ({ ...r, total_feedbacks: 0, satisfaction_rate: 0, alertes_critiques: 0, tendance_val: null })) : ranking,
+    agences_ranking: vide ? ranking.map((r) => ({ ...r, total_feedbacks: 0, satisfaction_rate: null, taux_traitement: null, alertes_critiques: 0, tendance_val: null })) : ranking,
     alertes_synthese: { total_critiques: 6, agences_impactees: [], evolution_positive: false },
     insights_ia: [],
   };

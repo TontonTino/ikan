@@ -189,7 +189,7 @@ export function AgenceDetail({
   const prevAvis = k?.total_feedbacks?.valeur_precedente ?? 0;
   const sat = satisfactionDelta(k?.satisfaction, k?.total_feedbacks);
   const crit = compteDefavorableDelta(k?.alertes_critiques, prevAvis);
-  const statut = k ? statutSeuil(k.satisfaction?.valeur_num ?? 0, avis, agence?.seuil_alerte) : null;
+  const statut = k ? statutSeuil(k.satisfaction?.valeur_num ?? null, avis, agence?.seuil_alerte) : null;
   const theme = stats.status === 'ok' ? stats.data.themes[0] : undefined;
   const sparkline = useMemo(() => {
     if (stats.status !== 'ok') return undefined;
@@ -219,7 +219,7 @@ export function AgenceDetail({
             icon={<SmileIcon />}
             label="Satisfaction"
             loading={stats.status === 'loading'}
-            value={k ? satisfactionTexte(k.satisfaction?.valeur_num ?? 0, avis) : '—'}
+            value={k ? satisfactionTexte(k.satisfaction?.valeur_num ?? null, avis) : '—'}
             tone={statut === 'sous' ? 'critical' : avis ? 'positive' : 'neutral'}
             trend={sat ? { value: sat.text, isPositive: sat.isPositive, direction: sat.direction, period: 'vs période préc.' } : undefined}
             subtitle={k ? `${avis} avis · ${periode}` : undefined}

@@ -130,7 +130,7 @@ export function SiegeKpis({
         label="Satisfaction"
         hint="Part des avis notés 4 ou 5 sur 5 sur la période."
         loading={statsLoading}
-        value={k ? satisfactionTexte(k.satisfaction?.valeur_num ?? 0, nbAvis) : '—'}
+        value={k ? satisfactionTexte(k.satisfaction?.valeur_num ?? null, nbAvis) : '—'}
         tone={nbAvis === 0 ? 'neutral' : 'positive'}
         trend={toTrend(sat, jours)}
         subtitle={stats.status === 'error' ? 'Statistiques indisponibles' : k && !sat ? (nbAvis === 0 ? periodeLabel(jours) : sansComparaison) : undefined}

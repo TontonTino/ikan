@@ -8,7 +8,7 @@
  *  - 0 avis ≠ 0 % : une agence ou une période sans avis est « Pas d'avis »,
  *    jamais une mauvaise performance ;
  *  - aucun delta n'est affiché si la période précédente n'a aucun avis
- *    (l'API renvoie alors « +100% », ce qui n'est pas une comparaison).
+ *    (l'API renvoie alors une évolution null et un taux null / status "no_data").
  */
 import type { AgenceRankDetail, Alerte, EvolutionPoint, Issue, StatKPI } from '../../../types';
 
@@ -95,7 +95,7 @@ export function satisfactionDelta(satisfaction: StatKPI | undefined, volume: Sta
   if (!satisfaction || !volume) return null;
   const volCur = volume.valeur_num;
   const volPrev = volume.valeur_precedente ?? 0;
-  if (!volCur || !volPrev || satisfaction.valeur_precedente == null) return null;
+  if (!volCur || !volPrev || satisfaction.valeur_num == null || satisfaction.valeur_precedente == null) return null;
   const diff = Math.round((satisfaction.valeur_num - satisfaction.valeur_precedente) * 10) / 10;
   return {
     text: signed(diff, ' pts'),
@@ -108,7 +108,7 @@ export function satisfactionDelta(satisfaction: StatKPI | undefined, volume: Sta
 export function volumeDelta(volume: StatKPI | undefined): KpiDelta | null {
   if (!volume) return null;
   const prev = volume.valeur_precedente ?? 0;
-  if (!prev) return null;
+  if (!prev || volume.valeur_num == null) return null;
   const pct = Math.round(((volume.valeur_num - prev) / prev) * 1000) / 10;
   return {
     text: signed(pct, ' %'),
@@ -123,7 +123,7 @@ export function volumeDelta(volume: StatKPI | undefined): KpiDelta | null {
  * Null si la période précédente n'a aucun avis du tout (`volumePrev` = 0).
  */
 export function compteDefavorableDelta(kpi: StatKPI | undefined, volumePrev: number | null | undefined): KpiDelta | null {
-  if (!kpi || !volumePrev || kpi.valeur_precedente == null) return null;
+  if (!kpi || !volumePrev || kpi.valeur_num == null || kpi.valeur_precedente == null) return null;
   const diff = kpi.valeur_num - kpi.valeur_precedente;
   return {
     text: signed(diff, '', 0),
@@ -137,20 +137,12 @@ export function compteDefavorableDelta(kpi: StatKPI | undefined, volumePrev: num
 // ────────────────────────────────────────────────────────────────────
 
 /**
- * Clé de tri d'un point d'évolution.
- *  - jour   « 2026-10-04 »  → tri lexical correct
- *  - semaine « S9-2026 »    → l'API trie « S10 » avant « S9 » : on trie par (année, semaine).
- * Limite connue : l'année de la clé API est l'année civile de la date, pas l'année ISO ;
- * les jours de fin décembre en semaine ISO 1 peuvent être mal placés (cas de bord, API).
+ * Tri chronologique des points d'évolution. Les clés de l'API sont triables
+ * lexicalement : jour « 2026-10-04 », semaine ISO « 2026-W09 » (année ISO, donc
+ * la semaine 52 de 2025 précède la semaine 1 de 2026).
  */
-function evolutionSortKey(key: string): string {
-  const week = /^S(\d{1,2})-(\d{4})$/.exec(key);
-  if (week) return `${week[2]}-W${week[1].padStart(2, '0')}`;
-  return key;
-}
-
 export function sortEvolution(points: EvolutionPoint[]): EvolutionPoint[] {
-  return [...points].sort((a, b) => evolutionSortKey(a.date).localeCompare(evolutionSortKey(b.date)));
+  return [...points].sort((a, b) => a.date.localeCompare(b.date));
 }
 
 export const isDailyPoint = (p: EvolutionPoint) => /^\d{4}-\d{2}-\d{2}$/.test(p.date);
@@ -227,25 +219,23 @@ export const STATUT_SEUIL_LABEL: Record<StatutSeuil, string> = {
  * Statut d'une agence sur la période, comparé à SON seuil configuré (Agence.seuil_alerte).
  * Moins de MIN_AVIS_SEUIL avis : pas de comparaison (même règle que les alertes de l'API).
  */
-export function statutSeuil(satisfaction: number, avis: number, seuil: number | null | undefined): StatutSeuil {
-  if (avis === 0) return 'sans_avis';
+export function statutSeuil(satisfaction: number | null, avis: number, seuil: number | null | undefined): StatutSeuil {
+  if (avis === 0 || satisfaction == null) return 'sans_avis';
   if (avis < MIN_AVIS_SEUIL || seuil == null) return 'pas_assez_avis';
   return satisfaction < seuil ? 'sous' : 'au_dessus';
 }
 
 /** Satisfaction affichable : « Pas d'avis » plutôt que « 0 % ». */
-export const satisfactionTexte = (satisfaction: number, avis: number) =>
-  avis === 0 ? "Pas d'avis" : `${fmt(satisfaction)} %`;
+export const satisfactionTexte = (satisfaction: number | null, avis: number) =>
+  avis === 0 || satisfaction == null ? "Pas d'avis" : `${fmt(satisfaction)} %`;
 
 /**
- * Tendance d'une agence en points, depuis AgenceRankDetail.tendance_val (« -12.3% » = points).
- * « +100% » est renvoyé par l'API quand la période précédente n'a pas d'avis : ignoré (null).
- * Une valeur NÉGATIVE est toujours une vraie baisse (la période précédente avait des avis).
+ * Tendance d'une agence en points, depuis AgenceRankDetail.tendance_val (« -12.3 pts »).
+ * L'API renvoie null quand l'une des deux périodes n'a pas d'avis (pas de comparaison).
  */
 export function tendancePts(tendance: string | null | undefined): number | null {
   if (!tendance) return null;
-  if (tendance.trim() === '+100%') return null;
-  const n = Number.parseFloat(tendance.replace('%', '').replace(',', '.').replace('−', '-'));
+  const n = Number.parseFloat(tendance.replace('pts', '').replace(',', '.').replace('−', '-'));
   return Number.isFinite(n) ? n : null;
 }
 
@@ -270,7 +260,7 @@ export function repartitionReseau(ranking: AgenceRankDetail[], seuils: Map<strin
 export function extremesWilson(ranking: AgenceRankDetail[], n = 3) {
   const comparables = ranking
     .filter((a) => a.total_feedbacks >= MIN_AVIS_SEUIL)
-    .sort((a, b) => b.wilson_score - a.wilson_score || b.satisfaction_rate - a.satisfaction_rate);
+    .sort((a, b) => b.wilson_score - a.wilson_score || (b.satisfaction_rate ?? -1) - (a.satisfaction_rate ?? -1));
   const meilleures = comparables.slice(0, n);
   const moinsBonnes = comparables.slice(Math.max(n, comparables.length - n)).reverse();
   return { meilleures, moinsBonnes, comparables: comparables.length };

@@ -11,6 +11,7 @@ import Card from '../../components/ui/Card';
 import { fullDate, relativeTime } from '../../components/ui/format';
 import { AlertTriangleIcon, LightningIcon, MessageSquareIcon } from '../../components/common/Icons';
 import { raisonLabel, alerteFeedbackAnchor, alerteSeuilAnchor } from '../../components/alerts/alerteLabels';
+import { libelleRecommandations } from '../../utils/sourceAnalyse';
 
 interface Props {
   alertes: Alerte[]; alertesFeedback: AlerteFeedback[]; alertesLoading: boolean; totalAlertes: number;
@@ -152,11 +153,11 @@ export default function PilotageAlertesActionsTab(props: Props) {
         )}
       </section>
 
-      {/* ── Recommandations IA (réseau pour le CX Manager, agence pour l'Agency Manager) ── */}
+      {/* ── Recommandations (réseau pour le CX Manager, agence pour l'Agency Manager) ── */}
       <section aria-labelledby="alertes-recos" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
           <LightningIcon size={18} color="var(--color-primary)" aria-hidden="true" />
-          <SectionHeading id="alertes-recos">Recommandations IA ({recosLoading ? '…' : recosTotal})</SectionHeading>
+          <SectionHeading id="alertes-recos">{libelleRecommandations(recos)} ({recosLoading ? '…' : recosTotal})</SectionHeading>
         </div>
 
           {recosLoading ? (

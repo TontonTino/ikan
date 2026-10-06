@@ -283,6 +283,10 @@ def comparer_periodes(
     Détecte les anomalies = variation relative au-delà de
     _SEUIL_VARIATION_ANOMALIE sur le sentiment moyen, le taux de criticité,
     ou l'apparition/hausse forte d'un thème. Calcul 100% déterministe.
+
+    Une période sans feedback n'a ni sentiment moyen ni taux de criticité (None, pas
+    0.0) : sentiment et criticité ne sont comparés que si les DEUX périodes ont des
+    données — une période actuelle vide n'est jamais un « sentiment en baisse ».
     """
     maintenant = datetime.now(timezone.utc)
     debut_actuelle = maintenant - timedelta(days=jours_periode)
@@ -293,7 +297,7 @@ def comparer_periodes(
 
     def _stats(feedbacks: list[dict[str, Any]]) -> dict[str, Any]:
         if not feedbacks:
-            return {"total": 0, "sentiment_moyen": 0.0, "taux_criticite": 0.0, "par_theme": {}}
+            return {"total": 0, "sentiment_moyen": None, "taux_criticite": None, "par_theme": {}}
         sentiment_moyen = sum(f["sentiment_score"] for f in feedbacks) / len(feedbacks)
         taux_criticite = sum(1 for f in feedbacks if f["criticite"] in _CRITICITES_ALERTE) / len(feedbacks)
         par_theme: dict[str, int] = {}
@@ -306,8 +310,9 @@ def comparer_periodes(
     stats_precedente = _stats(precedente)
 
     anomalies = []
+    comparable = stats_actuelle["total"] > 0 and stats_precedente["total"] > 0
 
-    if stats_precedente["total"] > 0:
+    if comparable:
         delta_sentiment = stats_actuelle["sentiment_moyen"] - stats_precedente["sentiment_moyen"]
         if abs(delta_sentiment) >= _SEUIL_VARIATION_ANOMALIE:
             anomalies.append({
@@ -318,7 +323,7 @@ def comparer_periodes(
                 "valeur_precedente": stats_precedente["sentiment_moyen"],
             })
 
-    if stats_precedente["total"] > 0:
+    if comparable:
         delta_criticite = stats_actuelle["taux_criticite"] - stats_precedente["taux_criticite"]
         if abs(delta_criticite) >= _SEUIL_VARIATION_ANOMALIE:
             anomalies.append({

@@ -54,7 +54,8 @@ from app.schemas.dashboard import (
 )
 
 from app.services.dashboard_helpers import (
-    _calc_kpi_trend, _compter_utilisateurs_actifs, _period_label, _repartition_forfaits,
+    _calc_kpi_trend, _cle_semaine_iso, _compter_utilisateurs_actifs, _est_traite, _kpi_taux,
+    _libelles_semaines, _period_label, _repartition_forfaits, _taux,
 )
 
 from app.api.v1.endpoints.dashboard_statistics_shared import THEME_LABELS_MAP
@@ -141,6 +142,7 @@ def get_statistics_cx(
         else []
     )
     analyses_cur_map = {a.feedback_id: a for a in analyses_current}
+    analyses_prev_ids = {a.feedback_id for a in analyses_prev}
 
     # 3. Calculs des KPIs
     total_curr = len(fbs_current)
@@ -152,44 +154,33 @@ def get_statistics_cx(
     neg_curr = sum(1 for f in fbs_current if f.note <= 2)
     neg_prev = sum(1 for f in fbs_prev if f.note <= 2)
 
-    sat_curr = round(pos_curr / total_curr * 100, 1) if total_curr > 0 else 0.0
-    sat_prev = round(pos_prev / total_prev * 100, 1) if total_prev > 0 else 0.0
+    # None si aucun avis sur la période (jamais 0.0) — même convention que le moteur KPI.
+    sat_curr = _taux(pos_curr, total_curr)
+    sat_prev = _taux(pos_prev, total_prev)
 
-    # Feedbacks traités (statut de traitement Closed-Loop ou présence AnalyseIA)
+    # Feedbacks traités : MÊME définition (_est_traite) pour les deux périodes.
     def _is_treated(f: Feedback) -> bool:
-        statut = getattr(f, "statut_traitement", "nouveau")
-        if statut in ("en_cours", "en_traitement", "recontacte", "resolu", "escalade", "ferme"):
-            return True
-        return f.id in analyses_cur_map
+        return _est_traite(f, analyses_cur_map)
 
     traites_curr = sum(1 for f in fbs_current if _is_treated(f))
-    traites_prev = len(analyses_prev)
+    traites_prev = sum(1 for f in fbs_prev if _est_traite(f, analyses_prev_ids))
     attente_curr = max(0, total_curr - traites_curr)
 
-    taux_trait_curr = round(traites_curr / total_curr * 100, 1) if total_curr > 0 else 0.0
-    taux_trait_prev = round(traites_prev / total_prev * 100, 1) if total_prev > 0 else 0.0
+    taux_trait_curr = _taux(traites_curr, total_curr)
+    taux_trait_prev = _taux(traites_prev, total_prev)
 
     critiques_curr = sum(1 for a in analyses_current if a.criticite == CriticiteType.CRITIQUE)
     critiques_prev = sum(1 for a in analyses_prev if a.criticite == CriticiteType.CRITIQUE)
 
     # Construction du dictionnaire de KPIs avec vraies évolutions
-    sat_ev, sat_pos = _calc_kpi_trend(sat_curr, sat_prev, is_pct_diff=True)
     tot_ev, tot_pos = _calc_kpi_trend(total_curr, total_prev)
     trt_ev, trt_pos = _calc_kpi_trend(traites_curr, traites_prev)
-    tx_ev, tx_pos = _calc_kpi_trend(taux_trait_curr, taux_trait_prev, is_pct_diff=True)
     pos_ev, pos_p_pos = _calc_kpi_trend(pos_curr, pos_prev)
     neg_ev, neg_p_pos = _calc_kpi_trend(neg_curr, neg_prev, invert_positive=True)
     crit_ev, crit_p_pos = _calc_kpi_trend(critiques_curr, critiques_prev, invert_positive=True)
 
     kpis = {
-        "satisfaction": StatKPI(
-            valeur=f"{sat_curr}%",
-            valeur_num=sat_curr,
-            valeur_precedente=sat_prev,
-            evolution=sat_ev,
-            is_positive=sat_pos,
-            sous_titre="Taux de clients satisfaits (notes 4-5/5)",
-        ),
+        "satisfaction": _kpi_taux(sat_curr, sat_prev, "Taux de clients satisfaits (notes 4-5/5)"),
         "total_feedbacks": StatKPI(
             valeur=total_curr,
             valeur_num=float(total_curr),
@@ -204,7 +195,10 @@ def get_statistics_cx(
             valeur_precedente=traites_prev,
             evolution=trt_ev,
             is_positive=trt_pos,
-            sous_titre=f"{taux_trait_curr}% du volume total pris en charge",
+            sous_titre=(
+                f"{taux_trait_curr}% du volume total pris en charge"
+                if taux_trait_curr is not None else "Aucun avis sur la période"
+            ),
         ),
         "feedbacks_attente": StatKPI(
             valeur=attente_curr,
@@ -214,14 +208,7 @@ def get_statistics_cx(
             is_positive=attente_curr == 0,
             sous_titre="Nouveaux avis nécessitant une attention",
         ),
-        "taux_traitement": StatKPI(
-            valeur=f"{taux_trait_curr}%",
-            valeur_num=taux_trait_curr,
-            valeur_precedente=taux_trait_prev,
-            evolution=tx_ev,
-            is_positive=tx_pos,
-            sous_titre="Efficacité opérationnelle de prise en charge",
-        ),
+        "taux_traitement": _kpi_taux(taux_trait_curr, taux_trait_prev, "Efficacité opérationnelle de prise en charge"),
         "feedbacks_positifs": StatKPI(
             valeur=pos_curr,
             valeur_num=float(pos_curr),
@@ -281,8 +268,8 @@ def get_statistics_cx(
             key = dt.strftime("%Y-%m-%d")
             label = dt.strftime("%d/%m")
         else:
-            key = f"S{dt.isocalendar()[1]}-{dt.year}"
-            label = f"Sem {dt.isocalendar()[1]}"
+            key = _cle_semaine_iso(dt)
+            label = ""  # « Sem N » attribué après coup (année ajoutée si la série en couvre deux)
 
         timeline_map[key]["feedbacks"] += 1
         timeline_map[key]["notes"].append(f.note)
@@ -304,13 +291,21 @@ def get_statistics_cx(
             if f.statut_traitement != "nouveau":
                 volume_map[key]["traites"] += 1
 
+    if jours > 60:
+        libelles_sem = _libelles_semaines(timeline_map.keys())
+        for k, data in timeline_map.items():
+            data["label"] = libelles_sem[k]
+        for k, data in volume_map.items():
+            data["label"] = libelles_sem[k]
+
     evolution_satisfaction: list[EvolutionPoint] = []
     evolution_volume: list[EvolutionPoint] = []
 
     for k, data in sorted(timeline_map.items()):
         cnt = data["feedbacks"]
         notes = data["notes"]
-        sat_pct = round(sum(1 for n in notes if n >= 4) / len(notes) * 100, 1) if notes else 0.0
+        # Un point n'existe que s'il contient au moins un avis : le taux est toujours défini.
+        sat_pct = _taux(sum(1 for n in notes if n >= 4), len(notes))
         pt = EvolutionPoint(
             date=k,
             label=data["label"],
@@ -410,11 +405,11 @@ def get_statistics_cx(
         ag_pos = sum(1 for f in cur_list if f.note >= 4)
         ag_prev_pos = sum(1 for f in prev_list if f.note >= 4)
 
-        ag_sat = round(ag_pos / ag_tot * 100, 1) if ag_tot > 0 else 0.0
-        ag_prev_sat = round(ag_prev_pos / ag_prev_tot * 100, 1) if ag_prev_tot > 0 else 0.0
+        ag_sat = _taux(ag_pos, ag_tot)
+        ag_prev_sat = _taux(ag_prev_pos, ag_prev_tot)
 
         ag_traites = sum(1 for f in cur_list if _is_treated(f))
-        ag_taux_tr = round(ag_traites / ag_tot * 100, 1) if ag_tot > 0 else 0.0
+        ag_taux_tr = _taux(ag_traites, ag_tot)
 
         ag_critiques = sum(1 for f in cur_list if f.id in analyses_cur_map and analyses_cur_map[f.id].criticite == CriticiteType.CRITIQUE)
 
@@ -450,8 +445,12 @@ def get_statistics_cx(
 
     # Classement par score de Wilson décroissant (même logique que le
     # Top/Flop de la Vue Siège, DashboardSiegePage.tsx), CSAT brut en second
-    # critère pour départager les égalités ou scores très proches.
-    agences_ranking.sort(key=lambda x: (-x.wilson_score, -x.satisfaction_rate))
+    # critère pour départager les égalités ou scores très proches. Les agences
+    # sans avis (CSAT None) ferment la marche.
+    agences_ranking.sort(key=lambda x: (
+        -x.wilson_score,
+        -(x.satisfaction_rate if x.satisfaction_rate is not None else -1),
+    ))
     impacted_agencies.sort(key=lambda x: -x.alertes_count)
 
     alertes_synthese = AlerteSyntheseDetail(
@@ -461,25 +460,29 @@ def get_statistics_cx(
         evolution_positive=crit_p_pos,
     )
 
-    # 8. Synthèse & Insights IA automatiques
+    # 8. Synthèse automatique : constats calculés par RÈGLES (seuils fixes sur les
+    # données de la période), aucun appel LLM → source="regle". Les textes n'énoncent
+    # que des faits mesurés, sans prédiction ni effet supposé.
     insights_ia: list[InsightIADetail] = []
-    if sat_curr >= 80:
+    if sat_curr is not None and sat_curr >= 80:
         insights_ia.append(InsightIADetail(
             id="insight-sat-positive",
             type="point_fort",
-            titre="Excellente satisfaction globale",
-            description=f"Le réseau maintient un score élevé de {sat_curr}% sur {total_curr} feedbacks analysés.",
+            titre="Satisfaction supérieure ou égale à 80 %",
+            description=f"{sat_curr}% des {total_curr} avis de la période sont positifs (notes 4-5/5).",
             priorite="low",
             date=now.strftime("%d/%m/%Y"),
+            source="regle",
         ))
-    elif sat_curr > 0:
+    elif sat_curr is not None:
         insights_ia.append(InsightIADetail(
             id="insight-sat-warning",
             type="point_vigilance",
-            titre="Satisfaction à consolider",
-            description=f"Le score actuel de {sat_curr}% nécessite des ajustements sur les points de friction remontés.",
+            titre="Satisfaction inférieure à 80 %",
+            description=f"{sat_curr}% des {total_curr} avis de la période sont positifs (notes 4-5/5).",
             priorite="high",
             date=now.strftime("%d/%m/%Y"),
+            source="regle",
         ))
 
     if themes_res:
@@ -487,22 +490,29 @@ def get_statistics_cx(
         insights_ia.append(InsightIADetail(
             id="insight-theme-top",
             type="recommandation",
-            titre=f"Thématique majeure : {top_theme.label}",
-            description=f"{top_theme.pourcentage}% des retours portent sur ce sujet ({top_theme.count} mentions). Une optimisation ciblée permettra de maximiser le NPS.",
+            titre=f"Thème le plus cité : {top_theme.label}",
+            description=f"{top_theme.count} avis ({top_theme.pourcentage}% des thèmes détectés) portent sur ce sujet.",
             priorite="medium",
             date=now.strftime("%d/%m/%Y"),
+            source="regle",
         ))
 
     if critiques_curr > 0:
-        top_impacted = impacted_agencies[0].agence_nom if impacted_agencies else "le réseau"
+        top_impacted = impacted_agencies[0] if impacted_agencies else None
         insights_ia.append(InsightIADetail(
             id="insight-alertes",
             type="point_vigilance",
-            titre="Alertes critiques actives",
-            description=f"{critiques_curr} incident(s) critique(s) identifié(s), principalement sur {top_impacted}. Prise en charge prioritaire recommandée.",
+            titre="Avis critiques sur la période",
+            description=(
+                f"{critiques_curr} avis classé(s) critique(s), dont {top_impacted.alertes_count} "
+                f"pour {top_impacted.agence_nom}. Prise en charge prioritaire recommandée."
+                if top_impacted else
+                f"{critiques_curr} avis classé(s) critique(s). Prise en charge prioritaire recommandée."
+            ),
             priorite="critical",
-            agence_nom=top_impacted,
+            agence_nom=top_impacted.agence_nom if top_impacted else None,
             date=now.strftime("%d/%m/%Y"),
+            source="regle",
         ))
 
     return StatsCXResponse(

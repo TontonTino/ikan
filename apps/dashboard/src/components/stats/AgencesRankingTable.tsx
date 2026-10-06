@@ -66,13 +66,14 @@ export default function AgencesRankingTable({
           {agences.map((ag, idx) => {
             const isSelected = selectedAgenceId === ag.agence_id;
             // 0 avis = « Pas d'avis », jamais « 0 % » ni une mauvaise performance (règle data-first).
-            const sansAvis = ag.total_feedbacks === 0;
-            // tendance_val est une différence en POINTS ; « +100% » = période précédente sans avis (pas une comparaison).
+            const sat = ag.satisfaction_rate;
+            const sansAvis = ag.total_feedbacks === 0 || sat === null;
+            // tendance_val est une différence en POINTS ; null = l'une des deux périodes sans avis (pas de comparaison).
             const tendance = tendancePts(ag.tendance_val);
             const satColor =
-              sansAvis ? '#475569' : ag.satisfaction_rate >= 80 ? '#3C7730' : ag.satisfaction_rate >= 60 ? '#D97706' : '#DC2626';
+              sat === null || sansAvis ? '#475569' : sat >= 80 ? '#3C7730' : sat >= 60 ? '#D97706' : '#DC2626';
             const satBg =
-              sansAvis ? '#F1F5F9' : ag.satisfaction_rate >= 80 ? '#EBF6ED' : ag.satisfaction_rate >= 60 ? '#FEF3C7' : '#FEE2E2';
+              sat === null || sansAvis ? '#F1F5F9' : sat >= 80 ? '#EBF6ED' : sat >= 60 ? '#FEF3C7' : '#FEE2E2';
 
             return (
               <tr
@@ -157,7 +158,7 @@ export default function AgencesRankingTable({
 
                 {/* Taux de traitement */}
                 <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                  <span style={{ fontWeight: 700, color: '#02302D' }}>{sansAvis ? '—' : `${ag.taux_traitement}%`}</span>
+                  <span style={{ fontWeight: 700, color: '#02302D' }}>{sansAvis || ag.taux_traitement === null ? '—' : `${ag.taux_traitement}%`}</span>
                   <span style={{ color: '#94A3B8', fontSize: '0.72rem', marginLeft: '4px' }}>
                     ({ag.feedbacks_traites})
                   </span>
