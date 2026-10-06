@@ -175,6 +175,13 @@ def update_me(
     """
     updates = data.model_dump(exclude_unset=True)
 
+    if "delai_alerte_negatif_heures" in updates and current_user.role != UserRole.CX_MANAGER:
+        # Refus explicite (et non ignoré en silence) : un formulaire qui croit enregistrer ne doit pas échouer sans le dire.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Le délai d'alerte des avis négatifs est réservé au CX Manager.",
+        )
+
     if updates.get("email"):
         nouvel_email = updates["email"].strip().lower()
         if nouvel_email != current_user.email.lower():

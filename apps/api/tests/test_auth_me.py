@@ -9,6 +9,7 @@ from uuid import uuid4
 
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-auth-me-tests-0123456789")
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -136,3 +137,44 @@ def test_changer_mot_de_passe_trop_court_refuse():
         "nouveau_mot_de_passe": "court",
     })
     assert r.status_code == 422
+
+
+# ── Délai d'alerte des avis négatifs (CX Manager uniquement, 1 à 168 h) ──────
+
+def test_cx_manager_modifie_delai_et_get_me_renvoie_la_nouvelle_valeur():
+    user = _user(role=UserRole.CX_MANAGER, delai_alerte_negatif_heures=24)
+    client = _client(user)
+
+    r = client.patch("/auth/me", json={"delai_alerte_negatif_heures": 48})
+    assert r.status_code == 200
+    assert r.json()["delai_alerte_negatif_heures"] == 48
+
+    r = client.get("/auth/me")
+    assert r.status_code == 200
+    assert r.json()["delai_alerte_negatif_heures"] == 48
+    assert "delai_alerte_suggestion_heures" not in r.json()
+
+
+@pytest.mark.parametrize("valeur", [0, 169, None])
+def test_delai_hors_bornes_ou_vide_est_refuse(valeur):
+    user = _user(role=UserRole.CX_MANAGER, delai_alerte_negatif_heures=24)
+    db = _FakeDb()
+    client = _client(user, db)
+
+    r = client.patch("/auth/me", json={"delai_alerte_negatif_heures": valeur})
+
+    assert r.status_code == 422
+    assert user.delai_alerte_negatif_heures == 24
+    assert not db.committed
+
+
+def test_agency_manager_ne_peut_pas_modifier_le_delai():
+    user = _user(role=UserRole.AGENCY_MANAGER, delai_alerte_negatif_heures=24)
+    db = _FakeDb()
+    client = _client(user, db)
+
+    r = client.patch("/auth/me", json={"delai_alerte_negatif_heures": 72})
+
+    assert r.status_code == 403
+    assert user.delai_alerte_negatif_heures == 24
+    assert not db.committed

@@ -1,7 +1,7 @@
 """
 Schémas Pydantic pour l'authentification.
 """
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from app.models.enums import UserRole
 import uuid
 
@@ -51,7 +51,16 @@ class UpdateMeRequest(BaseModel):
     nom: str | None = Field(default=None, min_length=1, max_length=150)
     prenom: str | None = Field(default=None, min_length=1, max_length=150)
     email: EmailStr | None = None
-    delai_alerte_negatif_heures: int | None = Field(default=None, ge=1, le=720)
+    # Réservé au CX Manager (vérifié dans update_me). Bornes : 1 h à 168 h (une semaine).
+    delai_alerte_negatif_heures: int | None = Field(default=None, ge=1, le=168)
+
+    @field_validator("delai_alerte_negatif_heures")
+    @classmethod
+    def _delai_non_vide(cls, valeur: int | None) -> int | None:
+        # None explicite serait écrit en base dans une colonne NOT NULL : refusé à la validation (422).
+        if valeur is None:
+            raise ValueError("Le délai d'alerte ne peut pas être vide.")
+        return valeur
 
 
 class ChangerMotDePasseRequest(BaseModel):
