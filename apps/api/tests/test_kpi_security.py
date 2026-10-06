@@ -37,6 +37,7 @@ from app.services.kpi.engine import (
     calculer_issue_backlog,
     calculer_backlog_age,
     calculer_action_completion_rate,
+    calculer_issue_recurrence_rate,
     calculer_negative_sentiment_rate,
     calculer_nps,
     calculer_sla_compliance_rate,
@@ -156,6 +157,77 @@ def test_org_b_avec_agence_de_a_ne_recupere_rien_de_a(ctx):
     db = ctx.Session()
     assert calculer_feedback_volume(db, ctx.org_b, agence_id=ctx.agence_a).value == 0.0
     assert calculer_issue_volume(db, ctx.org_b, agence_id=ctx.agence_a).value == 0.0
+    db.close()
+
+
+@pytest.fixture()
+def ctx_recurrence():
+    """Org A (agences A1 et A2) et Org B (agence B1), chacune avec une Issue racine résolue
+    et une occurrence liée. Org A a aussi une Issue non récurrente en A1 et rien en A2.
+    Attendus : A = 1/2 récurrentes (racine + occurrence), B = 1/3 (une Issue non récurrente
+    en plus), et aucune fuite entre organisations ni entre agences."""
+    engine = create_engine("sqlite+pysqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False})
+    Base.metadata.create_all(
+        engine,
+        tables=[Plan.__table__, Organisation.__table__, Agence.__table__, Issue.__table__],
+    )
+    Session = sessionmaker(bind=engine)
+    db = Session()
+
+    org_a = Organisation(id=uuid4(), nom="Org A", active=True)
+    org_b = Organisation(id=uuid4(), nom="Org B", active=True)
+    db.add_all([org_a, org_b])
+    db.flush()
+
+    agence_a1 = Agence(id=uuid4(), organisation_id=org_a.id, nom="Agence A1", active=True)
+    agence_a2 = Agence(id=uuid4(), organisation_id=org_a.id, nom="Agence A2", active=True)
+    agence_b1 = Agence(id=uuid4(), organisation_id=org_b.id, nom="Agence B1", active=True)
+    db.add_all([agence_a1, agence_a2, agence_b1])
+    db.flush()
+
+    def issue(org, agence, titre, statut="resolue", origine=None):
+        i = Issue(id=uuid4(), organisation_id=org.id, agence_id=agence.id, titre=titre,
+                  statut=statut, severite=CriticiteType.CRITIQUE, necessite_action=True,
+                  premiere_detection=NOW, date_resolution=NOW, date_limite_sla=NOW + timedelta(hours=1),
+                  issue_origine_id=origine.id if origine else None)
+        db.add(i)
+        db.flush()
+        return i
+
+    racine_a = issue(org_a, agence_a1, "Racine A")
+    issue(org_a, agence_a1, "Occurrence A", origine=racine_a)
+    issue(org_a, agence_a1, "Issue A non récurrente", statut="ouverte")
+    racine_b = issue(org_b, agence_b1, "Racine B")
+    issue(org_b, agence_b1, "Occurrence B", origine=racine_b)
+    issue(org_b, agence_b1, "Issue B non récurrente", statut="ouverte")
+    db.commit()
+
+    ids = SimpleNamespace(org_a=org_a.id, org_b=org_b.id, agence_a1=agence_a1.id, agence_a2=agence_a2.id,
+                          agence_b1=agence_b1.id)
+    db.close()
+    return SimpleNamespace(Session=Session, **vars(ids))
+
+
+def test_recurrence_jamais_visible_hors_organisation_ni_agence(ctx_recurrence):
+    """Ni un utilisateur d'une autre organisation, ni un Agency Manager d'une autre agence ne
+    doivent voir les Issues d'origine ni les occurrences de l'agence/organisation voisine."""
+    db = ctx_recurrence.Session()
+    # Organisation A : 3 Issues, dont 1 seule occurrence (la racine n'a pas d'origine).
+    # Une fuite de B dans A donnerait (2, 6) : le test échouerait.
+    r_a = calculer_issue_recurrence_rate(db, ctx_recurrence.org_a)
+    assert (r_a.numerator, r_a.denominator) == (1, 3)
+    # Utilisateur de l'organisation B : ne voit que ses propres Issues.
+    r_b = calculer_issue_recurrence_rate(db, ctx_recurrence.org_b)
+    assert (r_b.numerator, r_b.denominator) == (1, 3)
+    # Agency Manager de A2 (aucune Issue) : rien de A1, aucune occurrence visible.
+    assert calculer_issue_recurrence_rate(db, ctx_recurrence.org_a, agence_id=ctx_recurrence.agence_a2).status == "no_data"
+    # Agency Manager de A1 : voit ses propres occurrences uniquement.
+    r_a1 = calculer_issue_recurrence_rate(db, ctx_recurrence.org_a, agence_id=ctx_recurrence.agence_a1)
+    assert (r_a1.numerator, r_a1.denominator) == (1, 3)
+    # Combinaison incohérente org A + agence de B : rien, ni occurrence de B.
+    assert calculer_issue_recurrence_rate(db, ctx_recurrence.org_a, agence_id=ctx_recurrence.agence_b1).status == "no_data"
+    # Combinaison incohérente org B + agence de A2 : rien.
+    assert calculer_issue_recurrence_rate(db, ctx_recurrence.org_b, agence_id=ctx_recurrence.agence_a2).status == "no_data"
     db.close()
 
 
