@@ -28,6 +28,9 @@ from app.models.mention_veille import MentionVeille
 from app.models.issue import Issue
 from app.models.action_corrective import ActionCorrective
 from app.models.historique_issue import HistoriqueIssue
+from app.models.alerte_quota_envoyee import AlerteQuotaEnvoyee
+from app.models.changement_plan import ChangementPlan
+from app.models.stripe_event_traite import StripeEventTraite
 
 __all__ = [
     # Enums
@@ -58,4 +61,7 @@ __all__ = [
     "Issue",
     "ActionCorrective",
     "HistoriqueIssue",
+    "AlerteQuotaEnvoyee",
+    "ChangementPlan",
+    "StripeEventTraite",
 ]

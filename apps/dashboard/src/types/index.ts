@@ -17,8 +17,8 @@ export interface User {
   organisation_nom?: string;
   organisation_logo?: string;
   agence_nom?: string;
-  /** Pertinent uniquement pour role='cx_manager' (délai avant qu'un feedback "suggestion" non traité devienne une alerte). */
-  delai_alerte_suggestion_heures?: number;
+  /** Pertinent uniquement pour role='cx_manager' : délai (1 à 168 h) avant qu'un avis négatif non traité devienne une alerte. */
+  delai_alerte_negatif_heures?: number;
 }
 
 

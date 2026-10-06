@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { authApi } from '../services/api';
 import { useAuthStore } from '../stores/authStore';
 import PageHeader from '../components/ui/PageHeader';
@@ -58,21 +58,36 @@ export default function ParametresPage() {
     }
   };
 
-  // ── Section 2 (CX Manager uniquement) : délai avant alerte "suggestion" ──
-  const [delaiSuggestion, setDelaiSuggestion] = useState(user?.delai_alerte_suggestion_heures ?? 24);
+  // ── Section 2 (CX Manager uniquement) : délai avant alerte « avis négatif non traité » ──
+  const DELAI_MIN = 1;
+  const DELAI_MAX = 168;
+  const [delai, setDelai] = useState<number | ''>(user?.delai_alerte_negatif_heures ?? 24);
+  // Le profil peut arriver après le premier rendu (rechargement de page) : on resynchronise la saisie.
+  useEffect(() => {
+    if (user?.delai_alerte_negatif_heures != null) setDelai(user.delai_alerte_negatif_heures);
+  }, [user?.delai_alerte_negatif_heures]);
   const [delaiEnCours, setDelaiEnCours] = useState(false);
   const [messageDelai, setMessageDelai] = useState<{ type: 'succes' | 'erreur'; texte: string } | null>(null);
 
   const enregistrerDelai = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessageDelai(null);
+    if (delai === '' || !Number.isInteger(delai) || delai < DELAI_MIN || delai > DELAI_MAX) {
+      setMessageDelai({ type: 'erreur', texte: `Saisissez un nombre entier d'heures entre ${DELAI_MIN} et ${DELAI_MAX}.` });
+      return;
+    }
     setDelaiEnCours(true);
     try {
-      const res = await authApi.updateMe({ delai_alerte_suggestion_heures: delaiSuggestion });
+      const res = await authApi.updateMe({ delai_alerte_negatif_heures: delai });
       setUser(res.data);
       setMessageDelai({ type: 'succes', texte: 'Délai mis à jour.' });
     } catch (err: any) {
-      setMessageDelai({ type: 'erreur', texte: err?.response?.data?.detail || 'Erreur lors de la mise à jour.' });
+      // FastAPI renvoie un tableau pour les erreurs de validation (422) : on n'affiche jamais un objet brut.
+      const detail = err?.response?.data?.detail;
+      setMessageDelai({
+        type: 'erreur',
+        texte: typeof detail === 'string' ? detail : `Saisissez un nombre entier d'heures entre ${DELAI_MIN} et ${DELAI_MAX}.`,
+      });
     } finally {
       setDelaiEnCours(false);
     }
@@ -161,18 +176,19 @@ export default function ParametresPage() {
             Alertes
           </h3>
           <p style={{ margin: '0 0 18px', fontSize: '0.82rem', color: '#64748B' }}>
-            Délai avant qu'un feedback de catégorie « suggestion » non traité devienne une alerte pour vous.
+            Délai avant qu'un avis négatif non traité (note 2/5 ou moins, ou sentiment négatif) devienne une alerte pour vous.
           </p>
 
           <form onSubmit={enregistrerDelai}>
             <div style={{ marginBottom: '4px' }}>
-              <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>Délai (en heures)</label>
+              <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>Délai (en heures, de 1 à 168)</label>
               <input
                 type="number"
-                min={1}
-                max={720}
-                value={delaiSuggestion}
-                onChange={(e) => setDelaiSuggestion(Number(e.target.value))}
+                min={DELAI_MIN}
+                max={DELAI_MAX}
+                step={1}
+                value={delai}
+                onChange={(e) => setDelai(e.target.value === '' ? '' : Number(e.target.value))}
                 required
                 className="saas-input"
                 style={{ width: '100%' }}

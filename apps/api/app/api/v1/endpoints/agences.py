@@ -7,6 +7,7 @@ from uuid import UUID
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -284,7 +285,22 @@ def delete_agence(
     _check_agence_access(agence, current_user)
 
     db.delete(agence)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        # Suppression en cascade des Issues de l'agence : une racine peut encore être référencée par une
+        # occurrence d'une autre agence de la même organisation (FK NO ACTION différée, voir migration 020).
+        # Aucune suppression partielle : la transaction est annulée avant de répondre.
+        db.rollback()
+        diag = getattr(exc.orig, "diag", None)
+        if getattr(diag, "constraint_name", None) != "fk_issues_issue_origine_same_organisation":
+            raise
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Impossible de supprimer cette agence : certaines de ses Issues sont à l'origine "
+                   "d'occurrences rattachées à une autre agence de votre organisation. "
+                   "Supprimez ou détachez d'abord ces occurrences, puis réessayez.",
+        )
 
 
 # ============================================================================
