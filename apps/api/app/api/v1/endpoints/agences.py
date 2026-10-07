@@ -22,6 +22,7 @@ from app.models.historique_feedback import HistoriqueFeedback
 from app.models.enums import UserRole
 from app.schemas.agence import AgenceCreate, AgenceUpdate, AgenceResponse, AgencePhotoUpdate, ActiviteAgenceItem, AgenceContexteItem
 from app.schemas.categorie import CategorieCreate, CategorieUpdate, CategorieResponse
+from app.services.categorie_templates import creer_categories_depart
 from app.services.plan_catalog import FEATURE_CATEGORIES
 from app.services.plan_service import organisation_a_la_fonctionnalite
 
@@ -207,6 +208,12 @@ def create_agence(
         actif=True
     )
     db.add(qr)
+
+    # Jeu de catégories de départ du secteur de l'organisation, s'il en existe un (sans
+    # effet aujourd'hui sauf pour le secteur telecom, voir categorie_templates.py). Ne
+    # remplace jamais le filet "Général" (get_or_create_categories_actives), qui ne se
+    # déclenche de toute façon que si aucune catégorie active n'existe encore.
+    creer_categories_depart(db, agence)
 
     db.commit()
     db.refresh(agence)

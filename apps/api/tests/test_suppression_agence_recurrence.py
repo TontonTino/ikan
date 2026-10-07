@@ -56,7 +56,13 @@ def donnees():
     racine, occurrence = uuid.uuid4(), uuid.uuid4()
     tag = uuid.uuid4().hex[:8]
     db = _SessionTest()
-    db.add(Organisation(id=org, nom=f"org-del-{tag}", active=True, email_pro=f"del-{tag}@test.invalid"))
+    # secteur_activite explicite : la vraie base Postgres jetable a encore la contrainte
+    # NOT NULL posée par la migration 002 (secteur_code, lui, a un server_default="autre"
+    # depuis la migration 023 — pas besoin de le préciser ici, hors sujet pour ce test).
+    db.add(Organisation(
+        id=org, nom=f"org-del-{tag}", active=True, email_pro=f"del-{tag}@test.invalid",
+        secteur_activite="Non renseigné",
+    ))
     db.flush()
     db.add_all([
         Agence(id=ag_x, organisation_id=org, nom="X", active=True, seuil_alerte=1),

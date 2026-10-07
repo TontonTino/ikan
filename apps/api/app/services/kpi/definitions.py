@@ -17,8 +17,26 @@ qu'aucune Issue résolue n'existe pour la médiane), `value` reste `None` et `st
 NEGATIVE_SENTIMENT_RATE, CRITICAL_ISSUE_RATE, ISSUE_RESOLUTION_RATE, LOOP_CLOSURE_RATE et
 MEDIAN_RESOLUTION_TIME. Les KPI de volume (FEEDBACK_VOLUME, ISSUE_VOLUME) n'ont pas cette
 notion : un compte de 0 est une réponse valide, jamais "no_data".
+
+Familles (voir le rapport d'audit KPI — ces 15 KPI étaient jusqu'ici tous montrés comme
+"communs" à toutes les organisations, sans secteur ni pack) :
+- FAMILLE_COMMUN_PRIORITAIRE : les 8 KPI visibles par toutes les organisations en premier
+  (CSAT, NPS, sentiment négatif, volume/criticité/résolution/délai des Issues, loop closure).
+- FAMILLE_COMMUN_OPERATIONNEL : les autres KPI également communs à tous, affichés en
+  section secondaire (volume de feedbacks, backlog et son âge, actions, SLA, récurrence,
+  escalades).
+- FAMILLE_SECTORIEL : un KPI propre à un pack (voir app/services/kpi/packs.py, PACKS). Un
+  KPI de cette famille porte un `secteur_code` non nul.
+
+app/services/kpi/packs.py est la seule source qui lit `famille` pour construire les listes
+de codes (COMMUN_PRIORITAIRE, COMMUN_OPERATIONNEL, COMMUNS) — ne pas dupliquer ces listes
+ailleurs.
 """
 from dataclasses import dataclass
+
+FAMILLE_COMMUN_PRIORITAIRE = "commun_prioritaire"
+FAMILLE_COMMUN_OPERATIONNEL = "commun_operationnel"
+FAMILLE_SECTORIEL = "sectoriel"
 
 
 @dataclass(frozen=True)
@@ -27,6 +45,10 @@ class KPIDefinition:
     label: str
     description: str
     unit: str
+    famille: str = FAMILLE_COMMUN_PRIORITAIRE
+    # Non nul uniquement pour un KPI de famille FAMILLE_SECTORIEL : le secteur auquel ce
+    # KPI appartient (doit être une clé de app.services.secteurs.SECTEUR_CODES).
+    secteur_code: str | None = None
 
 
 KPI_DEFINITIONS: dict[str, KPIDefinition] = {
@@ -58,6 +80,7 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
         label="Volume de feedbacks",
         description="Nombre de feedbacks soumis (Feedback.date_soumission) dans la période.",
         unit="count",
+        famille=FAMILLE_COMMUN_OPERATIONNEL,
     ),
     "ISSUE_VOLUME": KPIDefinition(
         code="ISSUE_VOLUME",
@@ -115,14 +138,17 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
     "ISSUE_BACKLOG": KPIDefinition(
         code="ISSUE_BACKLOG", label="Issue Backlog",
         description="Nombre d'Issues actuellement ouvertes, en cours d'action ou rouvertes, dans le périmètre.", unit="count",
+        famille=FAMILLE_COMMUN_OPERATIONNEL,
     ),
     "BACKLOG_AGE": KPIDefinition(
         code="BACKLOG_AGE", label="Backlog Age",
         description="Médiane en heures de l'âge du cycle ouvert actuel des Issues du backlog.", unit="hours",
+        famille=FAMILLE_COMMUN_OPERATIONNEL,
     ),
     "ACTION_COMPLETION_RATE": KPIDefinition(
         code="ACTION_COMPLETION_RATE", label="Action Completion Rate",
         description="Pourcentage d'actions non annulées créées dans la période actuellement terminées.", unit="percent",
+        famille=FAMILLE_COMMUN_OPERATIONNEL,
     ),
     "SLA_COMPLIANCE_RATE": KPIDefinition(
         code="SLA_COMPLIANCE_RATE",
@@ -132,6 +158,7 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
             "qui ont été résolues au plus tard à cette deadline. Les Issues sans SLA sont exclues."
         ),
         unit="percent",
+        famille=FAMILLE_COMMUN_OPERATIONNEL,
     ),
     "ISSUE_RECURRENCE_RATE": KPIDefinition(
         code="ISSUE_RECURRENCE_RATE",
@@ -141,6 +168,7 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
             "Issue racine antérieure, parmi toutes les Issues détectées dans la période."
         ),
         unit="percent",
+        famille=FAMILLE_COMMUN_OPERATIONNEL,
     ),
     "ESCALATION_RATE": KPIDefinition(
         code="ESCALATION_RATE",
@@ -151,6 +179,7 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
             "compte qu'une fois, même si elle est ré-escaladée."
         ),
         unit="percent",
+        famille=FAMILLE_COMMUN_OPERATIONNEL,
     ),
     "NPS": KPIDefinition(
         code="NPS",
@@ -162,5 +191,47 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
             "le statut est no_data."
         ),
         unit="points",
+    ),
+    # ── Pack telecom (app/services/kpi/packs_telecom.py, app/services/kpi/packs.py) ──
+    "TEL_PART_HORS_PERIMETRE": KPIDefinition(
+        code="TEL_PART_HORS_PERIMETRE",
+        label="Part hors périmètre agence",
+        description=(
+            "Pourcentage d'Issues classées (catégorie à clé du pack telecom) dont la clé "
+            "appartient au groupe hors_agence, parmi les Issues classées détectées dans la "
+            "période. Ne mesure pas la performance de l'agence : indique la part des "
+            "problèmes qu'elle ne peut pas traiter seule. Moins de 5 Issues classées : "
+            "no_data. Expose aussi le nombre d'Issues non classées (sans catégorie, ou "
+            "catégorie sans clé du pack) sur la même période."
+        ),
+        unit="percent",
+        famille=FAMILLE_SECTORIEL,
+        secteur_code="telecom",
+    ),
+    "TEL_RECURRENCE_AGENCE": KPIDefinition(
+        code="TEL_RECURRENCE_AGENCE",
+        label="Récurrence (périmètre agence)",
+        description=(
+            "Même formule qu'ISSUE_RECURRENCE_RATE, restreinte aux Issues dont la catégorie "
+            "a une clé du groupe agence (accueil, service client, carte SIM & numéro, "
+            "équipements & boutique). Moins de 5 Issues de ce groupe dans la période : "
+            "no_data. Ne sert pas à classer les agences entre elles."
+        ),
+        unit="percent",
+        famille=FAMILLE_SECTORIEL,
+        secteur_code="telecom",
+    ),
+    "TEL_RECURRENCE_HORS_PERIMETRE": KPIDefinition(
+        code="TEL_RECURRENCE_HORS_PERIMETRE",
+        label="Récurrence (hors périmètre agence)",
+        description=(
+            "Même formule qu'ISSUE_RECURRENCE_RATE, restreinte aux Issues dont la catégorie "
+            "a une clé du groupe hors_agence (internet & réseau mobile, facturation & "
+            "paiement, mobile money). Moins de 5 Issues de ce groupe dans la période : "
+            "no_data. Ne sert pas à classer les agences entre elles."
+        ),
+        unit="percent",
+        famille=FAMILLE_SECTORIEL,
+        secteur_code="telecom",
     ),
 }

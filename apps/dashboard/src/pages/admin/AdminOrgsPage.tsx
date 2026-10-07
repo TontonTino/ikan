@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { organisationsApi } from '../../services/api';
+import { organisationsApi, secteursApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
-import type { Organisation } from '../../types';
+import type { Organisation, SecteurInfo } from '../../types';
 import PageHeader from '../../components/ui/PageHeader';
 import { BuildingIcon, PlusIcon, AlertTriangleIcon, DownloadIcon } from '../../components/common/Icons';
 
@@ -13,6 +13,7 @@ export default function AdminOrgsPage() {
     return <Navigate to="/siege" replace />;
   }
   const [orgs, setOrgs] = useState<Organisation[]>([]);
+  const [secteurs, setSecteurs] = useState<SecteurInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingOrg, setEditingOrg] = useState<Organisation | null>(null);
@@ -20,7 +21,7 @@ export default function AdminOrgsPage() {
   const [form, setForm] = useState({
     nom: '',
     logo: '',
-    secteur_activite: '',
+    secteur_code: '',
     pays_region: '',
     email_pro: '',
   });
@@ -37,11 +38,13 @@ export default function AdminOrgsPage() {
 
   useEffect(() => {
     loadOrgs();
+    // Liste code/libellé des secteurs — source unique pour ce select (GET /secteurs).
+    secteursApi.list().then((r) => setSecteurs(r.data)).catch(() => setSecteurs([]));
   }, []);
 
   const openCreate = () => {
     setEditingOrg(null);
-    setForm({ nom: '', logo: '', secteur_activite: '', pays_region: '', email_pro: '' });
+    setForm({ nom: '', logo: '', secteur_code: secteurs[0]?.code || '', pays_region: '', email_pro: '' });
     setErrorMsg('');
     setShowForm(true);
   };
@@ -51,7 +54,7 @@ export default function AdminOrgsPage() {
     setForm({
       nom: org.nom || '',
       logo: org.logo || '',
-      secteur_activite: org.secteur_activite || org.secteur || '',
+      secteur_code: org.secteur_code || secteurs[0]?.code || '',
       pays_region: org.pays_region || '',
       email_pro: org.email_pro || org.email || '',
     });
@@ -66,7 +69,7 @@ export default function AdminOrgsPage() {
       const payload = {
         nom: form.nom,
         logo: form.logo.trim() || null,
-        secteur_activite: form.secteur_activite,
+        secteur_code: form.secteur_code,
         pays_region: form.pays_region,
         email_pro: form.email_pro,
       };
@@ -80,7 +83,7 @@ export default function AdminOrgsPage() {
       loadOrgs();
       setShowForm(false);
       setEditingOrg(null);
-      setForm({ nom: '', logo: '', secteur_activite: '', pays_region: '', email_pro: '' });
+      setForm({ nom: '', logo: '', secteur_code: secteurs[0]?.code || '', pays_region: '', email_pro: '' });
     } catch (err: any) {
       console.error('Erreur API organisation:', err?.response?.data);
       let detail = err?.response?.data?.detail;
@@ -209,14 +212,17 @@ export default function AdminOrgsPage() {
               <label style={{ display: 'block', fontWeight: 700, marginBottom: '6px', fontSize: '0.84rem', color: '#1E293B' }}>
                 Secteur d'activité *
               </label>
-              <input
-                type="text"
-                placeholder="ex: Télécommunications, Banque, Hôtellerie..."
-                value={form.secteur_activite}
-                onChange={(e) => setForm({ ...form, secteur_activite: e.target.value })}
+              <select
+                value={form.secteur_code}
+                onChange={(e) => setForm({ ...form, secteur_code: e.target.value })}
                 required
                 className="saas-input"
-              />
+              >
+                {secteurs.length === 0 && <option value="">Chargement…</option>}
+                {secteurs.map((s) => (
+                  <option key={s.code} value={s.code}>{s.libelle}</option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -421,7 +427,7 @@ export default function AdminOrgsPage() {
                     <span>{o.nom}</span>
                   </div>
                 </td>
-                <td style={{ padding: '14px 20px', color: '#475569' }}>{o.secteur_activite || o.secteur || '—'}</td>
+                <td style={{ padding: '14px 20px', color: '#475569' }}>{o.secteur_libelle || o.secteur_activite || o.secteur || '—'}</td>
                 <td style={{ padding: '14px 20px', color: '#475569' }}>{o.pays_region || '—'}</td>
                 <td style={{ padding: '14px 20px', fontWeight: 500, color: '#1E293B' }}>{o.email_pro || o.email}</td>
                 <td style={{ padding: '14px 20px' }}>

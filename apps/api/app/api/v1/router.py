@@ -20,6 +20,7 @@ from app.api.v1.endpoints import (
     veille,
     issues,
     kpis,
+    secteurs,
 )
 
 api_router = APIRouter()
@@ -40,3 +41,4 @@ api_router.include_router(admin_facturation.router, prefix="/admin/facturation",
 api_router.include_router(veille.router, prefix="/veille", tags=["Veille & Réseaux"])
 api_router.include_router(issues.router, prefix="/issues", tags=["Issues"])
 api_router.include_router(kpis.router, prefix="/kpis", tags=["KPI"])
+api_router.include_router(secteurs.router, prefix="/secteurs", tags=["Secteurs"])
