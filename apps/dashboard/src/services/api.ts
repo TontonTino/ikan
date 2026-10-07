@@ -234,6 +234,11 @@ export const kpisApi = {
     api.get<import('../types').KPICollectionResponse>('/kpis/', { params }),
 };
 
+// ── Secteurs (GET /secteurs) — source unique code/libellé pour le select du dashboard ──
+export const secteursApi = {
+  list: () => api.get<import('../types').SecteurInfo[]>('/secteurs/'),
+};
+
 // ── Système (Settings & Permissions) ──────────────────
 export const systemApi = {
   getSettings: () => api.get('/system/settings'),

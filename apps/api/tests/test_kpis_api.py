@@ -35,6 +35,7 @@ from app.models.organisation import Organisation
 from app.models.plan import Plan
 from app.models.qr_code import QRCode
 from app.services.kpi.definitions import KPI_DEFINITIONS
+from app.services.kpi.packs import COMMUNS
 
 NOW = datetime.now(timezone.utc)
 IL_Y_A_40_JOURS = NOW - timedelta(days=40)
@@ -148,6 +149,11 @@ def _kpis_by_code(payload: dict) -> dict:
 # ── Contrat / 8 KPI ──────────────────────────────────────────────────────────────
 
 def test_tous_les_kpis_presents_avec_bons_codes(ctx):
+    """Org A n'a pas de secteur_code explicite -> défaut "autre" (app/models/organisation.py)
+    -> aucun pack (PACKS est vide pour tous les secteurs, voir app/services/kpi/packs.py) ->
+    exactement les 14 communs actuels. Ce n'est plus un nombre figé : si un pack sectoriel
+    est un jour injecté dans PACKS["autre"] (improbable mais possible), ce test doit suivre
+    sans y être pour quelque chose — voir test_kpi_packs.py pour les tests dédiés au registre."""
     r = ctx.call("cx_a", "get", "/kpis/")
     assert r.status_code == 200, r.text
     data = r.json()
@@ -155,8 +161,10 @@ def test_tous_les_kpis_presents_avec_bons_codes(ctx):
     assert data["agence_id"] is None
     assert data["jours"] == 30
     codes = {k["code"] for k in data["kpis"]}
-    assert codes == set(KPI_DEFINITIONS.keys())
-    assert len(data["kpis"]) == 14
+    assert codes == set(COMMUNS) == set(KPI_DEFINITIONS.keys())
+    assert len(data["kpis"]) == len(COMMUNS) == 14
+    assert data["secteur_code"] == "autre"
+    assert data["pack_disponible"] is False
 
 
 def test_champs_kpi_result_presents(ctx):

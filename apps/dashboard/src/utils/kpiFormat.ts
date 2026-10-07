@@ -1,8 +1,12 @@
 /**
- * Formatage des 8 KPI P0 (KPI Engine, app/services/kpi/) — extrait de PilotagePage.tsx
- * pour être partagé avec KpiCoreGrid (Pilotage/Issues et Vue d'ensemble Agency Manager).
- * Fonctions pures, sans JSX : kpiIconComponent renvoie le composant icône lui-même (pas
- * un élément rendu), à instancier par l'appelant.
+ * Formatage des KPI (KPI Engine, app/services/kpi/) — extrait de PilotagePage.tsx pour
+ * être partagé avec KpiCoreGrid (onglet Issues du Pilotage, CX Manager). Fonctions
+ * pures, sans JSX : kpiIconComponent renvoie le composant icône lui-même (pas un élément
+ * rendu), à instancier par l'appelant.
+ *
+ * Table complétée pour les 14 KPI actuels (communs prioritaires + communs opérationnels,
+ * voir app/services/kpi/packs.py) ; un futur KPI sectoriel sans entrée ici retombe sur
+ * l'icône générique ActivityIcon, jamais une erreur.
  */
 import type { ComponentType } from 'react';
 import type { IconProps } from '../components/common/Icons';
@@ -17,29 +21,35 @@ import {
   ClockIcon,
   ShieldCheckIcon,
   ActivityIcon,
+  TrendingUpIcon,
+  LayoutGridIcon,
+  CalendarIcon,
+  CheckIcon,
+  LightningIcon,
+  RefreshCwIcon,
 } from '../components/common/Icons';
 
+const ICONE_PAR_CODE: Record<string, ComponentType<IconProps>> = {
+  // Communs prioritaires
+  CSAT: SmileIcon,
+  NPS: TrendingUpIcon,
+  NEGATIVE_SENTIMENT_RATE: ThumbsDownIcon,
+  ISSUE_VOLUME: TargetIcon,
+  CRITICAL_ISSUE_RATE: AlertTriangleIcon,
+  ISSUE_RESOLUTION_RATE: CheckCircleIcon,
+  MEDIAN_RESOLUTION_TIME: ClockIcon,
+  LOOP_CLOSURE_RATE: ShieldCheckIcon,
+  // Communs opérationnels
+  FEEDBACK_VOLUME: MessageSquareIcon,
+  ISSUE_BACKLOG: LayoutGridIcon,
+  BACKLOG_AGE: CalendarIcon,
+  ACTION_COMPLETION_RATE: CheckIcon,
+  SLA_COMPLIANCE_RATE: LightningIcon,
+  ISSUE_RECURRENCE_RATE: RefreshCwIcon,
+};
+
 export function kpiIconComponent(code: string): ComponentType<IconProps> {
-  switch (code) {
-    case 'CSAT':
-      return SmileIcon;
-    case 'NEGATIVE_SENTIMENT_RATE':
-      return ThumbsDownIcon;
-    case 'FEEDBACK_VOLUME':
-      return MessageSquareIcon;
-    case 'ISSUE_VOLUME':
-      return TargetIcon;
-    case 'CRITICAL_ISSUE_RATE':
-      return AlertTriangleIcon;
-    case 'ISSUE_RESOLUTION_RATE':
-      return CheckCircleIcon;
-    case 'MEDIAN_RESOLUTION_TIME':
-      return ClockIcon;
-    case 'LOOP_CLOSURE_RATE':
-      return ShieldCheckIcon;
-    default:
-      return ActivityIcon;
-  }
+  return ICONE_PAR_CODE[code] ?? ActivityIcon;
 }
 
 // Règle stricte du backend (KPI Engine) : status "no_data" signifie qu'aucune donnée

@@ -26,8 +26,12 @@ export interface Organisation {
   id: string;
   nom: string;
   logo?: string;
-  secteur_activite: string;
+  secteur_activite?: string | null;
   secteur?: string;
+  // Code de secteur stable et son libellé (app/services/secteurs.py) — source à afficher
+  // désormais, secteur_activite n'étant conservé que pour compatibilité.
+  secteur_code: string;
+  secteur_libelle?: string | null;
   pays_region: string;
   email_pro: string;
   email?: string;
@@ -35,6 +39,12 @@ export interface Organisation {
   created_at: string;
   date_creation?: string;
   plan?: { code: string; nom: string } | null;
+}
+
+// ── Secteurs (GET /secteurs, app/schemas/secteur.py) ────
+export interface SecteurInfo {
+  code: string;
+  libelle: string;
 }
 
 export interface Agence {
@@ -636,13 +646,17 @@ export interface IssueDetail extends Issue {
 export interface KPIResult {
   code: string;
   label: string;
-  unit: 'percent' | 'count' | 'hours';
+  unit: 'percent' | 'count' | 'hours' | 'points';
   status: 'ok' | 'no_data';
   value: number | null;
   numerator: number | null;
   denominator: number | null;
   verified_count: number | null;
   requiring_action_count: number | null;
+  // Famille posée par l'endpoint (app/services/kpi/packs.py) : 'commun_prioritaire' |
+  // 'commun_operationnel' | 'sectoriel'. Absente seulement sur une réponse d'avant cette
+  // phase mise en cache côté client — jamais attendue comme null par un KPI réel.
+  famille?: string | null;
 }
 
 export interface KPICollectionResponse {
@@ -650,6 +664,10 @@ export interface KPICollectionResponse {
   agence_id: string | null;
   jours: number;
   kpis: KPIResult[];
+  // Secteur de l'organisation et disponibilité de son pack sectoriel — permet à
+  // KpiCoreGrid d'afficher la note "bientôt disponibles" sans appel supplémentaire.
+  secteur_code?: string | null;
+  pack_disponible?: boolean;
 }
 
 // ── Demandes de contact (app/schemas/feedback.py::DemandeContactListItem) ──
