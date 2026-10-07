@@ -119,7 +119,6 @@ export default function DesignSystemPage() {
   const [granularity, setGranularity] = useState<Granularity>('week');
   const [chartState, setChartState] = useState<'data' | 'loading' | 'empty'>('data');
   const [demoRole, setDemoRole] = useState<UserRole>('cx_manager');
-  const [demoCollapsed, setDemoCollapsed] = useState(true);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-7)', padding: 'var(--space-5)', maxWidth: 1200, margin: '0 auto' }}>
@@ -128,7 +127,7 @@ export default function DesignSystemPage() {
         <p style={{ margin: 'var(--space-1) 0 0', color: 'var(--color-text-muted)' }}>Vitrine de développement — données d'exemple, aucune donnée réelle.</p>
       </header>
 
-      <Section title="Sidebar rétractable (étape 2)">
+      <Section title="Sidebar adaptative">
         <style>{'.ds-sidebar-frame .dashboard-sidebar { height: calc(100% - 2 * var(--layout-gutter)); }'}</style>
         <div style={row} role="group" aria-label="Rôle de démonstration">
           {(['cx_manager', 'agency_manager', 'admin'] as UserRole[]).map((r) => (
@@ -139,10 +138,10 @@ export default function DesignSystemPage() {
         </div>
         <div style={{ ...row, alignItems: 'flex-start' }}>
           <SidebarFrame label="Ouverte : libellés, sections, espace de travail">
-            <Sidebar user={DEMO_USER(demoRole)} sections={ROLE_NAV_SECTIONS[demoRole]} collapsed={false} onToggleCollapsed={() => undefined} mobileOpen={false} onCloseMobile={() => undefined} yam={demoRole !== 'admin' ? { open: false, onToggle: () => undefined } : undefined} />
+            <Sidebar user={DEMO_USER(demoRole)} sections={ROLE_NAV_SECTIONS[demoRole]} collapsed={false} mobileOpen={false} onCloseMobile={() => undefined} yam={demoRole !== 'admin' ? { open: false, onToggle: () => undefined } : undefined} />
           </SidebarFrame>
           <SidebarFrame label="Réduite : icônes + tooltip au survol et au focus (Tab)">
-            <Sidebar user={DEMO_USER(demoRole)} sections={ROLE_NAV_SECTIONS[demoRole].map((sec, i) => i === 0 ? { ...sec, items: sec.items.map((it, j) => j === 2 ? { ...it, badge: 4, badgeUrgent: true } : it) } : sec)} collapsed={demoCollapsed} onToggleCollapsed={() => setDemoCollapsed((c) => !c)} mobileOpen={false} onCloseMobile={() => undefined} yam={demoRole !== 'admin' ? { open: false, onToggle: () => undefined } : undefined} />
+            <Sidebar user={DEMO_USER(demoRole)} sections={ROLE_NAV_SECTIONS[demoRole].map((sec, i) => i === 0 ? { ...sec, items: sec.items.map((it, j) => j === 2 ? { ...it, badge: 4, badgeUrgent: true } : it) } : sec)} collapsed mobileOpen={false} onCloseMobile={() => undefined} yam={demoRole !== 'admin' ? { open: false, onToggle: () => undefined } : undefined} />
           </SidebarFrame>
         </div>
       </Section>

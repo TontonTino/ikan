@@ -72,37 +72,6 @@
 }
 .ikan-nav-dot--urgent { background: var(--color-critical-solid); }
 
-/* Bouton Réduire / Agrandir */
-.dashboard-sidebar-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-3);
-  width: 100%;
-  min-height: var(--touch-target);
-  margin-top: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.055);
-  color: var(--sidebar-text);
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-bold);
-  cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
-}
-.dashboard-sidebar-toggle:hover { background: rgba(255, 255, 255, 0.11); color: var(--sidebar-text-strong); }
-.dashboard-sidebar-toggle__icon { display: inline-flex; transform: rotate(180deg); transition: transform var(--duration-slow) var(--ease-standard); }
-.dashboard-sidebar-toggle__kbd {
-  margin-left: auto;
-  padding: 1px 6px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: var(--radius-sm);
-  color: var(--sidebar-muted);
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-bold);
-}
-
 /* ── Zone de contenu ─────────────────────────────────────────────────── */
 .dashboard-content {
   flex: 1;
@@ -121,11 +90,13 @@
 .dashboard-mobile-close,
 .dashboard-sidebar-overlay { display: none; }
 
+.dashboard-sidebar .ikan-nav-link { min-height: var(--touch-target); }
+
 /* ── Desktop réduit : icônes seules + tooltips ───────────────────────── */
-@media (min-width: 1025px) {
+@media (min-width: 768px) {
   .app-shell--collapsed { --shell-sidebar: var(--sidebar-width-collapsed); }
 
-  .dashboard-sidebar--collapsed { padding: var(--space-5) var(--space-2); overflow: visible; }
+  .dashboard-sidebar--collapsed { width: var(--sidebar-width-collapsed); padding: var(--space-5) var(--space-2); overflow: visible; }
   .dashboard-sidebar--collapsed .dashboard-sidebar__head { justify-content: center; padding-inline: 0; }
   .dashboard-sidebar--collapsed .dashboard-sidebar-brand-logo { display: flex; justify-content: center; width: 100%; }
   .dashboard-sidebar--collapsed .dashboard-role-label,
@@ -134,10 +105,7 @@
   .dashboard-sidebar--collapsed .ikan-nav-badge,
   .dashboard-sidebar--collapsed .ikan-yam-button-label,
   .dashboard-sidebar--collapsed .ikan-yam-subtitle,
-  .dashboard-sidebar--collapsed .ikan-yam-chevron,
-  .dashboard-sidebar--collapsed .dashboard-sidebar-toggle__label,
-  .dashboard-sidebar--collapsed .dashboard-sidebar-toggle__kbd { display: none; }
-  /* Séparateur discret entre sections, à la place des titres masqués */
+  .dashboard-sidebar--collapsed .ikan-yam-chevron { display: none; }
   .dashboard-sidebar--collapsed .dashboard-nav-section + .dashboard-nav-section { padding-top: var(--space-3); border-top: 1px solid rgba(255, 255, 255, 0.08); }
   /* Le menu continue de défiler en mode réduit : les tooltips sont en portail, rien à laisser déborder. */
   .dashboard-sidebar--collapsed .dashboard-primary-nav { gap: var(--space-3); }
@@ -145,8 +113,6 @@
   .dashboard-sidebar--collapsed .ikan-nav-link { justify-content: center; width: 100%; min-height: var(--touch-target); padding: var(--space-3) var(--space-2); }
   .dashboard-sidebar--collapsed .ikan-nav-link-content { justify-content: center; }
   .dashboard-sidebar--collapsed .ikan-yam-button { justify-content: center; padding: var(--space-2); }
-  .dashboard-sidebar--collapsed .dashboard-sidebar-toggle { justify-content: center; padding: var(--space-2); }
-  .dashboard-sidebar--collapsed .dashboard-sidebar-toggle__icon { transform: none; }
 
   /* Carte d'espace de travail (SidebarWorkspaceCard) */
   .dashboard-sidebar--collapsed .agency-context-wrap { margin-bottom: var(--space-3); }
@@ -161,10 +127,10 @@
 }
 
 /* ── Mobile / tablette : tiroir ──────────────────────────────────────── */
-@media (max-width: 1024px) {
+@media (max-width: 767px) {
   .dashboard-hamburger { display: flex !important; }
   .dashboard-mobile-close { display: flex !important; }
-  .dashboard-sidebar-toggle { display: none; }
+  .dashboard-mobile-close { width: var(--touch-target) !important; height: var(--touch-target) !important; }
 
   .dashboard-sidebar {
     top: 0;
@@ -187,6 +153,11 @@
   }
 
   .dashboard-content { margin-left: 0; width: 100%; max-width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-sidebar,
+  .dashboard-content { transition: none !important; }
 }
 
 @media (max-width: 640px) {

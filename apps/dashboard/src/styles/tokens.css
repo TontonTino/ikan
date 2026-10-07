@@ -159,7 +159,7 @@
 
   /* ── Dimensions ────────────────────────────────────────────────────── */
   --sidebar-width: 270px;
-  --sidebar-width-collapsed: 76px;
+  --sidebar-width-collapsed: 72px;
   --layout-gutter: var(--space-4);   /* marge autour de la sidebar flottante */
   --header-height: 70px;
   --touch-target: 44px;     /* cible tactile minimale WCAG 2.5.5 */

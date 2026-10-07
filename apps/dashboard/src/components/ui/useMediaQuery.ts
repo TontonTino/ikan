@@ -16,5 +16,5 @@ export function useMediaQuery(query: string): boolean {
   return matches;
 }
 
-/** Point de rupture où la sidebar passe de tiroir (mobile/tablette) à barre fixe. */
-export const DESKTOP_QUERY = '(min-width: 1025px)';
+/** Point de rupture où la sidebar passe du drawer mobile à la barre fixe/tablette. */
+export const DESKTOP_QUERY = '(min-width: 768px)';
