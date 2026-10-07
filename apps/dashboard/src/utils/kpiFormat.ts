@@ -1,8 +1,12 @@
 /**
- * Formatage des 8 KPI P0 (KPI Engine, app/services/kpi/) — extrait de PilotagePage.tsx
- * pour être partagé avec KpiCoreGrid (Pilotage/Issues et Vue d'ensemble Agency Manager).
- * Fonctions pures, sans JSX : kpiIconComponent renvoie le composant icône lui-même (pas
- * un élément rendu), à instancier par l'appelant.
+ * Formatage des KPI (KPI Engine, app/services/kpi/) — extrait de PilotagePage.tsx pour
+ * être partagé avec KpiCoreGrid (onglet Issues du Pilotage, CX Manager). Fonctions
+ * pures, sans JSX : kpiIconComponent renvoie le composant icône lui-même (pas un élément
+ * rendu), à instancier par l'appelant.
+ *
+ * Table complétée pour les 15 KPI communs + les 3 KPI du pack telecom (voir
+ * app/services/kpi/packs.py et packs_telecom.py) ; un futur KPI sectoriel sans entrée ici
+ * retombe sur l'icône générique ActivityIcon, jamais une erreur.
  */
 import type { ComponentType } from 'react';
 import type { IconProps } from '../components/common/Icons';
@@ -17,29 +21,42 @@ import {
   ClockIcon,
   ShieldCheckIcon,
   ActivityIcon,
+  TrendingUpIcon,
+  LayoutGridIcon,
+  CalendarIcon,
+  CheckIcon,
+  LightningIcon,
+  RefreshCwIcon,
+  MegaphoneIcon,
+  WifiHighIcon,
 } from '../components/common/Icons';
 
+const ICONE_PAR_CODE: Record<string, ComponentType<IconProps>> = {
+  // Communs prioritaires
+  CSAT: SmileIcon,
+  NPS: TrendingUpIcon,
+  NEGATIVE_SENTIMENT_RATE: ThumbsDownIcon,
+  ISSUE_VOLUME: TargetIcon,
+  CRITICAL_ISSUE_RATE: AlertTriangleIcon,
+  ISSUE_RESOLUTION_RATE: CheckCircleIcon,
+  MEDIAN_RESOLUTION_TIME: ClockIcon,
+  LOOP_CLOSURE_RATE: ShieldCheckIcon,
+  // Communs opérationnels
+  FEEDBACK_VOLUME: MessageSquareIcon,
+  ISSUE_BACKLOG: LayoutGridIcon,
+  BACKLOG_AGE: CalendarIcon,
+  ACTION_COMPLETION_RATE: CheckIcon,
+  SLA_COMPLIANCE_RATE: LightningIcon,
+  ISSUE_RECURRENCE_RATE: RefreshCwIcon,
+  ESCALATION_RATE: MegaphoneIcon,
+  // Pack telecom (famille sectorielle)
+  TEL_PART_HORS_PERIMETRE: WifiHighIcon,
+  TEL_RECURRENCE_AGENCE: RefreshCwIcon,
+  TEL_RECURRENCE_HORS_PERIMETRE: RefreshCwIcon,
+};
+
 export function kpiIconComponent(code: string): ComponentType<IconProps> {
-  switch (code) {
-    case 'CSAT':
-      return SmileIcon;
-    case 'NEGATIVE_SENTIMENT_RATE':
-      return ThumbsDownIcon;
-    case 'FEEDBACK_VOLUME':
-      return MessageSquareIcon;
-    case 'ISSUE_VOLUME':
-      return TargetIcon;
-    case 'CRITICAL_ISSUE_RATE':
-      return AlertTriangleIcon;
-    case 'ISSUE_RESOLUTION_RATE':
-      return CheckCircleIcon;
-    case 'MEDIAN_RESOLUTION_TIME':
-      return ClockIcon;
-    case 'LOOP_CLOSURE_RATE':
-      return ShieldCheckIcon;
-    default:
-      return ActivityIcon;
-  }
+  return ICONE_PAR_CODE[code] ?? ActivityIcon;
 }
 
 // Règle stricte du backend (KPI Engine) : status "no_data" signifie qu'aucune donnée
@@ -60,6 +77,14 @@ export function formatKpiSubtitle(k: KPIResult, jours: number): string {
     const verifiees = k.verified_count ?? 0;
     const requises = k.requiring_action_count ?? 0;
     return `${verifiees} vérifiée${verifiees !== 1 ? 's' : ''} sur ${requises} nécessitant une action`;
+  }
+  // TEL_PART_HORS_PERIMETRE : le nombre d'Issues non classées doit rester visible même en
+  // no_data (denominateur < 5), car "pas assez d'Issues classées" n'est pas la même
+  // information que "aucune Issue non classée" — voir app/services/kpi/engine.py.
+  if (k.code === 'TEL_PART_HORS_PERIMETRE' && k.non_classees_count != null) {
+    const n = k.non_classees_count;
+    const base = `${n} Issue${n !== 1 ? 's' : ''} non classée${n !== 1 ? 's' : ''}`;
+    return k.status === 'no_data' ? base : `${base} · ${jours} derniers jours`;
   }
   if (k.status === 'no_data') return 'sur cette période';
   return `${jours} derniers jours`;

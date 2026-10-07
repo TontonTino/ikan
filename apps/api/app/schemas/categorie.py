@@ -28,6 +28,10 @@ class CategorieResponse(BaseModel):
     cree_par_id: Optional[uuid.UUID] = None
     # 'cx_manager' | 'agency_manager' | None (catégorie antérieure à cette fonctionnalité)
     cree_par_role: Optional[str] = None
+    # Clé stable (app/services/categorie_templates.py) — posée par le système (jeu de
+    # départ par secteur ou rattrapage), jamais par CategorieCreate/Update : non modifiable
+    # via l'API pour l'instant. None pour une catégorie libre sans correspondance.
+    cle: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

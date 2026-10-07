@@ -39,6 +39,11 @@ class Categorie(Base):
         UUID(as_uuid=True), ForeignKey("utilisateurs.id", ondelete="SET NULL"), nullable=True
     )
     cree_par_role: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    # Clé stable, posée par le système (jeu de départ par secteur ou rattrapage, voir
+    # app/services/categorie_templates.py) — jamais par le CX Manager. Unique par agence
+    # quand non nulle (index unique partiel, migration 025_categorie_cle). Permet de relier
+    # un KPI sectoriel à une catégorie sans dépendre de son nom (libre, non garanti stable).
+    cle: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # Relations
     agence: Mapped["Agence"] = relationship("Agence", back_populates="categories")

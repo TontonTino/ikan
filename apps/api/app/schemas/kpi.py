@@ -21,6 +21,14 @@ class KPIResult(BaseModel):
     # Métadonnées additionnelles, utilisées seulement par LOOP_CLOSURE_RATE pour l'instant.
     verified_count: Optional[int] = None
     requiring_action_count: Optional[int] = None
+    # Nombre d'Issues non classées (sans catégorie, ou catégorie sans clé du pack) sur la
+    # même période/périmètre — utilisé seulement par TEL_PART_HORS_PERIMETRE pour l'instant.
+    non_classees_count: Optional[int] = None
+    # Famille du KPI (commun_prioritaire | commun_operationnel | sectoriel), posée par
+    # l'endpoint depuis KPI_DEFINITIONS — jamais calculée par le moteur lui-même. Additif :
+    # None pour un appelant qui ne la demande pas explicitement n'est pas attendu, mais le
+    # champ reste optionnel pour ne jamais faire échouer une validation existante.
+    famille: Optional[str] = None
 
 
 class KPICollectionResponse(BaseModel):
@@ -30,3 +38,7 @@ class KPICollectionResponse(BaseModel):
     agence_id: Optional[UUID] = None
     jours: int
     kpis: List[KPIResult]
+    # Secteur de l'organisation et disponibilité de son pack — évite au frontend un appel
+    # séparé pour savoir s'il doit afficher la note "KPIs sectoriels bientôt disponibles".
+    secteur_code: Optional[str] = None
+    pack_disponible: bool = False

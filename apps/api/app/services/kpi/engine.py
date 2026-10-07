@@ -27,9 +27,11 @@ from app.models.feedback import Feedback
 from app.models.issue import Issue
 from app.models.issue_escalation import IssueEscalation
 from app.models.historique_issue import HistoriqueIssue
+from app.models.categorie import Categorie
 from app.models.qr_code import QRCode
 from app.schemas.kpi import KPIResult
 from app.services.kpi.definitions import KPI_DEFINITIONS
+from app.services.kpi.packs_telecom import PERIMETRE_AGENCE, PERIMETRE_CATEGORIES, PERIMETRE_HORS_AGENCE, TOUTES_LES_CLES_DU_PACK
 
 ISSUE_STATUTS_RESOLUS = ("resolue", "verifiee")
 ISSUE_STATUTS_BACKLOG = ("ouverte", "action_en_cours", "reouverte")
@@ -313,6 +315,77 @@ def calculer_issue_recurrence_rate(db: Session, organisation_id: UUID, agence_id
     )
 
 
+# ── Pack telecom (app/services/kpi/packs_telecom.py) — famille sectorielle, voir packs.py ──
+# Seuil "moins de 5 Issues -> no_data" (PERIMETRE_CATEGORIES.md / rapport de l'étape 0) :
+# distinct de ISSUE_RECURRENCE_RATE ci-dessus (seuil 0), car ces KPIs sectoriels portent sur
+# des sous-populations bien plus petites, où un ratio sur 1 ou 2 Issues serait trompeur.
+SEUIL_MIN_ISSUES_TELECOM = 5
+
+
+def calculer_tel_part_hors_perimetre(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
+    """Part des Issues classées (catégorie à clé du pack) dont la clé appartient au groupe
+    hors_agence — ne mesure PAS la performance de l'agence, voir description dans
+    definitions.py. Expose aussi le nombre d'Issues non classées (sans catégorie, ou
+    catégorie sans clé du pack) sur la même période/périmètre."""
+    total, classees, hors_agence = (
+        _base_issue_query(db, organisation_id, agence_id, jours)
+        .outerjoin(Categorie, Issue.categorie_id == Categorie.id)
+        .with_entities(
+            func.count(Issue.id),
+            func.sum(case((Categorie.cle.in_(TOUTES_LES_CLES_DU_PACK), 1), else_=0)),
+            func.sum(case((Categorie.cle.in_(PERIMETRE_CATEGORIES[PERIMETRE_HORS_AGENCE]), 1), else_=0)),
+        )
+        .one()
+    )
+    total = total or 0
+    classees = classees or 0
+    hors_agence = hors_agence or 0
+    non_classees = total - classees
+    if classees < SEUIL_MIN_ISSUES_TELECOM:
+        return _no_data("TEL_PART_HORS_PERIMETRE", numerator=hors_agence, denominator=classees, non_classees_count=non_classees)
+    d = KPI_DEFINITIONS["TEL_PART_HORS_PERIMETRE"]
+    return KPIResult(
+        code="TEL_PART_HORS_PERIMETRE", label=d.label, unit=d.unit, status="ok",
+        value=round(hors_agence / classees * 100, 1), numerator=hors_agence, denominator=classees,
+        non_classees_count=non_classees,
+    )
+
+
+def _calculer_tel_recurrence(code: str, groupe: str, db: Session, organisation_id: UUID,
+                              agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
+    """Même formule qu'ISSUE_RECURRENCE_RATE, restreinte aux Issues dont la catégorie a une
+    clé du `groupe` donné (app/services/kpi/packs_telecom.py::PERIMETRE_CATEGORIES). Le
+    groupe "mixte" est toujours exclu par construction : seuls les codes TEL_RECURRENCE_AGENCE
+    (groupe="agence") et TEL_RECURRENCE_HORS_PERIMETRE (groupe="hors_agence") existent."""
+    total, recurrentes = (
+        _base_issue_query(db, organisation_id, agence_id, jours)
+        .join(Categorie, Issue.categorie_id == Categorie.id)
+        .filter(Categorie.cle.in_(PERIMETRE_CATEGORIES[groupe]))
+        .with_entities(
+            func.count(Issue.id),
+            func.sum(case((Issue.issue_origine_id.isnot(None), 1), else_=0)),
+        )
+        .one()
+    )
+    total = total or 0
+    recurrentes = recurrentes or 0
+    if total < SEUIL_MIN_ISSUES_TELECOM:
+        return _no_data(code, numerator=recurrentes, denominator=total)
+    d = KPI_DEFINITIONS[code]
+    return KPIResult(
+        code=code, label=d.label, unit=d.unit, status="ok",
+        value=round(recurrentes / total * 100, 1), numerator=recurrentes, denominator=total,
+    )
+
+
+def calculer_tel_recurrence_agence(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
+    return _calculer_tel_recurrence("TEL_RECURRENCE_AGENCE", PERIMETRE_AGENCE, db, organisation_id, agence_id, jours)
+
+
+def calculer_tel_recurrence_hors_perimetre(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
+    return _calculer_tel_recurrence("TEL_RECURRENCE_HORS_PERIMETRE", PERIMETRE_HORS_AGENCE, db, organisation_id, agence_id, jours)
+
+
 def calculer_escalation_rate(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
     """Share of Issues present in backlog during the period with an explicit escalation.
 
@@ -447,4 +520,7 @@ KPI_FUNCTIONS = {
     "ISSUE_RECURRENCE_RATE": calculer_issue_recurrence_rate,
     "ESCALATION_RATE": calculer_escalation_rate,
     "NPS": calculer_nps,
+    "TEL_PART_HORS_PERIMETRE": calculer_tel_part_hors_perimetre,
+    "TEL_RECURRENCE_AGENCE": calculer_tel_recurrence_agence,
+    "TEL_RECURRENCE_HORS_PERIMETRE": calculer_tel_recurrence_hors_perimetre,
 }

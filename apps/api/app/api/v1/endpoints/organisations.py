@@ -19,6 +19,7 @@ from app.schemas.organisation import (
 )
 from app.services.plan_catalog import STRIPE_PRICE_IDS
 from app.services.plan_service import utilisation_organisation
+from app.services.secteurs import libelle_secteur
 
 router = APIRouter()
 
@@ -131,7 +132,10 @@ def create_organisation(
 
     org_data = data.model_dump()
     org_data["email"] = data.email_pro
-    org_data["secteur"] = data.secteur_activite
+    # secteur_activite (libre, legacy) déduit du libellé de secteur_code quand l'appelant
+    # ne le fournit pas explicitement — secteur_code reste la seule source de décision.
+    org_data["secteur_activite"] = data.secteur_activite or libelle_secteur(data.secteur_code)
+    org_data["secteur"] = org_data["secteur_activite"]
     org_data["created_by_id"] = current_user.id
 
     org = Organisation(**org_data)
@@ -187,6 +191,10 @@ def update_organisation(
     update_dict = data.model_dump(exclude_unset=True)
     if "email_pro" in update_dict:
         update_dict["email"] = update_dict["email_pro"]
+    # secteur_code change sans secteur_activite explicite -> on redérive le libellé legacy,
+    # pour ne pas laisser secteur_activite afficher l'ancien secteur après ce changement.
+    if "secteur_code" in update_dict and "secteur_activite" not in update_dict:
+        update_dict["secteur_activite"] = libelle_secteur(update_dict["secteur_code"])
     if "secteur_activite" in update_dict:
         update_dict["secteur"] = update_dict["secteur_activite"]
 

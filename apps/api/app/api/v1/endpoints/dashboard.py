@@ -27,6 +27,7 @@ from app.models.analyse_ia import AnalyseIA
 from app.models.suggestion import Suggestion
 from app.models.enums import UserRole, SentimentType, IdeaStatus
 from app.utils.stats import wilson_lower_bound
+from app.services.secteurs import libelle_secteur
 from app.services.dashboard_helpers import (
     _calc_kpi_trend,
     _cle_semaine_iso,
@@ -400,7 +401,7 @@ def dashboard_admin(
             id=o.id,
             nom=o.nom,
             logo=o.logo,
-            secteur_activite=o.secteur_activite or o.secteur or "Général",
+            secteur_activite=libelle_secteur(o.secteur_code),
             pays_region=o.pays_region or "International",
             email_pro=o.email_pro or o.email or "",
             active=o.active,

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
 from app.services.plan_catalog import PLAN_GRATUIT_ID
+from app.services.secteurs import SECTEUR_AUTRE
 
 
 class Organisation(Base):
@@ -20,7 +21,16 @@ class Organisation(Base):
     )
     nom: Mapped[str] = mapped_column(String(255), nullable=False)
     logo: Mapped[str | None] = mapped_column(Text, nullable=True)
-    secteur_activite: Mapped[str | None] = mapped_column(String(100), nullable=True, default="Télécommunications")
+    # Libellé libre historique, plus de défaut applicatif (voir secteur_code ci-dessous,
+    # seule source désormais pour toute décision métier — audit KPI, migration 023).
+    secteur_activite: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    # Code stable de secteur d'activité, liste fermée (app/services/secteurs.py,
+    # contrainte CHECK ck_organisations_secteur_code_valide posée par la migration 023).
+    # Source unique pour le libellé affiché (libelle_secteur) et pour le pack KPI du
+    # secteur (app/services/kpi/packs.py) — jamais secteur_activite ni secteur.
+    secteur_code: Mapped[str] = mapped_column(
+        String(30), nullable=False, default=SECTEUR_AUTRE, server_default=SECTEUR_AUTRE
+    )
     pays_region: Mapped[str | None] = mapped_column(String(100), nullable=True, default="Tunisie / Afrique du Nord")
     email_pro: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True, index=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

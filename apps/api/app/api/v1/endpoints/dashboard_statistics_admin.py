@@ -27,6 +27,7 @@ from app.models.analyse_ia import AnalyseIA
 from app.models.suggestion import Suggestion
 from app.models.enums import UserRole, SentimentType, IdeaStatus
 from app.utils.stats import wilson_lower_bound
+from app.services.secteurs import libelle_secteur
 from app.schemas.dashboard import (
     DashboardAgence,
     DashboardSiege,
@@ -112,7 +113,7 @@ def get_statistics_admin(
             organisation_id=o.id,
             nom=o.nom,
             logo=o.logo,
-            secteur=o.secteur_activite or o.secteur or "Général",
+            secteur=libelle_secteur(o.secteur_code),
             agences_count=agences_par_org.get(o.id, 0),
             utilisateurs_count=utilisateurs_par_org.get(o.id, 0),
             plan_code=plan.code if plan else None,
