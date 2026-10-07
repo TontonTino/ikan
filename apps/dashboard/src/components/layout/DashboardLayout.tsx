@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Outlet, useNavigate, useLocation, matchPath } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { alertesApi } from '../../services/api';
@@ -8,12 +8,15 @@ import BackButton from './BackButton';
 import Sidebar, { SIDEBAR_ID } from './Sidebar';
 import NotificationCenter from './NotificationCenter';
 import { ROLE_NAV_SECTIONS, type NavSection } from './navigation';
-import YamChatPanel from '../agent/YamChatPanel';
+import YamChatPanel, { YAM_PANEL_ID } from '../agent/YamChatPanel';
 import { useYamStore } from '../../stores/yamStore';
 import { useMediaQuery, DESKTOP_QUERY } from '../ui/useMediaQuery';
 import { XCloseIcon } from '../common/Icons';
 
-const COLLAPSE_STORAGE_KEY = 'ikan-sidebar-collapsed';
+// Seuils d'espace utile du contenu (hors sidebar, marges et panneau YAM).
+// L'écart de 40 px évite les bascules répétées quand la largeur varie près du seuil.
+const COMPACT_ENTER_THRESHOLD = 760;
+const COMPACT_EXIT_THRESHOLD = 800;
 
 // ── Table centrale du bouton « Retour » ───────────────────────────────────────
 // Pages profondes (non présentes dans le menu) qui affichent un BackButton en haut du contenu. Pour en ajouter
@@ -66,28 +69,73 @@ export default function DashboardLayout() {
   const toggleYam = useYamStore((s) => s.toggle);
   const closeYam = useYamStore((s) => s.close);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(() => {
-    try {
-      return window.localStorage.getItem(COLLAPSE_STORAGE_KEY) === 'true';
-    } catch {
-      return false;
-    }
-  });
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
-  // L'état réduit ne s'applique qu'à la barre desktop : le tiroir mobile affiche toujours les libellés.
-  const collapsed = desktopSidebarCollapsed && isDesktop;
-  const toggleCollapsed = useCallback(() => setDesktopSidebarCollapsed((c) => !c), []);
+  const shellRef = useRef<HTMLDivElement>(null);
+  const [compactNavigation, setCompactNavigation] = useState(false);
+  // Les seuils portent sur la largeur intérieure réellement visible aux pages :
+  // bornes du contenu, paddings CSS et éventuelle superposition de YAM inclus.
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+
+    const updateNavigationMode = () => {
+      const shellRect = shell.getBoundingClientRect();
+      const shellStyle = window.getComputedStyle(shell);
+      const expandedSidebarWidth = Number.parseFloat(shellStyle.getPropertyValue('--sidebar-width'));
+      const layoutGutter = Number.parseFloat(shellStyle.getPropertyValue('--layout-gutter'));
+      const main = shell.querySelector<HTMLElement>('.dashboard-main-inner');
+      if (!main || !Number.isFinite(expandedSidebarWidth) || !Number.isFinite(layoutGutter)) return;
+
+      const mainStyle = window.getComputedStyle(main);
+      const contentPaddingLeft = Number.parseFloat(mainStyle.paddingLeft);
+      const contentPaddingRight = Number.parseFloat(mainStyle.paddingRight);
+      if (!Number.isFinite(contentPaddingLeft) || !Number.isFinite(contentPaddingRight)) return;
+
+      // Coordonnées relatives au shell : la Sidebar est fixed, mais le contenu
+      // réserve sa place via margin-left/width dans layout.css.
+      const contentStart = expandedSidebarWidth + 2 * layoutGutter + contentPaddingLeft;
+      const contentEnd = shellRect.width - contentPaddingRight;
+
+      let visibleContentEnd = contentEnd;
+      if (yamOpen) {
+        const yamPanel = document.getElementById(YAM_PANEL_ID);
+        if (yamPanel) {
+          const panelStyle = window.getComputedStyle(yamPanel);
+          const panelWidth = yamPanel.getBoundingClientRect().width;
+          const panelRightInset = Number.parseFloat(panelStyle.right);
+          if (Number.isFinite(panelWidth) && Number.isFinite(panelRightInset)) {
+            // YAM est fixed et recouvre le contenu. Son bord gauche borne la
+            // zone continue visible ; le padding droit déjà masqué n'est pas
+            // déduit une seconde fois.
+            const yamLeft = shellRect.width - panelRightInset - panelWidth;
+            visibleContentEnd = Math.min(contentEnd, yamLeft);
+          }
+        }
+      }
+
+      const availableContentWidth = Math.max(0, visibleContentEnd - contentStart);
+      setCompactNavigation((wasCompact) => {
+        const threshold = wasCompact ? COMPACT_EXIT_THRESHOLD : COMPACT_ENTER_THRESHOLD;
+        return availableContentWidth < threshold;
+      });
+    };
+
+    updateNavigationMode();
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateNavigationMode) : null;
+    observer?.observe(shell);
+    const yamPanel = yamOpen ? document.getElementById(YAM_PANEL_ID) : null;
+    if (yamPanel) observer?.observe(yamPanel);
+    window.addEventListener('resize', updateNavigationMode);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', updateNavigationMode);
+    };
+  }, [yamOpen]);
+  // Le tiroir est réservé aux téléphones ; tablette et desktop utilisent la sidebar adaptive.
+  const collapsed = compactNavigation && isDesktop;
   const hamburgerRef = useRef<HTMLButtonElement>(null);
   // YAM : CX Manager et Agency Manager uniquement (l'Admin n'est jamais proposé, même si l'API le refuse aussi).
   const canUseYam = user?.role === 'cx_manager' || user?.role === 'agency_manager';
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(COLLAPSE_STORAGE_KEY, String(desktopSidebarCollapsed));
-    } catch {
-      // La préférence reste utilisable en mémoire si le stockage est bloqué.
-    }
-  }, [desktopSidebarCollapsed]);
 
   // La sidebar mobile (tiroir) se ferme dès qu'on change de page — couvre le
   // clic sur un lien de nav sans avoir besoin d'un handler par lien.
@@ -135,7 +183,7 @@ export default function DashboardLayout() {
       }
     };
     const onResize = () => {
-      if (window.innerWidth > 1024) setMobileMenuOpen(false);
+      if (window.innerWidth >= 768) setMobileMenuOpen(false);
     };
     document.addEventListener('keydown', onKey);
     window.addEventListener('resize', onResize);
@@ -219,7 +267,7 @@ export default function DashboardLayout() {
 
   return (
 
-    <div className={`app-shell${collapsed ? ' app-shell--collapsed' : ''}`}>
+    <div ref={shellRef} className={`app-shell${collapsed ? ' app-shell--collapsed' : ''}`}>
       {/* Voile derrière le tiroir mobile : ferme la sidebar au clic extérieur (mobile/tablette uniquement). */}
       <div
         className={`dashboard-sidebar-overlay${mobileMenuOpen ? ' is-open' : ''}`}
@@ -231,7 +279,6 @@ export default function DashboardLayout() {
         user={user}
         sections={navSections}
         collapsed={collapsed}
-        onToggleCollapsed={toggleCollapsed}
         mobileOpen={mobileMenuOpen}
         onCloseMobile={() => setMobileMenuOpen(false)}
         yam={canUseYam ? { open: yamOpen, onToggle: toggleYam } : undefined}
@@ -255,7 +302,7 @@ export default function DashboardLayout() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-            {/* Bouton hamburger : caché sur desktop, visible ≤ 1024px (styles/layout.css). */}
+            {/* Bouton hamburger : réservé au drawer téléphone (< 768 px). */}
             <button
               type="button"
               ref={hamburgerRef}
@@ -265,8 +312,8 @@ export default function DashboardLayout() {
               aria-expanded={mobileMenuOpen}
               aria-controls={SIDEBAR_ID}
               style={{
-                width: '38px',
-                height: '38px',
+                width: '44px',
+                height: '44px',
                 borderRadius: '10px',
                 background: '#FFFFFF',
                 border: '1px solid #E2E8F0',

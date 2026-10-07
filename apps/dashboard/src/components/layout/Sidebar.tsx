@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { NavLink } from 'react-router-dom';
 import type { User } from '../../types';
 import IkanLogo from '../common/IkanLogo';
@@ -18,27 +18,10 @@ export interface SidebarProps {
   sections: NavSection[];
   /** État réduit effectif (desktop uniquement ; toujours false en tiroir mobile). */
   collapsed: boolean;
-  onToggleCollapsed: () => void;
   /** Tiroir mobile/tablette ouvert. */
   mobileOpen: boolean;
   onCloseMobile: () => void;
   yam?: { open: boolean; onToggle: () => void };
-}
-
-/** Raccourci « [ » : ignoré dans les champs de saisie et avec un modificateur. */
-function useToggleShortcut(enabled: boolean, onToggle: () => void) {
-  useEffect(() => {
-    if (!enabled) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== '[' || e.ctrlKey || e.metaKey || e.altKey) return;
-      const t = e.target as HTMLElement | null;
-      if (t && (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName))) return;
-      e.preventDefault();
-      onToggle();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [enabled, onToggle]);
 }
 
 /**
@@ -51,10 +34,7 @@ function useToggleShortcut(enabled: boolean, onToggle: () => void) {
  * Les liens proviennent de ROLE_NAV_SECTIONS (navigation.tsx), alignés sur
  * les gardes de route : un rôle ne voit que ce qu'il peut ouvrir.
  */
-export default function Sidebar({ user, sections, collapsed, onToggleCollapsed, mobileOpen, onCloseMobile, yam }: SidebarProps) {
-  // Le raccourci ne s'applique qu'à la barre desktop (pas au tiroir).
-  useToggleShortcut(!mobileOpen, onToggleCollapsed);
-
+export default function Sidebar({ user, sections, collapsed, mobileOpen, onCloseMobile, yam }: SidebarProps) {
   const withTooltip = (label: string, node: React.ReactElement) =>
     collapsed ? (
       <Tooltip content={label} placement="right" decorative delay={0}>
@@ -162,24 +142,6 @@ export default function Sidebar({ user, sections, collapsed, onToggleCollapsed, 
           </button>,
         )}
 
-      {withTooltip(
-        'Agrandir le menu ( [ )',
-        <button
-          type="button"
-          className="dashboard-sidebar-toggle"
-          onClick={onToggleCollapsed}
-          aria-label={collapsed ? 'Agrandir la barre latérale' : 'Réduire la barre latérale'}
-          aria-expanded={!collapsed}
-          aria-controls={SIDEBAR_ID}
-          aria-keyshortcuts="["
-        >
-          <span className="dashboard-sidebar-toggle__icon" aria-hidden="true">
-            <ChevronRightIcon size={17} />
-          </span>
-          <span className="dashboard-sidebar-toggle__label">Réduire</span>
-          <kbd className="dashboard-sidebar-toggle__kbd" aria-hidden="true">[</kbd>
-        </button>,
-      )}
     </aside>
   );
 }
