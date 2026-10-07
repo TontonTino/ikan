@@ -167,78 +167,33 @@ export default function LoginPage() {
             {/* Titre Principal */}
             <h1
               style={{
-                fontSize: '1.95rem',
+                fontSize: 'clamp(0.85rem, 2.4vw, 1.6rem)',
                 fontWeight: 800,
                 color: '#FFFFFF',
-                lineHeight: 1.28,
+                lineHeight: 1.2,
                 letterSpacing: '-0.025em',
-                margin: '0 0 16px 0',
+                margin: '0 0 16px',
                 maxWidth: '480px',
+                width: '100%',
               }}
             >
-              Transformez l'expérience client en<br />
-              avantage compétitif
+              <span style={{ display: 'block', whiteSpace: 'nowrap' }}>Transformez l'expérience client</span>
+              <span style={{ display: 'block', whiteSpace: 'nowrap' }}>en avantage compétitif</span>
             </h1>
 
-            {/* Texte Secondaire */}
+            {/* Signature produit */}
             <p
               style={{
                 fontSize: '0.94rem',
                 color: 'rgba(255, 255, 255, 0.78)',
                 lineHeight: 1.55,
-                margin: '0 0 28px 0',
-                fontWeight: 500,
-                maxWidth: '440px',
+                margin: 0,
+                fontWeight: 600,
+                letterSpacing: '0.02em',
               }}
             >
-              Collectez, analysez et agissez sur les retours clients en temps réel across tout votre réseau d'agences.
+              Collecter - Analyser - Agir
             </p>
-
-            {/* Badges Features */}
-            <div
-              style={{
-                display: 'flex',
-                gap: '12px',
-                flexWrap: 'wrap',
-                justifyContent: 'center',
-              }}
-            >
-              <div
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.16)',
-                  borderRadius: '9999px',
-                  padding: '6px 14px',
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  color: '#FFFFFF',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  backdropFilter: 'blur(4px)',
-                }}
-              >
-                <span style={{ color: '#4ADE80', fontSize: '0.68rem' }}>●</span> Analyse IA en temps réel
-              </div>
-
-              <div
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.16)',
-                  borderRadius: '9999px',
-                  padding: '6px 14px',
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  color: '#FFFFFF',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  backdropFilter: 'blur(4px)',
-                }}
-              >
-                <span style={{ color: '#4ADE80', fontSize: '0.68rem' }}>●</span> Traitement automatique des retours
-              </div>
-            </div>
           </div>
         </div>
 
