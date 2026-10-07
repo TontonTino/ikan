@@ -39,7 +39,10 @@ from app.schemas.feedback import (
     ActionCXCreate,
     ReponseClientCreate,
     DemandeContactListItem,
+    NPSSubmit,
+    NPSSubmitResponse,
 )
+from app.core.security import create_nps_token, decode_token
 from app.services.ai.analyse_service import analyser_feedback
 from app.core.config import settings
 
@@ -226,7 +229,12 @@ def submit_feedback(
         except Exception as ai_err:
             logger.error(f"Erreur lors de l'analyse IA synchrone du feedback {feedback.id}: {ai_err}")
 
-        return _format_feedback_response(feedback)
+        reponse = _format_feedback_response(feedback)
+        # nps_token posé ICI seulement (pas dans _format_feedback_response, réutilisé par
+        # les endpoints de lecture/workflow ailleurs dans ce fichier) : n'a de sens qu'au
+        # moment de la soumission, jamais régénéré sur une relecture.
+        reponse.nps_token = create_nps_token(feedback.id)
+        return reponse
     except HTTPException:
         raise
     except Exception as e:
@@ -236,6 +244,33 @@ def submit_feedback(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erreur serveur submit_feedback: {str(e)}"
         )
+
+
+@router.post("/{feedback_id}/nps", response_model=NPSSubmitResponse)
+def soumettre_nps(feedback_id: UUID, data: NPSSubmit, db: Session = Depends(get_db)):
+    """Réponse NPS facultative — endpoint PUBLIC, affiché après l'écran de remerciement
+    (apps/client/src/pages/feedback/[code].astro). Ne modifie AUCUN autre champ du
+    feedback. Le jeton est TOUJOURS vérifié ici directement (type, expiration, feedback
+    cible) — jamais via get_current_user/get_current_active_user : un jeton nps n'a
+    aucune route protégée à authentifier (voir create_nps_token)."""
+    jeton_invalide = HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Jeton invalide ou expiré")
+
+    payload = decode_token(data.token)
+    if payload is None or payload.get("type") != "nps":
+        raise jeton_invalide
+    if payload.get("sub") != str(feedback_id):
+        raise jeton_invalide
+
+    feedback = db.query(Feedback).filter(Feedback.id == feedback_id).first()
+    if not feedback:
+        raise jeton_invalide
+
+    if feedback.nps_note is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Réponse NPS déjà enregistrée pour ce feedback")
+
+    feedback.nps_note = data.nps_note
+    db.commit()
+    return NPSSubmitResponse(nps_note=feedback.nps_note)
 
 
 @router.get("/", response_model=List[FeedbackResponse])

@@ -43,6 +43,17 @@ def create_refresh_token(subject: Any) -> str:
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
+def create_nps_token(feedback_id: Any) -> str:
+    """Jeton JWT à usage unique (30 minutes) autorisant UNIQUEMENT la réponse NPS
+    facultative d'un feedback précis après sa soumission — voir POST /feedbacks/{id}/nps.
+    `type: "nps"` est délibérément distinct de "access"/"refresh" : get_current_user
+    (ici et apps/agent) rejette déjà tout jeton dont `type` n'est pas "access", donc un
+    jeton NPS ne peut authentifier aucune route protégée, par construction."""
+    expire = datetime.now(timezone.utc) + timedelta(minutes=30)
+    to_encode = {"exp": expire, "sub": str(feedback_id), "type": "nps"}
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
 def decode_token(token: str) -> Optional[dict]:
     """Décode et valide un token JWT. Retourne None si invalide."""
     try:

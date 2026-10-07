@@ -112,6 +112,10 @@ class FeedbackResponse(BaseModel):
     categorie_nom: Optional[str] = None
     note: int
     nps_note: Optional[int] = None
+    # Posé UNIQUEMENT par submit_feedback (POST /feedbacks), jamais par les autres endpoints
+    # qui réutilisent ce même schéma (liste, détail, workflow CX) : un jeton NPS frais n'a de
+    # sens qu'au moment de la soumission elle-même. Additif, absent partout ailleurs.
+    nps_token: Optional[str] = None
     commentaire: Optional[str] = None
     date_soumission: datetime
     statut_traitement: str = "nouveau"
@@ -131,3 +135,13 @@ class FeedbackResponse(BaseModel):
     demande_contact: Optional[DemandeContactInfo] = None
 
     model_config = {"from_attributes": True}
+
+
+class NPSSubmit(BaseModel):
+    """Payload de POST /feedbacks/{feedback_id}/nps (public, facultatif après l'envoi)."""
+    nps_note: int = Field(..., ge=0, le=10, description="Réponse NPS, 0 à 10")
+    token: str = Field(..., description="nps_token renvoyé par POST /feedbacks à la création")
+
+
+class NPSSubmitResponse(BaseModel):
+    nps_note: int

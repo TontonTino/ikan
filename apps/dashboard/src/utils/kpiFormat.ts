@@ -86,6 +86,13 @@ export function formatKpiSubtitle(k: KPIResult, jours: number): string {
     const base = `${n} Issue${n !== 1 ? 's' : ''} non classée${n !== 1 ? 's' : ''}`;
     return k.status === 'no_data' ? base : `${base} · ${jours} derniers jours`;
   }
+  // NPS : le dénominateur EST le nombre de réponses (voir calculer_nps,
+  // app/services/kpi/engine.py) — sous 5, le score est statistiquement peu fiable, on le
+  // dit plutôt que de laisser croire à un NPS aussi solide qu'avec un grand échantillon.
+  if (k.code === 'NPS' && k.status === 'ok' && k.denominator != null && k.denominator < 5) {
+    const n = k.denominator;
+    return `Échantillon faible (${n} réponse${n !== 1 ? 's' : ''})`;
+  }
   if (k.status === 'no_data') return 'sur cette période';
   return `${jours} derniers jours`;
 }
