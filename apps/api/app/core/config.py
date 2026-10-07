@@ -6,6 +6,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import AnyHttpUrl
 from typing import List
 
+from app.core.cors import origines_autorisees
+
 
 from pathlib import Path
 
@@ -39,12 +41,13 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    # CORS
-    ALLOWED_ORIGINS: str = "http://localhost:4321,http://localhost:5173,http://localhost:3000,http://127.0.0.1:4321,http://127.0.0.1:5173,https://ikanai-client.onrender.com,https://ikanai-dashboard.onrender.com"
+    # CORS : liste séparée par des virgules (sans JSON). Si elle est renseignée, elle REMPLACE le défaut
+    # (défini dans app/core/cors.py selon APP_ENV). En production, elle doit contenir client et dashboard.
+    ALLOWED_ORIGINS: str | None = None
 
     @property
     def allowed_origins_list(self) -> List[str]:
-        return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
+        return origines_autorisees(self.ALLOWED_ORIGINS, self.APP_ENV)
 
     # Agent IA YAM (optionnel — service séparé, port 8001). Vide = notification désactivée.
     # AGENT_WEBHOOK_URL = URL de BASE du service (ex. http://localhost:8001) ;
