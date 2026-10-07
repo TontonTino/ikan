@@ -19,9 +19,9 @@ export default function PilotageIdeasTab({ suggestions, suggestionsTotal, sugges
     return suggestions;
   }, [suggestions, activeSubTab]);
   const ideesTabsConfig: TabItem[] = [
-    { id: 'toutes', label: 'Toutes les id?es', icon: <LightbulbIcon size={16} />, badge: suggestions.length },
-    { id: 'a_etudier', label: '? ?tudier', icon: <ClockIcon size={16} />, badge: aEtudierCount, badgeColor: aEtudierCount > 0 ? 'red' : 'default' },
-    { id: 'decisions', label: 'D?cisions prises', icon: <CheckCircleIcon size={16} />, badge: decisionsCount },
+    { id: 'toutes', label: 'Toutes les idées', icon: <LightbulbIcon size={16} />, badge: suggestions.length },
+    { id: 'a_etudier', label: 'À étudier', icon: <ClockIcon size={16} />, badge: aEtudierCount, badgeColor: aEtudierCount > 0 ? 'red' : 'default' },
+    { id: 'decisions', label: 'Décisions prises', icon: <CheckCircleIcon size={16} />, badge: decisionsCount },
   ];
   return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
