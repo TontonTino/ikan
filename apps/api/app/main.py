@@ -5,11 +5,11 @@ import logging
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.core.config import settings
+from app.core.cors import appliquer_cors
 from app.api.v1.router import api_router
 from app.db.session import engine, Base, SessionLocal
 import app.models.organisation
@@ -160,14 +160,10 @@ def on_startup():
     except Exception as e:
         print(f"[STARTUP SCHEDULER LOG ERROR] {e}")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.allowed_origins_list,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["X-Total-Count"],
-)
+_origines_cors = settings.allowed_origins_list
+# Ligne de démarrage : origines publiques uniquement, aucun secret.
+print(f"[CORS] APP_ENV={settings.APP_ENV} origines autorisées : {', '.join(_origines_cors)}")
+appliquer_cors(app, _origines_cors)
 
 # Inclusion des routes
 app.include_router(api_router, prefix=settings.API_V1_STR)
