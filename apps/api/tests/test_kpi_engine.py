@@ -23,9 +23,10 @@ from app.db.session import Base
 from app.models.agence import Agence
 from app.models.action_corrective import ActionCorrective
 from app.models.analyse_ia import AnalyseIA
-from app.models.enums import CriticiteType, SentimentType
+from app.models.enums import CriticiteType, IssueEscalationReason, SentimentType, UserRole
 from app.models.feedback import Feedback
 from app.models.issue import Issue
+from app.models.issue_escalation import IssueEscalation
 from app.models.historique_issue import HistoriqueIssue
 from app.models.organisation import Organisation
 from app.models.plan import Plan
@@ -46,6 +47,7 @@ from app.services.kpi.engine import (
     calculer_nps,
     calculer_sla_compliance_rate,
     calculer_issue_recurrence_rate,
+    calculer_escalation_rate,
 )
 
 NOW = datetime.now(timezone.utc)
@@ -57,18 +59,21 @@ def ctx():
     Base.metadata.create_all(
         engine,
         tables=[Plan.__table__, Organisation.__table__, Agence.__table__, QRCode.__table__,
-                Feedback.__table__, AnalyseIA.__table__, Issue.__table__, HistoriqueIssue.__table__, ActionCorrective.__table__],
+                Feedback.__table__, AnalyseIA.__table__, Issue.__table__, HistoriqueIssue.__table__, ActionCorrective.__table__,
+                IssueEscalation.__table__],
     )
     Session = sessionmaker(bind=engine)
     db = Session()
 
     org_a = Organisation(id=uuid4(), nom="Org A", active=True)
-    db.add(org_a)
+    org_b = Organisation(id=uuid4(), nom="Org B", active=True)
+    db.add_all([org_a, org_b])
     db.flush()
 
     agence_a1 = Agence(id=uuid4(), organisation_id=org_a.id, nom="Agence A1", active=True)
     agence_a2 = Agence(id=uuid4(), organisation_id=org_a.id, nom="Agence A2", active=True)
-    db.add_all([agence_a1, agence_a2])
+    agence_b1 = Agence(id=uuid4(), organisation_id=org_b.id, nom="Agence B1", active=True)
+    db.add_all([agence_a1, agence_a2, agence_b1])
     db.flush()
 
     qr_a1 = QRCode(id=uuid4(), agence_id=agence_a1.id, code="QR-A1", url="http://t/a1", actif=True)
@@ -76,7 +81,9 @@ def ctx():
     db.add_all([qr_a1, qr_a2])
     db.commit()
 
-    ids = SimpleNamespace(org_a=org_a.id, agence_a1=agence_a1.id, agence_a2=agence_a2.id, qr_a1=qr_a1.id, qr_a2=qr_a2.id)
+    ids = SimpleNamespace(org_a=org_a.id, org_b=org_b.id, agence_a1=agence_a1.id,
+                          agence_a2=agence_a2.id, agence_b1=agence_b1.id,
+                          qr_a1=qr_a1.id, qr_a2=qr_a2.id)
     return SimpleNamespace(Session=Session, **vars(ids))
 
 
@@ -106,6 +113,25 @@ def _issue(db, organisation_id, agence_id, statut="ouverte", severite=CriticiteT
     )
     db.add(issue)
     return issue
+
+
+def _escalation(db, issue, date_evenement):
+    event = IssueEscalation(
+        id=uuid4(), issue_id=issue.id, date_evenement=date_evenement,
+        motif=IssueEscalationReason.AUTRE, declenchee_par_id=uuid4(),
+        declenchee_par_nom="CX Test", declenchee_par_role=UserRole.CX_MANAGER,
+        created_at=date_evenement,
+    )
+    db.add(event)
+    return event
+
+
+def _status_change(db, issue, old_status, new_status, date_evenement):
+    db.add(HistoriqueIssue(
+        id=uuid4(), issue_id=issue.id, auteur_nom="CX Test", auteur_role="cx_manager",
+        type_evenement="test_transition", ancien_statut=old_status,
+        nouveau_statut=new_status, date_evenement=date_evenement,
+    ))
 
 
 # ── CSAT ──────────────────────────────────────────────────────────────────────────
@@ -731,6 +757,157 @@ def test_issue_recurrence_rate_ne_compte_pas_les_feedbacks_rattaches(ctx):
     result = calculer_issue_recurrence_rate(db, ctx.org_a)
 
     assert (result.numerator, result.denominator, result.value) == (1, 1, 100.0)
+    db.close()
+
+
+def test_escalation_rate_sans_issue_eligible_retourne_no_data(ctx):
+    db = ctx.Session()
+    result = calculer_escalation_rate(db, ctx.org_a)
+    assert (result.status, result.value, result.numerator, result.denominator) == ("no_data", None, 0, 0)
+    db.close()
+
+
+def test_escalation_rate_issues_actives_sans_evenement_retourne_zero(ctx):
+    db = ctx.Session()
+    _issue(db, ctx.org_a, ctx.agence_a1, premiere_detection=NOW - timedelta(days=5))
+    _issue(db, ctx.org_a, ctx.agence_a1, premiere_detection=NOW - timedelta(days=40))
+    db.commit()
+
+    result = calculer_escalation_rate(db, ctx.org_a)
+
+    assert (result.status, result.value, result.numerator, result.denominator) == ("ok", 0.0, 0, 2)
+    db.close()
+
+
+def test_escalation_rate_compte_les_issues_distinctes_pas_les_evenements(ctx, monkeypatch):
+    import app.services.kpi.engine as kpi_engine
+
+    fixed_now = datetime(2026, 10, 6, 12, 0, tzinfo=timezone.utc)
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return fixed_now if tz else fixed_now.replace(tzinfo=None)
+
+    monkeypatch.setattr(kpi_engine, "datetime", FrozenDateTime)
+    db = ctx.Session()
+    older = _issue(db, ctx.org_a, ctx.agence_a1, premiere_detection=fixed_now - timedelta(days=60))
+    newer = _issue(db, ctx.org_a, ctx.agence_a1, premiere_detection=fixed_now - timedelta(days=2))
+    db.flush()
+    _escalation(db, older, fixed_now - timedelta(days=10))
+    _escalation(db, older, fixed_now - timedelta(days=5))
+    _escalation(db, older, fixed_now - timedelta(days=1))
+    _escalation(db, newer, fixed_now + timedelta(seconds=1))
+    db.commit()
+
+    result = calculer_escalation_rate(db, ctx.org_a, jours=30)
+
+    assert (result.status, result.value, result.numerator, result.denominator) == ("ok", 50.0, 1, 2)
+    db.close()
+
+
+def test_escalation_rate_reconstruit_presence_active_sur_la_periode(ctx, monkeypatch):
+    import app.services.kpi.engine as kpi_engine
+
+    fixed_now = datetime(2026, 10, 6, 12, 0, tzinfo=timezone.utc)
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return fixed_now if tz else fixed_now.replace(tzinfo=None)
+
+    monkeypatch.setattr(kpi_engine, "datetime", FrozenDateTime)
+    db = ctx.Session()
+    # Detectée avant la période, active au début de celle-ci : reste éligible.
+    active_old = _issue(db, ctx.org_a, ctx.agence_a1, premiere_detection=fixed_now - timedelta(days=60))
+    # Résolue avant la période : un événement d'escalade tardif ne la rend pas éligible.
+    closed_old = _issue(db, ctx.org_a, ctx.agence_a1, statut="resolue",
+                        premiere_detection=fixed_now - timedelta(days=60))
+    # Active au début de la période puis résolue : éligible, car présente dans le processus.
+    closed_during = _issue(db, ctx.org_a, ctx.agence_a1,
+                           premiere_detection=fixed_now - timedelta(days=60))
+    db.flush()
+    _status_change(db, closed_old, "ouverte", "resolue", fixed_now - timedelta(days=31))
+    _status_change(db, closed_during, "ouverte", "resolue", fixed_now - timedelta(days=2))
+    _escalation(db, active_old, fixed_now - timedelta(days=3))
+    _escalation(db, closed_old, fixed_now - timedelta(days=1))
+    _escalation(db, closed_during, fixed_now - timedelta(days=5))
+    db.commit()
+
+    result = calculer_escalation_rate(db, ctx.org_a, jours=30)
+
+    assert (result.numerator, result.denominator, result.value) == (2, 2, 100.0)
+    db.close()
+
+
+def test_escalation_rate_filtre_agence_et_organisation(ctx, monkeypatch):
+    import app.services.kpi.engine as kpi_engine
+
+    fixed_now = datetime(2026, 10, 6, 12, 0, tzinfo=timezone.utc)
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return fixed_now if tz else fixed_now.replace(tzinfo=None)
+
+    monkeypatch.setattr(kpi_engine, "datetime", FrozenDateTime)
+    db = ctx.Session()
+    issue_a1 = _issue(db, ctx.org_a, ctx.agence_a1, premiere_detection=fixed_now - timedelta(days=1))
+    issue_a2 = _issue(db, ctx.org_a, ctx.agence_a2, premiere_detection=fixed_now - timedelta(days=1))
+    issue_b = _issue(db, ctx.org_b, ctx.agence_b1, premiere_detection=fixed_now - timedelta(days=1))
+    db.flush()
+    _escalation(db, issue_a2, fixed_now - timedelta(hours=1))
+    _escalation(db, issue_b, fixed_now - timedelta(hours=1))
+    db.commit()
+
+    org_result = calculer_escalation_rate(db, ctx.org_a)
+    agency_a1 = calculer_escalation_rate(db, ctx.org_a, agence_id=ctx.agence_a1)
+    agency_a2 = calculer_escalation_rate(db, ctx.org_a, agence_id=ctx.agence_a2)
+    incoherent_scope = calculer_escalation_rate(db, ctx.org_a, agence_id=ctx.agence_b1)
+
+    assert (org_result.numerator, org_result.denominator, org_result.value) == (1, 2, 50.0)
+    assert (agency_a1.status, agency_a1.numerator, agency_a1.denominator) == ("ok", 0, 1)
+    assert (agency_a2.numerator, agency_a2.denominator, agency_a2.value) == (1, 1, 100.0)
+    assert (incoherent_scope.status, incoherent_scope.numerator, incoherent_scope.denominator) == ("no_data", 0, 0)
+    db.close()
+
+
+def test_escalation_rate_ne_confond_pas_criticite_sla_action_et_recurrence(ctx, monkeypatch):
+    import app.services.kpi.engine as kpi_engine
+
+    fixed_now = datetime(2026, 10, 6, 12, 0, tzinfo=timezone.utc)
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return fixed_now if tz else fixed_now.replace(tzinfo=None)
+
+    monkeypatch.setattr(kpi_engine, "datetime", FrozenDateTime)
+    db = ctx.Session()
+    # Une Issue critique avec SLA dépassé et une action reste non escaladée sans événement.
+    critical = _issue(
+        db, ctx.org_a, ctx.agence_a1, statut="ouverte", severite=CriticiteType.CRITIQUE,
+        necessite_action=True, premiere_detection=fixed_now - timedelta(days=2),
+        date_limite_sla=fixed_now - timedelta(hours=1),
+    )
+    db.flush()
+    db.add(ActionCorrective(id=uuid4(), issue_id=critical.id, titre="Action", statut="en_cours"))
+
+    # Une Issue récurrente escaladée compte normalement ; sa racine, résolue avant la
+    # période, n'appartient pas au dénominateur actif.
+    root = _issue(db, ctx.org_a, ctx.agence_a1, statut="resolue",
+                  premiere_detection=fixed_now - timedelta(days=80))
+    db.flush()
+    _status_change(db, root, "ouverte", "resolue", fixed_now - timedelta(days=60))
+    occurrence = _issue(db, ctx.org_a, ctx.agence_a1, issue_origine_id=root.id,
+                        premiere_detection=fixed_now - timedelta(days=1))
+    db.flush()
+    _escalation(db, occurrence, fixed_now - timedelta(hours=2))
+    db.commit()
+
+    result = calculer_escalation_rate(db, ctx.org_a, jours=30)
+
+    assert (result.numerator, result.denominator, result.value) == (1, 2, 50.0)
     db.close()
 
 

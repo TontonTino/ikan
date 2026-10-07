@@ -26,6 +26,15 @@ class CriticiteType(str, enum.Enum):
     CRITIQUE = "critique"
 
 
+class IssueEscalationReason(str, enum.Enum):
+    """Motif contrôlé d'un événement d'escalade explicite d'Issue."""
+    SLA = "sla"
+    CRITICITE = "criticite"
+    RISQUE_CLIENT = "risque_client"
+    DECISION_MANAGERIALE = "decision_manageriale"
+    AUTRE = "autre"
+
+
 class IdeaStatus(str, enum.Enum):
     """Statut d'une suggestion ou idée soumise par un client."""
     NOUVEAU = "nouveau"

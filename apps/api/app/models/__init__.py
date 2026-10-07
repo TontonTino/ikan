@@ -8,6 +8,7 @@ from app.models.enums import (
     CriticiteType,
     IdeaStatus,
     PriorityLevel,
+    IssueEscalationReason,
 )
 from app.models.plan import Plan, PlanFeature
 from app.models.organisation import Organisation
@@ -26,6 +27,7 @@ from app.models.reponse_client import ReponseClient
 from app.models.categorie import Categorie
 from app.models.mention_veille import MentionVeille
 from app.models.issue import Issue
+from app.models.issue_escalation import IssueEscalation
 from app.models.action_corrective import ActionCorrective
 from app.models.historique_issue import HistoriqueIssue
 from app.models.alerte_quota_envoyee import AlerteQuotaEnvoyee
@@ -39,6 +41,7 @@ __all__ = [
     "CriticiteType",
     "IdeaStatus",
     "PriorityLevel",
+    "IssueEscalationReason",
     # Modèles
     "Plan",
     "PlanFeature",
@@ -59,6 +62,7 @@ __all__ = [
     "Categorie",
     "MentionVeille",
     "Issue",
+    "IssueEscalation",
     "ActionCorrective",
     "HistoriqueIssue",
     "AlerteQuotaEnvoyee",

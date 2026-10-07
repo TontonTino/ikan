@@ -16,7 +16,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import case, func
+from sqlalchemy import and_, case, func, literal, or_, union_all
 from sqlalchemy.orm import Session
 
 from app.models.agence import Agence
@@ -25,6 +25,7 @@ from app.models.analyse_ia import AnalyseIA
 from app.models.enums import CriticiteType, SentimentType
 from app.models.feedback import Feedback
 from app.models.issue import Issue
+from app.models.issue_escalation import IssueEscalation
 from app.models.historique_issue import HistoriqueIssue
 from app.models.qr_code import QRCode
 from app.schemas.kpi import KPIResult
@@ -312,6 +313,99 @@ def calculer_issue_recurrence_rate(db: Session, organisation_id: UUID, agence_id
     )
 
 
+def calculer_escalation_rate(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
+    """Share of Issues present in backlog during the period with an explicit escalation.
+
+    The denominator is reconstructed from the initial detection time plus audited Issue
+    status transitions. An Issue is eligible when a backlog status interval overlaps the
+    reporting window, including Issues detected before the window.
+    """
+    maintenant = datetime.now(timezone.utc)
+    date_debut = maintenant - timedelta(days=jours)
+
+    issue_scope = [Issue.organisation_id == organisation_id]
+    if agence_id is not None:
+        issue_scope.append(Issue.agence_id == agence_id)
+
+    # Every Issue starts in "ouverte" at premiere_detection. Subsequent status changes
+    # are recorded in HistoriqueIssue by the Issue workflow endpoints.
+    initial_states = (
+        db.query(
+            Issue.id.label("issue_id"),
+            Issue.premiere_detection.label("status_at"),
+            literal("ouverte").label("status"),
+            literal(0).label("sequence"),
+        )
+        .filter(*issue_scope, Issue.premiere_detection <= maintenant)
+    )
+    transitions = (
+        db.query(
+            Issue.id.label("issue_id"),
+            HistoriqueIssue.date_evenement.label("status_at"),
+            HistoriqueIssue.nouveau_statut.label("status"),
+            literal(1).label("sequence"),
+        )
+        .join(HistoriqueIssue, HistoriqueIssue.issue_id == Issue.id)
+        .filter(
+            *issue_scope,
+            HistoriqueIssue.ancien_statut.isnot(None),
+            HistoriqueIssue.nouveau_statut.isnot(None),
+            HistoriqueIssue.ancien_statut != HistoriqueIssue.nouveau_statut,
+            HistoriqueIssue.date_evenement <= maintenant,
+        )
+    )
+    state_events = union_all(initial_states, transitions).cte("issue_status_events")
+    state_intervals = (
+        db.query(
+            state_events.c.issue_id,
+            state_events.c.status,
+            state_events.c.status_at,
+            func.lead(state_events.c.status_at).over(
+                partition_by=state_events.c.issue_id,
+                order_by=(state_events.c.status_at, state_events.c.sequence),
+            ).label("next_status_at"),
+        )
+        .cte("issue_status_intervals")
+    )
+    eligible = (
+        db.query(state_intervals.c.issue_id)
+        .filter(
+            state_intervals.c.status.in_(ISSUE_STATUTS_BACKLOG),
+            state_intervals.c.status_at <= maintenant,
+            or_(state_intervals.c.next_status_at.is_(None), state_intervals.c.next_status_at > date_debut),
+        )
+        .distinct()
+        .cte("eligible_issues")
+    )
+
+    row = (
+        db.query(
+            func.count(func.distinct(eligible.c.issue_id)),
+            func.count(func.distinct(IssueEscalation.issue_id)),
+        )
+        .select_from(
+            eligible.outerjoin(
+                IssueEscalation,
+                and_(
+                    IssueEscalation.issue_id == eligible.c.issue_id,
+                    IssueEscalation.date_evenement >= date_debut,
+                    IssueEscalation.date_evenement <= maintenant,
+                ),
+            )
+        )
+        .one()
+    )
+    denominator, numerator = (value or 0 for value in row)
+    if denominator == 0:
+        return _no_data("ESCALATION_RATE", numerator=0, denominator=0)
+    d = KPI_DEFINITIONS["ESCALATION_RATE"]
+    return KPIResult(
+        code="ESCALATION_RATE", label=d.label, unit=d.unit, status="ok",
+        value=round(numerator / denominator * 100, 1),
+        numerator=numerator, denominator=denominator,
+    )
+
+
 def calculer_nps(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
     """Net Promoter Score for valid NPS responses submitted during the rolling period."""
     total, promoteurs, detracteurs = (
@@ -351,5 +445,6 @@ KPI_FUNCTIONS = {
     "ACTION_COMPLETION_RATE": calculer_action_completion_rate,
     "SLA_COMPLIANCE_RATE": calculer_sla_compliance_rate,
     "ISSUE_RECURRENCE_RATE": calculer_issue_recurrence_rate,
+    "ESCALATION_RATE": calculer_escalation_rate,
     "NPS": calculer_nps,
 }
