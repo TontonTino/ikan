@@ -26,6 +26,7 @@ import {
   XCloseIcon,
 } from '../../components/common/Icons';
 import { themeLabel } from '../../utils/themeLabels';
+import './FeedbacksPage.css';
 
 const STATUT_BADGES: Record<StatutTraitement, { label: string; bg: string; text: string; icon: React.ReactNode }> = {
   nouveau: { label: 'Nouveau', bg: '#FEE2E2', text: '#DC2626', icon: <AlertTriangleIcon size={12} color="#DC2626" /> },
@@ -79,6 +80,23 @@ const normalizeCriticite = (criticite?: string): string => {
   return criticite.toLowerCase().trim();
 };
 
+const dateDebutPeriode = (periode: string) => {
+  if (periode === 'all') return null;
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  if (periode === 'today') return date;
+  date.setDate(date.getDate() - (periode === '7' ? 6 : 29));
+  return date;
+};
+
+const sentimentDominant = (positifs: number, negatifs: number, neutres: number) => {
+  const sentiments = [['positif', positifs], ['négatif', negatifs], ['neutre', neutres]] as const;
+  const maximum = Math.max(positifs, negatifs, neutres);
+  if (maximum === 0) return 'non évalué';
+  const dominants = sentiments.filter(([, count]) => count === maximum).map(([label]) => label);
+  return dominants.length > 1 ? `à égalité (${dominants.join(', ')})` : dominants[0];
+};
+
 const hasAttentionSignal = (feedback: Feedback) => {
   const criticite = normalizeCriticite(feedback.analyse_ia?.criticite);
   const sentiment = normalizeSentiment(feedback.analyse_ia?.sentiment);
@@ -130,8 +148,19 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
   const [selectedAgenceId, setSelectedAgenceId] = useState<string>(agenceId || 'all');
   const [filterSentiment, setFilterSentiment] = useState<string>('all');
   const [filterTheme, setFilterTheme] = useState<string>(() => searchParams.get('theme') || 'all');
+  const [filterNote, setFilterNote] = useState<string>('all');
+  const [filterCriticite, setFilterCriticite] = useState<string>('all');
+  const [filterPeriode, setFilterPeriode] = useState<string>('all');
   const [search, setSearch] = useState<string>('');
   const [page, setPage] = useState(0);
+  const [filtersOpen, setFiltersOpen] = useState(() => typeof window === 'undefined' || !window.matchMedia('(max-width: 700px)').matches);
+
+  useEffect(() => {
+    const mobileQuery = window.matchMedia('(max-width: 700px)');
+    const syncFilterPanel = () => setFiltersOpen(!mobileQuery.matches);
+    mobileQuery.addEventListener('change', syncFilterPanel);
+    return () => mobileQuery.removeEventListener('change', syncFilterPanel);
+  }, []);
 
   useEffect(() => {
     const requestedTab = searchParams.get('tab');
@@ -211,7 +240,18 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
     return feedbacks.filter((f) => {
       if (selectedAgenceId !== 'all' && f.agence_id !== selectedAgenceId) return false;
       if (filterSentiment !== 'all' && normalizeSentiment(f.analyse_ia?.sentiment) !== filterSentiment) return false;
-      if (filterTheme !== 'all' && f.analyse_ia?.theme_principal !== filterTheme) return false;
+      if (filterTheme === 'non_categorise' ? Boolean(f.analyse_ia?.theme_principal) : filterTheme !== 'all' && f.analyse_ia?.theme_principal !== filterTheme) return false;
+      if (filterNote !== 'all' && f.note !== Number(filterNote)) return false;
+      if (filterCriticite !== 'all') {
+        const hasAnalysis = Boolean(f.analyse_ia);
+        const criticite = normalizeCriticite(f.analyse_ia?.criticite);
+        if (filterCriticite === 'non_evaluee' ? (!hasAnalysis || Boolean(criticite)) : criticite !== filterCriticite) return false;
+      }
+      const debutPeriode = dateDebutPeriode(filterPeriode);
+      if (debutPeriode) {
+        const dateFeedback = new Date(f.date_soumission);
+        if (Number.isNaN(dateFeedback.getTime()) || dateFeedback < debutPeriode) return false;
+      }
       if (search.trim()) {
         const q = search.toLowerCase();
         const comment = (f.commentaire || '').toLowerCase();
@@ -219,7 +259,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
       }
       return true;
     });
-  }, [feedbacks, selectedAgenceId, filterSentiment, filterTheme, search]);
+  }, [feedbacks, selectedAgenceId, filterSentiment, filterTheme, filterNote, filterCriticite, filterPeriode, search]);
 
   const tabFeedbacks = useMemo(() => filteredFeedbacks.filter((feedback) => {
     if (activeTab === 'a_traiter') return needsTreatment(feedback);
@@ -242,6 +282,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
     const set = new Set<string>();
     feedbacks.forEach((f) => {
       if (f.analyse_ia?.theme_principal) set.add(f.analyse_ia.theme_principal);
+      else set.add('non_categorise');
     });
     if (filterTheme !== 'all') set.add(filterTheme);
     return Array.from(set).sort((a, b) => themeLabel(a).localeCompare(themeLabel(b)));
@@ -249,18 +290,20 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
 
   // Agrégation dynamique par catégorie/thème (plus de liste figée à 15 entrées)
   const themesAggregated = useMemo(() => {
-    const map: Record<string, { theme: string; label: string; count: number; positifs: number; negatifs: number; agences: Set<string>; verbatims: string[] }> = {};
+    const map: Record<string, { theme: string; label: string; count: number; positifs: number; negatifs: number; neutres: number; criticites: Record<string, number>; agences: Set<string>; verbatims: string[] }> = {};
 
     feedbacks.forEach((f) => {
-      const tKey = f.analyse_ia?.theme_principal;
-      if (!tKey) return;
+      const tKey = f.analyse_ia?.theme_principal || 'non_categorise';
       if (!map[tKey]) {
-        map[tKey] = { theme: tKey, label: themeLabel(tKey), count: 0, positifs: 0, negatifs: 0, agences: new Set(), verbatims: [] };
+        map[tKey] = { theme: tKey, label: tKey === 'non_categorise' ? 'Non catégorisé' : themeLabel(tKey), count: 0, positifs: 0, negatifs: 0, neutres: 0, criticites: {}, agences: new Set(), verbatims: [] };
       }
       map[tKey].count += 1;
       const s = normalizeSentiment(f.analyse_ia?.sentiment);
       if (s === 'positif') map[tKey].positifs += 1;
       if (s === 'negatif') map[tKey].negatifs += 1;
+      if (s === 'neutre') map[tKey].neutres += 1;
+      const criticite = normalizeCriticite(f.analyse_ia?.criticite);
+      if (criticite) map[tKey].criticites[criticite] = (map[tKey].criticites[criticite] || 0) + 1;
       if (f.agence_nom) map[tKey].agences.add(f.agence_nom);
       if (f.commentaire && map[tKey].verbatims.length < 3) {
         map[tKey].verbatims.push(f.commentaire);
@@ -288,7 +331,16 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
     });
   }
   if (filterTheme !== 'all') {
-    activeFilters.push({ key: 'theme', label: `Thème : ${themeLabel(filterTheme)}`, clear: () => setFilterTheme('all') });
+    activeFilters.push({ key: 'theme', label: `Thème : ${filterTheme === 'non_categorise' ? 'Non catégorisé' : themeLabel(filterTheme)}`, clear: () => setFilterTheme('all') });
+  }
+  if (filterPeriode !== 'all') {
+    const labels: Record<string, string> = { today: "Aujourd'hui", '7': '7 derniers jours', '30': '30 derniers jours' };
+    activeFilters.push({ key: 'periode', label: `Période : ${labels[filterPeriode] || filterPeriode}`, clear: () => setFilterPeriode('all') });
+  }
+  if (filterNote !== 'all') activeFilters.push({ key: 'note', label: `Note : ${filterNote}/5`, clear: () => setFilterNote('all') });
+  if (filterCriticite !== 'all') {
+    const labels: Record<string, string> = { critique: 'Critique', elevee: 'Élevée', moyenne: 'Moyenne', faible: 'Faible', non_evaluee: 'Non évaluée' };
+    activeFilters.push({ key: 'criticite', label: `Criticité : ${labels[filterCriticite] || filterCriticite}`, clear: () => setFilterCriticite('all') });
   }
   if (search.trim()) {
     activeFilters.push({ key: 'search', label: `Recherche : « ${search.trim()} »`, clear: () => setSearch('') });
@@ -297,6 +349,9 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
     setSelectedAgenceId(agenceId || 'all');
     setFilterSentiment('all');
     setFilterTheme('all');
+    setFilterNote('all');
+    setFilterCriticite('all');
+    setFilterPeriode('all');
     setSearch('');
     setActiveTab('tous');
   };
@@ -309,7 +364,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
   // Retour à la première page quand l'onglet, un filtre ou le nombre de feedbacks change (pas quand un feedback est simplement mis à jour depuis la modale).
   useEffect(() => {
     setPage(0);
-  }, [activeTab, selectedAgenceId, filterSentiment, filterTheme, search]);
+  }, [activeTab, selectedAgenceId, filterSentiment, filterTheme, filterNote, filterCriticite, filterPeriode, search]);
 
   const tabsConfig = [
     { id: 'tous', label: 'Tous les feedbacks', icon: <MessageSquareIcon size={16} />, badge: loading ? undefined : feedbackTotal },
@@ -329,6 +384,8 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
     },
     { id: 'thematiques', label: 'Thématiques IA', icon: <TagIcon size={16} />, badge: loading ? undefined : themesAggregated.length },
   ];
+  const aucunFeedbackDansPerimetre = feedbacks.length === 0 && feedbackTotal === 0;
+  const filtresSansAgence = activeFilters.some((filter) => filter.key !== 'agence') || activeTab !== 'tous';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
@@ -340,29 +397,6 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
 
       {/* Contexte d'agence et vues : le périmètre précède les résultats. */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-        {showAgenceSelector && (
-          <div style={{ display: 'flex', justifyContent: 'flex-start', flex: '0 1 240px' }}>
-              <select
-                value={selectedAgenceId}
-                onChange={(e) => setSelectedAgenceId(e.target.value)}
-                aria-label="Filtrer par agence"
-            style={{
-              background: '#FFFFFF',
-              border: '1px solid #E2E8F0',
-              borderRadius: '12px',
-              padding: '8px 14px',
-              fontSize: '0.80rem',
-              fontWeight: 600,
-              color: '#0F172A',
-            }}
-          >
-            <option value="all">Toutes les agences</option>
-            {agences.map((a) => (
-              <option key={a.id} value={a.id}>{a.nom}</option>
-            ))}
-            </select>
-          </div>
-        )}
         {!showAgenceSelector && currentUser?.role === 'agency_manager' && (
           <div aria-label="Périmètre de l’agence" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#334155', fontSize: '0.84rem', fontWeight: 700, padding: '8px 12px' }}>
             <StoreIcon size={16} color="#3C7730" />
@@ -388,80 +422,68 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
         <section aria-labelledby="feedbacks-liste" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div id="feedbacks-liste"><SectionHeading>Liste des feedbacks</SectionHeading></div>
           {/* Barre de Recherche et Filtres */}
-          <div
-            style={{
-              background: '#FFFFFF',
-              borderRadius: '18px',
-              padding: '14px 20px',
-              border: '1px solid #E2E8F0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '12px',
-              flexWrap: 'wrap',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 260px' }}>
+          <div className="feedbacks-toolbar">
+            <div className="feedbacks-search">
               <SearchIcon size={16} color="#94A3B8" />
               <input
                 type="text"
-                placeholder="Rechercher un mot-clé dans les commentaires..."
-                aria-label="Rechercher dans les commentaires"
+                placeholder="Rechercher parmi les feedbacks chargés..."
+                aria-label="Rechercher dans les commentaires chargés"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 style={{
-                  border: 'none',
-                  width: '100%',
-                  fontSize: '0.84rem',
-                  fontFamily: 'inherit',
-                  color: '#0F172A',
+                  border: 'none', width: '100%', minWidth: 0, fontSize: '0.84rem', fontFamily: 'inherit', color: '#0F172A',
                 }}
               />
             </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              {/* Filtre Sentiment */}
+            {showAgenceSelector && (
+              <select className="feedbacks-agency-select" value={selectedAgenceId} onChange={(e) => setSelectedAgenceId(e.target.value)} aria-label="Filtrer par agence">
+                <option value="all">Toutes les agences</option>
+                {agences.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+              </select>
+            )}
+            <details
+              className="feedbacks-filter-details"
+              open={filtersOpen}
+              onToggle={(event) => setFiltersOpen(event.currentTarget.open)}
+            >
+              <summary><FilterIcon size={15} /> Filtres {activeFilters.length > 0 ? `(${activeFilters.length})` : ''}</summary>
+              <div className="feedbacks-filter-controls">
+              <label className="feedbacks-select-label">Période
+                <select value={filterPeriode} onChange={(e) => setFilterPeriode(e.target.value)} aria-label="Filtrer par période">
+                  <option value="all">Toutes les dates</option><option value="today">Aujourd'hui</option><option value="7">7 derniers jours</option><option value="30">30 derniers jours</option>
+                </select>
+              </label>
+              <label className="feedbacks-select-label">Note
+                <select value={filterNote} onChange={(e) => setFilterNote(e.target.value)} aria-label="Filtrer par note">
+                  <option value="all">Toutes les notes</option>{[1, 2, 3, 4, 5].map((note) => <option key={note} value={note}>{note}/5</option>)}
+                </select>
+              </label>
               <select
                 value={filterSentiment}
                 onChange={(e) => setFilterSentiment(e.target.value)}
                 aria-label="Filtrer par sentiment"
-                style={{
-                  background: '#F8FAFC',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: '10px',
-                  padding: '6px 10px',
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  color: '#0F172A',
-                }}
               >
                 <option value="all">Tous sentiments</option>
                 <option value="positif">Positif</option>
                 <option value="neutre">Neutre</option>
                 <option value="negatif">Négatif</option>
               </select>
-
-              {/* Filtre Thème */}
+              <select value={filterCriticite} onChange={(e) => setFilterCriticite(e.target.value)} aria-label="Filtrer par criticité">
+                <option value="all">Toutes criticités</option><option value="critique">Critique</option><option value="elevee">Élevée</option><option value="moyenne">Moyenne</option><option value="faible">Faible</option><option value="non_evaluee">Non évaluée</option>
+              </select>
               <select
                 value={filterTheme}
                 onChange={(e) => setFilterTheme(e.target.value)}
                 aria-label="Filtrer par thème"
-                style={{
-                  background: '#F8FAFC',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: '10px',
-                  padding: '6px 10px',
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  color: '#0F172A',
-                }}
               >
                 <option value="all">Tous thèmes</option>
                 {themesDisponibles.map((t) => (
-                  <option key={t} value={t}>{themeLabel(t)}</option>
+                  <option key={t} value={t}>{t === 'non_categorise' ? 'Non catégorisé' : themeLabel(t)}</option>
                 ))}
               </select>
-            </div>
+              </div>
+            </details>
           </div>
 
           {/* Récapitulatif des filtres actifs */}
@@ -506,7 +528,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
           )}
 
           {/* Tableau des Feedbacks */}
-          <div
+          <div className="feedbacks-desktop-table"
             style={{
               background: '#FFFFFF',
               borderRadius: '20px',
@@ -677,11 +699,11 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                 ) : (
                   <tr>
                     <td colSpan={6}>
-                      {activeFilters.length > 0 || activeTab !== 'tous' ? (
+                      {filtresSansAgence && !aucunFeedbackDansPerimetre ? (
                         <EmptyState
                           illustration="no-feedback"
-                          title="Aucun feedback trouvé"
-                          message={`Aucun feedback chargé ne correspond à cette vue et aux filtres actifs. Recherche effectuée sur ${feedbacks.length} feedbacks chargés sur ${feedbackTotal}.`}
+                          title="Aucun feedback ne correspond à ces critères."
+                          message={`Les critères ont été appliqués aux ${feedbacks.length} feedbacks chargés sur ${feedbackTotal}.`}
                           action={{ label: 'Réinitialiser les filtres', onClick: resetFilters }}
                         />
                       ) : (
@@ -699,6 +721,37 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
               </tbody>
             </table>
           </div>
+
+          {!loading && !loadError && tabFeedbacks.length > 0 && (
+            <div className="feedbacks-mobile-list" aria-label="Feedbacks">
+              {pageFeedbacks.map((f) => {
+                const sentiment = normalizeSentiment(f.analyse_ia?.sentiment);
+                const sentimentMeta = SENTIMENT_STYLE[sentiment];
+                const criticite = normalizeCriticite(f.analyse_ia?.criticite);
+                const statut = STATUT_BADGES[(f.statut_traitement || 'nouveau') as StatutTraitement] || STATUT_BADGES.nouveau;
+                return (
+                  <article key={f.id} className="feedbacks-mobile-card">
+                    <div className="feedbacks-mobile-card-top">
+                      <strong>★ {f.note}/5</strong>
+                      <span>{f.analyse_ia ? (CRITICITE_STYLE[criticite] ? `${criticite === 'elevee' ? 'Élevée' : criticite.charAt(0).toUpperCase() + criticite.slice(1)}` : 'Criticité non évaluée') : 'Analyse indisponible'}</span>
+                      <span>{sentimentMeta?.label || (f.analyse_ia ? 'Sentiment non évalué' : 'Sans analyse')}</span>
+                    </div>
+                    <p>{f.commentaire || 'Aucun commentaire texte rédigé.'}</p>
+                    <div className="feedbacks-mobile-meta">
+                      {showAgenceSelector && <span>{f.agence_nom || 'Agence'}</span>}
+                      <time dateTime={f.date_soumission}>{formatDate(f.date_soumission)}</time>
+                      <span className="feedbacks-mobile-status" style={{ background: statut.bg, color: statut.text }}>{statut.label}</span>
+                      {f.issue_id && <span>Issue liée</span>}
+                    </div>
+                    <button type="button" className="btn-primary" onClick={(e) => { e.stopPropagation(); setSelectedFeedbackForTreatment(f); }}>Consulter</button>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+          {!loading && loadError && <div className="feedbacks-mobile-empty"><EmptyState illustration="no-data" title="Impossible de charger les feedbacks" message="Une erreur est survenue lors du chargement. Vérifiez votre connexion puis réessayez." action={{ label: 'Réessayer', onClick: () => setReloadToken((token) => token + 1) }} /></div>}
+          {!loading && !loadError && tabFeedbacks.length === 0 && <div className="feedbacks-mobile-empty"><EmptyState illustration="no-feedback" title={filtresSansAgence && !aucunFeedbackDansPerimetre ? 'Aucun feedback ne correspond à ces critères.' : 'Aucun feedback dans ce périmètre'} message={filtresSansAgence && !aucunFeedbackDansPerimetre ? `Les critères ont été appliqués aux ${feedbacks.length} feedbacks chargés sur ${feedbackTotal}.` : 'Aucun feedback disponible dans ce périmètre.'} action={filtresSansAgence && !aucunFeedbackDansPerimetre ? { label: 'Réinitialiser les filtres', onClick: resetFilters } : undefined} /></div>}
+          {loading && <div className="feedbacks-mobile-empty" role="status" aria-busy="true">Chargement des feedbacks…</div>}
 
           {/* Pagination côté client */}
           {!loading && tabFeedbacks.length > 0 && (
@@ -756,8 +809,8 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
         {!loading && !loadError && themesAggregated.length === 0 && (
           <EmptyState illustration="no-data" title="Aucune thématique disponible" message={feedbackTotal === 0 ? 'Aucun feedback dans ce périmètre.' : 'Aucun thème analysé parmi les feedbacks chargés.'} />
         )}
-        {!loading && !loadError && themesAggregated.length > 0 && feedbacks.length < feedbackTotal && (
-          <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.76rem' }}>Répartition calculée sur {feedbacks.length} feedbacks chargés sur {feedbackTotal} au total.</p>
+        {!loading && !loadError && feedbackTotal > 0 && (
+          <p role="status" style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.76rem' }}>Analyse basée sur les {feedbacks.length} feedbacks chargés sur {feedbackTotal} au total.</p>
         )}
         {!loadError && <div
           style={{
@@ -803,6 +856,10 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                     📍 {thm.agences.size} agences concernées
                   </span>
                 </div>
+                <p style={{ margin: '0 0 10px', color: '#475569', fontSize: '0.76rem' }}>
+                  Sentiment dominant : {sentimentDominant(thm.positifs, thm.negatifs, thm.neutres)}
+                  {Object.keys(thm.criticites).length > 0 ? ` · Criticité la plus fréquente : ${{ critique: 'critique', elevee: 'élevée', moyenne: 'moyenne', faible: 'faible' }[Object.entries(thm.criticites).sort((a, b) => b[1] - a[1])[0][0]] || Object.entries(thm.criticites).sort((a, b) => b[1] - a[1])[0][0]}` : ' · Aucune criticité disponible'}
+                </p>
 
                 {/* Exemples de Verbatims */}
                 {thm.verbatims.length > 0 && (
@@ -821,11 +878,16 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                 className="btn-primary"
                 style={{ padding: '8px', fontSize: '0.76rem', borderRadius: '10px', width: '100%', justifyContent: 'center' }}
               >
-                Voir les {thm.count} avis de ce thème →
+                Voir les {thm.count} feedbacks chargés de ce thème →
               </button>
             </div>
           ))}
         </div>}
+        {!loading && !loadError && feedbacks.length < feedbackTotal && (
+          <button type="button" onClick={loadMoreFeedbacks} disabled={loadingMore} className="btn-secondary" style={{ alignSelf: 'flex-start' }}>
+            {loadingMore ? 'Chargement…' : 'Charger plus de feedbacks pour compléter l’analyse'}
+          </button>
+        )}
         </div>
       )}
 
