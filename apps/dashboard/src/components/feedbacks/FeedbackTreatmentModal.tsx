@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Feedback, StatutTraitement, HistoriqueFeedback, ReponseClient, UserRole, Issue, IssueStatut, Categorie, CriticiteType } from '../../types';
 import { feedbacksApi, issuesApi, agencesApi } from '../../services/api';
 import EmptyState from '../ui/EmptyState';
@@ -7,7 +7,6 @@ import {
   ClockIcon,
   PhoneIcon,
   CheckCircleIcon,
-  MapPinIcon,
   PlusIcon,
   UsersIcon,
   CheckIcon,
@@ -76,6 +75,8 @@ export default function FeedbackTreatmentModal({
   currentUserRole = 'agency_manager',
   currentUserName = 'Utilisateur',
 }: FeedbackTreatmentModalProps) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const [activeTab, setActiveTab] = useState<'traitement' | 'historique' | 'reponses'>('traitement');
   
   // États locaux formulaires
@@ -100,7 +101,7 @@ export default function FeedbackTreatmentModal({
   const [categoriesAgence, setCategoriesAgence] = useState<Categorie[]>([]);
   const [creerTitre, setCreerTitre] = useState('');
   const [creerDescription, setCreerDescription] = useState('');
-  const [creerSeverite, setCreerSeverite] = useState<CriticiteType>('faible');
+  const [creerSeverite, setCreerSeverite] = useState<CriticiteType | ''>('');
   const [creerCategorieId, setCreerCategorieId] = useState('');
 
   const [issuesExistantes, setIssuesExistantes] = useState<Issue[]>([]);
@@ -114,6 +115,15 @@ export default function FeedbackTreatmentModal({
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
   };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeButtonRef.current?.focus();
+    return () => {
+      previousFocusRef.current?.focus();
+    };
+  }, [isOpen]);
 
   // Chargement de l'historique et des réponses
   const loadHistoriqueAndReponses = useCallback(async (fId: string) => {
@@ -169,7 +179,7 @@ export default function FeedbackTreatmentModal({
     setIssueMode('choix');
     setCreerTitre('');
     setCreerDescription('');
-    setCreerSeverite(fb.analyse_ia?.criticite || 'faible');
+    setCreerSeverite(fb.analyse_ia?.criticite || '');
     setCreerCategorieId(fb.categorie_id || '');
     setIssuesExistantes([]);
     setIssueSelectionneeId(null);
@@ -204,7 +214,7 @@ export default function FeedbackTreatmentModal({
   if (!isOpen || !feedback) return null;
 
   const currentStatut: StatutTraitement = feedback.statut_traitement || 'en_traitement';
-  const isPositiveFeedback = feedback.note >= 4 && (!feedback.analyse_ia || feedback.analyse_ia.sentiment === 'positif') && !feedback.demande_contact?.souhaite_etre_rappele;
+  const isPositiveFeedback = feedback.note >= 4 && feedback.analyse_ia?.sentiment === 'positif' && !feedback.demande_contact?.souhaite_etre_rappele;
 
   // Calcul d'étape active dans le stepper
   const getStepIndex = (st: StatutTraitement) => {
@@ -363,7 +373,7 @@ export default function FeedbackTreatmentModal({
 
   const handleCreerIssue = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!creerTitre.trim() || !feedback.agence_id) return;
+    if (!creerTitre.trim() || !feedback.agence_id || !creerSeverite) return;
     setLoadingAction(true);
     try {
       const res = await issuesApi.create({
@@ -440,14 +450,30 @@ export default function FeedbackTreatmentModal({
           from { opacity: 0; transform: scale(0.96) translateY(10px); }
           to { opacity: 1; transform: scale(1) translateY(0); }
         }
+        @media (max-width: 640px) {
+          .feedback-treatment-dialog { max-height: calc(100dvh - 32px) !important; border-radius: 20px 20px 0 0 !important; }
+          .feedback-treatment-header { padding: 16px !important; gap: 12px; }
+          .feedback-treatment-header-meta { flex-wrap: wrap; }
+          .feedback-treatment-stepper { padding: 12px 16px !important; gap: 8px; flex-wrap: wrap; }
+          .feedback-treatment-stepper > div { gap: 5px !important; }
+          .feedback-treatment-metadata { padding: 12px 16px !important; gap: 8px !important; }
+          .feedback-treatment-tabs { padding: 0 12px !important; overflow-x: auto; }
+          .feedback-treatment-tabs button { padding: 10px 12px !important; white-space: nowrap; }
+          .feedback-treatment-body { padding: 16px !important; }
+        }
       `}</style>
 
       {/* Conteneur Modale SaaS */}
       <div
+        className="feedback-treatment-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="feedback-treatment-title"
+        tabIndex={-1}
         style={{
           width: '780px',
           maxWidth: '100%',
-          maxHeight: '92vh',
+          maxHeight: 'min(92vh, 900px)',
           background: '#FFFFFF',
           borderRadius: '24px',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
@@ -460,7 +486,7 @@ export default function FeedbackTreatmentModal({
       >
         {/* ── Header ────────────────────────────────────────────── */}
         <div
-          className="on-dark"
+          className="on-dark feedback-treatment-header"
           style={{
             background: '#02302D',
             color: '#FFFFFF',
@@ -472,7 +498,7 @@ export default function FeedbackTreatmentModal({
           }}
         >
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+            <div className="feedback-treatment-header-meta" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
               <span
                 style={{
                   background: '#75B72A',
@@ -487,31 +513,24 @@ export default function FeedbackTreatmentModal({
               >
                 Traitement Feedback
               </span>
-              {feedback.agence_nom && (
-                <span style={{ fontSize: '0.82rem', color: '#D6E8D9', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                  <MapPinIcon size={13} color="#BCCF00" />
-                  <span>{feedback.agence_nom}</span>
-                </span>
-              )}
             </div>
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
+            <h2 id="feedback-treatment-title" style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
               Feedback #{feedback.id.slice(0, 8)}
             </h2>
-            <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginTop: '4px' }}>
-              Soumis le {new Date(feedback.date_soumission).toLocaleString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-              {feedback.assigne_a_nom && <span> • Pris en charge par <strong style={{ color: '#FFFFFF' }}>{feedback.assigne_a_nom}</strong></span>}
-            </div>
           </div>
 
           <button
+            ref={closeButtonRef}
             onClick={onClose}
             aria-label="Fermer"
             style={{
               background: 'rgba(255,255,255,0.12)',
               border: 'none',
               color: '#FFFFFF',
-              width: '34px',
-              height: '34px',
+              width: '44px',
+              height: '44px',
+              minWidth: '44px',
+              minHeight: '44px',
               borderRadius: '50%',
               cursor: 'pointer',
               fontSize: '1rem',
@@ -545,6 +564,7 @@ export default function FeedbackTreatmentModal({
 
         {/* ── Workflow Stepper Informatif (Non-cliquable) ──────── */}
         <div
+          className="feedback-treatment-stepper"
           style={{
             background: '#F8FAFC',
             padding: '16px 28px',
@@ -616,6 +636,7 @@ export default function FeedbackTreatmentModal({
 
         {/* ── Metadata Badges Bar ───────────────────────────────── */}
         <div
+          className="feedback-treatment-metadata"
           style={{
             padding: '14px 28px',
             background: '#FFFFFF',
@@ -649,13 +670,18 @@ export default function FeedbackTreatmentModal({
           >
             {feedback.analyse_ia?.sentiment === 'positif' && <ThumbsUpIcon size={12} color="#3C7730" />}
             {feedback.analyse_ia?.sentiment === 'negatif' && <ThumbsDownIcon size={12} color="#B91C1C" />}
-            <span style={{ textTransform: 'capitalize' }}>Ressenti : {feedback.analyse_ia?.sentiment || 'Neutre'}</span>
+            <span style={{ textTransform: 'capitalize' }}>Ressenti : {feedback.analyse_ia ? feedback.analyse_ia.sentiment || 'Non évalué' : 'Analyse indisponible'}</span>
           </div>
 
-          {/* Thème IA */}
-          <div style={{ background: '#F1F5F9', color: '#334155', padding: '4px 10px', borderRadius: '8px', fontWeight: 700 }}>
-            Thème : {THEME_LABELS[feedback.analyse_ia?.theme_principal || ''] || feedback.analyse_ia?.theme_principal || 'Accueil & Conseillers'}
+          {/* Criticité : afficher uniquement l'analyse réelle et distinguer une valeur absente. */}
+          <div style={{ background: feedback.analyse_ia?.criticite === 'critique' ? '#FEE2E2' : feedback.analyse_ia?.criticite === 'elevee' ? '#FFEDD5' : '#F8FAFC', color: feedback.analyse_ia?.criticite === 'critique' ? '#B91C1C' : feedback.analyse_ia?.criticite === 'elevee' ? '#C2410C' : '#475569', padding: '4px 10px', borderRadius: '8px', border: '1px solid #E2E8F0', fontWeight: 800 }}>
+            Criticité : {feedback.analyse_ia ? feedback.analyse_ia.criticite || 'Non évaluée' : 'Analyse indisponible'}
           </div>
+          {feedback.analyse_ia?.discordance_detectee && (
+            <div role="status" style={{ background: '#FFF7ED', color: '#9A3412', padding: '4px 10px', borderRadius: '8px', border: '1px solid #FED7AA', fontWeight: 800 }}>
+              Discordance détectée
+            </div>
+          )}
 
           {/* Statut Badge */}
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -676,7 +702,7 @@ export default function FeedbackTreatmentModal({
         </div>
 
         {/* ── Navigation Onglets ────────────────────────────────── */}
-        <div style={{ display: 'flex', borderBottom: '1px solid #E2E8F0', background: '#FAFAFA', padding: '0 28px' }}>
+        <div className="feedback-treatment-tabs" style={{ display: 'flex', borderBottom: '1px solid #E2E8F0', background: '#FAFAFA', padding: '0 28px' }}>
           {[
             { id: 'traitement', label: 'Traitement Opérationnel', icon: <ClockIcon size={14} /> },
             { id: 'historique', label: `Historique (${historiqueList.length})`, icon: <UsersIcon size={14} /> },
@@ -711,7 +737,7 @@ export default function FeedbackTreatmentModal({
         </div>
 
         {/* ── Corps Principal Scrollable ────────────────────────── */}
-        <div style={{ flex: 1, padding: '24px 28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div className="feedback-treatment-body" style={{ flex: 1, minHeight: 0, padding: '24px 28px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
           {/* ONGLET 1 : TRAITEMENT OPÉRATIONNEL */}
           {activeTab === 'traitement' && (
@@ -731,6 +757,13 @@ export default function FeedbackTreatmentModal({
                 <p style={{ margin: 0, fontSize: '0.94rem', color: '#0F172A', lineHeight: 1.55, fontStyle: feedback.commentaire ? 'normal' : 'italic' }}>
                   "{feedback.commentaire || 'Aucun commentaire texte rédigé.'}"
                 </p>
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', padding: '0 2px', color: '#64748B', fontSize: '0.82rem' }} aria-label="Contexte du feedback">
+                <span><strong style={{ color: '#334155' }}>Agence :</strong> {feedback.agence_nom || 'Non renseignée'}</span>
+                <span><strong style={{ color: '#334155' }}>Date :</strong> {new Date(feedback.date_soumission).toLocaleString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                <span><strong style={{ color: '#334155' }}>Thème :</strong> {feedback.analyse_ia?.theme_principal ? THEME_LABELS[feedback.analyse_ia.theme_principal] || feedback.analyse_ia.theme_principal : 'Non catégorisé'}</span>
+                {feedback.assigne_a_nom && <span><strong style={{ color: '#334155' }}>Pris en charge par :</strong> {feedback.assigne_a_nom}</span>}
               </div>
 
               {/* 2. Feedback Positif Sans Action Requise */}
@@ -1163,8 +1196,10 @@ export default function FeedbackTreatmentModal({
                       <select
                         value={creerSeverite}
                         onChange={(e) => setCreerSeverite(e.target.value as CriticiteType)}
+                        required
                         style={{ padding: '8px 10px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.82rem', fontFamily: 'inherit' }}
                       >
+                        <option value="">Choisir la sévérité</option>
                         {(Object.keys(ISSUE_SEVERITE_LABELS) as CriticiteType[]).map((s) => (
                           <option key={s} value={s}>{ISSUE_SEVERITE_LABELS[s]}</option>
                         ))}
@@ -1186,9 +1221,9 @@ export default function FeedbackTreatmentModal({
                       </button>
                       <button
                         type="submit"
-                        disabled={loadingAction || !creerTitre.trim()}
+                        disabled={loadingAction || !creerTitre.trim() || !creerSeverite}
                         className="btn-primary"
-                        style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '10px', opacity: creerTitre.trim() ? 1 : 0.5, cursor: creerTitre.trim() ? 'pointer' : 'not-allowed' }}
+                        style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '10px', opacity: creerTitre.trim() && creerSeverite ? 1 : 0.5, cursor: creerTitre.trim() && creerSeverite ? 'pointer' : 'not-allowed' }}
                       >
                         {loadingAction ? 'Création...' : 'Créer l’Issue'}
                       </button>

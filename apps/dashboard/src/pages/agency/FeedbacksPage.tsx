@@ -79,6 +79,17 @@ const normalizeCriticite = (criticite?: string): string => {
   return criticite.toLowerCase().trim();
 };
 
+const hasAttentionSignal = (feedback: Feedback) => {
+  const criticite = normalizeCriticite(feedback.analyse_ia?.criticite);
+  const sentiment = normalizeSentiment(feedback.analyse_ia?.sentiment);
+  return criticite === 'critique' || criticite === 'elevee' || sentiment === 'negatif' || Boolean(feedback.analyse_ia?.discordance_detectee);
+};
+
+const needsTreatment = (feedback: Feedback) => {
+  const statut = feedback.statut_traitement || 'nouveau';
+  return statut !== 'resolu' || Boolean(feedback.demande_contact && !feedback.demande_contact.traitee);
+};
+
 interface FeedbacksPageProps {
   /**
    * Agence fixe (page agence unifiée, onglet Feedbacks) : quand fourni, le
@@ -102,6 +113,8 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [agences, setAgences] = useState<Agence[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [toast, setToast] = useState('');
   const [selectedFeedbackForTreatment, setSelectedFeedbackForTreatment] = useState<Feedback | null>(null);
 
@@ -131,27 +144,40 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
     let cancelled = false;
     async function loadData() {
       setLoading(true);
+      setLoadError(false);
       try {
-        const agenceFiltre = agenceId || (selectedAgenceId !== 'all' ? selectedAgenceId : undefined);
-        const fRes = await feedbacksApi.list({ limit: FETCH_LIMIT, offset: 0, ...(agenceFiltre ? { agence_id: agenceFiltre } : {}) });
-        if (!cancelled) {
-          setFeedbacks(fRes?.data || []);
-          setFeedbackTotal(Number(fRes?.headers?.['x-total-count'] || 0));
+        try {
+          const agenceFiltre = agenceId || (selectedAgenceId !== 'all' ? selectedAgenceId : undefined);
+          const fRes = await feedbacksApi.list({ limit: FETCH_LIMIT, offset: 0, ...(agenceFiltre ? { agence_id: agenceFiltre } : {}) });
+          if (!cancelled) {
+            setFeedbacks(fRes?.data || []);
+            const totalHeader = Number(fRes?.headers?.['x-total-count']);
+            setFeedbackTotal(Number.isFinite(totalHeader) ? totalHeader : (fRes?.data || []).length);
+          }
+        } catch (err) {
+          console.error('Erreur chargement:', err);
+          if (!cancelled) {
+            setFeedbacks([]);
+            setFeedbackTotal(0);
+            setLoadError(true);
+          }
         }
-
         if (showAgenceSelector) {
-          const aRes = await agencesApi.list();
-          if (!cancelled && aRes?.data) setAgences(aRes.data);
+          try {
+            const aRes = await agencesApi.list();
+            if (!cancelled && aRes?.data) setAgences(aRes.data);
+          } catch (err) {
+            // Une indisponibilité du sélecteur d'agence ne doit pas masquer la liste déjà chargée.
+            console.error('Erreur chargement des agences:', err);
+          }
         }
-      } catch (err) {
-        console.error('Erreur chargement:', err);
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
     loadData();
     return () => { cancelled = true; };
-  }, [showAgenceSelector, agenceId, selectedAgenceId]);
+  }, [showAgenceSelector, agenceId, selectedAgenceId, reloadToken]);
 
   const loadMoreFeedbacks = async () => {
     if (loadingMore || feedbacks.length >= feedbackTotal) return;
@@ -180,23 +206,9 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
     }
   };
 
-  // Filtrage selon l'onglet et les critères
-  const tabFeedbacks = useMemo(() => {
+  // Les vues et leurs compteurs partagent exactement le même périmètre local.
+  const filteredFeedbacks = useMemo(() => {
     return feedbacks.filter((f) => {
-      // 1. Filtrage selon l'onglet actif
-      if (activeTab === 'a_traiter') {
-        const statut = f.statut_traitement || 'nouveau';
-        const needsAction = statut !== 'resolu' || (f.demande_contact && !f.demande_contact.traitee);
-        if (!needsAction) return false;
-      }
-      if (activeTab === 'critiques') {
-        const crit = normalizeCriticite(f.analyse_ia?.criticite);
-        const sent = normalizeSentiment(f.analyse_ia?.sentiment);
-        const isCrit = crit === 'critique' || crit === 'elevee' || sent === 'negatif' || f.analyse_ia?.discordance_detectee;
-        if (!isCrit) return false;
-      }
-
-      // 2. Filtres généraux (agence, sentiment, thème, recherche)
       if (selectedAgenceId !== 'all' && f.agence_id !== selectedAgenceId) return false;
       if (filterSentiment !== 'all' && normalizeSentiment(f.analyse_ia?.sentiment) !== filterSentiment) return false;
       if (filterTheme !== 'all' && f.analyse_ia?.theme_principal !== filterTheme) return false;
@@ -207,19 +219,22 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
       }
       return true;
     });
-  }, [feedbacks, activeTab, selectedAgenceId, filterSentiment, filterTheme, search]);
+  }, [feedbacks, selectedAgenceId, filterSentiment, filterTheme, search]);
+
+  const tabFeedbacks = useMemo(() => filteredFeedbacks.filter((feedback) => {
+    if (activeTab === 'a_traiter') return needsTreatment(feedback);
+    if (activeTab === 'critiques') return hasAttentionSignal(feedback);
+    return true;
+  }), [filteredFeedbacks, activeTab]);
 
   // Statistiques pour les badges d'onglets
   const aTraiterCount = useMemo(() => {
-    return feedbacks.filter((f) => (f.statut_traitement || 'nouveau') !== 'resolu' || (f.demande_contact && !f.demande_contact.traitee)).length;
-  }, [feedbacks]);
+    return filteredFeedbacks.filter(needsTreatment).length;
+  }, [filteredFeedbacks]);
 
   const critiquesCount = useMemo(() => {
-    return feedbacks.filter((f) => {
-      const crit = normalizeCriticite(f.analyse_ia?.criticite);
-      return crit === 'critique' || crit === 'elevee';
-    }).length;
-  }, [feedbacks]);
+    return filteredFeedbacks.filter(hasAttentionSignal).length;
+  }, [filteredFeedbacks]);
 
   // Thèmes réellement présents dans les feedbacks : catégories libres définies par le
   // CX Manager par agence (plus les anciennes clés IA à 15 thèmes pour les feedbacks legacy).
@@ -283,6 +298,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
     setFilterSentiment('all');
     setFilterTheme('all');
     setSearch('');
+    setActiveTab('tous');
   };
 
   // ── Pagination côté client sur la liste déjà filtrée (aucun rechargement API entre les pages) ──
@@ -301,14 +317,14 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
       id: 'a_traiter',
       label: 'À traiter',
       icon: <ClockIcon size={16} />,
-      badge: loading ? undefined : aTraiterCount,
+      badge: loading ? undefined : `${aTraiterCount}${feedbacks.length < feedbackTotal ? '*' : ''}`,
       badgeColor: aTraiterCount > 0 ? ('red' as const) : ('default' as const),
     },
     {
       id: 'critiques',
       label: 'Critiques & Alertes',
       icon: <AlertTriangleIcon size={16} />,
-      badge: loading ? undefined : critiquesCount,
+      badge: loading ? undefined : `${critiquesCount}${feedbacks.length < feedbackTotal ? '*' : ''}`,
       badgeColor: critiquesCount > 0 ? ('red' as const) : ('default' as const),
     },
     { id: 'thematiques', label: 'Thématiques IA', icon: <TagIcon size={16} />, badge: loading ? undefined : themesAggregated.length },
@@ -322,9 +338,10 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
         </div>
       )}
 
-      {/* Filtre agence */}
-      {showAgenceSelector && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      {/* Contexte d'agence et vues : le périmètre précède les résultats. */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+        {showAgenceSelector && (
+          <div style={{ display: 'flex', justifyContent: 'flex-start', flex: '0 1 240px' }}>
               <select
                 value={selectedAgenceId}
                 onChange={(e) => setSelectedAgenceId(e.target.value)}
@@ -343,16 +360,28 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
             {agences.map((a) => (
               <option key={a.id} value={a.id}>{a.nom}</option>
             ))}
-          </select>
-        </div>
-      )}
+            </select>
+          </div>
+        )}
+        {!showAgenceSelector && currentUser?.role === 'agency_manager' && (
+          <div aria-label="Périmètre de l’agence" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#334155', fontSize: '0.84rem', fontWeight: 700, padding: '8px 12px' }}>
+            <StoreIcon size={16} color="#3C7730" />
+            {currentUser.agence_nom || 'Mon agence'}
+          </div>
+        )}
 
-      {/* Navigation par Onglets */}
-      <TabsNavigation
-        tabs={tabsConfig}
-        activeTab={activeTab}
-        onChange={(id) => setActiveTab(id as any)}
-      />
+        <TabsNavigation
+          tabs={tabsConfig}
+          activeTab={activeTab}
+          onChange={(id) => setActiveTab(id as FeedbackTab)}
+          style={{ marginBottom: 0, flex: '1 1 auto' }}
+        />
+      </div>
+      {!loading && !loadError && (
+        <p role="status" style={{ margin: '-12px 0 0', fontSize: '0.76rem', color: 'var(--color-text-muted)' }}>
+          Les compteurs « À traiter » et « Critiques & alertes » portent sur {feedbacks.length} feedbacks chargés sur {feedbackTotal} au total{feedbacks.length < feedbackTotal ? ' (* couverture partielle)' : ''}. Recherche et filtres s’appliquent à ces éléments chargés.
+        </p>
+      )}
 
       {/* ── ONGLET 1, 2, 3 : VUES TABLEAU DE FEEDBACKS ── */}
       {activeTab !== 'thematiques' && (
@@ -506,6 +535,17 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                       </td>
                     </tr>
                   ))
+                ) : loadError ? (
+                  <tr>
+                    <td colSpan={6}>
+                      <EmptyState
+                        illustration="no-data"
+                        title="Impossible de charger les feedbacks"
+                        message="Une erreur est survenue lors du chargement. Vérifiez votre connexion puis réessayez."
+                        action={{ label: 'Réessayer', onClick: () => setReloadToken((token) => token + 1) }}
+                      />
+                    </td>
+                  </tr>
                 ) : tabFeedbacks.length > 0 ? (
                   pageFeedbacks.map((f) => {
                     const sKey = normalizeSentiment(f.analyse_ia?.sentiment);
@@ -530,8 +570,8 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                         </td>
 
                         {/* Note & Sentiment */}
-                        <td style={{ padding: '14px 16px', minWidth: '120px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <td style={{ padding: '14px 16px', minWidth: '150px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                             <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.90rem' }}>
                               ★ {f.note}/5
                             </span>
@@ -549,8 +589,27 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                               }}
                             >
                               {sentMeta.icon}
-                              {sentMeta.label}
+                              {f.analyse_ia ? sentMeta.label : 'Analyse indisponible'}
                             </span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '7px' }}>
+                            {f.analyse_ia?.criticite ? (
+                              <span
+                                aria-label={`Criticité ${f.analyse_ia.criticite}`}
+                                style={{
+                                  background: CRITICITE_STYLE[f.analyse_ia.criticite]?.bg || '#F1F5F9',
+                                  color: CRITICITE_STYLE[f.analyse_ia.criticite]?.text || '#475569',
+                                  padding: f.analyse_ia.criticite === 'critique' || f.analyse_ia.criticite === 'elevee' ? '3px 8px' : '1px 0',
+                                  borderRadius: '6px',
+                                  fontSize: f.analyse_ia.criticite === 'critique' || f.analyse_ia.criticite === 'elevee' ? '0.72rem' : '0.70rem',
+                                  fontWeight: 800,
+                                  border: f.analyse_ia.criticite === 'critique' ? '1px solid #DC2626' : '1px solid transparent',
+                                }}
+                              >
+                                {f.analyse_ia.criticite === 'critique' ? 'CRITIQUE' : f.analyse_ia.criticite === 'elevee' ? 'ÉLEVÉE' : `Criticité ${f.analyse_ia.criticite}`}
+                              </span>
+                            ) : <span style={{ fontSize: '0.70rem', color: '#64748B' }}>{f.analyse_ia ? 'Criticité non évaluée' : 'Analyse indisponible'}</span>}
+                            {f.analyse_ia?.discordance_detectee && <span style={{ color: '#9A3412', fontSize: '0.70rem', fontWeight: 800 }}>Discordance</span>}
                           </div>
                         </td>
 
@@ -595,6 +654,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                             {statMeta.icon}
                             {statMeta.label}
                           </span>
+                          {f.issue_id && <div style={{ marginTop: '6px', color: '#0369A1', fontSize: '0.70rem', fontWeight: 800 }}>Issue liée</div>}
                         </td>
 
                         {/* Action */}
@@ -617,19 +677,19 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                 ) : (
                   <tr>
                     <td colSpan={6}>
-                      {activeFilters.length > 0 ? (
+                      {activeFilters.length > 0 || activeTab !== 'tous' ? (
                         <EmptyState
                           illustration="no-feedback"
                           title="Aucun feedback trouvé"
-                          message="Aucun feedback ne correspond aux filtres sélectionnés."
+                          message={`Aucun feedback chargé ne correspond à cette vue et aux filtres actifs. Recherche effectuée sur ${feedbacks.length} feedbacks chargés sur ${feedbackTotal}.`}
                           action={{ label: 'Réinitialiser les filtres', onClick: resetFilters }}
                         />
                       ) : (
                         <div className="saas-card saas-card--success">
                           <EmptyState
                             illustration="no-feedback"
-                            title="Aucun feedback trouvé"
-                            message="Il n'y a aucun feedback à afficher dans cette vue."
+                            title="Aucun feedback dans ce périmètre"
+                            message="L’API ne retourne aucun feedback pour l’agence ou le périmètre sélectionné."
                           />
                         </div>
                       )}
@@ -644,7 +704,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
           {!loading && tabFeedbacks.length > 0 && (
             <nav aria-label="Pagination des feedbacks" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
-                {pageCourante * PAGE_SIZE + 1}–{Math.min((pageCourante + 1) * PAGE_SIZE, tabFeedbacks.length)} affichés · {feedbacks.length} chargés sur {feedbackTotal}
+                {pageCourante * PAGE_SIZE + 1}–{Math.min((pageCourante + 1) * PAGE_SIZE, tabFeedbacks.length)} affichés sur {tabFeedbacks.length} correspondants · {feedbacks.length} chargés sur {feedbackTotal} au total
               </span>
               {totalPages > 1 && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -692,7 +752,14 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
             ))}
           </div>
         )}
-        <div
+        {!loading && loadError && <EmptyState illustration="no-data" title="Impossible de charger les feedbacks" message="Une erreur est survenue lors du chargement des thèmes." action={{ label: 'Réessayer', onClick: () => setReloadToken((token) => token + 1) }} />}
+        {!loading && !loadError && themesAggregated.length === 0 && (
+          <EmptyState illustration="no-data" title="Aucune thématique disponible" message={feedbackTotal === 0 ? 'Aucun feedback dans ce périmètre.' : 'Aucun thème analysé parmi les feedbacks chargés.'} />
+        )}
+        {!loading && !loadError && themesAggregated.length > 0 && feedbacks.length < feedbackTotal && (
+          <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.76rem' }}>Répartition calculée sur {feedbacks.length} feedbacks chargés sur {feedbackTotal} au total.</p>
+        )}
+        {!loadError && <div
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
@@ -758,7 +825,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
               </button>
             </div>
           ))}
-        </div>
+        </div>}
         </div>
       )}
 
