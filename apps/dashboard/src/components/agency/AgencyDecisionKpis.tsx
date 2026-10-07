@@ -9,7 +9,7 @@ type Props = {
 };
 
 export default function AgencyDecisionKpis({ data, jours }: Props) {
-  const noFeedbacks = data.nombre_feedbacks === 0;
+  const noFeedbacks = data.nombre_feedbacks === 0 || data.taux_satisfaction == null;
 
   return (
     <div
@@ -31,6 +31,15 @@ export default function AgencyDecisionKpis({ data, jours }: Props) {
         label="Feedbacks"
         value={data.nombre_feedbacks}
         subtitle={`${jours} derniers jours · ${data.nombre_negatifs} négatif${data.nombre_negatifs !== 1 ? 's' : ''}`}
+      />
+      <KpiCard
+        compact
+        showSparkline={false}
+        icon={<AlertTriangleIcon size={16} />}
+        label="Feedbacks critiques"
+        value={data.nombre_critiques}
+        subtitle={`sur les ${jours} derniers jours`}
+        tone={data.nombre_critiques > 0 ? 'critical' : 'neutral'}
       />
       <KpiCard
         compact
