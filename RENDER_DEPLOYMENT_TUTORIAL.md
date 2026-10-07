@@ -70,7 +70,7 @@ Sur Render, nous allons créer 4 services :
    - `SECRET_KEY` = `ikanai-super-secret-key-orange-summer-challenge-2026-novax`
    - `APP_ENV` = `production`
    - `DEBUG` = `false`
-   - `ALLOWED_ORIGINS` = `https://ikanai-client.onrender.com,https://ikanai-dashboard.onrender.com`
+   - `ALLOWED_ORIGINS` = `https://ikan-1.onrender.com,https://ikanai-dashboard-fixs.onrender.com` (URLs réelles du client et du dashboard ; ne pas y ajouter localhost en production)
    - `PUBLIC_CLIENT_URL` = `https://ikanai-client.onrender.com`
 5. Cliquez sur **Create Web Service**.
 6. Une fois déployé, vous obtenez l'URL de votre API : `https://ikanai-api.onrender.com`.
