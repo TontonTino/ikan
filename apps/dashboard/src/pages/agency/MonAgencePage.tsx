@@ -148,7 +148,13 @@ export default function MonAgencePage() {
   const agenceId = agenceIdParam || user?.agence_id;
 
   const requestedTab = searchParams.get('tab');
-  const initialTab: AgenceTab = TABS_VALIDES.includes(requestedTab as AgenceTab) ? (requestedTab as AgenceTab) : 'informations';
+  const ongletsEtendusAutorises = user?.role !== 'agency_manager';
+  const ongletsDisponibles: AgenceTab[] = ongletsEtendusAutorises
+    ? TABS_VALIDES
+    : ['informations', 'categories'];
+  const initialTab: AgenceTab = ongletsDisponibles.includes(requestedTab as AgenceTab)
+    ? (requestedTab as AgenceTab)
+    : 'informations';
   const [activeTab, setActiveTab] = useState<AgenceTab>(initialTab);
 
   const [agence, setAgence] = useState<Agence | null>(null);
@@ -223,7 +229,7 @@ export default function MonAgencePage() {
   }, [agenceId, nonAutorise]);
 
   useEffect(() => {
-    if (nonAutorise || !agenceId) return;
+    if (nonAutorise || user?.role !== 'cx_manager' || !agenceId) return;
     let annule = false;
     agencesApi
       .activite(agenceId)
@@ -236,10 +242,18 @@ export default function MonAgencePage() {
     return () => {
       annule = true;
     };
-  }, [agenceId, nonAutorise]);
+  }, [agenceId, nonAutorise, user?.role]);
+
+  useEffect(() => {
+    if (!ongletsDisponibles.includes(activeTab)) {
+      setActiveTab('informations');
+      setSearchParams({}, { replace: true });
+    }
+  }, [activeTab, user?.role]);
 
   const handleTabChange = (id: string) => {
     const tab = id as AgenceTab;
+    if (!ongletsDisponibles.includes(tab)) return;
     setActiveTab(tab);
     setSearchParams(tab === 'informations' ? {} : { tab }, { replace: true });
   };
@@ -443,8 +457,10 @@ export default function MonAgencePage() {
   const tabsConfig: TabItem[] = [
     { id: 'informations', label: 'Informations', icon: <MapPinIcon size={16} /> },
     { id: 'categories', label: 'Catégories', icon: <TagIcon size={16} />, badge: categories.length },
-    { id: 'feedbacks', label: 'Feedbacks', icon: <MessageSquareIcon size={16} /> },
-    { id: 'activite', label: 'Activité', icon: <ActivityIcon size={16} /> },
+    ...(ongletsEtendusAutorises ? [
+      { id: 'feedbacks', label: 'Feedbacks', icon: <MessageSquareIcon size={16} /> },
+      { id: 'activite', label: 'Activité', icon: <ActivityIcon size={16} /> },
+    ] : []),
   ];
 
   const positifs = stats?.sentiments.find((s) => s.sentiment === 'positif')?.count ?? 0;
@@ -780,10 +796,10 @@ export default function MonAgencePage() {
 
       {/* ── Onglet Feedbacks (réutilise FeedbacksPage.tsx paramétré par agenceId,
           sélecteur d'agence masqué puisqu'elle est déjà fixée par cette page) ── */}
-      {activeTab === 'feedbacks' && <FeedbacksPage agenceId={agence.id} />}
+      {ongletsEtendusAutorises && activeTab === 'feedbacks' && <FeedbacksPage agenceId={agence.id} />}
 
       {/* ── Onglet Activité (HistoriqueFeedback + HistoriqueSuggestion fusionnés) ── */}
-      {activeTab === 'activite' && (
+      {ongletsEtendusAutorises && activeTab === 'activite' && (
         <div style={cardStyle}>
           <h3 style={{ margin: '0 0 14px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D' }}>Fil d'activité</h3>
           {activite.length === 0 ? (
