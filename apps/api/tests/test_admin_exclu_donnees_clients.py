@@ -40,7 +40,10 @@ AUTORISEES_POUR_ADMIN = {
     ("/dashboard", "/statistics/admin"),               # statistiques plateforme de l'Admin
     ("/alertes", "/agences/{agence_id}/seuil"),        # configuration des seuils (droit structurel, matrice des permissions)
 }
-PUBLICS = {("/feedbacks", "POST", "/")}                # soumission d'un feedback par le client final (sans compte)
+PUBLICS = {
+    ("/feedbacks", "POST", "/"),                       # soumission d'un feedback par le client final (sans compte)
+    ("/feedbacks", "POST", "/{feedback_id}/nps"),       # réponse NPS facultative, jeton dédié vérifié dans l'endpoint (pas get_current_active_user)
+}
 
 
 class _DbInterdite:

@@ -272,6 +272,22 @@ try {
                   <span>Transmis en direct à l'agence</span>
                 </div>
 
+                <!-- Question NPS facultative, révélée en JS après succès de l'envoi
+                     principal (uniquement si un nps_token a été reçu, voir le script) -->
+                <div class="nps-block" id="npsBlock" style="display:none;">
+                  <p class="nps-question" id="npsQuestionText">
+                    Une dernière question, facultative : sur une échelle de 0 à 10,
+                    recommanderiez-vous <strong id="npsAgenceNom">cette agence</strong> à un proche ?
+                  </p>
+                  <div class="nps-scale" id="npsScale" role="group" aria-label="Note de recommandation, de 0 à 10"></div>
+                  <div class="nps-scale-labels" aria-hidden="true">
+                    <span>Pas du tout probable</span>
+                    <span>Très probable</span>
+                  </div>
+                  <button type="button" class="nps-skip-link" id="btnNpsSkip">Passer</button>
+                  <p class="nps-thanks" id="npsThanks" style="display:none;" role="status">Merci pour votre réponse !</p>
+                </div>
+
                 <div class="success-actions">
                   <button type="button" class="btn-secondary" id="btnNewFeedback">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1310,6 +1326,103 @@ try {
     border: 1px solid rgba(46, 125, 50, 0.2);
   }
 
+  /* ========== Question NPS facultative (après succès de l'envoi) ========== */
+  .nps-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    margin-top: 6px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(60, 119, 48, 0.14);
+  }
+
+  .nps-question {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: #02302D;
+    text-align: center;
+  }
+
+  .nps-question strong {
+    color: #3C7730;
+  }
+
+  /* Mobile d'abord : la grille s'enroule naturellement sur petit écran, chaque bouton
+     reste tappable (>= 44px dans les deux dimensions, recommandation d'accessibilité
+     tactile) quel que soit le nombre de boutons par ligne. */
+  .nps-scale {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .nps-btn {
+    min-width: 44px;
+    min-height: 44px;
+    flex: 1 1 44px;
+    max-width: 56px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    border: 1.5px solid rgba(60, 119, 48, 0.3);
+    background: #FFFFFF;
+    color: #02302D;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+  }
+
+  .nps-btn:hover,
+  .nps-btn:focus-visible {
+    background: #3C7730;
+    color: #FFFFFF;
+    outline: 2px solid #3C7730;
+    outline-offset: 2px;
+  }
+
+  .nps-btn:active {
+    transform: scale(0.94);
+  }
+
+  .nps-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+    transform: none;
+  }
+
+  .nps-scale-labels {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    font-size: 0.68rem;
+    color: #64748B;
+  }
+
+  .nps-skip-link {
+    background: none;
+    border: none;
+    padding: 6px 10px;
+    min-height: 44px;
+    font-size: 0.78rem;
+    color: #64748B;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .nps-thanks {
+    margin: 0;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #2E7D32;
+  }
+
   .live-dot-green {
     width: 6px;
     height: 6px;
@@ -1548,6 +1661,9 @@ try {
     return 'general';
   }
 
+  // Nom de l'agence courante, réutilisé par la question NPS après l'envoi.
+  let agenceNomCourant = 'cette agence';
+
   // Hydratation / Validation QR Code côté client
   async function hydrateAgency() {
     try {
@@ -1555,6 +1671,7 @@ try {
       if (res.ok) {
         const data = await res.json();
         const agencyName = data.agence_nom || 'AGENCE';
+        agenceNomCourant = agencyName;
         const agencyBadge = document.getElementById('agencyBadgeText');
         if (agencyBadge) {
           agencyBadge.textContent = agencyName;
@@ -1910,6 +2027,13 @@ try {
         if (screenSentiment) screenSentiment.style.display = 'none';
         if (screenSuccess) screenSuccess.style.display = 'flex';
         window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // Question NPS facultative : uniquement si l'envoi a réellement créé un feedback
+        // (jamais dans les branches d'échec/hors-ligne ci-dessous, où il n'y a rien à noter).
+        const created = await res.json().catch(() => null);
+        if (created?.id && created?.nps_token) {
+          afficherQuestionNPS(created.id, created.nps_token);
+        }
       } else {
         const err = await res.json().catch(() => ({}));
         alert(`Information : ${err.detail || 'Votre avis a été pris en compte.'}`);
@@ -1925,6 +2049,59 @@ try {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   });
+
+  // ================= QUESTION NPS FACULTATIVE (après succès) =================
+  function afficherQuestionNPS(feedbackId: string, token: string) {
+    const block = document.getElementById('npsBlock');
+    const nomSpan = document.getElementById('npsAgenceNom');
+    const scale = document.getElementById('npsScale');
+    if (nomSpan) nomSpan.textContent = agenceNomCourant;
+    if (block) block.style.display = 'flex';
+
+    if (scale && !scale.dataset.rendered) {
+      for (let note = 0; note <= 10; note++) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'nps-btn';
+        btn.textContent = String(note);
+        btn.setAttribute(
+          'aria-label',
+          note === 0 ? '0 — Pas du tout probable' : note === 10 ? '10 — Très probable' : `Note ${note} sur 10`
+        );
+        btn.addEventListener('click', () => envoyerNPS(feedbackId, token, note));
+        scale.appendChild(btn);
+      }
+      scale.dataset.rendered = '1';
+    }
+
+    document.getElementById('btnNpsSkip')?.addEventListener(
+      'click',
+      () => { if (block) block.style.display = 'none'; },
+      { once: true }
+    );
+  }
+
+  async function envoyerNPS(feedbackId: string, token: string, note: number) {
+    const scale = document.getElementById('npsScale');
+    const skip = document.getElementById('btnNpsSkip');
+    const thanks = document.getElementById('npsThanks');
+
+    scale?.querySelectorAll('button').forEach((b) => ((b as HTMLButtonElement).disabled = true));
+
+    try {
+      await fetchAPI(`/feedbacks/${feedbackId}/nps`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nps_note: note, token }),
+      });
+    } catch (e) {
+      console.warn('Envoi NPS non bloquant (réseau ou jeton expiré) :', e);
+      // Tout échec est ignoré : on affiche quand même "Merci", jamais d'erreur visible.
+    } finally {
+      if (skip) skip.style.display = 'none';
+      if (thanks) thanks.style.display = 'block';
+    }
+  }
 
   // Nouveau retour
   document.getElementById('btnNewFeedback')?.addEventListener('click', () => {
