@@ -39,8 +39,10 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    # CORS
-    ALLOWED_ORIGINS: str = "http://localhost:4321,http://localhost:5173,http://localhost:3000,http://127.0.0.1:4321,http://127.0.0.1:5173,https://ikanai-client.onrender.com,https://ikanai-dashboard.onrender.com"
+    # CORS : liste séparée par des virgules (sans JSON). Une variable d'environnement REMPLACE ce défaut :
+    # en production, ALLOWED_ORIGINS doit contenir toutes les origines voulues (client + dashboard).
+    # Défaut = développement local + production actuelle (client ikan-1, dashboard ikanai-dashboard-fixs).
+    ALLOWED_ORIGINS: str = "http://localhost:4321,http://localhost:5173,http://localhost:3000,http://127.0.0.1:4321,http://127.0.0.1:5173,https://ikan-1.onrender.com,https://ikanai-dashboard-fixs.onrender.com"
 
     @property
     def allowed_origins_list(self) -> List[str]:
