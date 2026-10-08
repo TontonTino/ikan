@@ -23,6 +23,7 @@ from app.services.categorie_templates import (
     JAMAIS_AFFECTER_NOMS_NORMALISES,
     SECTEUR_CATEGORIES_DEPART,
     CategorieDepart,
+    appliquer_rattrapage_cles,
     cles_attendues_par_nom_normalise,
     creer_categories_depart,
     normaliser_nom_categorie,
@@ -201,3 +202,75 @@ def test_creer_categories_depart_registre_injecte_seulement_le_bon_secteur(db_se
     assert {c.cle for c in creees_restau} == {"salle", "cuisine"}
     assert creees_commerce == []
     assert db_session.query(Categorie).filter(Categorie.agence_id == agence_commerce.id).count() == 0
+
+
+# ── appliquer_rattrapage_cles (orchestration DB, migrations 026/027) ────────────
+# Régression du bug trouvé en production : 026 s'est terminée sans erreur mais n'a
+# affecté aucune ligne (cause précise non confirmée). Ces tests couvrent spécifiquement
+# le cas qui aurait permis de le détecter avant déploiement : une réexécution après un
+# conflit ne doit jamais redonner la même clé à la catégorie perdante.
+
+def _categorie(db, agence_id, nom, active=True, cle=None, age_jours=10):
+    c = Categorie(
+        id=uuid.uuid4(), agence_id=agence_id, nom=nom, active=active, cle=cle,
+        created_at=NOW - timedelta(days=age_jours),
+    )
+    db.add(c)
+    db.flush()
+    return c
+
+
+def test_appliquer_rattrapage_cles_cas_simple(db_session):
+    org, agence = _creer_org_et_agence(db_session, "telecom")
+    _categorie(db_session, agence.id, "Accueil")
+    _categorie(db_session, agence.id, "Service Client")
+    _categorie(db_session, agence.id, "Formation")  # ne doit jamais être affectée
+    db_session.commit()
+
+    rapport = appliquer_rattrapage_cles(db_session, "telecom")
+    db_session.commit()
+
+    cles = {c.nom: c.cle for c in db_session.query(Categorie).filter(Categorie.agence_id == agence.id).all()}
+    assert cles["Accueil"] == "accueil"
+    assert cles["Service Client"] == "service_client"
+    assert cles["Formation"] is None
+    assert len(rapport) == 2
+
+
+def test_appliquer_rattrapage_cles_secteur_sans_registre_ne_fait_rien(db_session):
+    org, agence = _creer_org_et_agence(db_session, "banque")
+    _categorie(db_session, agence.id, "Accueil")
+    db_session.commit()
+
+    rapport = appliquer_rattrapage_cles(db_session, "banque")
+    db_session.commit()
+
+    assert rapport == []
+    assert db_session.query(Categorie).filter(Categorie.agence_id == agence.id).one().cle is None
+
+
+def test_appliquer_rattrapage_cles_idempotent_apres_conflit(db_session):
+    """Bug corrigé : une réexécution après qu'un conflit a été résolu ne doit JAMAIS
+    redonner la clé à la catégorie perdante (qui reste cle IS NULL indéfiniment, par
+    construction — voir la docstring d'appliquer_rattrapage_cles)."""
+    org, agence = _creer_org_et_agence(db_session, "telecom")
+    gagnante = _categorie(db_session, agence.id, "Accueil", active=True, age_jours=5)
+    perdante = _categorie(db_session, agence.id, "accueil ", active=False, age_jours=40)
+    db_session.commit()
+
+    rapport_1 = appliquer_rattrapage_cles(db_session, "telecom")
+    db_session.commit()
+    assert len(rapport_1) == 2  # le conflit + l'affectation
+    db_session.refresh(gagnante)
+    db_session.refresh(perdante)
+    assert gagnante.cle == "accueil"
+    assert perdante.cle is None
+
+    # Réexécution : ne doit plus rien faire, surtout pas affecter "accueil" à la perdante.
+    rapport_2 = appliquer_rattrapage_cles(db_session, "telecom")
+    db_session.commit()
+    assert rapport_2 == []
+    db_session.refresh(gagnante)
+    db_session.refresh(perdante)
+    assert gagnante.cle == "accueil"
+    assert perdante.cle is None
