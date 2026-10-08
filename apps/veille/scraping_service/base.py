@@ -11,11 +11,16 @@ class FeedbackItem(BaseModel):
     source_id: str
     target_url: str
     author_name: str | None = None
+    author_hash: str | None = None
     text: str = Field(min_length=1)
     rating: float | None = None  # Note éventuelle (ex: 5.0 pour Google Reviews ou reco Facebook)
     published_at: datetime | None = None
     permalink: str | None = None
     raw_text: str | None = None
+    sentiment: str | None = None  # ex: "positif", "neutre", "négatif"
+    theme: str | None = None  # ex: "service_client", "qualite_produit", "prix", etc.
+    confidence: float | None = None  # score de confiance IA (0.0 à 1.0)
+    ai_analyzed_at: datetime | None = None
     metadata: dict[str, object] = Field(default_factory=dict)
 
 

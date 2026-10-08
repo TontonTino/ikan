@@ -1,6 +1,6 @@
 """
-Endpoints Veille & Réseaux Sociaux — pilotage du microservice de veille, ingestion des
-mentions (table mentions_veille, séparée de feedbacks) et consultation.
+Endpoints Veille & Réseaux Sociaux — pilotage du microservice de veille, ingestion et
+consultation des mentions dans leur flux séparé.
 """
 from collections import defaultdict
 from datetime import datetime
@@ -9,6 +9,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user, get_db
@@ -55,7 +56,7 @@ async def veille_status(
     _exiger_cx_manager(current_user)
 
     health = await check_veille_service()
-    session = await get_session_status() if health.get("status") == "online" else {"valid": False}
+    session = await get_session_status(str(current_user.organisation_id)) if health.get("status") == "online" else {"valid": False}
     return {
         "service": health,
         "facebook_session": session,
@@ -142,7 +143,10 @@ class MentionOut(BaseModel):
     texte: str
     sentiment: SentimentType
     score_sentiment: float
+    theme_principal: Optional[str]
+    theme_confidence: Optional[float]
     date_publication: Optional[datetime]
+    date_analyse: Optional[datetime]
     url_source: Optional[str]
     agence_nom: Optional[str]
 
@@ -170,7 +174,10 @@ def lister_mentions(
     date_debut: Optional[datetime] = Query(None),
     date_fin: Optional[datetime] = Query(None),
     sentiment: Optional[str] = Query(None, description="positif | neutre | negatif"),
+    theme: Optional[str] = Query(None, description="Thème, ou non_classe pour les thèmes absents"),
+    plateforme: Optional[str] = Query(None, min_length=1, max_length=30),
     agence_id: Optional[UUID] = Query(None),
+    recherche: Optional[str] = Query(None, min_length=1, max_length=200),
     limit: int = Query(25, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -190,6 +197,16 @@ def lister_mentions(
     base_query = _appliquer_filtres_periode_agence(base_query, current_user, date_debut, date_fin, agence_id)
     if sentiment_enum is not None:
         base_query = base_query.filter(MentionVeille.sentiment == sentiment_enum)
+    if theme is not None:
+        theme_normalise = theme.strip().lower().replace("_", " ")
+        if theme_normalise in {"non classe", "non classé"}:
+            base_query = base_query.filter(MentionVeille.theme_principal.is_(None))
+        else:
+            base_query = base_query.filter(func.lower(MentionVeille.theme_principal) == theme.strip().lower())
+    if plateforme is not None:
+        base_query = base_query.filter(func.lower(MentionVeille.plateforme) == plateforme.strip().lower())
+    if recherche is not None:
+        base_query = base_query.filter(MentionVeille.texte.ilike(f"%{recherche.strip()}%"))
 
     total = base_query.count()
     rows = (
@@ -208,7 +225,10 @@ def lister_mentions(
             texte=mention.texte,
             sentiment=mention.sentiment,
             score_sentiment=mention.score_sentiment,
+            theme_principal=mention.theme_principal,
+            theme_confidence=mention.theme_confidence,
             date_publication=mention.date_publication,
+            date_analyse=mention.date_analyse,
             url_source=mention.url_source,
             agence_nom=agence_nom,
         )
@@ -218,6 +238,12 @@ def lister_mentions(
 
 
 class SentimentBucket(BaseModel):
+    count: int
+    pourcentage: float
+
+
+class ThemeBucket(BaseModel):
+    theme_principal: Optional[str]
     count: int
     pourcentage: float
 
@@ -232,6 +258,7 @@ class SyntheseJour(BaseModel):
 class SyntheseResponse(BaseModel):
     total: int
     par_sentiment: Dict[str, SentimentBucket]
+    par_theme: List[ThemeBucket]
     serie_journaliere: List[SyntheseJour]
 
 
@@ -240,6 +267,7 @@ def synthese_mentions(
     date_debut: Optional[datetime] = Query(None),
     date_fin: Optional[datetime] = Query(None),
     agence_id: Optional[UUID] = Query(None),
+    plateforme: Optional[str] = Query(None, min_length=1, max_length=30),
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_current_active_user),
 ) -> SyntheseResponse:
@@ -248,6 +276,8 @@ def synthese_mentions(
 
     query = db.query(MentionVeille)
     query = _appliquer_filtres_periode_agence(query, current_user, date_debut, date_fin, agence_id)
+    if plateforme is not None:
+        query = query.filter(func.lower(MentionVeille.plateforme) == plateforme.strip().lower())
     mentions = query.all()
 
     total = len(mentions)
@@ -275,4 +305,21 @@ def synthese_mentions(
         for jour, v in sorted(par_jour.items())
     ]
 
-    return SyntheseResponse(total=total, par_sentiment=par_sentiment, serie_journaliere=serie_journaliere)
+    compte_theme: Dict[Optional[str], int] = defaultdict(int)
+    for mention in mentions:
+        compte_theme[mention.theme_principal] += 1
+    par_theme = [
+        ThemeBucket(
+            theme_principal=theme,
+            count=count,
+            pourcentage=round(count / total * 100, 1) if total else 0.0,
+        )
+        for theme, count in sorted(compte_theme.items(), key=lambda item: (item[0] is None, item[0] or ""))
+    ]
+
+    return SyntheseResponse(
+        total=total,
+        par_sentiment=par_sentiment,
+        par_theme=par_theme,
+        serie_journaliere=serie_journaliere,
+    )

@@ -7,7 +7,7 @@ feedbacks : ces avis n'ont pas de note client réelle, voir ingest_mentions).
 import hashlib
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
@@ -15,8 +15,9 @@ import httpx
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.models.enums import SentimentType
 from app.models.mention_veille import MentionVeille
-from app.services.ai.sentiment import analyser_sentiment
+from app.services.ai.classification_service import classify
 
 logger = logging.getLogger(__name__)
 
@@ -59,14 +60,15 @@ async def check_veille_service() -> Dict[str, Any]:
         return {"status": "offline", "error": str(e)}
 
 
-async def get_session_status() -> Dict[str, Any]:
-    """Récupère l'état de la session Facebook enregistrée dans le microservice."""
-    url = f"{settings.VEILLE_SERVICE_URL.rstrip('/')}/session/facebook/status"
+async def get_session_status(client_id: str) -> Dict[str, Any]:
+    """Récupère les Pages Facebook connectées pour l'organisation."""
+    url = f"{settings.VEILLE_SERVICE_URL.rstrip('/')}/pages"
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            res = await client.get(url, headers=_get_headers())
+            res = await client.get(url, params={"client_id": client_id}, headers=_get_headers())
             if res.status_code == 200:
-                return res.json()
+                pages = res.json().get("pages", [])
+                return {"valid": any(page.get("status") == "active" for page in pages), "pages": pages}
             return {"valid": False, "error": f"Erreur {res.status_code}: {res.text}"}
     except Exception as e:
         return {"valid": False, "error": str(e)}
@@ -162,6 +164,24 @@ def ingest_mentions(
         type_contenu = item.get("type_contenu") or item.get("type") or "avis"
         url_source = item.get("url_source") or item.get("url") or None
         date_publication = _parser_date_publication(item.get("date_publication") or item.get("date"))
+        external_id_value = item.get("external_id") or item.get("source_id")
+        external_id = external_id_value.strip() if isinstance(external_id_value, str) else None
+        if not external_id or len(external_id) > 255:
+            external_id = None
+
+        if external_id is not None:
+            deja_present = (
+                db.query(MentionVeille)
+                .filter(
+                    MentionVeille.organisation_id == organisation_id,
+                    MentionVeille.plateforme == plateforme,
+                    MentionVeille.external_id == external_id,
+                )
+                .first()
+            )
+            if deja_present:
+                duplicate_count += 1
+                continue
 
         empreinte = _calculer_empreinte(plateforme, _normaliser_texte(texte), date_publication, url_source)
 
@@ -174,7 +194,15 @@ def ingest_mentions(
             duplicate_count += 1
             continue
 
-        sentiment, score = analyser_sentiment(texte)
+        classification = classify(texte, note=None)
+        sentiment = {
+            "positive": SentimentType.POSITIF,
+            "positif": SentimentType.POSITIF,
+            "negative": SentimentType.NEGATIF,
+            "negatif": SentimentType.NEGATIF,
+            "neutral": SentimentType.NEUTRE,
+            "neutre": SentimentType.NEUTRE,
+        }.get(str(classification.get("sentiment", "")).lower(), SentimentType.NEUTRE)
 
         mention = MentionVeille(
             organisation_id=organisation_id,
@@ -184,8 +212,12 @@ def ingest_mentions(
             texte=texte,
             url_source=url_source,
             date_publication=date_publication,
+            external_id=external_id,
             sentiment=sentiment,
-            score_sentiment=score,
+            score_sentiment=float(classification.get("score_sentiment", 0.5)),
+            theme_principal=classification.get("theme") if classification.get("theme_matched", False) else None,
+            theme_confidence=classification.get("theme_confidence") if classification.get("theme_matched", False) else None,
+            date_analyse=datetime.now(timezone.utc),
             empreinte=empreinte,
         )
         db.add(mention)

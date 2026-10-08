@@ -1,9 +1,34 @@
+# Environment & Secrets
 .env
-state/
+.env.local
+
+# Virtual Environment
 .venv/
-debug/
+env/
+venv/
+
+# Python & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# Application Data & State
 data/
+state/
+debug/
+*.db
+*.sqlite3
+
+# Temporary / export files
 export.json
 resultat.json
-__pycache__/
-*.pyc
+
+# OS Specific
+.DS_Store
+Thumbs.db

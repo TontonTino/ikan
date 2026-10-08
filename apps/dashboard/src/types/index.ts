@@ -572,7 +572,10 @@ export interface VeilleMention {
   texte: string;
   sentiment: SentimentType;
   score_sentiment: number;
+  theme_principal: string | null;
+  theme_confidence: number | null;
   date_publication: string | null;
+  date_analyse: string | null;
   url_source: string | null;
   agence_nom: string | null;
 }
@@ -587,6 +590,12 @@ export interface VeilleSentimentBucket {
   pourcentage: number;
 }
 
+export interface VeilleThemeBucket {
+  theme_principal: string | null;
+  count: number;
+  pourcentage: number;
+}
+
 export interface VeilleSyntheseJour {
   date: string;
   positif: number;
@@ -597,6 +606,7 @@ export interface VeilleSyntheseJour {
 export interface VeilleSyntheseResponse {
   total: number;
   par_sentiment: Record<SentimentType, VeilleSentimentBucket>;
+  par_theme: VeilleThemeBucket[];
   serie_journaliere: VeilleSyntheseJour[];
 }
 

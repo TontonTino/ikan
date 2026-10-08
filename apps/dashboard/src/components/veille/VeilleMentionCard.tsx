@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ThumbsUpIcon, ThumbsDownIcon, SmileyMehIcon, ExternalLinkIcon, ClockIcon, StoreIcon } from '../common/Icons';
 import type { VeilleMention } from '../../types';
+import { themeLabel } from '../../utils/themeLabels';
 
 const SENTIMENT_META: Record<string, { label: string; badgeClass: string; icon: React.ReactNode }> = {
   positif: { label: 'Positif', badgeClass: 'badge-success', icon: <ThumbsUpIcon size={12} /> },
@@ -29,10 +30,15 @@ export default function VeilleMentionCard({ mention }: { mention: VeilleMention 
   return (
     <div className="saas-card" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         <span className={`badge ${meta.badgeClass}`}>
           {meta.icon}
           {meta.label}
         </span>
+        <span className="badge badge-neutral" title={mention.theme_confidence == null ? undefined : `Confiance : ${Math.round(mention.theme_confidence * 100)}%`}>
+          {themeLabel(mention.theme_principal)}
+        </span>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.76rem', color: 'var(--color-text-muted)', fontWeight: 600, flexWrap: 'wrap' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
             <ClockIcon size={12} /> {formatDate(mention.date_publication)}

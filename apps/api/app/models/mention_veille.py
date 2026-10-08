@@ -24,6 +24,7 @@ class MentionVeille(Base):
     __tablename__ = "mentions_veille"
     __table_args__ = (
         UniqueConstraint("organisation_id", "empreinte", name="uq_mention_veille_organisation_empreinte"),
+        UniqueConstraint("organisation_id", "plateforme", "external_id", name="uq_mention_veille_org_plateforme_external_id"),
         Index("idx_mention_veille_organisation_date", "organisation_id", "date_publication"),
     )
 
@@ -40,8 +41,12 @@ class MentionVeille(Base):
     texte: Mapped[str] = mapped_column(Text, nullable=False)  # tronqué à 2000 caractères avant insertion
     url_source: Mapped[str | None] = mapped_column(Text, nullable=True)
     date_publication: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    external_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     sentiment: Mapped[SentimentType] = mapped_column(Enum(SentimentType), nullable=False)
     score_sentiment: Mapped[float] = mapped_column(Float, nullable=False)
+    theme_principal: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    theme_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    date_analyse: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # sha256(plateforme + texte normalisé (minuscules, espaces réduits) + date_publication + url_source) :
     # détecte les ré-extractions du même contenu pour une organisation, sans jamais stocker l'auteur.
     empreinte: Mapped[str] = mapped_column(String(64), nullable=False)

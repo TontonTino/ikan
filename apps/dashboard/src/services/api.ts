@@ -194,11 +194,14 @@ export const veilleApi = {
     date_debut?: string;
     date_fin?: string;
     sentiment?: import('../types').SentimentType;
+    theme?: string;
+    plateforme?: string;
+    recherche?: string;
     agence_id?: string;
     limit?: number;
     offset?: number;
   }) => api.get<import('../types').VeilleMentionsResponse>('/veille/mentions', { params }),
-  synthese: (params?: { date_debut?: string; date_fin?: string; agence_id?: string }) =>
+  synthese: (params?: { date_debut?: string; date_fin?: string; agence_id?: string; plateforme?: string }) =>
     api.get<import('../types').VeilleSyntheseResponse>('/veille/synthese', { params }),
 };
 

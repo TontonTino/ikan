@@ -1,108 +1,96 @@
-"""Tests unitaires pour le nettoyage et l'analyse de contenu Facebook."""
+from datetime import datetime
+import hashlib
 
-import pytest
-
-from scraping_service.facebook.parser import (
-    clean_facebook_url,
-    detect_review_rating,
-    filter_clean_content,
-    generate_source_id,
-)
+from scraping_service.config import settings
+from scraping_service.facebook.parser import parse_comment_to_feedback, parse_post_to_feedback
 
 
-def test_filter_clean_content_basic():
-    sample = (
-        "Awa Traoré\n"
-        "J'aime beaucoup ce restaurant, le service est rapide\n"
-        "Like many customers, I waited too long\n"
-        "J'aime\nCommenter\nPartager\n12 k\nToutes les réactions : 12"
-    )
-    result = filter_clean_content(sample)
-    assert "J'aime beaucoup ce restaurant" in result
-    assert "Like many customers" in result
-    assert "Commenter" not in result
-    assert "Partager" not in result
-    assert "12 k" not in result
-    assert "Toutes les réactions" not in result
+def test_parse_comment_to_feedback(monkeypatch):
+    monkeypatch.setattr(settings, "state_secret", "")
+    monkeypatch.setattr(settings, "store_author_name", False)
 
-
-def test_clean_facebook_url():
-    raw_url = (
-        "https://www.facebook.com/example/posts/123456"
-        "?__cft__[0]=AZX&__tn__=%2CO%2CP-R&ref=page_internal&fbclid=IwAR3abc"
-    )
-    cleaned = clean_facebook_url(raw_url)
-    assert cleaned == "https://www.facebook.com/example/posts/123456"
-    assert "fbclid" not in cleaned
-    assert "__tn__" not in cleaned
-    assert "ref" not in cleaned
-
-
-def test_generate_source_id():
-    id1 = generate_source_id("https://facebook.com/post/1", "texte de test")
-    id2 = generate_source_id("https://facebook.com/post/1", "autre texte")
-    id3 = generate_source_id(None, "texte de test")
-
-    assert len(id1) == 24
-    assert id1 == id2  # basé sur permalink en priorité
-    assert id1 != id3
-
-
-def test_detect_review_rating():
-    # Avis positif
-    r1, s1 = detect_review_rating("Amadou Koné recommande La Brioche Dorée.")
-    assert r1 == 5.0
-    assert s1 == "recommended"
-
-    # Avis négatif
-    r2, s2 = detect_review_rating("Fatou Diallo ne recommande pas Orange Burkina.")
-    assert r2 == 1.0
-    assert s2 == "not_recommended"
-
-    # En anglais
-    r3, s3 = detect_review_rating("John Doe doesn't recommend Brand X.")
-    assert r3 == 1.0
-    assert s3 == "not_recommended"
-
-    # Note par étoiles
-    r4, s4 = detect_review_rating("Note attribuée : 4,5 sur 5 étoiles")
-    assert r4 == 4.5
-    assert s4 == "star_rating"
-
-    # Post ordinaire
-    r5, s5 = detect_review_rating("Voici notre nouveau menu pour la semaine !")
-    assert r5 is None
-    assert s5 is None
-
-
-def test_extract_comet_ssr_items():
-    from scraping_service.facebook.parser import extract_comet_ssr_items
-
-    mock_html = """
-    <html>
-    <head>
-    <script type="application/json">
-    {
-      "require": [
-        ["CometFeedStory", "render", [], [{
-          "story": {
-            "id": "post_12345",
-            "message": {"text": "Superbe nouvelle offre disponible dans toutes nos agences !"},
-            "url": "https://www.facebook.com/brand/posts/12345",
-            "creation_time": 1726927200,
-            "actors": [{"name": "Brand Burkina"}]
-          }
-        }]]
-      ]
+    sample_comment = {
+        "id": "123456_789012",
+        "message": "Service client rapide et très professionnel !",
+        "created_time": "2026-09-30T10:15:30+0000",
+        "from": {
+            "name": "Jean Dupont",
+            "id": "999888777",
+        },
+        "like_count": 5,
+        "permalink_url": "https://www.facebook.com/123456/posts/789012",
     }
-    </script>
-    </head>
-    </html>
-    """
-    items = extract_comet_ssr_items(mock_html, "https://www.facebook.com/brand")
-    assert len(items) == 1
-    item = items[0]
-    assert item.author_name == "Brand Burkina"
-    assert "Superbe nouvelle offre" in item.text
-    assert item.permalink == "https://www.facebook.com/brand/posts/12345"
-    assert item.published_at is not None
+
+    item = parse_comment_to_feedback(
+        comment=sample_comment,
+        page_id="1618870513365355",
+        post_id="123456",
+        post_text="Publication de test",
+    )
+
+    assert item.source == "facebook"
+    assert item.source_id == "123456_789012"
+    assert item.author_name is None
+    assert item.author_hash is None
+    assert "author_id" not in item.metadata
+    assert item.text == "Service client rapide et très professionnel !"
+    assert item.published_at == datetime.fromisoformat("2026-09-30T10:15:30+00:00")
+    assert item.metadata["like_count"] == 5
+    assert item.metadata["post_id"] == "123456"
+
+
+def test_parse_comment_hashes_author_without_storing_identity(monkeypatch):
+    monkeypatch.setattr(settings, "state_secret", "test-salt")
+    monkeypatch.setattr(settings, "store_author_name", False)
+    item = parse_comment_to_feedback(
+        comment={"id": "comment", "message": "hello", "from": {"id": "author-id", "name": "Author"}},
+        page_id="page",
+        post_id="post",
+    )
+
+    assert item.author_hash == hashlib.sha256(b"test-salt:author-id").hexdigest()
+    assert item.author_name is None
+    assert "author-id" not in str(item.model_dump())
+
+
+def test_parse_comment_accepts_missing_message_and_author():
+    # Par défaut (include_empty=False) : commentaire sans texte ignoré
+    item_ignored = parse_comment_to_feedback(
+        comment={"id": "comment", "message": None, "from": None},
+        page_id="page",
+        post_id="post",
+        include_empty=False,
+    )
+    assert item_ignored is None
+
+    # Avec include_empty=True : commentaire vide converti
+    item = parse_comment_to_feedback(
+        comment={"id": "comment", "message": None, "from": None},
+        page_id="page",
+        post_id="post",
+        include_empty=True,
+    )
+    assert item is not None
+    assert item.author_name is None
+    assert item.author_hash is None
+    assert item.text == "[Média ou commentaire sans texte]"
+
+
+def test_parse_post_to_feedback():
+    sample_post = {
+        "id": "1618870513365355_1001",
+        "message": "Bienvenue sur la plateforme IKAN AI !",
+        "created_time": "2026-09-29T12:00:00+0000",
+        "shares": {"count": 12},
+        "reactions": {"summary": {"total_count": 45}},
+        "comments": {"summary": {"total_count": 8}},
+    }
+
+    item = parse_post_to_feedback(post=sample_post, page_id="1618870513365355")
+
+    assert item.source == "facebook"
+    assert item.source_id == "1618870513365355_1001"
+    assert item.text == "Bienvenue sur la plateforme IKAN AI !"
+    assert item.metadata["total_reactions"] == 45
+    assert item.metadata["total_comments"] == 8
+    assert item.metadata["shares_count"] == 12

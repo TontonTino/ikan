@@ -8,6 +8,7 @@ réellement la déduplication et le filtrage sans toucher la base partagée : le
 explique pourquoi la migration elle-même n'a pas été appliquée avec `alembic upgrade`.
 """
 import os
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -31,6 +32,8 @@ from app.models.organisation import Organisation
 from app.models.plan import Plan
 from app.models.qr_code import QRCode
 from app.models.utilisateur import Utilisateur
+from app.services.ai import classification_service
+from app.services import veille_service
 
 
 @pytest.fixture()
@@ -158,6 +161,158 @@ def test_sentiment_calcule_immediatement(ctx):
     assert 0.0 <= positif.score_sentiment <= 1.0
     assert 0.0 <= negatif.score_sentiment <= 1.0
     db.close()
+
+
+def test_classification_ikan_est_appelee_sans_note_et_persistee(ctx, monkeypatch):
+    appels = []
+
+    def fake_classify(texte, note=None):
+        appels.append((texte, note))
+        return {
+            "sentiment": "negative",
+            "score_sentiment": 0.21,
+            "theme": "facturation",
+            "theme_confidence": 0.87,
+            "theme_matched": True,
+        }
+
+    monkeypatch.setattr(veille_service, "classify", fake_classify)
+    client = ctx.client_pour(UserRole.CX_MANAGER, ctx.cx_a, ctx.org_a)
+    response = client.post("/veille/ingest", json={"items": [{
+        "source": "facebook",
+        "source_id": "comment-42",
+        "text": "La facturation est incorrecte",
+    }]})
+    assert response.status_code == 200, response.text
+    assert appels == [("La facturation est incorrecte", None)]
+
+    db = ctx.Session()
+    mention = db.query(MentionVeille).one()
+    assert mention.sentiment == SentimentType.NEGATIF
+    assert mention.score_sentiment == 0.21
+    assert mention.theme_principal == "facturation"
+    assert mention.theme_confidence == 0.87
+    assert mention.external_id == "comment-42"
+    assert mention.date_analyse is not None
+    assert db.query(Feedback).count() == 0
+    db.close()
+
+
+def test_theme_de_repli_est_persiste_comme_absent(ctx, monkeypatch):
+    monkeypatch.setattr(classification_service, "_models_initialized", True)
+    monkeypatch.setattr(classification_service, "_transformers_available", False)
+    monkeypatch.setattr(classification_service, "THEME_LABELS", classification_service._load_labels())
+
+    client = ctx.client_pour(UserRole.CX_MANAGER, ctx.cx_a, ctx.org_a)
+    response = client.post("/veille/ingest", json={"items": [{
+        "text": "blorple quux zyxw",
+    }]})
+    assert response.status_code == 200, response.text
+
+    db = ctx.Session()
+    mention = db.query(MentionVeille).one()
+    assert mention.theme_principal is None
+    assert mention.theme_confidence is None
+    assert mention.date_analyse is not None
+    db.close()
+
+
+def test_deduplication_priorise_plateforme_et_identifiant_externe(ctx):
+    client = ctx.client_pour(UserRole.CX_MANAGER, ctx.cx_a, ctx.org_a)
+    items = [
+        {"source": "facebook", "source_id": "same-id", "text": "Première version"},
+        {"source": "facebook", "source_id": "same-id", "text": "Texte légèrement modifié"},
+    ]
+    response = client.post("/veille/ingest", json={"items": items})
+    assert response.status_code == 200, response.text
+    assert response.json()["summary"] == {
+        "ingested_count": 1, "duplicate_count": 1, "ignored_empty_count": 0,
+    }
+
+    db = ctx.Session()
+    assert db.query(MentionVeille).count() == 1
+    db.close()
+
+
+def test_api_mentions_filtres_pagination_et_champs_analytiques(ctx, monkeypatch):
+    def fake_classify(texte, note=None):
+        if "sans thème" in texte:
+            return {"sentiment": "neutral", "score_sentiment": 0.5, "theme": "accueil", "theme_confidence": 0.5, "theme_matched": False}
+        if "réseau" in texte:
+            return {"sentiment": "positive", "score_sentiment": 0.9, "theme": "reseau", "theme_confidence": 0.8, "theme_matched": True}
+        return {"sentiment": "negative", "score_sentiment": 0.2, "theme": "facturation", "theme_confidence": 0.7, "theme_matched": True}
+
+    monkeypatch.setattr(veille_service, "classify", fake_classify)
+    now = datetime.now(timezone.utc)
+    client = ctx.client_pour(UserRole.CX_MANAGER, ctx.cx_a, ctx.org_a)
+    response = client.post("/veille/ingest", json={"agence_id": str(ctx.ag_a), "items": [
+        {"source_id": "api-1", "plateforme": "facebook", "text": "Commentaire sans thème spécifique", "date_publication": now.isoformat(), "url_source": "https://facebook.com/p/1"},
+        {"source_id": "api-2", "plateforme": "facebook", "text": "Le réseau fonctionne bien", "date_publication": (now - timedelta(days=1)).isoformat()},
+        {"source_id": "api-3", "plateforme": "google_reviews", "text": "Erreur de facture", "date_publication": (now - timedelta(days=2)).isoformat()},
+    ]})
+    assert response.status_code == 200, response.text
+
+    liste = client.get("/veille/mentions", params={"limit": 1, "offset": 0})
+    assert liste.status_code == 200
+    assert liste.json()["total"] == 3
+    assert len(liste.json()["items"]) == 1
+
+    non_classes = client.get("/veille/mentions", params={"theme": "non_classe"})
+    assert non_classes.status_code == 200
+    assert non_classes.json()["total"] == 1
+    mention_non_classee = non_classes.json()["items"][0]
+    assert mention_non_classee["theme_principal"] is None
+    assert mention_non_classee["theme_confidence"] is None
+    assert mention_non_classee["score_sentiment"] == 0.5
+    assert mention_non_classee["date_analyse"] is not None
+
+    filtres = client.get("/veille/mentions", params={
+        "sentiment": "positif", "theme": "reseau", "plateforme": "FACEBOOK",
+        "agence_id": str(ctx.ag_a), "date_debut": (now - timedelta(days=2)).isoformat(),
+        "date_fin": (now + timedelta(days=1)).isoformat(),
+        "recherche": "réseau", "limit": 10, "offset": 0,
+    })
+    assert filtres.status_code == 200
+    assert filtres.json()["total"] == 1
+    assert filtres.json()["items"][0]["theme_principal"] == "reseau"
+
+    synthese = client.get("/veille/synthese")
+    assert synthese.status_code == 200
+    data = synthese.json()
+    assert data["total"] == 3
+    assert data["par_sentiment"]["positif"]["count"] == 1
+    assert data["par_sentiment"]["negatif"]["count"] == 1
+    assert {item["theme_principal"]: item["count"] for item in data["par_theme"]}[None] == 1
+    assert len(data["serie_journaliere"]) == 3
+
+    filtre_synthese = client.get("/veille/synthese", params={"plateforme": "facebook"})
+    assert filtre_synthese.status_code == 200
+    assert filtre_synthese.json()["total"] == 2
+
+
+def test_lecture_mentions_reste_disponible_microservice_veille_hors_ligne(ctx, monkeypatch):
+    async def service_hors_ligne():
+        return {"status": "offline", "error": "service arrêté pour le test"}
+
+    monkeypatch.setattr(veille, "check_veille_service", service_hors_ligne)
+    client = ctx.client_pour(UserRole.CX_MANAGER, ctx.cx_a, ctx.org_a)
+    ingestion = client.post("/veille/ingest", json={"items": [{
+        "source_id": "mention-existante-1",
+        "text": "Le réseau fonctionne bien dans la zone",
+        "date_publication": datetime.now(timezone.utc).isoformat(),
+    }]})
+    assert ingestion.status_code == 200, ingestion.text
+
+    etat = client.get("/veille/status")
+    assert etat.status_code == 200
+    assert etat.json()["service"]["status"] == "offline"
+
+    mentions = client.get("/veille/mentions")
+    synthese = client.get("/veille/synthese")
+    assert mentions.status_code == 200, mentions.text
+    assert mentions.json()["total"] == 1
+    assert synthese.status_code == 200, synthese.text
+    assert synthese.json()["total"] == 1
 
 
 def test_masque_email_dans_le_texte(ctx):

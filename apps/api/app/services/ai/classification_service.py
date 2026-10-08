@@ -102,13 +102,13 @@ FALLBACK_THEMES: dict[str, list[str]] = {
 }
 
 
-def _fallback_classifier_theme(texte: str) -> tuple[str, float]:
+def _fallback_classifier_theme(texte: str) -> tuple[str, float, bool]:
     """
     Classifie le thème avec le dictionnaire de mots-clés normalisés parmi les 15 thèmes IKAN AI.
-    Retourne (theme, confidence).
+    Retourne (theme, confidence, matched), où matched indique qu'un mot-clé a été trouvé.
     """
     if not texte or len(texte.strip()) < 3:
-        return "accueil", 0.5
+        return "accueil", 0.5, False
 
     texte_clean = _strip_accents(texte.lower())
     scores: dict[str, int] = {}
@@ -123,12 +123,12 @@ def _fallback_classifier_theme(texte: str) -> tuple[str, float]:
             scores[theme] = score
 
     if not scores:
-        return "accueil", 0.5
+        return "accueil", 0.5, False
 
     best_theme = max(scores, key=lambda k: scores[k])
     total_score = sum(scores.values())
     confidence = min(0.95, round(scores[best_theme] / max(1, total_score) * 0.9, 3))
-    return best_theme, max(0.6, confidence)
+    return best_theme, max(0.6, confidence), True
 
 
 # Verrou pour le chargement paresseux thread-safe
@@ -208,6 +208,7 @@ class ClassificationResult(TypedDict):
     score_sentiment: float
     theme: str
     theme_confidence: float
+    theme_matched: bool
 
 
 def classify(text: str, note: Optional[int] = None) -> ClassificationResult:
@@ -228,6 +229,7 @@ def classify(text: str, note: Optional[int] = None) -> ClassificationResult:
             "score_sentiment": 0.5,
             "theme": "accueil",
             "theme_confidence": 0.5,
+            "theme_matched": False,
         }
 
     # 1. Analyse de sentiment déterministe enrichie (rapide, sans latence réseau)
@@ -239,7 +241,7 @@ def classify(text: str, note: Optional[int] = None) -> ClassificationResult:
     )
 
     # 2. Détection de mots-clés sémantiques
-    kw_theme, kw_conf = _fallback_classifier_theme(text)
+    kw_theme, kw_conf, kw_matched = _fallback_classifier_theme(text)
 
     # 3. Inférence Deep Learning Transformers si le modèle local est disponible
     model_theme = None
@@ -263,29 +265,36 @@ def classify(text: str, note: Optional[int] = None) -> ClassificationResult:
     # 4. Fusion intelligente (Hybrid Ensemble)
     final_theme = "accueil"
     final_conf = 0.5
+    final_theme_matched = False
 
     if kw_conf >= 0.6:
         final_theme = kw_theme
         final_conf = max(kw_conf, model_conf)
+        final_theme_matched = kw_matched
     elif model_theme and model_conf >= 0.65:
         final_theme = model_theme
         final_conf = model_conf
+        final_theme_matched = True
     elif kw_theme:
         final_theme = kw_theme
         final_conf = kw_conf
+        final_theme_matched = kw_matched
     elif model_theme:
         final_theme = model_theme
         final_conf = model_conf
+        final_theme_matched = True
 
     # Garantir que le thème est strictement l'un des 15 thèmes
     if final_theme not in THEME_LABELS:
         final_theme = "accueil"
+        final_theme_matched = False
 
     return {
         "sentiment": sentiment_str,
         "score_sentiment": score_sent,
         "theme": final_theme,
         "theme_confidence": final_conf,
+        "theme_matched": final_theme_matched,
     }
 
 

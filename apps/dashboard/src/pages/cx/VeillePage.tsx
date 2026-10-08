@@ -13,8 +13,10 @@ import VeilleSentimentFilter from '../../components/veille/VeilleSentimentFilter
 import VeilleInfoBanner from '../../components/veille/VeilleInfoBanner';
 import VeilleKpiRow from '../../components/veille/VeilleKpiRow';
 import VeilleDailyChart from '../../components/veille/VeilleDailyChart';
+import VeilleThemeChart from '../../components/veille/VeilleThemeChart';
 import VeilleMentionCard from '../../components/veille/VeilleMentionCard';
 import { RefreshCwIcon, AlertTriangleIcon } from '../../components/common/Icons';
+import { themeLabel } from '../../utils/themeLabels';
 
 const PAGE_SIZE = 25;
 
@@ -28,6 +30,9 @@ export default function VeillePage() {
   const [jours, setJours] = useState(30);
   const [selectedAgenceId, setSelectedAgenceId] = useState<string | null>(null);
   const [selectedSentiment, setSelectedSentiment] = useState<SentimentType | null>(null);
+  const [selectedTheme, setSelectedTheme] = useState('');
+  const [plateforme, setPlateforme] = useState('');
+  const [recherche, setRecherche] = useState('');
   const [page, setPage] = useState(0);
 
   const [agencesList, setAgencesList] = useState<Agence[]>([]);
@@ -38,6 +43,8 @@ export default function VeillePage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mentionsError, setMentionsError] = useState<string | null>(null);
+  const [syntheseError, setSyntheseError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isCxManager) return;
@@ -67,26 +74,42 @@ export default function VeillePage() {
     if (!isCxManager) return;
     setLoading(true);
     setError(null);
+    setMentionsError(null);
+    setSyntheseError(null);
     try {
-      const filtresPeriode = { date_debut: dateDebut, agence_id: selectedAgenceId || undefined };
-      const [mentionsRes, syntheseRes] = await Promise.all([
+      const filtresPeriode = { date_debut: dateDebut, agence_id: selectedAgenceId || undefined, plateforme: plateforme || undefined };
+      const [mentionsRes, syntheseRes] = await Promise.allSettled([
         veilleApi.mentions({
           ...filtresPeriode,
           sentiment: selectedSentiment || undefined,
+          theme: selectedTheme || undefined,
+          plateforme: plateforme || undefined,
+          recherche: recherche.trim() || undefined,
           limit: PAGE_SIZE,
           offset: page * PAGE_SIZE,
         }),
         veilleApi.synthese(filtresPeriode),
       ]);
-      setMentions(mentionsRes.data.items);
-      setTotal(mentionsRes.data.total);
-      setSynthese(syntheseRes.data);
+      if (mentionsRes.status === 'fulfilled') {
+        setMentions(mentionsRes.value.data.items);
+        setTotal(mentionsRes.value.data.total);
+      } else {
+        setMentionsError(mentionsRes.reason?.response?.data?.detail || 'Lecture des mentions impossible.');
+      }
+      if (syntheseRes.status === 'fulfilled') {
+        setSynthese(syntheseRes.value.data);
+      } else {
+        setSyntheseError(syntheseRes.reason?.response?.data?.detail || 'Chargement des indicateurs impossible.');
+      }
+      if (mentionsRes.status === 'rejected' && syntheseRes.status === 'rejected') {
+        setError('Les mentions et les indicateurs sont momentanément indisponibles.');
+      }
     } catch (err: any) {
       setError(err?.response?.data?.detail || 'Erreur lors du chargement des mentions.');
     } finally {
       setLoading(false);
     }
-  }, [isCxManager, dateDebut, selectedAgenceId, selectedSentiment, page]);
+  }, [isCxManager, dateDebut, selectedAgenceId, selectedSentiment, selectedTheme, plateforme, recherche, page]);
 
   useEffect(() => {
     fetchData();
@@ -95,7 +118,7 @@ export default function VeillePage() {
   // Retour à la première page quand un filtre (hors pagination) change.
   useEffect(() => {
     setPage(0);
-  }, [jours, selectedAgenceId, selectedSentiment]);
+  }, [jours, selectedAgenceId, selectedSentiment, selectedTheme, plateforme, recherche]);
 
   if (!isCxManager) {
     return <Navigate to={user?.role === 'admin' ? '/admin/dashboard' : '/agence'} replace />;
@@ -123,6 +146,14 @@ export default function VeillePage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
         <VeilleSentimentFilter value={selectedSentiment} onChange={setSelectedSentiment} />
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <input aria-label="Rechercher dans les mentions" placeholder="Rechercher un texte…" value={recherche} onChange={(e) => setRecherche(e.target.value)} style={{ padding: '9px 12px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', background: 'var(--color-surface)', color: 'var(--color-text-main)' }} />
+          <select aria-label="Plateforme" value={plateforme} onChange={(e) => setPlateforme(e.target.value)} style={{ padding: '9px 12px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', background: 'var(--color-surface)', color: 'var(--color-text-main)' }}>
+            <option value="">Toutes les plateformes</option><option value="facebook">Facebook</option><option value="google_reviews">Google</option>
+          </select>
+          <select aria-label="Thème" value={selectedTheme} onChange={(e) => setSelectedTheme(e.target.value)} style={{ padding: '9px 12px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', background: 'var(--color-surface)', color: 'var(--color-text-main)' }}>
+            <option value="">Tous les thèmes</option><option value="non_classe">Non classé</option>
+            {synthese?.par_theme.filter((t) => t.theme_principal).map((t) => <option key={t.theme_principal} value={t.theme_principal!}>{themeLabel(t.theme_principal)}</option>)}
+          </select>
           <AgenceFilterSelect agences={agencesList} selectedId={selectedAgenceId} onChange={setSelectedAgenceId} />
           <PeriodSelector value={jours} onChange={setJours} />
         </div>
@@ -148,7 +179,7 @@ export default function VeillePage() {
         </div>
       )}
 
-      {error && !loading && (
+      {error && !loading && !synthese && mentions.length === 0 && (
         <div className="saas-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center', padding: '40px 20px' }}>
           <AlertTriangleIcon size={28} color="var(--color-error)" />
           <p style={{ margin: 0, fontWeight: 700, color: 'var(--color-text-main)' }}>Impossible de charger les mentions</p>
@@ -160,26 +191,36 @@ export default function VeillePage() {
       )}
 
       {/* ── Contenu ── */}
-      {!loading && !error && synthese && (
+      {!loading && (
         <>
-          <div>
+          {synthese && <div>
             <SectionHeading>Vue d'ensemble</SectionHeading>
             <div style={{ marginTop: '12px' }}>
               <VeilleKpiRow synthese={synthese} />
             </div>
-          </div>
+          </div>}
+          {syntheseError && <p role="status" style={{ margin: 0, color: 'var(--color-text-muted)' }}>{syntheseError}</p>}
 
-          <div>
+          {synthese && <div>
             <SectionHeading>Évolution journalière</SectionHeading>
             <div className="saas-card" style={{ marginTop: '12px' }}>
               <VeilleDailyChart data={synthese.serie_journaliere} />
             </div>
-          </div>
+          </div>}
+
+          {synthese && <div>
+            <SectionHeading>Répartition par thème</SectionHeading>
+            <div className="saas-card" style={{ marginTop: '12px' }}>
+              <VeilleThemeChart data={synthese.par_theme} />
+            </div>
+          </div>}
 
           <div>
             <SectionHeading>Mentions</SectionHeading>
             <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {mentions.length === 0 ? (
+              {mentionsError ? (
+                <p role="status" style={{ margin: 0, color: 'var(--color-text-muted)' }}>{mentionsError}</p>
+              ) : mentions.length === 0 ? (
                 <div className="saas-card">
                   <EmptyState
                     title={serviceOffline ? 'Le service de collecte est hors ligne' : 'Aucune mention pour ces filtres'}

@@ -1,15 +1,16 @@
 import React from 'react';
 import KpiCard from '../ui/KpiCard';
-import { MegaphoneIcon, ThumbsUpIcon, ThumbsDownIcon } from '../common/Icons';
+import { MegaphoneIcon, ThumbsDownIcon, TagIcon } from '../common/Icons';
 import type { VeilleSyntheseResponse } from '../../types';
+import { themeLabel } from '../../utils/themeLabels';
 
 function mentionsLabel(count: number): string {
   return `${count} mention${count > 1 ? 's' : ''}`;
 }
 
 export default function VeilleKpiRow({ synthese }: { synthese: VeilleSyntheseResponse }) {
-  const positif = synthese.par_sentiment.positif;
   const negatif = synthese.par_sentiment.negatif;
+  const themeDominant = [...synthese.par_theme].sort((a, b) => b.count - a.count)[0];
   const echantillonReduit = synthese.total > 0 && synthese.total < 20;
 
   return (
@@ -25,20 +26,15 @@ export default function VeilleKpiRow({ synthese }: { synthese: VeilleSyntheseRes
         />
         <KpiCard
           compact
-          icon={<ThumbsUpIcon />}
-          label="Positif"
-          value={`${positif?.pourcentage ?? 0}%`}
-          badgeColor="green"
-          subtitle={mentionsLabel(positif?.count ?? 0)}
-        />
-        <KpiCard
-          compact
           icon={<ThumbsDownIcon />}
-          label="Négatif"
+          label="Mentions négatives"
           value={`${negatif?.pourcentage ?? 0}%`}
           badgeColor="red"
           subtitle={mentionsLabel(negatif?.count ?? 0)}
         />
+        <KpiCard compact icon={<TagIcon />} label="Thème le plus cité"
+          value={themeDominant ? themeLabel(themeDominant.theme_principal) : '—'}
+          badgeColor="neutral" subtitle={themeDominant ? mentionsLabel(themeDominant.count) : 'Aucune mention'} />
       </div>
       {echantillonReduit && (
         <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>

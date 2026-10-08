@@ -1,5 +1,5 @@
 import React from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { VeilleSyntheseJour } from '../../types';
 
 // Visuellement masqué mais accessible aux lecteurs d'écran (même donnée que le graphique).
@@ -33,7 +33,7 @@ export default function VeilleDailyChart({ data }: { data: VeilleSyntheseJour[] 
     <div>
       <div role="img" aria-label={description} style={{ width: '100%', height: 260 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+          <BarChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
             <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} />
             <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} />
@@ -41,10 +41,10 @@ export default function VeilleDailyChart({ data }: { data: VeilleSyntheseJour[] 
               contentStyle={{ background: 'var(--color-primary-dark)', borderRadius: '10px', border: 'none', color: '#FFFFFF', fontSize: '0.78rem' }}
             />
             <Legend wrapperStyle={{ fontSize: '0.78rem' }} />
-            <Line type="monotone" dataKey="positif" name="Positif" stroke="var(--color-success)" strokeWidth={2} dot={false} />
-            <Line type="monotone" dataKey="neutre" name="Neutre" stroke="var(--color-text-muted)" strokeWidth={2} dot={false} />
-            <Line type="monotone" dataKey="negatif" name="Négatif" stroke="var(--color-error)" strokeWidth={2} dot={false} />
-          </LineChart>
+            <Bar dataKey="positif" name="Positif" stackId="sentiment" fill="var(--color-success)" />
+            <Bar dataKey="neutre" name="Neutre" stackId="sentiment" fill="var(--color-text-muted)" />
+            <Bar dataKey="negatif" name="Négatif" stackId="sentiment" fill="var(--color-error)" />
+          </BarChart>
         </ResponsiveContainer>
       </div>
 
