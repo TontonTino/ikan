@@ -1,5 +1,5 @@
 """
-Métadonnées des 8 KPI P0 — définitions pures, aucun accès base de données. Une seule
+Métadonnées des KPI — définitions pures, aucun accès base de données. Une seule
 source de vérité pour le code, le libellé, la description exacte de la formule et
 l'unité, utilisée par le moteur (engine.py) et par toute future API KPI.
 
@@ -18,15 +18,16 @@ NEGATIVE_SENTIMENT_RATE, CRITICAL_ISSUE_RATE, ISSUE_RESOLUTION_RATE, LOOP_CLOSUR
 MEDIAN_RESOLUTION_TIME. Les KPI de volume (FEEDBACK_VOLUME, ISSUE_VOLUME) n'ont pas cette
 notion : un compte de 0 est une réponse valide, jamais "no_data".
 
-Familles (voir le rapport d'audit KPI — ces 15 KPI étaient jusqu'ici tous montrés comme
-"communs" à toutes les organisations, sans secteur ni pack) :
-- FAMILLE_COMMUN_PRIORITAIRE : les 8 KPI visibles par toutes les organisations en premier
-  (CSAT, NPS, sentiment négatif, volume/criticité/résolution/délai des Issues, loop closure).
-- FAMILLE_COMMUN_OPERATIONNEL : les autres KPI également communs à tous, affichés en
-  section secondaire (volume de feedbacks, backlog et son âge, actions, SLA, récurrence,
-  escalades).
-- FAMILLE_SECTORIEL : un KPI propre à un pack (voir app/services/kpi/packs.py, PACKS). Un
-  KPI de cette famille porte un `secteur_code` non nul.
+Familles — architecture en couches (décision produit) : un socle CX Core universel, puis
+des extensions sectorielles. Les 15 KPI historiques ne sont plus tous "communs" :
+- FAMILLE_COMMUN_PRIORITAIRE : CX Core, les 8 KPI universels visibles par toutes les
+  organisations (CSAT, sentiment négatif, volume de feedbacks, volume/criticité/résolution/
+  délai des Issues, loop closure). Aucune règle propre à un secteur ou à un client.
+- FAMILLE_COMMUN_OPERATIONNEL : conservée pour compatibilité (valeur exposée par l'API et
+  lue par le dashboard), aucun KPI ne la porte aujourd'hui.
+- FAMILLE_SECTORIEL : un KPI propre à une extension sectorielle, visible seulement via
+  PACKS (app/services/kpi/packs.py). Extension Banking : NPS, backlog et son âge, actions,
+  SLA, récurrence, escalades (secteur_code="banque"). Extension Telecom : les KPI TEL_*.
 
 app/services/kpi/packs.py est la seule source qui lit `famille` pour construire les listes
 de codes (COMMUN_PRIORITAIRE, COMMUN_OPERATIONNEL, COMMUNS) — ne pas dupliquer ces listes
@@ -46,8 +47,11 @@ class KPIDefinition:
     description: str
     unit: str
     famille: str = FAMILLE_COMMUN_PRIORITAIRE
-    # Non nul uniquement pour un KPI de famille FAMILLE_SECTORIEL : le secteur auquel ce
-    # KPI appartient (doit être une clé de app.services.secteurs.SECTEUR_CODES).
+    # Non nul uniquement pour un KPI de famille FAMILLE_SECTORIEL : l'extension sectorielle
+    # d'origine de ce KPI (doit être une clé de app.services.secteurs.SECTEUR_CODES).
+    # Documentaire : la visibilité est décidée par PACKS seul (packs.py) — un KPI peut être
+    # ouvert à un autre secteur par décision métier explicite (ex. NPS, d'origine "banque",
+    # aussi présent dans PACKS["telecom"]).
     secteur_code: str | None = None
 
 
@@ -80,7 +84,6 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
         label="Volume de feedbacks",
         description="Nombre de feedbacks soumis (Feedback.date_soumission) dans la période.",
         unit="count",
-        famille=FAMILLE_COMMUN_OPERATIONNEL,
     ),
     "ISSUE_VOLUME": KPIDefinition(
         code="ISSUE_VOLUME",
@@ -135,20 +138,24 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
         ),
         unit="percent",
     ),
+    # ── Extension Banking (PACKS["banque"], app/services/kpi/packs.py) — NPS plus bas ──
     "ISSUE_BACKLOG": KPIDefinition(
         code="ISSUE_BACKLOG", label="Issue Backlog",
         description="Nombre d'Issues actuellement ouvertes, en cours d'action ou rouvertes, dans le périmètre.", unit="count",
-        famille=FAMILLE_COMMUN_OPERATIONNEL,
+        famille=FAMILLE_SECTORIEL,
+        secteur_code="banque",
     ),
     "BACKLOG_AGE": KPIDefinition(
         code="BACKLOG_AGE", label="Backlog Age",
         description="Médiane en heures de l'âge du cycle ouvert actuel des Issues du backlog.", unit="hours",
-        famille=FAMILLE_COMMUN_OPERATIONNEL,
+        famille=FAMILLE_SECTORIEL,
+        secteur_code="banque",
     ),
     "ACTION_COMPLETION_RATE": KPIDefinition(
         code="ACTION_COMPLETION_RATE", label="Action Completion Rate",
         description="Pourcentage d'actions non annulées créées dans la période actuellement terminées.", unit="percent",
-        famille=FAMILLE_COMMUN_OPERATIONNEL,
+        famille=FAMILLE_SECTORIEL,
+        secteur_code="banque",
     ),
     "SLA_COMPLIANCE_RATE": KPIDefinition(
         code="SLA_COMPLIANCE_RATE",
@@ -158,7 +165,8 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
             "qui ont été résolues au plus tard à cette deadline. Les Issues sans SLA sont exclues."
         ),
         unit="percent",
-        famille=FAMILLE_COMMUN_OPERATIONNEL,
+        famille=FAMILLE_SECTORIEL,
+        secteur_code="banque",
     ),
     "ISSUE_RECURRENCE_RATE": KPIDefinition(
         code="ISSUE_RECURRENCE_RATE",
@@ -168,7 +176,8 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
             "Issue racine antérieure, parmi toutes les Issues détectées dans la période."
         ),
         unit="percent",
-        famille=FAMILLE_COMMUN_OPERATIONNEL,
+        famille=FAMILLE_SECTORIEL,
+        secteur_code="banque",
     ),
     "ESCALATION_RATE": KPIDefinition(
         code="ESCALATION_RATE",
@@ -179,7 +188,8 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
             "compte qu'une fois, même si elle est ré-escaladée."
         ),
         unit="percent",
-        famille=FAMILLE_COMMUN_OPERATIONNEL,
+        famille=FAMILLE_SECTORIEL,
+        secteur_code="banque",
     ),
     "NPS": KPIDefinition(
         code="NPS",
@@ -191,6 +201,8 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
             "le statut est no_data."
         ),
         unit="points",
+        famille=FAMILLE_SECTORIEL,
+        secteur_code="banque",
     ),
     # ── Pack telecom (app/services/kpi/packs_telecom.py, app/services/kpi/packs.py) ──
     "TEL_PART_HORS_PERIMETRE": KPIDefinition(

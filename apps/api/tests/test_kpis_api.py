@@ -36,7 +36,7 @@ from app.models.organisation import Organisation
 from app.models.plan import Plan
 from app.models.qr_code import QRCode
 from app.services.kpi.definitions import KPI_DEFINITIONS
-from app.services.kpi.packs import COMMUNS
+from app.services.kpi.packs import COMMUNS, PACKS
 
 NOW = datetime.now(timezone.utc)
 IL_Y_A_40_JOURS = NOW - timedelta(days=40)
@@ -54,9 +54,13 @@ def ctx():
     Session = sessionmaker(bind=engine)
     db = Session()
 
-    org_a = Organisation(id=uuid4(), nom="Org A", active=True)
-    org_b = Organisation(id=uuid4(), nom="Org B", active=True)
-    org_c = Organisation(id=uuid4(), nom="Org C (vide)", active=True)
+    # Secteur "banque" : ses organisations voient le CX Core ET l'extension Banking
+    # (PACKS["banque"]), ce qui garde testés ici, à l'identique, les formules, le RBAC et
+    # l'isolation des 7 KPI bancaires. Un secteur sans pack est couvert par
+    # test_kpi_packs.py et test_kpi_packs_banque_api.py.
+    org_a = Organisation(id=uuid4(), nom="Org A", active=True, secteur_code="banque")
+    org_b = Organisation(id=uuid4(), nom="Org B", active=True, secteur_code="banque")
+    org_c = Organisation(id=uuid4(), nom="Org C (vide)", active=True, secteur_code="banque")
     db.add_all([org_a, org_b, org_c])
     db.flush()
 
@@ -155,14 +159,12 @@ def _kpis_by_code(payload: dict) -> dict:
     return {k["code"]: k for k in payload["kpis"]}
 
 
-# ── Contrat / 8 KPI ──────────────────────────────────────────────────────────────
+# ── Contrat / 15 KPI (banque) ────────────────────────────────────────────────────
 
 def test_tous_les_kpis_presents_avec_bons_codes(ctx):
-    """Org A n'a pas de secteur_code explicite -> défaut "autre" (app/models/organisation.py)
-    -> aucun pack sectoriel (PACKS["autre"] est vide, voir app/services/kpi/packs.py) ->
-    exactement les 15 communs actuels. Ce n'est plus un nombre figé : si un pack sectoriel
-    est un jour injecté dans PACKS["autre"] (improbable mais possible), ce test doit suivre
-    sans y être pour quelque chose — voir test_kpi_packs.py pour les tests du registre."""
+    """Org A est du secteur "banque" -> les 8 KPI CX Core + les 7 de l'extension Banking
+    (PACKS["banque"], app/services/kpi/packs.py) = 15. Voir test_kpi_packs.py pour les
+    tests du registre lui-même."""
     r = ctx.call("cx_a", "get", "/kpis/")
     assert r.status_code == 200, r.text
     data = r.json()
@@ -170,10 +172,10 @@ def test_tous_les_kpis_presents_avec_bons_codes(ctx):
     assert data["agence_id"] is None
     assert data["jours"] == 30
     codes = {k["code"] for k in data["kpis"]}
-    assert codes == set(COMMUNS)
-    assert len(data["kpis"]) == len(COMMUNS) == 15
-    assert data["secteur_code"] == "autre"
-    assert data["pack_disponible"] is False
+    assert codes == set(COMMUNS) | set(PACKS["banque"])
+    assert len(data["kpis"]) == len(COMMUNS) + len(PACKS["banque"]) == 15
+    assert data["secteur_code"] == "banque"
+    assert data["pack_disponible"] is True
 
 
 def test_champs_kpi_result_presents(ctx):
