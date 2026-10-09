@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     fb_api_version: str = "v25.0"
     fb_page_access_token: str = ""
     fb_default_page_id: str = ""
+    # Client (organisation IKAN AI) auquel rattacher la Page par défaut au démarrage.
+    bootstrap_client_id: str = ""
     fb_login_config_id: str = ""
     fb_redirect_uri: str = ""
     fb_webhook_verify_token: str = ""

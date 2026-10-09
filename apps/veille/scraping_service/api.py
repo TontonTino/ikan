@@ -37,6 +37,7 @@ from scraping_service.core.pages import ConnectedPage, calculate_page_attention
 from scraping_service.facebook.client import FacebookGraphClient
 from scraping_service.facebook.scraper import FacebookCollector
 from scraping_service.facebook.tokens import inspect_and_validate_page_token
+from scraping_service.services.bootstrap import bootstrap_default_page
 from scraping_service.services.sync import sync_all, sync_page
 from scraping_service.services.token_lifecycle import check_all_pages_tokens
 
@@ -55,6 +56,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         raise ConfigurationError("VEILLE_STATE_SECRET est obligatoire hors de l'environnement dev.")
     if settings.env != "dev" and not settings.token_encryption_key:
         raise ConfigurationError("VEILLE_TOKEN_ENCRYPTION_KEY est obligatoire hors de l'environnement dev.")
+    await bootstrap_default_page(store=page_store, client_factory=facebook_client_factory)
     tasks: list[asyncio.Task[None]] = []
     if settings.sync_interval_minutes > 0:
         tasks.append(asyncio.create_task(_periodic_sync()))
