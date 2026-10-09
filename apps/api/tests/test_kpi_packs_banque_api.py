@@ -1,7 +1,7 @@
 """
 GET /kpis — couches CX Core / extension Banking, sur le vrai registre PACKS (aucune
 injection) :
-- chaque secteur voit exactement ses codes : banque 8 + 7 = 15, telecom 8 + NPS + 3 = 12,
+- chaque secteur voit exactement ses codes : banque 8 + 7 = 15, telecom 8 + NPS + 6 = 15,
   sante / commerce / restauration / hotellerie / autre 8 ;
 - un CX d'un secteur sans NPS reçoit 404 sur /kpis/NPS, même message qu'un code inconnu ;
 - le NPS ouvert au telecom reste cloisonné par organisation et par agence (RBAC inchangé).
@@ -49,7 +49,10 @@ BANKING = {
     "NPS", "ISSUE_BACKLOG", "BACKLOG_AGE", "ACTION_COMPLETION_RATE",
     "SLA_COMPLIANCE_RATE", "ISSUE_RECURRENCE_RATE", "ESCALATION_RATE",
 }
-TEL = {"TEL_PART_HORS_PERIMETRE", "TEL_RECURRENCE_AGENCE", "TEL_RECURRENCE_HORS_PERIMETRE"}
+TEL = {
+    "TEL_PART_HORS_PERIMETRE", "TEL_RECURRENCE_AGENCE", "TEL_RECURRENCE_HORS_PERIMETRE",
+    "TEL_RECLAMATIONS_RESEAU", "TEL_RECLAMATIONS_RECHARGE_FORFAIT", "TEL_RECLAMATIONS_FACTURATION",
+}
 
 ATTENDU_PAR_SECTEUR = {
     "banque": CX_CORE | BANKING,
@@ -141,7 +144,7 @@ def test_codes_visibles_exacts_par_secteur(ctx, secteur):
 
 def test_effectifs_par_secteur():
     assert {s: len(c) for s, c in ATTENDU_PAR_SECTEUR.items()} == {
-        "banque": 15, "telecom": 12, "sante": 8, "commerce": 8,
+        "banque": 15, "telecom": 15, "sante": 8, "commerce": 8,
         "restauration": 8, "hotellerie": 8, "autre": 8,
     }
 
