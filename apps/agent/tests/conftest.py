@@ -27,16 +27,17 @@ import pytest
 TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", "")
 
 if not TEST_DATABASE_URL:
-    pytest.skip(
-        "TEST_DATABASE_URL non défini — tests d'isolation ignorés (base Postgres de test requise)",
-        allow_module_level=True,
+    raise RuntimeError(
+        "Tests YAM arrêtés : TEST_DATABASE_URL doit pointer vers une base PostgreSQL locale de test "
+        "(hôte localhost/127.0.0.1 et nom contenant 'test'). Aucune base n'a été utilisée."
     )
 
 _parsed = urlparse(TEST_DATABASE_URL)
 if _parsed.hostname not in {"localhost", "127.0.0.1"} or "test" not in (_parsed.path or "").lower():
     raise RuntimeError(
-        "TEST_DATABASE_URL refusée : la base de test doit être locale (localhost/127.0.0.1) "
-        "et son nom doit contenir « test »."
+        "Tests YAM arrêtés : TEST_DATABASE_URL refusée. Utilisez uniquement une base PostgreSQL "
+        "locale (hôte localhost ou 127.0.0.1) dont le nom contient 'test'. "
+        "Aucune connexion à cette base n'a été effectuée."
     )
 
 # Doit être fait AVANT tout import de app.* (settings lus à l'import).

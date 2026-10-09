@@ -33,7 +33,7 @@ hors de propos pour des modèles en lecture seule.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, Text, Integer, DateTime, ForeignKey, Boolean, Float, Enum, func
+from sqlalchemy import String, Text, Integer, DateTime, ForeignKey, Boolean, Float, Enum, Index, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship, DeclarativeBase
 
@@ -187,3 +187,45 @@ class AnalyseIA(ReadOnlyBase):
     date_analyse: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     feedback: Mapped["Feedback"] = relationship("Feedback", back_populates="analyse_ia", viewonly=True)
+
+
+class MentionVeille(ReadOnlyBase):
+    """Miroir strictement en lecture seule de la table mentions_veille de l'API.
+
+    Aucune colonne d'identité d'auteur n'est mappée. Ce modèle reste sur
+    ReadOnlyBase et n'entre donc pas dans les migrations propres à YAM.
+    """
+    __tablename__ = "mentions_veille"
+    __table_args__ = (
+        UniqueConstraint(
+            "organisation_id", "empreinte",
+            name="uq_mention_veille_organisation_empreinte",
+        ),
+        UniqueConstraint(
+            "organisation_id", "plateforme", "external_id",
+            name="uq_mention_veille_org_plateforme_external_id",
+        ),
+        Index("idx_mention_veille_organisation_date", "organisation_id", "date_publication"),
+        {"extend_existing": True},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    organisation_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organisations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    agence_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("agences.id", ondelete="SET NULL"), nullable=True
+    )
+    plateforme: Mapped[str] = mapped_column(String(30), nullable=False, default="facebook")
+    type_contenu: Mapped[str] = mapped_column(String(20), nullable=False)
+    texte: Mapped[str] = mapped_column(Text, nullable=False)
+    url_source: Mapped[str | None] = mapped_column(Text, nullable=True)
+    date_publication: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    external_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    sentiment: Mapped[SentimentType] = mapped_column(Enum(SentimentType), nullable=False)
+    score_sentiment: Mapped[float] = mapped_column(Float, nullable=False)
+    theme_principal: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    theme_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    date_analyse: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    empreinte: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

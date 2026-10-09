@@ -58,6 +58,12 @@ def _load_intentions_config() -> dict[str, str]:
 # Mots-clés / expressions par intention (formes sans accents). L'ordre des
 # entrées sert de départage en cas d'égalité de score.
 MOTS_CLES_INTENTIONS: dict[str, list[str]] = {
+    # Veille sociale : termes explicites uniquement. Les formulations générales
+    # sur les clients restent dans le flux Feedback.
+    "veille_externe": [
+        "facebook", "instagram", "reseaux sociaux", "reseau social",
+        "en ligne", "mentions", "veille", "e-reputation", "ereputation",
+    ],
     # Placée EN PREMIER : en cas d'égalité de score, l'ordre du dictionnaire
     # départage — une question qui nomme des agences ("quelle agence a le plus
     # d'alertes ?") est mieux servie par le classement (qui inclut aussi le
@@ -159,7 +165,8 @@ MOTS_CLES_INTENTIONS: dict[str, list[str]] = {
     "resume_periode": [
         "resume", "resumer", "synthese", "bilan", "vue d ensemble", "recap",
         "recapitulatif", "activite recente", "quoi de neuf", "que s est il passe",
-        "comment ca se passe",
+        "comment ca se passe", "que disent les clients", "quels retours clients",
+        "retours des clients",
         # --- enrichissement ---
         # "periode" (seul) volontairement exclu : terme trop générique et
         # omniprésent dans le domaine (jours_periode, periode_actuelle...),
@@ -350,6 +357,13 @@ def classifier_intention(question: str, contexte: dict | None = None) -> str:
         return "autre"
 
     texte_clean = _strip_accents(question.lower())
+
+    # Un signal Veille explicite prime sur les termes de période, qui peuvent
+    # autrement faire gagner resume_periode au score. La période sera
+    # interprétée séparément par la requête Veille.
+    if any(mot in texte_clean for mot in MOTS_CLES_INTENTIONS["veille_externe"]):
+        return "veille_externe"
+
     scores = _scores_mots_cles(texte_clean)
 
     if not scores:

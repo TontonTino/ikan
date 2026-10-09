@@ -30,7 +30,10 @@ if db_url.startswith("postgres://"):
 config.set_main_option("sqlalchemy.url", db_url)
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # disable_existing_loggers=False : lancé dans le même processus que l'application (fixture
+    # de tests), fileConfig désactiverait sinon les loggers déjà créés (app.agent.qa_service…)
+    # et tous leurs WARNING seraient perdus en silence.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 

@@ -23,9 +23,11 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.models.readonly import Feedback, AnalyseIA, Agence, QRCode, DemandeContact
+from app.models.readonly import Feedback, AnalyseIA, Agence, QRCode, DemandeContact, MentionVeille
+from app.models.enums import SentimentType
 
 _CRITICITES_ALERTE = {"elevee", "critique"}
 
@@ -164,6 +166,77 @@ def get_feedbacks(
     """Équivalent mock_store.get_feedbacks() : derniers `jours` jours depuis maintenant."""
     maintenant = datetime.now(timezone.utc)
     return _requete_feedbacks(db, organisation_id, agence_id, maintenant - timedelta(days=jours), maintenant)
+
+
+def query_veille_externe(
+    db: Session,
+    organisation_id: uuid.UUID,
+    jours: int,
+    agence_id: Optional[uuid.UUID] = None,
+) -> dict[str, Any]:
+    """Agrégats et cinq exemples de mentions, sans jointure avec Feedback.
+
+    `jours` est volontairement obligatoire : l'appelant choisit explicitement
+    la période, avec 30 jours par défaut au niveau du service Q&A.
+    """
+    organisation_id = _exiger_organisation(organisation_id)
+    if not isinstance(jours, int) or jours < 1:
+        raise ValueError("jours doit être un entier positif pour la requête Veille")
+
+    maintenant = datetime.now(timezone.utc)
+    debut = maintenant - timedelta(days=jours)
+    base = db.query(MentionVeille).filter(
+        MentionVeille.organisation_id == organisation_id,
+        MentionVeille.date_publication >= debut,
+        MentionVeille.date_publication <= maintenant,
+    )
+    if agence_id is not None:
+        base = base.filter(MentionVeille.agence_id == agence_id)
+
+    total = base.count()
+    par_sentiment = {sentiment.value: 0 for sentiment in SentimentType}
+    sentiments_query = db.query(MentionVeille.sentiment, func.count(MentionVeille.id)).filter(
+        MentionVeille.organisation_id == organisation_id,
+        MentionVeille.date_publication >= debut,
+        MentionVeille.date_publication <= maintenant,
+    )
+    if agence_id is not None:
+        sentiments_query = sentiments_query.filter(MentionVeille.agence_id == agence_id)
+    for sentiment, nombre in sentiments_query.group_by(MentionVeille.sentiment).all():
+        valeur = sentiment.value if hasattr(sentiment, "value") else str(sentiment)
+        par_sentiment[valeur] = nombre
+
+    themes_query = db.query(MentionVeille.theme_principal, func.count(MentionVeille.id)).filter(
+        MentionVeille.organisation_id == organisation_id,
+        MentionVeille.date_publication >= debut,
+        MentionVeille.date_publication <= maintenant,
+    )
+    if agence_id is not None:
+        themes_query = themes_query.filter(MentionVeille.agence_id == agence_id)
+    par_theme = {
+        (theme if theme is not None else "Non classé"): nombre
+        for theme, nombre in themes_query.group_by(MentionVeille.theme_principal).all()
+    }
+
+    exemples = [
+        {
+            "texte": (mention.texte or "")[:280],
+            "plateforme": mention.plateforme,
+            "date": mention.date_publication.isoformat() if mention.date_publication else None,
+            "sentiment": mention.sentiment.value if hasattr(mention.sentiment, "value") else str(mention.sentiment),
+            "theme": mention.theme_principal if mention.theme_principal is not None else "Non classé",
+        }
+        for mention in base.order_by(MentionVeille.date_publication.desc().nullslast()).limit(5).all()
+    ]
+    return {
+        "total": total,
+        "jours": jours,
+        "date_debut": debut.isoformat(),
+        "date_fin": maintenant.isoformat(),
+        "par_sentiment": par_sentiment,
+        "par_theme": par_theme,
+        "exemples": exemples,
+    }
 
 
 def get_feedback_with_analyse(

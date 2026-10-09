@@ -3,11 +3,18 @@ Point d'entrée FastAPI de l'agent IA IKAN AI — service indépendant, port 800
 
 Lancement local : uvicorn app.main:app --reload --port 8001
 """
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.endpoints import agent_router, webhook_router
 from app.config.settings import settings
+
+# Les loggers app.* (ex. replis Veille de qa_service) propagent vers la racine : sans handler
+# racine, uvicorn n'affiche leurs WARNING que via le « lastResort » de Python, sans niveau ni nom.
+# basicConfig n'agit que si la racine n'a encore aucun handler (sortie stderr, lue par Render).
+logging.basicConfig(level=logging.WARNING, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

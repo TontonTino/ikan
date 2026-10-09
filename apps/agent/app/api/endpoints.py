@@ -75,6 +75,7 @@ def ask(
             db,
             current_user.organisation_id,
             payload.question,
+            role=current_user.role,
             agence_id=agence_id,
             jours=payload.jours,
             conversation_id=payload.conversation_id,
