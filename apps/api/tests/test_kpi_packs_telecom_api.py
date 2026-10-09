@@ -1,7 +1,8 @@
 """
 GET /kpis — périmètre réel du pack telecom (pas un pack injecté pour le test, le vrai
-PACKS["telecom"]) : une organisation telecom voit les communs + les 3 KPI du pack ; une
-organisation banque ou autre voit les communs seulement et reçoit 404 sur les codes TEL_*.
+PACKS["telecom"]) : une organisation telecom voit le CX Core + NPS + les 3 KPI TEL_* (12),
+jamais les 6 autres KPI bancaires (404 par code) ; une organisation banque ou autre ne voit
+jamais les codes TEL_* (404 par code).
 """
 import os
 from types import SimpleNamespace
@@ -34,6 +35,9 @@ from app.models.qr_code import QRCode
 from app.services.kpi.packs import COMMUNS
 
 TEL_CODES = ("TEL_PART_HORS_PERIMETRE", "TEL_RECURRENCE_AGENCE", "TEL_RECURRENCE_HORS_PERIMETRE")
+BANKING_SANS_NPS = ("ISSUE_BACKLOG", "BACKLOG_AGE", "ACTION_COMPLETION_RATE", "SLA_COMPLIANCE_RATE",
+                    "ISSUE_RECURRENCE_RATE", "ESCALATION_RATE")
+BANKING = ("NPS",) + BANKING_SANS_NPS
 
 
 @pytest.fixture()
@@ -81,29 +85,40 @@ def ctx():
     return SimpleNamespace(call=call, **vars(ids))
 
 
-def test_organisation_telecom_voit_les_communs_plus_le_pack(ctx):
+def test_organisation_telecom_voit_cx_core_plus_nps_plus_le_pack(ctx):
     r = ctx.call("cx_telecom", "get", "/kpis/")
     assert r.status_code == 200, r.text
     data = r.json()
     codes = {k["code"] for k in data["kpis"]}
-    assert codes == set(COMMUNS) | set(TEL_CODES)
-    assert len(data["kpis"]) == len(COMMUNS) + 3
+    assert codes == set(COMMUNS) | {"NPS"} | set(TEL_CODES)
+    assert len(data["kpis"]) == 8 + 1 + 3 == 12
     assert data["secteur_code"] == "telecom"
     assert data["pack_disponible"] is True
     sectoriels = {k["code"] for k in data["kpis"] if k["famille"] == "sectoriel"}
-    assert sectoriels == set(TEL_CODES)
+    assert sectoriels == {"NPS"} | set(TEL_CODES)
+    assert not (codes & set(BANKING_SANS_NPS))
 
 
-@pytest.mark.parametrize("user_key", ["cx_banque", "cx_autre"])
-def test_organisation_non_telecom_ne_voit_que_les_communs(ctx, user_key):
-    r = ctx.call(user_key, "get", "/kpis/")
+def test_organisation_banque_voit_cx_core_plus_les_7_bancaires_sans_tel(ctx):
+    r = ctx.call("cx_banque", "get", "/kpis/")
+    assert r.status_code == 200, r.text
+    data = r.json()
+    codes = {k["code"] for k in data["kpis"]}
+    assert codes == set(COMMUNS) | set(BANKING)
+    assert len(data["kpis"]) == 8 + 7 == 15
+    assert data["pack_disponible"] is True
+    assert not (codes & set(TEL_CODES))
+
+
+def test_organisation_autre_ne_voit_que_le_cx_core(ctx):
+    r = ctx.call("cx_autre", "get", "/kpis/")
     assert r.status_code == 200, r.text
     data = r.json()
     codes = {k["code"] for k in data["kpis"]}
     assert codes == set(COMMUNS)
-    assert len(data["kpis"]) == len(COMMUNS)
+    assert len(data["kpis"]) == 8
     assert data["pack_disponible"] is False
-    assert not (codes & set(TEL_CODES))
+    assert not (codes & (set(TEL_CODES) | set(BANKING)))
 
 
 @pytest.mark.parametrize("code", TEL_CODES)
@@ -121,3 +136,21 @@ def test_organisation_telecom_accede_aux_codes_tel_par_leur_code(ctx, code):
     assert r.status_code == 200, r.text
     assert r.json()["code"] == code
     assert r.json()["status"] == "no_data"  # aucune Issue dans ce jeu de données minimal
+
+
+@pytest.mark.parametrize("code", BANKING_SANS_NPS)
+def test_organisation_telecom_404_sur_les_6_kpi_bancaires_hors_nps(ctx, code):
+    """Les règles bancaires (délais, SLA, récurrence, escalades) ne sont pas transposées
+    au telecom : 404, même message qu'un code inconnu."""
+    r = ctx.call("cx_telecom", "get", f"/kpis/{code}")
+    assert r.status_code == 404
+    r_inconnu = ctx.call("cx_telecom", "get", "/kpis/CE_CODE_N_EXISTE_PAS")
+    assert r.json()["detail"] == r_inconnu.json()["detail"].replace("CE_CODE_N_EXISTE_PAS", code)
+
+
+def test_organisation_telecom_accede_au_nps_par_son_code(ctx):
+    r = ctx.call("cx_telecom", "get", "/kpis/NPS")
+    assert r.status_code == 200, r.text
+    assert r.json()["code"] == "NPS"
+    assert r.json()["famille"] == "sectoriel"
+    assert r.json()["status"] == "no_data"  # aucune réponse NPS dans ce jeu de données minimal
