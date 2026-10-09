@@ -49,14 +49,14 @@ export default function AdminPermissionsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div style={{ color: '#64748B', padding: '32px', fontWeight: 600 }}>Chargement des permissions...</div>;
+  if (loading) return <div style={{ color: '#64748B', padding: '32px', fontWeight: 600 }}>Chargement des permissions…</div>;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* ── Page Header Standardisé ── */}
       <PageHeader
-        title="Rôles & Permissions RBAC"
-        subtitle="Matrice complète des droits d'accès et des niveaux de gouvernance de la plateforme IKAN AI."
+        title="Rôles et permissions"
+        subtitle="Ce que chaque rôle peut voir et faire sur la plateforme IKAN AI."
       />
 
       {/* ── Bandeaux de Rôles SaaS ── */}
@@ -239,8 +239,8 @@ export default function AdminPermissionsPage() {
       >
         <ShieldCheckIcon size={20} color="#92400E" />
         <div style={{ fontSize: '0.84rem', color: '#92400E', fontWeight: 600 }}>
-          <strong>Gouvernance de Sécurité :</strong> Les privilèges RBAC sont centralisés au niveau applicatif.
-          Pour toute demande d'attribution personnalisée, contactez le support administrateur IKAN AI.
+          <strong>Sécurité :</strong> les droits sont attribués par rôle et ne peuvent pas être personnalisés utilisateur par utilisateur.
+          Pour toute demande particulière, contactez le support IKAN AI.
         </div>
       </div>
     </div>

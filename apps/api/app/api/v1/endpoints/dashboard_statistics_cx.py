@@ -180,14 +180,14 @@ def get_statistics_cx(
     crit_ev, crit_p_pos = _calc_kpi_trend(critiques_curr, critiques_prev, invert_positive=True)
 
     kpis = {
-        "satisfaction": _kpi_taux(sat_curr, sat_prev, "Taux de clients satisfaits (notes 4-5/5)"),
+        "satisfaction": _kpi_taux(sat_curr, sat_prev, "Part des avis notés 4 ou 5 sur 5"),
         "total_feedbacks": StatKPI(
             valeur=total_curr,
             valeur_num=float(total_curr),
             valeur_precedente=total_prev,
             evolution=tot_ev,
             is_positive=tot_pos,
-            sous_titre="Avis collectés en borne et comptoir",
+            sous_titre="Avis reçus via les QR codes des agences",
         ),
         "feedbacks_traites": StatKPI(
             valeur=traites_curr,
@@ -206,16 +206,16 @@ def get_statistics_cx(
             valeur_precedente=max(0, total_prev - traites_prev),
             evolution=None,
             is_positive=attente_curr == 0,
-            sous_titre="Nouveaux avis nécessitant une attention",
+            sous_titre="Avis pas encore ouverts par une agence",
         ),
-        "taux_traitement": _kpi_taux(taux_trait_curr, taux_trait_prev, "Efficacité opérationnelle de prise en charge"),
+        "taux_traitement": _kpi_taux(taux_trait_curr, taux_trait_prev, "Part des avis pris en charge"),
         "feedbacks_positifs": StatKPI(
             valeur=pos_curr,
             valeur_num=float(pos_curr),
             valeur_precedente=pos_prev,
             evolution=pos_ev,
             is_positive=pos_p_pos,
-            sous_titre="Retours enthousiastes & promoteurs",
+            sous_titre="Avis notés 4 ou 5 sur 5",
         ),
         "feedbacks_negatifs": StatKPI(
             valeur=neg_curr,
@@ -223,7 +223,7 @@ def get_statistics_cx(
             valeur_precedente=neg_prev,
             evolution=neg_ev,
             is_positive=neg_p_pos,
-            sous_titre="Insatisfactions nécessitant un suivi",
+            sous_titre="Avis notés 1 ou 2 sur 5",
         ),
         "alertes_critiques": StatKPI(
             valeur=critiques_curr,
@@ -231,7 +231,7 @@ def get_statistics_cx(
             valeur_precedente=critiques_prev,
             evolution=crit_ev,
             is_positive=crit_p_pos,
-            sous_titre="Feedbacks à haute criticité détectés par l'IA",
+            sous_titre="Avis de gravité critique (calcul automatique)",
         ),
     }
 
@@ -469,7 +469,7 @@ def get_statistics_cx(
             id="insight-sat-positive",
             type="point_fort",
             titre="Satisfaction supérieure ou égale à 80 %",
-            description=f"{sat_curr}% des {total_curr} avis de la période sont positifs (notes 4-5/5).",
+            description=f"{sat_curr}% des {total_curr} avis de la période sont notés 4 ou 5 sur 5.",
             priorite="low",
             date=now.strftime("%d/%m/%Y"),
             source="regle",
@@ -479,7 +479,7 @@ def get_statistics_cx(
             id="insight-sat-warning",
             type="point_vigilance",
             titre="Satisfaction inférieure à 80 %",
-            description=f"{sat_curr}% des {total_curr} avis de la période sont positifs (notes 4-5/5).",
+            description=f"{sat_curr}% des {total_curr} avis de la période sont notés 4 ou 5 sur 5.",
             priorite="high",
             date=now.strftime("%d/%m/%Y"),
             source="regle",
@@ -491,7 +491,7 @@ def get_statistics_cx(
             id="insight-theme-top",
             type="recommandation",
             titre=f"Thème le plus cité : {top_theme.label}",
-            description=f"{top_theme.count} avis ({top_theme.pourcentage}% des thèmes détectés) portent sur ce sujet.",
+            description=f"{top_theme.count} avis ({top_theme.pourcentage}% des avis classés par thème) portent sur ce sujet.",
             priorite="medium",
             date=now.strftime("%d/%m/%Y"),
             source="regle",

@@ -107,7 +107,7 @@ export default function DemandesRappelPage() {
       setDemandesTotal((total) => Math.max(0, total - 1));
       showToast('Demande marquée comme traitée');
     } catch {
-      showToast('Erreur lors de la mise à jour');
+      showToast('Impossible d’enregistrer. Réessayez.');
     }
   };
 
@@ -257,7 +257,7 @@ export default function DemandesRappelPage() {
 
               <div style={{ background: '#F8FAFB', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px 14px' }}>
                 <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
-                  Feedback lié — Note {d.feedback_note}/5
+                  Avis lié — Note {d.feedback_note}/5
                 </div>
                 <p style={{ margin: 0, fontSize: '0.86rem', color: '#334155', lineHeight: 1.5 }}>
                   {d.feedback_commentaire || 'Aucun commentaire.'}
@@ -271,6 +271,7 @@ export default function DemandesRappelPage() {
                     onClick={() => marquerTraitee(d.id)}
                     className="btn-primary"
                     style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '10px', fontWeight: 800 }}
+                    title="À utiliser une fois le client recontacté : ce marquage est déclaratif et ne modifie pas le statut de l’avis."
                   >
                     <CheckCircleIcon size={15} />
                     Marquer traitée

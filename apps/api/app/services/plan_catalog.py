@@ -55,10 +55,10 @@ FEATURE_LIBELLES_A_VENIR = {
 
 FEATURE_LIBELLES = {
     FEATURE_QR_FORMULAIRE: "QR code et formulaire client",
-    FEATURE_ANALYSE_SENTIMENT: "Analyse du sentiment",
+    FEATURE_ANALYSE_SENTIMENT: "Analyse du ton des avis",
     FEATURE_CATEGORIES: "Catégories personnalisées",
     FEATURE_ALERTES: "Alertes de satisfaction",
-    FEATURE_DISCORDANCE: "Détection de discordance",
+    FEATURE_DISCORDANCE: "Détection des avis contradictoires",
 }
 
 # code -> (id, nom, ordre, max_cx_managers, max_agences, max_feedbacks_mois)

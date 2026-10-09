@@ -357,7 +357,7 @@ export default function MonAgencePage() {
           setAgence(res.data);
           afficherMessage("Photo de l'agence mise à jour.");
         } catch {
-          afficherMessage("Erreur lors de l'envoi de la photo.");
+          afficherMessage("Impossible d’envoyer la photo. Réessayez.");
         } finally {
           setPhotoEnCours(false);
         }
@@ -374,7 +374,7 @@ export default function MonAgencePage() {
       setAgence(res.data);
       afficherMessage("Photo de l'agence retirée.");
     } catch {
-      afficherMessage('Erreur lors du retrait de la photo.');
+      afficherMessage('Impossible de retirer la photo. Réessayez.');
     } finally {
       setPhotoEnCours(false);
     }
@@ -458,7 +458,7 @@ export default function MonAgencePage() {
     { id: 'informations', label: 'Informations', icon: <MapPinIcon size={16} /> },
     { id: 'categories', label: 'Catégories', icon: <TagIcon size={16} />, badge: categories.length },
     ...(ongletsEtendusAutorises ? [
-      { id: 'feedbacks', label: 'Feedbacks', icon: <MessageSquareIcon size={16} /> },
+      { id: 'feedbacks', label: 'Avis clients', icon: <MessageSquareIcon size={16} /> },
       { id: 'activite', label: 'Activité', icon: <ActivityIcon size={16} /> },
     ] : []),
   ];
@@ -609,7 +609,7 @@ export default function MonAgencePage() {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <MailIcon size={17} color="#94A3B8" />
-                <span>{agence.email || 'Email non renseigné'}</span>
+                <span>{agence.email || 'E-mail non renseigné'}</span>
               </div>
             </div>
           </div>
@@ -664,7 +664,7 @@ export default function MonAgencePage() {
           </div>
           <p style={{ margin: '0 0 14px', fontSize: '0.82rem', color: '#64748B' }}>
             Les thèmes proposés aux clients dans le formulaire. Une catégorie « suggestion » déclenche une alerte dédiée
-            (voir Pilotage) lorsqu'un feedback qui lui est associé reste non traité.
+            (voir Alertes) lorsqu'un avis qui lui est associé reste non traité.
           </p>
 
           {formulaireOuvert && (
@@ -736,7 +736,7 @@ export default function MonAgencePage() {
                             color: c.cree_par_role === 'agency_manager' ? '#2563EB' : '#64748B',
                           }}
                         >
-                          {c.cree_par_role === 'agency_manager' ? 'Ajoutée par l’Agency Manager' : 'Ajoutée par le CX Manager'}
+                          {c.cree_par_role === 'agency_manager' ? 'Ajoutée par le responsable d’agence' : 'Ajoutée par le CX Manager'}
                         </span>
                         {c.est_categorie_suggestion && (
                           <span style={{ fontSize: '0.66rem', fontWeight: 700, padding: '2px 8px', borderRadius: '9999px', whiteSpace: 'nowrap', background: '#FEF3E2', color: '#B45309' }}>

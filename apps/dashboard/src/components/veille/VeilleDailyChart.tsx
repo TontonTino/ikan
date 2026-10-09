@@ -25,7 +25,7 @@ export default function VeilleDailyChart({ data }: { data: VeilleSyntheseJour[] 
   }
 
   const total = data.reduce((acc, j) => acc + j.positif + j.neutre + j.negatif, 0);
-  const description = `Évolution journalière du sentiment des mentions, du ${data[0].date} au ${data[data.length - 1].date}, ${total} mentions au total : ${data
+  const description = `Évolution journalière du ton des mentions, du ${data[0].date} au ${data[data.length - 1].date}, ${total} mentions au total : ${data
     .map((j) => `${j.date} : ${j.positif} positif, ${j.neutre} neutre, ${j.negatif} négatif`)
     .join(' ; ')}.`;
 
@@ -49,7 +49,7 @@ export default function VeilleDailyChart({ data }: { data: VeilleSyntheseJour[] 
       </div>
 
       <table style={srOnlyStyle}>
-        <caption>Détail journalier du sentiment des mentions</caption>
+        <caption>Détail journalier du ton des mentions</caption>
         <thead>
           <tr>
             <th scope="col">Date</th>

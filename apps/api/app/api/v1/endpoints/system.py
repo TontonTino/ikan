@@ -68,33 +68,33 @@ def get_roles_permissions(
                 "Créer, modifier, désactiver et supprimer des agences",
                 "Créer, modifier et désactiver des comptes utilisateurs",
                 "Configurer les seuils d'alerte de satisfaction par agence",
-                "Modifier les paramètres généraux et techniques du système",
+                "Enregistrer les paramètres généraux de la plateforme",
                 "Consulter la vue structurelle de la plateforme (organisations, agences, comptes, forfaits) — aucun accès aux données clients ni aux statistiques de satisfaction"
             ]
         },
         {
             "role": "cx_manager",
-            "nom_affichage": "CX Manager (Siège)",
-            "description": "Supervision globale de l'expérience client et pilotage stratégique.",
+            "nom_affichage": "CX Manager (siège)",
+            "description": "Suit l'expérience client de toutes les agences de son organisation.",
             "droits": [
-                "Consulter les indicateurs et KPIs globaux de l'organisation",
-                "Comparer les performances entre toutes les agences rattachées",
-                "Consulter les feedbacks et analyses IA (Sentiments & Thématiques)",
-                "Consulter les alertes et les recommandations d'actions stratégiques",
-                "Consulter les suggestions d'amélioration soumises par les clients",
-                "Exporter les rapports et synthèses périodiques"
+                "Consulter les indicateurs de l'organisation et comparer les agences",
+                "Consulter les avis clients de toutes les agences et leur analyse automatique (ton, gravité)",
+                "Créer et suivre des problèmes à traiter et des actions à mener",
+                "Consulter les alertes, les suggestions des clients et les demandes de rappel",
+                "Gérer les agences, leurs QR codes et les comptes des responsables d'agence",
+                "Consulter la veille des réseaux sociaux et exporter les statistiques"
             ]
         },
         {
             "role": "agency_manager",
-            "nom_affichage": "Responsable d'Agence",
-            "description": "Suivi et gestion opérationnelle de l'expérience client au niveau agence.",
+            "nom_affichage": "Responsable d'agence",
+            "description": "Traite au quotidien les avis clients de son agence.",
             "droits": [
-                "Consulter les feedbacks et notes attribués à son agence",
-                "Recevoir et traiter les alertes de satisfaction de son agence",
-                "Consulter les recommandations d'actions correctives de son agence",
-                "Mettre à jour le statut des suggestions rattachées à son agence",
-                "Gérer les demandes de recontact client"
+                "Consulter les avis clients de son agence et les prendre en charge",
+                "Créer et suivre des problèmes à traiter et des actions à mener pour son agence",
+                "Consulter les alertes de satisfaction de son agence",
+                "Mettre à jour le statut des suggestions de son agence",
+                "Traiter les demandes de rappel des clients"
             ]
         }
     ]

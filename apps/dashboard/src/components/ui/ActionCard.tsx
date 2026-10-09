@@ -41,7 +41,7 @@ const STATUS_TONE: Record<ActionStatus, 'neutral' | 'warning' | 'success'> = { a
 export function actionFromFeedback(f: Feedback): ActionCardData {
   return {
     id: f.id,
-    title: f.action_a_prendre || 'Action corrective',
+    title: f.action_a_prendre || 'Action à mener',
     description: f.commentaire,
     status: f.action_realisee ? 'terminee' : f.action_a_prendre ? 'en_cours' : 'a_faire',
     owner: f.assigne_a_nom,

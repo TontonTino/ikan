@@ -1,18 +1,14 @@
 import React from 'react';
 import type { CriticiteType, Feedback, SentimentType, StatutTraitement } from '../../types';
 import { themeLabel } from '../../utils/themeLabels';
+import { AVIS_STATUT_LABELS, GRAVITE_LABELS, SENTIMENT_LABELS } from '../../utils/vocabulaire';
 import Badge from './Badge';
 import Card from './Card';
 import { fullDate, relativeTime } from './format';
 
-const SENTIMENT_LABEL: Record<SentimentType, string> = { positif: 'Positif', neutre: 'Neutre', negatif: 'Négatif' };
-const CRITICITE_LABEL: Record<CriticiteType, string> = { faible: 'Faible', moyenne: 'Moyenne', elevee: 'Élevée', critique: 'Critique' };
-const STATUT_LABEL: Record<StatutTraitement, string> = {
-  nouveau: 'Nouveau',
-  en_traitement: 'En traitement',
-  en_cours: 'En cours',
-  resolu: 'Résolu',
-};
+const SENTIMENT_LABEL: Record<SentimentType, string> = SENTIMENT_LABELS;
+const CRITICITE_LABEL: Record<CriticiteType, string> = GRAVITE_LABELS;
+const STATUT_LABEL: Record<StatutTraitement, string> = AVIS_STATUT_LABELS;
 const STATUT_TONE: Record<StatutTraitement, 'critical' | 'info' | 'warning' | 'success'> = {
   nouveau: 'critical',
   en_traitement: 'info',
@@ -65,19 +61,19 @@ export default function FeedbackCard({ feedback, showAgency = false, onOpen, act
       tone={isCritical ? 'critical' : 'default'}
       className="ui-item"
       onClick={onOpen ? () => onOpen(feedback) : undefined}
-      aria-label={onOpen ? `Feedback ${feedback.note}/5${showAgency && feedback.agence_nom ? ` — ${feedback.agence_nom}` : ''}. Ouvrir le détail` : undefined}
+      aria-label={onOpen ? `Avis ${feedback.note}/5${showAgency && feedback.agence_nom ? ` — ${feedback.agence_nom}` : ''}. Ouvrir le détail` : undefined}
     >
       <div className="ui-item__head">
         <Rating note={feedback.note} />
         {ia && <Badge value={ia.sentiment} label={SENTIMENT_LABEL[ia.sentiment]} />}
         {ia && (ia.criticite === 'critique' || ia.criticite === 'elevee') && (
-          <Badge value={ia.criticite} label={`Criticité ${CRITICITE_LABEL[ia.criticite].toLowerCase()}`} />
+          <Badge value={ia.criticite} label={`Gravité ${CRITICITE_LABEL[ia.criticite].toLowerCase()}`} />
         )}
         <span className="ui-item__spacer" />
         {statut && <Badge variant={STATUT_TONE[statut]} label={STATUT_LABEL[statut]} />}
       </div>
 
-      <Heading className="ui-sr-only">Feedback client</Heading>
+      <Heading className="ui-sr-only">Avis client</Heading>
       {feedback.commentaire ? (
         <p className="ui-item__text">{feedback.commentaire}</p>
       ) : (

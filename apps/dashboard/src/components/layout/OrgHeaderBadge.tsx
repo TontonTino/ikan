@@ -31,11 +31,11 @@ export default function OrgHeaderBadge({ user }: OrgHeaderBadgeProps) {
 
   // L'admin IKAN AI gère la plateforme de manière globale
   const isAdmin = user.role === 'admin';
-  const orgName = user.organisation_nom || (isAdmin ? 'IKAN AI Platform' : 'Organisation');
+  const orgName = user.organisation_nom || (isAdmin ? 'Plateforme IKAN AI' : 'Organisation');
   const orgLogo = !imgError ? user.organisation_logo : null;
 
   // Détermination du nom de l'espace selon le rôle
-  let spaceName = 'Espace de Travail';
+  let spaceName = 'Espace de travail';
   if (user.role === 'cx_manager') {
     spaceName = 'Espace Siège & Réseau';
   } else if (user.role === 'agency_manager') {

@@ -94,7 +94,7 @@ export function StatsErrorState({
 
 export function StatsEmptyState({
   title = 'Aucune donnée disponible',
-  description = 'Aucun feedback n’a été enregistré pour les filtres sélectionnés.',
+  description = 'Aucun avis client ne correspond aux filtres sélectionnés.',
 }: {
   title?: string;
   description?: string;

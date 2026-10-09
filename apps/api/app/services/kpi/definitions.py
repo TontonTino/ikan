@@ -58,7 +58,7 @@ class KPIDefinition:
 KPI_DEFINITIONS: dict[str, KPIDefinition] = {
     "CSAT": KPIDefinition(
         code="CSAT",
-        label="CSAT",
+        label="Satisfaction client (CSAT)",
         description=(
             "Pourcentage de feedbacks avec une note de 4 ou 5 (sur l'échelle 1-5 réellement "
             "utilisée) parmi tous les feedbacks de la période. Feedback.note est toujours "
@@ -70,7 +70,7 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
     ),
     "NEGATIVE_SENTIMENT_RATE": KPIDefinition(
         code="NEGATIVE_SENTIMENT_RATE",
-        label="Taux de sentiment négatif",
+        label="Part d'avis négatifs",
         description=(
             "Pourcentage de feedbacks analysés (AnalyseIA existante) dont le sentiment IA "
             "est NEGATIF, parmi les feedbacks analysés de la période. Un feedback sans "
@@ -81,13 +81,13 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
     ),
     "FEEDBACK_VOLUME": KPIDefinition(
         code="FEEDBACK_VOLUME",
-        label="Volume de feedbacks",
+        label="Avis reçus",
         description="Nombre de feedbacks soumis (Feedback.date_soumission) dans la période.",
         unit="count",
     ),
     "ISSUE_VOLUME": KPIDefinition(
         code="ISSUE_VOLUME",
-        label="Volume d'Issues",
+        label="Problèmes enregistrés",
         description=(
             "Nombre d'Issues distinctes détectées (Issue.premiere_detection) dans la "
             "période — jamais un décompte de feedbacks négatifs. Une Issue liée à plusieurs "
@@ -97,7 +97,7 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
     ),
     "CRITICAL_ISSUE_RATE": KPIDefinition(
         code="CRITICAL_ISSUE_RATE",
-        label="Taux d'Issues critiques",
+        label="Part de problèmes critiques",
         description=(
             "Pourcentage d'Issues de sévérité CRITIQUE (Issue.severite, jamais recalculée "
             "depuis les feedbacks) parmi les Issues détectées dans la période. severite est "
@@ -107,7 +107,7 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
     ),
     "ISSUE_RESOLUTION_RATE": KPIDefinition(
         code="ISSUE_RESOLUTION_RATE",
-        label="Taux de résolution des Issues",
+        label="Taux de résolution des problèmes",
         description=(
             "Pourcentage d'Issues détectées dans la période dont le statut ACTUEL est "
             "'resolue' ou 'verifiee' (verifiee implique nécessairement d'avoir été résolue). "
@@ -129,7 +129,7 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
     ),
     "LOOP_CLOSURE_RATE": KPIDefinition(
         code="LOOP_CLOSURE_RATE",
-        label="Loop Closure Rate",
+        label="Résolutions vérifiées",
         description=(
             "Pourcentage d'Issues nécessitant une action (necessite_action=true) détectées "
             "dans la période et dont le statut ACTUEL est 'verifiee', parmi toutes les "
@@ -140,26 +140,26 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
     ),
     # ── Extension Banking (PACKS["banque"], app/services/kpi/packs.py) — NPS plus bas ──
     "ISSUE_BACKLOG": KPIDefinition(
-        code="ISSUE_BACKLOG", label="Issue Backlog",
+        code="ISSUE_BACKLOG", label="Problèmes en attente",
         description="Nombre d'Issues actuellement ouvertes, en cours d'action ou rouvertes, dans le périmètre.", unit="count",
         famille=FAMILLE_SECTORIEL,
         secteur_code="banque",
     ),
     "BACKLOG_AGE": KPIDefinition(
-        code="BACKLOG_AGE", label="Backlog Age",
+        code="BACKLOG_AGE", label="Ancienneté des problèmes en attente",
         description="Médiane en heures de l'âge du cycle ouvert actuel des Issues du backlog.", unit="hours",
         famille=FAMILLE_SECTORIEL,
         secteur_code="banque",
     ),
     "ACTION_COMPLETION_RATE": KPIDefinition(
-        code="ACTION_COMPLETION_RATE", label="Action Completion Rate",
+        code="ACTION_COMPLETION_RATE", label="Taux d'actions terminées",
         description="Pourcentage d'actions non annulées créées dans la période actuellement terminées.", unit="percent",
         famille=FAMILLE_SECTORIEL,
         secteur_code="banque",
     ),
     "SLA_COMPLIANCE_RATE": KPIDefinition(
         code="SLA_COMPLIANCE_RATE",
-        label="SLA Compliance Rate",
+        label="Respect des délais de traitement",
         description=(
             "Pourcentage des Issues résolues pendant la période avec une deadline SLA explicite "
             "qui ont été résolues au plus tard à cette deadline. Les Issues sans SLA sont exclues."
@@ -170,7 +170,7 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
     ),
     "ISSUE_RECURRENCE_RATE": KPIDefinition(
         code="ISSUE_RECURRENCE_RATE",
-        label="Issue Recurrence Rate",
+        label="Part de problèmes récurrents",
         description=(
             "Pourcentage des Issues détectées dans la période explicitement reliées à une "
             "Issue racine antérieure, parmi toutes les Issues détectées dans la période."
@@ -181,7 +181,7 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
     ),
     "ESCALATION_RATE": KPIDefinition(
         code="ESCALATION_RATE",
-        label="Escalation Rate",
+        label="Part de problèmes remontés",
         description=(
             "Pourcentage d'Issues ayant été dans le backlog à un moment de la période et "
             "avec au moins une escalade explicite pendant cette période. Chaque Issue ne "
@@ -193,7 +193,7 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
     ),
     "NPS": KPIDefinition(
         code="NPS",
-        label="NPS",
+        label="Recommandation (NPS)",
         description=(
             "Score NPS = (% de promoteurs avec nps_note 9–10) − (% de détracteurs avec "
             "nps_note 0–6), parmi les feedbacks avec nps_note renseigné dans la période "
@@ -250,7 +250,7 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
     # TEL_PART_HORS_PERIMETRE) — clé de catégorie : packs_telecom.CLE_PAR_KPI_RECLAMATIONS.
     "TEL_RECLAMATIONS_RESEAU": KPIDefinition(
         code="TEL_RECLAMATIONS_RESEAU",
-        label="Réclamations réseau (basé sur les feedbacks)",
+        label="Réclamations réseau (d’après les avis)",
         description=(
             "Pourcentage de feedbacks de la période dont la catégorie a la clé "
             "internet_reseau_mobile ET dont le sentiment IA est NEGATIF (même définition "
@@ -264,7 +264,7 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
     ),
     "TEL_RECLAMATIONS_RECHARGE_FORFAIT": KPIDefinition(
         code="TEL_RECLAMATIONS_RECHARGE_FORFAIT",
-        label="Réclamations recharge & forfaits (basé sur les feedbacks)",
+        label="Réclamations recharge & forfaits (d’après les avis)",
         description=(
             "Même formule que TEL_RECLAMATIONS_RESEAU, pour la clé de catégorie "
             "forfaits_recharge. Moins de 5 feedbacks dans la période : no_data."
@@ -275,7 +275,7 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
     ),
     "TEL_RECLAMATIONS_FACTURATION": KPIDefinition(
         code="TEL_RECLAMATIONS_FACTURATION",
-        label="Réclamations facturation (basé sur les feedbacks)",
+        label="Réclamations facturation (d’après les avis)",
         description=(
             "Même formule que TEL_RECLAMATIONS_RESEAU, pour la clé de catégorie "
             "facturation_paiement. Moins de 5 feedbacks dans la période : no_data."

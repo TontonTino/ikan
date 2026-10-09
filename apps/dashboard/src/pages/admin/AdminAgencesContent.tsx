@@ -148,11 +148,11 @@ export default function AdminAgencesContent() {
       } else {
         const r = await agencesApi.create(currentUser?.organisation_id || '', payload);
         setAgences((prev) => [...prev, r.data]);
-        showToast('Agence créée avec succès (QR Code généré !)');
+        showToast('Agence créée. Son QR code est prêt.');
       }
       setShowModal(false);
     } catch (err: any) {
-      showToast(err.response?.data?.detail || 'Erreur lors de la sauvegarde');
+      showToast(err.response?.data?.detail || 'Impossible d’enregistrer l’agence. Réessayez.');
     } finally {
       setSaving(false);
     }
@@ -164,7 +164,7 @@ export default function AdminAgencesContent() {
       setAgences((prev) => prev.map((ag) => (ag.id === a.id ? r.data : ag)));
       showToast(r.data.active ? 'Agence réactivée' : 'Agence désactivée');
     } catch {
-      showToast('Erreur lors de la mise à jour');
+      showToast('Impossible de mettre à jour l’agence. Réessayez.');
     }
   };
 
@@ -175,13 +175,13 @@ export default function AdminAgencesContent() {
       setAgences((prev) => prev.filter((ag) => ag.id !== a.id));
       showToast('Agence supprimée');
     } catch {
-      showToast('Impossible de supprimer cette agence (feedbacks rattachés)');
+      showToast('Impossible de supprimer cette agence : des avis clients y sont rattachés.');
     }
   };
 
   const copyQrUrl = (url: string) => {
     navigator.clipboard.writeText(url);
-    showToast('Lien du QR Code copié !');
+    showToast('Lien du QR code copié');
   };
 
   const toggleManagerActive = async (m: AgencyManagerLite) => {
@@ -190,7 +190,7 @@ export default function AdminAgencesContent() {
       setManagers((prev) => prev.map((x) => (x.id === m.id ? { ...x, active: !x.active } : x)));
       showToast(m.active ? 'Compte suspendu' : 'Compte réactivé');
     } catch {
-      showToast('Erreur lors de la modification du compte');
+      showToast('Impossible de modifier le compte. Réessayez.');
     }
   };
 
@@ -225,7 +225,7 @@ export default function AdminAgencesContent() {
     });
   }, [agences, managersParAgence, search, filtreSansManager]);
 
-  if (loading) return <div style={{ padding: '32px', color: '#64748B', fontWeight: 600 }}>Chargement des agences...</div>;
+  if (loading) return <div style={{ padding: '32px', color: '#64748B', fontWeight: 600 }}>Chargement des agences…</div>;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
@@ -242,7 +242,7 @@ export default function AdminAgencesContent() {
             Répertoire des agences ({agences.length})
           </h2>
           <p style={{ margin: '4px 0 0', fontSize: '0.84rem', color: '#64748B' }}>
-            Agences, QR codes et chefs d'agence du réseau
+            Agences, QR codes et responsables d’agence du réseau
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
@@ -261,7 +261,7 @@ export default function AdminAgencesContent() {
             }}
           >
             <UsersIcon size={16} color="#02302D" />
-            Ajouter un nouveau chef d'agence
+            Ajouter un responsable d’agence
           </button>
           <button
             type="button"
@@ -279,7 +279,7 @@ export default function AdminAgencesContent() {
             }}
           >
             <PlusIcon size={16} />
-            Nouvelle Agence
+            Nouvelle agence
           </button>
         </div>
       </div>
@@ -292,25 +292,25 @@ export default function AdminAgencesContent() {
           onClose={() => setManagerModal(null)}
           onCreated={() => {
             chargerManagers();
-            showToast(managerModal.manager ? "Chef d'agence modifié" : "Chef d'agence créé");
+            showToast(managerModal.manager ? "Responsable d’agence modifié" : "Responsable d’agence créé");
           }}
         />
       )}
 
       {/* ── Répertoire unique : agences + chefs d'agence ── */}
       <section aria-labelledby="repertoire-agences" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div id="repertoire-agences"><SectionHeading>Agences et chefs d'agence</SectionHeading></div>
+          <div id="repertoire-agences"><SectionHeading>Agences et responsables d’agence</SectionHeading></div>
 
           {managersIndisponibles && (
             <div role="alert" style={{ background: '#FEF3C7', border: '1px solid #FDE68A', color: '#92400E', borderRadius: '12px', padding: '10px 14px', fontSize: '0.82rem', fontWeight: 600 }}>
-              Les chefs d'agence n'ont pas pu être chargés : leur section peut être incomplète.
+              Les responsables d’agence n’ont pas pu être chargés : leur section peut être incomplète.
             </div>
           )}
 
           {/* Chefs d'agence sans agence : sinon invisibles (aucune carte pour les porter) */}
           {managersSansAgence.length > 0 && (
             <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '16px', padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <strong style={{ fontSize: '0.86rem', color: '#92400E' }}>Chefs d'agence sans agence ({managersSansAgence.length})</strong>
+              <strong style={{ fontSize: '0.86rem', color: '#92400E' }}>Responsables d’agence sans agence ({managersSansAgence.length})</strong>
               {managersSansAgence.map((m) => (
                 <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 600 }}>
@@ -335,7 +335,7 @@ export default function AdminAgencesContent() {
             <SearchIcon size={16} color="#94A3B8" />
             <input
               type="text"
-              placeholder="Rechercher par agence, ville, adresse ou chef d'agence (nom, email)..."
+              placeholder="Rechercher par agence, ville, adresse ou responsable d’agence (nom, e-mail)…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               aria-label="Rechercher dans le répertoire"
@@ -359,7 +359,7 @@ export default function AdminAgencesContent() {
                 fontFamily: 'inherit',
               }}
             >
-              Sans chef d'agence ({nbSansManager})
+              Sans responsable d’agence ({nbSansManager})
             </button>
           </div>
 
@@ -414,11 +414,11 @@ export default function AdminAgencesContent() {
                 {/* Chef d'agence */}
                 <div style={{ paddingTop: '12px', borderTop: '1px solid #F1F5F9' }}>
                   <div style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94A3B8', marginBottom: '8px' }}>
-                    Chef d'agence
+                    Responsable d’agence
                   </div>
                   {(managersParAgence.get(a.id) || []).length === 0 ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-                      <span style={{ fontSize: '0.82rem', color: '#64748B', fontWeight: 600 }}>Aucun chef d'agence</span>
+                      <span style={{ fontSize: '0.82rem', color: '#64748B', fontWeight: 600 }}>Aucun responsable d’agence</span>
                       <button
                         type="button"
                         onClick={() => setManagerModal({ defaultAgenceId: a.id })}
@@ -586,7 +586,7 @@ export default function AdminAgencesContent() {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Email</label>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>E-mail</label>
                   <input
                     type="email"
                     value={form.email}
@@ -598,7 +598,7 @@ export default function AdminAgencesContent() {
               </div>
 
               <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Seuil d'alerte satisfaction (%)</label>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Seuil d’alerte de satisfaction (%)</label>
                 <input
                   type="number"
                   value={form.seuil_alerte}
@@ -658,7 +658,7 @@ export default function AdminAgencesContent() {
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
             <div style={{ background: '#FFFFFF', borderRadius: '24px', padding: '28px', maxWidth: '360px', width: '100%', textAlign: 'center' }}>
               <h3 style={{ margin: '0 0 4px', fontSize: '1.1rem', fontWeight: 800, color: '#02302D' }}>{qrModalTarget.nom}</h3>
-              <p style={{ margin: '0 0 16px', fontSize: '0.78rem', color: '#64748B' }}>Borne de collecte feedback</p>
+              <p style={{ margin: '0 0 16px', fontSize: '0.78rem', color: '#64748B' }}>QR code de collecte des avis</p>
 
               <img
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(modalQrUrl)}`}
@@ -673,7 +673,7 @@ export default function AdminAgencesContent() {
                   className="btn-primary"
                   style={{ padding: '10px', fontWeight: 700, cursor: 'pointer' }}
                 >
-                  Copier l'URL
+                  Copier le lien
                 </button>
                 <button
                   type="button"

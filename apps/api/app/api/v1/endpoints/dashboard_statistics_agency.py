@@ -159,7 +159,7 @@ def get_statistics_agency(
     crit_ev, crit_p_pos = _calc_kpi_trend(critiques_curr, critiques_prev, invert_positive=True)
 
     kpis = {
-        "satisfaction": _kpi_taux(sat_curr, sat_prev, "Taux de satisfaction locale"),
+        "satisfaction": _kpi_taux(sat_curr, sat_prev, "Part des avis notés 4 ou 5 sur 5"),
         "total_feedbacks": StatKPI(
             valeur=total_curr,
             valeur_num=float(total_curr),
@@ -185,16 +185,16 @@ def get_statistics_agency(
             valeur_precedente=max(0, total_prev - traites_prev),
             evolution=None,
             is_positive=attente_curr == 0,
-            sous_titre="Avis en attente de réponse locale",
+            sous_titre="Avis pas encore ouverts par l'agence",
         ),
-        "taux_traitement": _kpi_taux(taux_trait_curr, taux_trait_prev, "Rapidité et taux de résolution locale"),
+        "taux_traitement": _kpi_taux(taux_trait_curr, taux_trait_prev, "Part des avis pris en charge"),
         "alertes_critiques": StatKPI(
             valeur=critiques_curr,
             valeur_num=float(critiques_curr),
             valeur_precedente=critiques_prev,
             evolution=crit_ev,
             is_positive=crit_p_pos,
-            sous_titre="Avis nécessitant un recontact d'urgence",
+            sous_titre="Avis de gravité critique (calcul automatique)",
         ),
     }
 
@@ -390,7 +390,7 @@ def get_statistics_agency(
                 id="agency-positive",
                 type="point_fort",
                 titre="Satisfaction supérieure ou égale à 80 %",
-                description=f"{sat_curr}% des {total_curr} avis de la période sont positifs (notes 4-5/5).",
+                description=f"{sat_curr}% des {total_curr} avis de la période sont notés 4 ou 5 sur 5.",
                 priorite="low",
                 date=now.strftime("%d/%m/%Y"),
                 source="regle",
@@ -401,7 +401,7 @@ def get_statistics_agency(
                 type="point_vigilance",
                 titre="Satisfaction inférieure à 80 %",
                 description=(
-                    f"{sat_curr}% des {total_curr} avis de la période sont positifs (notes 4-5/5). "
+                    f"{sat_curr}% des {total_curr} avis de la période sont notés 4 ou 5 sur 5. "
                     f"{attente_curr} avis en attente de prise en charge."
                 ),
                 priorite="medium",

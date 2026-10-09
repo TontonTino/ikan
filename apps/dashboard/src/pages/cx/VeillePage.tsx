@@ -268,7 +268,7 @@ export default function VeillePage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <input aria-label="Rechercher dans les mentions" placeholder="Rechercher un texte…" value={recherche} onChange={(e) => setRecherche(e.target.value)} style={{ padding: '9px 12px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', background: 'var(--color-surface)', color: 'var(--color-text-main)' }} />
           <select aria-label="Plateforme" value={plateforme} onChange={(e) => setPlateforme(e.target.value)} style={{ padding: '9px 12px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', background: 'var(--color-surface)', color: 'var(--color-text-main)' }}>
-            <option value="">Toutes les plateformes</option><option value="facebook">Facebook</option><option value="google_reviews">Google</option>
+            <option value="">Toutes les plateformes</option><option value="facebook">Facebook</option><option value="google_reviews" disabled>Avis Google (bientôt disponible)</option>
           </select>
           <select aria-label="Thème" value={selectedTheme} onChange={(e) => setSelectedTheme(e.target.value)} style={{ padding: '9px 12px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', background: 'var(--color-surface)', color: 'var(--color-text-main)' }}>
             <option value="">Tous les thèmes</option><option value="non_classe">Non classé</option>
@@ -347,7 +347,7 @@ export default function VeillePage() {
                     message={
                       serviceOffline
                         ? "Impossible de confirmer l'état du service de collecte des mentions en ce moment. Les mentions déjà collectées restent visibles ici dès qu'il y en a."
-                        : 'Essayez une autre période, une autre agence ou un autre sentiment.'
+                        : 'Essayez une autre période, une autre agence ou un autre ton.'
                     }
                     illustration="no-data"
                   />

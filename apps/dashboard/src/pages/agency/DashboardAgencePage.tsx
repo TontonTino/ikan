@@ -33,6 +33,7 @@ import AlerteRow from '../../components/alerts/AlerteRow';
 import RecommandationCard from '../../components/stats/RecommandationCard';
 import { ArrowUpRightIcon } from '../../components/common/Icons';
 import { themeLabel } from '../../utils/themeLabels';
+import { GRAVITE_LABELS, PROBLEME_STATUT_LABELS } from '../../utils/vocabulaire';
 
 const THEME_COLORS = [
   '#02302D', '#3C7730', '#75B72A', '#BCCF00', '#0284C7',
@@ -143,7 +144,7 @@ export default function DashboardAgencePage() {
       showToast('Recommandation marquée comme traitée');
       load();
     } catch {
-      showToast('❌ Erreur lors de la mise à jour');
+      showToast('❌ Impossible d’enregistrer la modification. Réessayez.');
     }
   };
 
@@ -258,9 +259,9 @@ export default function DashboardAgencePage() {
             <SectionHeading>Sources disponibles</SectionHeading>
             {sourceErrors.alerts && <p role="status" style={{ margin: 0, color: 'var(--color-error)' }}>Alertes indisponibles.</p>}
             {alertes.map((item) => <AlerteRow key={item.agence_id} alerte={item} />)}
-            {feedbackAlerts.map((item) => <div key={item.feedback_id} style={cardStyle}>Feedback à examiner · note {item.note}/5{item.commentaire ? ` · ${item.commentaire}` : ''} <Link to="/feedbacks?tab=critiques">Voir les feedbacks</Link></div>)}
-            {sourceErrors.issues && <p role="status" style={{ margin: 0, color: 'var(--color-error)' }}>Issues indisponibles.</p>}
-            {issues?.items.filter((issue) => OPEN_ISSUE_STATUSES.includes(issue.statut) && (issue.severite === 'critique' || issue.severite === 'elevee' || issue.necessite_action)).slice(0, 5).map((issue) => <div key={issue.id} style={cardStyle}><strong>{issue.titre}</strong> · {issue.severite} · {issue.statut} <Link to="/issues">Voir les issues</Link></div>)}
+            {feedbackAlerts.map((item) => <div key={item.feedback_id} style={cardStyle}>Avis à examiner · note {item.note}/5{item.commentaire ? ` · ${item.commentaire}` : ''} <Link to="/feedbacks?tab=critiques">Voir les avis</Link></div>)}
+            {sourceErrors.issues && <p role="status" style={{ margin: 0, color: 'var(--color-error)' }}>Problèmes à traiter indisponibles.</p>}
+            {issues?.items.filter((issue) => OPEN_ISSUE_STATUSES.includes(issue.statut) && (issue.severite === 'critique' || issue.severite === 'elevee' || issue.necessite_action)).slice(0, 5).map((issue) => <div key={issue.id} style={cardStyle}><strong>{issue.titre}</strong> · {issue.severite} · {issue.statut} <Link to="/issues">Voir les problèmes</Link></div>)}
             {sourceErrors.recommendations && <p role="status" style={{ margin: 0, color: 'var(--color-error)' }}>Recommandations indisponibles.</p>}
             {recos.map((reco) => <RecommandationCard key={reco.id} recommandation={reco} onMarquerTraitee={marquerTraitee} />)}
           </section>
@@ -298,13 +299,13 @@ export default function DashboardAgencePage() {
 
             <AgencyDecisionKpis data={data} jours={jours} />
             <p style={{ margin: '-8px 0 0', fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
-              La période choisie couvre les indicateurs, tendances et thèmes. Les priorités, issues et recommandations reflètent leur état actuel, toutes périodes confondues.
+              La période choisie couvre les indicateurs, tendances et thèmes. Les priorités, problèmes à traiter et recommandations reflètent leur état actuel, toutes périodes confondues.
             </p>
 
             <section aria-labelledby="agence-priorites" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div id="agence-priorites"><SectionHeading>Priorités à traiter</SectionHeading></div>
               {sourceErrors.alerts && <p role="status" style={{ margin: 0, color: 'var(--color-error)', fontSize: '0.86rem' }}>Les alertes ne sont pas disponibles. Les autres priorités restent affichées.</p>}
-              {sourceErrors.issues && <p role="status" style={{ margin: 0, color: 'var(--color-error)', fontSize: '0.86rem' }}>Les issues ne sont pas disponibles. Les autres priorités restent affichées.</p>}
+              {sourceErrors.issues && <p role="status" style={{ margin: 0, color: 'var(--color-error)', fontSize: '0.86rem' }}>Les problèmes à traiter ne sont pas disponibles. Les autres priorités restent affichées.</p>}
               {!sourceErrors.alerts && alertes.map((al) => (
                 <div key={al.agence_id} style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                   <div style={{ flex: '1 1 320px' }}><AlerteRow alerte={al} /></div>
@@ -316,11 +317,11 @@ export default function DashboardAgencePage() {
               {!sourceErrors.alerts && feedbackAlerts.map((item) => (
                 <div key={item.feedback_id} style={{ ...cardStyle, borderLeft: `5px solid ${item.note <= 2 ? 'var(--color-error)' : '#D97706'}`, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px', flexWrap: 'wrap' }}>
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <strong style={{ display: 'block', color: 'var(--color-text-body)', fontSize: '0.9rem' }}>Feedback à examiner · note {item.note}/5</strong>
+                    <strong style={{ display: 'block', color: 'var(--color-text-body)', fontSize: '0.9rem' }}>Avis à examiner · note {item.note}/5</strong>
                     <span style={{ color: 'var(--color-text-muted)', fontSize: '0.82rem' }}>{item.categorie_nom || 'Catégorie non renseignée'} · {item.raison.replace(/_/g, ' ')}{item.commentaire ? ` · « ${item.commentaire} »` : ''}</span>
                   </div>
                   <Link to="/feedbacks?tab=critiques" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.84rem', fontWeight: 700, color: '#3C7730', textDecoration: 'none' }}>
-                    Examiner les feedbacks <ArrowUpRightIcon size={13} color="#3C7730" />
+                    Examiner les avis <ArrowUpRightIcon size={13} color="#3C7730" />
                   </Link>
                 </div>
               ))}
@@ -332,19 +333,19 @@ export default function DashboardAgencePage() {
                   <div key={issue.id} style={{ ...cardStyle, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px', flexWrap: 'wrap', borderLeft: `5px solid ${issue.severite === 'critique' ? 'var(--color-error)' : '#D97706'}` }}>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <strong style={{ display: 'block', color: 'var(--color-text-body)', fontSize: '0.9rem' }}>{issue.titre}</strong>
-                      <span style={{ color: 'var(--color-text-muted)', fontSize: '0.82rem' }}>Priorité {issue.severite} · statut {issue.statut.replace(/_/g, ' ')}{issue.categorie_nom ? ` · ${issue.categorie_nom}` : ''}</span>
+                      <span style={{ color: 'var(--color-text-muted)', fontSize: '0.82rem' }}>Gravité {(GRAVITE_LABELS[issue.severite] ?? issue.severite).toLowerCase()} · {PROBLEME_STATUT_LABELS[issue.statut] ?? issue.statut}{issue.categorie_nom ? ` · ${issue.categorie_nom}` : ''}</span>
                     </div>
                     <Link to="/issues" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.84rem', fontWeight: 700, color: '#3C7730', textDecoration: 'none' }}>
-                      Voir les issues <ArrowUpRightIcon size={13} color="#3C7730" />
+                      Voir les problèmes <ArrowUpRightIcon size={13} color="#3C7730" />
                     </Link>
                   </div>
                 ))}
-              {!sourceErrors.issues && issues?.truncated && <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.78rem' }}>Liste partielle : l’API limite les issues chargées à {ISSUE_LIMIT} par statut.</p>}
+              {!sourceErrors.issues && issues?.truncated && <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.78rem' }}>Liste partielle : seuls les premiers problèmes sont chargés, {ISSUE_LIMIT} par statut.</p>}
               {!sourceErrors.alerts && !sourceErrors.issues && alertes.length === 0 && feedbackAlerts.length === 0 && (issues?.items.filter((issue) => OPEN_ISSUE_STATUSES.includes(issue.statut) && (issue.severite === 'critique' || issue.severite === 'elevee' || issue.necessite_action)).length ?? 0) === 0 && (
-                <p style={{ margin: 0, fontSize: '0.86rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Aucune alerte ou issue prioritaire détectée dans les données disponibles.</p>
+                <p style={{ margin: 0, fontSize: '0.86rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Aucune alerte ni aucun problème prioritaire dans les données disponibles.</p>
               )}
               <Link to="/feedbacks?tab=a_traiter" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', alignSelf: 'flex-start', fontSize: '0.84rem', fontWeight: 700, color: '#3C7730', textDecoration: 'none' }}>
-                Voir les {data.feedbacks_a_traiter} feedbacks à traiter <ArrowUpRightIcon size={13} color="#3C7730" />
+                Voir les {data.feedbacks_a_traiter} avis à traiter <ArrowUpRightIcon size={13} color="#3C7730" />
               </Link>
             </section>
 
@@ -385,7 +386,7 @@ export default function DashboardAgencePage() {
                     />
                   </AreaChart>
                 </ResponsiveContainer>
-              </div> : <EmptyState illustration="no-data" title="Pas de données d’évolution" message={`Aucun relevé de satisfaction sur ${data.periode}.`} />}
+              </div> : <EmptyState illustration="no-data" title="Aucune donnée d’évolution" message={`Aucun relevé de satisfaction sur ${data.periode}.`} />}
             </div>
           </section>
 
@@ -393,7 +394,7 @@ export default function DashboardAgencePage() {
           <section aria-labelledby="agence-comprehension" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div id="agence-comprehension"><SectionHeading>Que disent mes clients ?</SectionHeading></div>
             <div style={cardStyle}>
-              <h3 style={{ margin: '0 0 16px', fontSize: '1.05rem', fontWeight: 800, color: '#02302D' }}>Ressenti client</h3>
+              <h3 style={{ margin: '0 0 16px', fontSize: '1.05rem', fontWeight: 800, color: '#02302D' }}>Ton des avis</h3>
               {data.sentiments.length > 0 ? (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 170px), 1fr))', gap: '12px' }}>
                   {[
@@ -407,10 +408,10 @@ export default function DashboardAgencePage() {
                       <div key={item.key} style={{ padding: '14px 16px', background: item.bg, borderRadius: '14px', color: item.color }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'baseline' }}>
                           <strong style={{ fontSize: '0.84rem' }}>{item.label}</strong>
-                          <strong style={{ fontSize: '1.1rem' }}>{percentage == null ? 'Pas de données' : `${percentage}%`}</strong>
+                          <strong style={{ fontSize: '1.1rem' }}>{percentage == null ? 'Aucune donnée' : `${percentage}%`}</strong>
                         </div>
                         <div style={{ marginTop: '5px', fontSize: '0.76rem', fontWeight: 600 }}>
-                          {sentiment ? `${sentiment.count} feedbacks analysés` : 'Aucun feedback analysé'}
+                          {sentiment ? `${sentiment.count} avis analysés` : 'Aucun avis analysé'}
                         </div>
                         <div role="presentation" style={{ height: '5px', marginTop: '10px', background: 'rgba(255,255,255,0.75)', borderRadius: '999px', overflow: 'hidden' }}>
                           {percentage != null && <div style={{ height: '100%', width: `${Math.max(0, Math.min(100, percentage))}%`, background: item.color, borderRadius: '999px' }} />}
@@ -420,7 +421,7 @@ export default function DashboardAgencePage() {
                   })}
                 </div>
               ) : (
-                <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.86rem' }}>Les feedbacks de cette période n’ont pas encore été analysés.</p>
+                <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.86rem' }}>Les avis de cette période n’ont pas encore été analysés.</p>
               )}
             </div>
             <div style={cardStyle}>
@@ -482,7 +483,7 @@ export default function DashboardAgencePage() {
               ) : (
                 <EmptyState
                   illustration="no-data"
-                  title="Aucune donnée thématique"
+                  title="Aucune donnée sur les thèmes"
                   message="Aucun avis analysé sur cette période."
                 />
               )}
@@ -491,15 +492,15 @@ export default function DashboardAgencePage() {
 
           {/* ── Niveau 4 : actions ── */}
           <section aria-labelledby="agence-actions" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div id="agence-actions"><SectionHeading>Mes actions</SectionHeading></div>
+            <div id="agence-actions"><SectionHeading>Que faire ?</SectionHeading></div>
             <div style={{ ...cardStyle, padding: '26px 28px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', marginBottom: '18px' }}>
                 <div>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#02302D' }}>
-                  Recommandations à suivre ({recosTotal})
+                  Recommandations ({recosTotal})
                 </h3>
                 <p style={{ margin: '3px 0 0', fontSize: '0.84rem', color: '#64748B', fontWeight: 500 }}>
-                  Actions concrètes suggérées automatiquement par l'IA pour traiter les points de douleur récurrents.
+                  Pistes d’action suggérées automatiquement à partir des avis. Une recommandation n’est pas une décision : à vous de juger si elle s’applique.
                 </p>
                 </div>
                 <Link
@@ -545,14 +546,14 @@ export default function DashboardAgencePage() {
           <div id="agence-resultats"><SectionHeading>Résultats et suivi</SectionHeading></div>
           {sourceErrors.issues || !issues ? (
             <p role="status" style={{ margin: 0, color: sourceErrors.issues ? 'var(--color-error)' : 'var(--color-text-muted)', fontSize: '0.86rem' }}>
-              {sourceErrors.issues ? 'Le statut des issues est indisponible pour le moment.' : 'Chargement du statut des issues…'}
+              {sourceErrors.issues ? 'Le statut des problèmes est indisponible pour le moment.' : 'Chargement du statut des problèmes…'}
             </p>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))', gap: '12px' }}>
               {[
-                { label: 'Issues encore ouvertes', value: OPEN_ISSUE_STATUSES.reduce((total, statut) => total + issues.totals[statut], 0) },
-                { label: 'Issues résolues', value: issues.totals.resolue },
-                { label: 'Issues vérifiées', value: issues.totals.verifiee },
+                { label: 'Problèmes encore à traiter', value: OPEN_ISSUE_STATUSES.reduce((total, statut) => total + issues.totals[statut], 0) },
+                { label: 'Problèmes résolus', value: issues.totals.resolue },
+                { label: 'Problèmes à résolution vérifiée', value: issues.totals.verifiee },
               ].map((metric) => (
                 <div key={metric.label} style={{ ...cardStyle, padding: '16px 20px' }}>
                   <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem', fontWeight: 700 }}>{metric.label} · toutes périodes</div>
@@ -562,7 +563,7 @@ export default function DashboardAgencePage() {
             </div>
           )}
           <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.78rem' }}>
-            Les statuts « résolue » et « vérifiée » décrivent les issues dans l’API. L’API ne fournit pas de mesure d’évolution de la satisfaction attribuable à une intervention.
+            « Résolu » et « Résolution vérifiée » sont des statuts déclarés par vos équipes : ils ne prouvent pas, à eux seuls, une amélioration de la satisfaction.
           </p>
         </section>
       )}

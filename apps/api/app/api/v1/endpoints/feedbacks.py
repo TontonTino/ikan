@@ -214,7 +214,7 @@ def submit_feedback(
             type_evenement="soumission",
             ancien_statut=None,
             nouveau_statut="nouveau",
-            details=f"Feedback soumis (Note {note_val}/5)",
+            details=f"Avis reçu (note {note_val}/5)",
         )
         db.add(hist_init)
 
@@ -455,7 +455,7 @@ def open_feedback(
             type_evenement="ouverture",
             ancien_statut="nouveau",
             nouveau_statut="en_traitement",
-            details="Feedback ouvert pour prise en charge",
+            details="Avis ouvert et pris en charge",
         )
         db.add(hist)
         db.commit()
@@ -623,7 +623,7 @@ def confirmer_action_realisee(
         type_evenement="action_realisee",
         ancien_statut=ancien_statut,
         nouveau_statut="resolu",
-        details=feedback.action_a_prendre or "Action corrective réalisée sur le terrain",
+        details=feedback.action_a_prendre or "Action réalisée sur le terrain",
     )
     db.add(hist)
     db.commit()
@@ -721,7 +721,7 @@ def reouvrir_feedback(
         type_evenement="reouverture",
         ancien_statut=ancien_statut,
         nouveau_statut="en_traitement",
-        details="Feedback rouvert suite à un nouveau signalement client",
+        details="Avis rouvert suite à un nouveau signalement du client",
     )
     db.add(hist)
     db.commit()

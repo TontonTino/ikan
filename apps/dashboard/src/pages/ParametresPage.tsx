@@ -52,7 +52,7 @@ export default function ParametresPage() {
       setUser(res.data);
       setMessageInfos({ type: 'succes', texte: 'Informations mises à jour.' });
     } catch (err: any) {
-      setMessageInfos({ type: 'erreur', texte: err?.response?.data?.detail || 'Erreur lors de la mise à jour.' });
+      setMessageInfos({ type: 'erreur', texte: err?.response?.data?.detail || 'Impossible d’enregistrer les modifications. Réessayez.' });
     } finally {
       setEnregistrementEnCours(false);
     }
@@ -139,7 +139,7 @@ export default function ParametresPage() {
           Informations du compte
         </h3>
         <p style={{ margin: '0 0 18px', fontSize: '0.82rem', color: '#64748B' }}>
-          Votre nom et votre email de connexion.
+          Votre nom et votre e-mail de connexion.
         </p>
 
         <form onSubmit={enregistrerInfos}>
@@ -154,7 +154,7 @@ export default function ParametresPage() {
             </div>
           </div>
           <div style={{ marginBottom: '4px' }}>
-            <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>Email</label>
+            <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>E-mail</label>
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="saas-input" style={{ width: '100%' }} />
           </div>
 
@@ -176,7 +176,7 @@ export default function ParametresPage() {
             Alertes
           </h3>
           <p style={{ margin: '0 0 18px', fontSize: '0.82rem', color: '#64748B' }}>
-            Délai avant qu'un avis négatif non traité (note 2/5 ou moins, ou sentiment négatif) devienne une alerte pour vous.
+            Délai avant qu'un avis négatif non traité (note 2/5 ou moins, ou ton négatif) devienne une alerte pour vous.
           </p>
 
           <form onSubmit={enregistrerDelai}>

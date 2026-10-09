@@ -95,9 +95,22 @@ export default function AdminSettingsPage() {
 
       {/* ── Page Header Standardisé ── */}
       <PageHeader
-        title="Paramètres Système"
-        subtitle="Configuration globale et règles d'analyse de la plateforme IKAN AI."
+        title="Paramètres système"
+        subtitle="Configuration générale de la plateforme IKAN AI."
       />
+
+      {/* Transparence : ces valeurs sont enregistrées (PATCH /system/settings) mais aucun
+          service ne les lit encore côté API. Ne pas laisser croire qu'elles agissent. */}
+      <div
+        role="note"
+        style={{
+          background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E',
+          borderRadius: '16px', padding: '12px 16px', fontSize: '0.84rem', lineHeight: 1.5,
+        }}
+      >
+        <strong>À savoir :</strong> ces paramètres sont enregistrés, mais la plateforme ne les applique pas encore.
+        Modifier une valeur ici ne change pas, pour l’instant, le fonctionnement des agences, des analyses ou des notifications.
+      </div>
 
       {/* Section 1 : Identité de la plateforme */}
       <div
@@ -133,10 +146,10 @@ export default function AdminSettingsPage() {
             className="saas-input"
             value={form.nom_application || ''}
             onChange={(e) => setForm({ ...form, nom_application: e.target.value })}
-            placeholder="IKAN AI — Plateforme Feedback Client"
+            placeholder="IKAN AI — Plateforme d’avis clients"
           />
           <p style={{ fontSize: '0.78rem', color: '#64748B', marginTop: '6px', margin: 0 }}>
-            Ce nom apparaît dans les exports, rapports et communications automatiques.
+            Nom de référence de la plateforme (pas encore repris dans les exports ni les e-mails).
           </p>
         </div>
       </div>
@@ -165,7 +178,7 @@ export default function AdminSettingsPage() {
           }}
         >
           <BarChartIcon size={18} color="#3C7730" />
-          <span>Alertes et Rétention des données</span>
+          <span>Alertes et conservation des données</span>
         </h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div>
@@ -181,12 +194,12 @@ export default function AdminSettingsPage() {
               style={{ width: '100%', accentColor: '#3C7730' }}
             />
             <p style={{ fontSize: '0.78rem', color: '#64748B', marginTop: '6px', margin: 0 }}>
-              Appliqué automatiquement à chaque nouvelle agence créée. Les agences existantes ne sont pas affectées.
+              Valeur prévue pour les nouvelles agences. Pas encore appliquée : le seuil se règle aujourd’hui agence par agence, dans Gestion des agences.
             </p>
           </div>
           <div>
             <label style={{ display: 'block', fontWeight: 700, marginBottom: '6px', fontSize: '0.84rem', color: '#1E293B' }}>
-              Durée de rétention des feedbacks (mois)
+              Durée de conservation des avis clients (mois)
             </label>
             <input
               type="number"
@@ -198,7 +211,7 @@ export default function AdminSettingsPage() {
               onChange={(e) => setForm({ ...form, retention_mois: Number(e.target.value) })}
             />
             <p style={{ fontSize: '0.78rem', color: '#64748B', marginTop: '6px', margin: 0 }}>
-              Les feedbacks plus anciens que cette durée seront archivés automatiquement.
+              Durée prévue. Aucun archivage automatique n’est encore effectué.
             </p>
           </div>
         </div>
@@ -228,22 +241,22 @@ export default function AdminSettingsPage() {
           }}
         >
           <LightningIcon size={18} color="#3C7730" />
-          <span>Moteur d'Analyse IA</span>
+          <span>Analyse automatique des avis</span>
         </h2>
         <div>
           <label style={{ display: 'block', fontWeight: 700, marginBottom: '6px', fontSize: '0.84rem', color: '#1E293B' }}>
-            Mode du moteur IA
+            Mode d’analyse
           </label>
           <select
             className="saas-input"
             value={form.mode_ia || 'deterministique'}
             onChange={(e) => setForm({ ...form, mode_ia: e.target.value })}
           >
-            <option value="deterministique">Déterministe (règles lexicales & classification rapide)</option>
-            <option value="hybride">Hybride (règles + API Hugging Face)</option>
+            <option value="deterministique">Règles (analyse lexicale, sans IA externe)</option>
+            <option value="hybride">Hybride (règles + modèle externe Hugging Face)</option>
           </select>
           <p style={{ fontSize: '0.78rem', color: '#64748B', marginTop: '6px', margin: 0 }}>
-            Le mode hybride utilise l'API Hugging Face à distance avec fallback déterministe immédiat.
+            Préférence enregistrée uniquement : l’analyse actuelle du ton des avis utilise toujours les règles, quel que soit le mode choisi.
           </p>
         </div>
       </div>
@@ -281,10 +294,10 @@ export default function AdminSettingsPage() {
             onChange={(e) => setForm({ ...form, notifications_email_actives: e.target.checked })}
             style={{ width: '18px', height: '18px', accentColor: '#3C7730', cursor: 'pointer' }}
           />
-          <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#1E293B' }}>Activer les notifications par email</span>
+          <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#1E293B' }}>Activer les notifications par e-mail</span>
         </label>
         <p style={{ fontSize: '0.78rem', color: '#64748B', marginTop: '8px', marginLeft: '30px', margin: 0 }}>
-          Envoie des alertes par email aux responsables concernés lorsqu'un seuil de criticité est détecté.
+          Préférence enregistrée uniquement : aucun e-mail d’alerte n’est encore envoyé à partir de ce réglage.
         </p>
       </div>
 

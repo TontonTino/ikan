@@ -85,7 +85,7 @@ export default function RecommandationCard({ recommandation: r, agenceNom, onMar
           style={{ fontSize: '0.8rem', padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
         >
           <CheckIcon size={14} />
-          <span>Marquer comme traité</span>
+          <span>Marquer comme traitée</span>
         </button>
       )}
     </div>

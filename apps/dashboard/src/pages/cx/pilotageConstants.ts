@@ -1,12 +1,7 @@
 import type { IdeaStatus, IssueStatut, CriticiteType } from '../../types';
+import { GRAVITE_LABELS, PROBLEME_STATUT_LABELS } from '../../utils/vocabulaire';
 
-export const ISSUE_STATUT_LABELS: Record<IssueStatut, string> = {
-  ouverte: 'Ouverte',
-  action_en_cours: 'Action en cours',
-  resolue: 'Résolue',
-  verifiee: 'Vérifiée',
-  reouverte: 'Réouverte',
-};
+export const ISSUE_STATUT_LABELS: Record<IssueStatut, string> = PROBLEME_STATUT_LABELS;
 
 export const ISSUE_STATUT_BADGE_VARIANT: Record<IssueStatut, 'info' | 'elevee' | 'positif'> = {
   ouverte: 'info',
@@ -16,12 +11,7 @@ export const ISSUE_STATUT_BADGE_VARIANT: Record<IssueStatut, 'info' | 'elevee' |
   reouverte: 'elevee',
 };
 
-export const ISSUE_SEVERITE_LABELS: Record<CriticiteType, string> = {
-  faible: 'Faible',
-  moyenne: 'Moyenne',
-  elevee: 'Élevée',
-  critique: 'Critique',
-};
+export const ISSUE_SEVERITE_LABELS: Record<CriticiteType, string> = GRAVITE_LABELS;
 
 export const STATUS_LABELS: Record<IdeaStatus, string> = {
   nouveau: 'Nouveau',

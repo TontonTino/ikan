@@ -59,7 +59,7 @@ def _check_can_create_categorie(agence: Agence, current_user: Utilisateur) -> No
         return
     raise HTTPException(
         status_code=403,
-        detail="Accès refusé. Seuls le CX Manager de votre organisation et l'Agency Manager de cette agence "
+        detail="Accès refusé. Seuls le CX Manager de votre organisation et le responsable de cette agence "
                "peuvent créer une catégorie.",
     )
 
@@ -304,9 +304,9 @@ def delete_agence(
             raise
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Impossible de supprimer cette agence : certaines de ses Issues sont à l'origine "
-                   "d'occurrences rattachées à une autre agence de votre organisation. "
-                   "Supprimez ou détachez d'abord ces occurrences, puis réessayez.",
+            detail="Impossible de supprimer cette agence : certains de ses problèmes à traiter sont reliés "
+                   "à des problèmes récurrents d'une autre agence de votre organisation. "
+                   "Détachez ou supprimez d'abord ces problèmes reliés, puis réessayez.",
         )
 
 

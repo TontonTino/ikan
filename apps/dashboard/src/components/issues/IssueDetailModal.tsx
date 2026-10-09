@@ -3,21 +3,10 @@ import type { IssueDetail, IssueStatut, CriticiteType } from '../../types';
 import Badge from '../ui/Badge';
 import SkeletonBlock from '../ui/SkeletonBlock';
 import { CheckCircleIcon, ClockIcon } from '../common/Icons';
+import { GRAVITE_LABELS, PROBLEME_STATUT_LABELS } from '../../utils/vocabulaire';
 
-const SEVERITE_LABELS: Record<CriticiteType, string> = {
-  faible: 'Faible',
-  moyenne: 'Moyenne',
-  elevee: 'Élevée',
-  critique: 'Critique',
-};
-
-const STATUT_LABELS: Record<IssueStatut, string> = {
-  ouverte: 'Ouverte',
-  action_en_cours: 'Action en cours',
-  resolue: 'Résolue',
-  verifiee: 'Vérifiée',
-  reouverte: 'Réouverte',
-};
+const SEVERITE_LABELS: Record<CriticiteType, string> = GRAVITE_LABELS;
+const STATUT_LABELS: Record<IssueStatut, string> = PROBLEME_STATUT_LABELS;
 
 const STATUT_BADGE_VARIANT: Record<IssueStatut, 'info' | 'elevee' | 'positif'> = {
   ouverte: 'info',
@@ -96,7 +85,7 @@ export default function IssueDetailModal({ issue, loading, onClose, onTerminerAc
               </div>
             )}
             <h2 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
-              {issue ? issue.titre : 'Issue'}
+              {issue ? issue.titre : 'Problème à traiter'}
             </h2>
             {issue?.agence_nom && (
               <div style={{ fontSize: '0.8rem', color: '#D6E8D9', marginTop: '4px' }}>{issue.agence_nom}</div>
@@ -138,19 +127,19 @@ export default function IssueDetailModal({ issue, loading, onClose, onTerminerAc
               )}
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>
-                <span>Détectée le {formatDate(issue.premiere_detection)}</span>
-                {issue.derniere_detection && <span>Dernière détection le {formatDate(issue.derniere_detection)}</span>}
-                {issue.date_resolution && <span>Résolue le {formatDate(issue.date_resolution)}</span>}
-                {issue.date_verification && <span>Vérifiée le {formatDate(issue.date_verification)}</span>}
+                <span>Enregistré le {formatDate(issue.premiere_detection)}</span>
+                {issue.derniere_detection && <span>Dernier avis rattaché le {formatDate(issue.derniere_detection)}</span>}
+                {issue.date_resolution && <span>Résolu le {formatDate(issue.date_resolution)}</span>}
+                {issue.date_verification && <span>Résolution vérifiée le {formatDate(issue.date_verification)}</span>}
               </div>
 
               {/* Feedbacks liés */}
               <div>
                 <h3 style={{ fontSize: '0.78rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#64748B', margin: '0 0 10px' }}>
-                  Feedbacks liés ({issue.feedbacks.length})
+                  Avis clients liés ({issue.feedbacks.length})
                 </h3>
                 {issue.feedbacks.length === 0 ? (
-                  <p style={{ margin: 0, fontSize: '0.84rem', color: '#94A3B8' }}>Aucun feedback rattaché.</p>
+                  <p style={{ margin: 0, fontSize: '0.84rem', color: '#94A3B8' }}>Aucun avis rattaché.</p>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {issue.feedbacks.map((fb) => (
@@ -171,10 +160,10 @@ export default function IssueDetailModal({ issue, loading, onClose, onTerminerAc
               {/* Actions correctives liées */}
               <div>
                 <h3 style={{ fontSize: '0.78rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#64748B', margin: '0 0 10px' }}>
-                  Actions correctives ({issue.actions.length})
+                  Actions à mener ({issue.actions.length})
                 </h3>
                 {issue.actions.length === 0 ? (
-                  <p style={{ margin: 0, fontSize: '0.84rem', color: '#94A3B8' }}>Aucune action corrective définie.</p>
+                  <p style={{ margin: 0, fontSize: '0.84rem', color: '#94A3B8' }}>Aucune action à mener définie.</p>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {issue.actions.map((action) => (
@@ -241,7 +230,7 @@ export default function IssueDetailModal({ issue, loading, onClose, onTerminerAc
               style={{ padding: '9px 18px', fontSize: '0.84rem', borderRadius: '12px', fontWeight: 800 }}
             >
               <ClockIcon size={15} />
-              Marquer vérifiée
+              Confirmer la résolution
             </button>
           </div>
         )}

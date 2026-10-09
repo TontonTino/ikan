@@ -22,7 +22,7 @@ interface Props {
 }
 
 type AlertTypeFilter = 'toutes' | 'seuil' | 'feedback';
-const TYPE_LABEL: Record<AlertTypeFilter, string> = { toutes: 'Toutes', seuil: 'Satisfaction', feedback: 'Feedbacks' };
+const TYPE_LABEL: Record<AlertTypeFilter, string> = { toutes: 'Toutes', seuil: 'Satisfaction', feedback: 'Avis clients' };
 
 /** Défile jusqu'à l'alerte ciblée par l'URL (#alerte-…), la met en évidence et lui donne le focus. */
 function useHashTarget(ready: boolean) {

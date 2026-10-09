@@ -331,7 +331,7 @@ export function buildSurveillance({ ranking, alertesSeuil, issuesOuvertes, jours
     if (a.alertes_critiques > 0) {
       ajouter(a.agence_id, a.agence_nom, {
         type: 'critiques',
-        texte: `${a.alertes_critiques} feedback${a.alertes_critiques > 1 ? 's' : ''} critique${a.alertes_critiques > 1 ? 's' : ''}`,
+        texte: `${a.alertes_critiques} avis critique${a.alertes_critiques > 1 ? 's' : ''}`,
         portee: periode,
       });
     }
@@ -360,7 +360,7 @@ export function buildSurveillance({ ranking, alertesSeuil, issuesOuvertes, jours
     const critiques = issues.filter((i) => i.severite === 'critique').length;
     ajouter(agenceId, nom, {
       type: 'issues',
-      texte: `${issues.length} Issue${issues.length > 1 ? 's' : ''} à traiter${critiques ? ` (dont ${critiques} critique${critiques > 1 ? 's' : ''})` : ''}`,
+      texte: `${issues.length} problème${issues.length > 1 ? 's' : ''} à traiter${critiques ? ` (dont ${critiques} critique${critiques > 1 ? 's' : ''})` : ''}`,
       portee: 'en cours',
     });
   }

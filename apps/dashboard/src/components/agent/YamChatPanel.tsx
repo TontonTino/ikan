@@ -158,7 +158,7 @@ export default function YamChatPanel({ open, onClose }: Props) {
           <YamAvatar size={28} />
           <div className="yam-bubble yam-bubble-assistant">
             <p className="yam-paragraph">
-              Bonjour, je suis <strong>YAM</strong>. Je peux analyser les feedbacks de votre
+              Bonjour, je suis <strong>YAM</strong>. Je peux analyser les avis de votre
               périmètre : alertes, thèmes, problèmes récurrents, tendances et recommandations.
             </p>
             {messages.length === 0 && (

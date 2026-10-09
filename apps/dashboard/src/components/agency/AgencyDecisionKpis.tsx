@@ -21,14 +21,15 @@ export default function AgencyDecisionKpis({ data, jours }: Props) {
         showSparkline={false}
         icon={<SmileIcon size={16} />}
         label="Satisfaction"
-        value={noFeedbacks ? 'Pas de données' : `${data.taux_satisfaction}%`}
-        subtitle={noFeedbacks ? 'sur cette période' : `sur ${data.nombre_feedbacks} feedbacks`}
+        hint="Part des avis notés 4 ou 5 sur 5 sur la période."
+        value={noFeedbacks ? 'Aucune donnée' : `${data.taux_satisfaction}%`}
+        subtitle={noFeedbacks ? 'sur cette période' : `sur ${data.nombre_feedbacks} avis`}
       />
       <KpiCard
         compact
         showSparkline={false}
         icon={<MessageSquareIcon size={16} />}
-        label="Feedbacks"
+        label="Avis clients"
         value={data.nombre_feedbacks}
         subtitle={`${jours} derniers jours · ${data.nombre_negatifs} négatif${data.nombre_negatifs !== 1 ? 's' : ''}`}
       />
@@ -36,7 +37,7 @@ export default function AgencyDecisionKpis({ data, jours }: Props) {
         compact
         showSparkline={false}
         icon={<AlertTriangleIcon size={16} />}
-        label="Feedbacks critiques"
+        label="Avis critiques"
         value={data.nombre_critiques}
         subtitle={`sur les ${jours} derniers jours`}
         tone={data.nombre_critiques > 0 ? 'critical' : 'neutral'}
@@ -45,9 +46,9 @@ export default function AgencyDecisionKpis({ data, jours }: Props) {
         compact
         showSparkline={false}
         icon={<AlertTriangleIcon size={16} />}
-        label="À traiter"
+        label="Avis à traiter"
         value={data.feedbacks_a_traiter}
-        subtitle={`${data.actions_ouvertes} action${data.actions_ouvertes !== 1 ? 's' : ''} corrective${data.actions_ouvertes !== 1 ? 's' : ''} ouverte${data.actions_ouvertes !== 1 ? 's' : ''}`}
+        subtitle={`${data.actions_ouvertes} action${data.actions_ouvertes !== 1 ? 's' : ''} à mener en cours`}
         badgeColor={data.feedbacks_a_traiter > 0 ? 'red' : 'green'}
       />
       <KpiCard
@@ -55,8 +56,8 @@ export default function AgencyDecisionKpis({ data, jours }: Props) {
         showSparkline={false}
         icon={<CheckCircleIcon size={16} />}
         label="Prise en charge"
-        value={data.taux_prise_en_charge === null ? 'Pas de données' : `${data.taux_prise_en_charge}%`}
-        subtitle="feedbacks ayant quitté le statut Nouveau"
+        value={data.taux_prise_en_charge === null ? 'Aucune donnée' : `${data.taux_prise_en_charge}%`}
+        subtitle="avis ayant quitté le statut Nouveau"
       />
     </div>
   );

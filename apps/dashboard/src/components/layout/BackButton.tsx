@@ -11,8 +11,8 @@ export interface BackButtonProps {
 
 // Origines connues (state.retour) -> complément de phrase correct en français.
 const RETOUR_LABELS: Record<string, string> = {
-  'Vue Siège': 'à la Vue Siège',
-  Répertoire: 'au Répertoire',
+  'Vue Siège': 'à la vue d’ensemble',
+  Répertoire: 'à la gestion des agences',
 };
 
 /**

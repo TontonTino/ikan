@@ -33,8 +33,8 @@ const STATUT_TONE: Record<StatutSeuil, 'success' | 'critical' | 'neutral' | 'out
 
 export const KPI_TITRE: Record<KpiKind, string> = {
   satisfaction: 'Satisfaction par agence',
-  volume: 'Feedbacks par agence',
-  critiques: 'Feedbacks critiques par agence',
+  volume: 'Avis par agence',
+  critiques: 'Avis critiques par agence',
   seuil: 'Agences sous leur seuil',
 };
 
@@ -132,14 +132,14 @@ export function KpiDetail({
         onRowClick={(a) => onOpenAgence(a.agence_id)}
         rowLabel={(a) => `Ouvrir le détail de ${a.agence_nom}`}
         defaultSort={defaultSort}
-        emptyTitle={kind === 'critiques' ? 'Aucun feedback critique sur cette période.' : 'Aucune agence.'}
+        emptyTitle={kind === 'critiques' ? 'Aucun avis critique sur cette période.' : 'Aucune agence.'}
         columns={columns}
       />
       <div className="siege-drawer-actions">
         {kind === 'satisfaction' ? (
           <Button variant="secondary" onClick={() => navigate('/statistiques')}>Analyse détaillée</Button>
         ) : (
-          <Button variant="secondary" onClick={() => navigate('/feedbacks')}>Voir les feedbacks</Button>
+          <Button variant="secondary" onClick={() => navigate('/feedbacks')}>Voir les avis</Button>
         )}
       </div>
     </>
@@ -221,7 +221,7 @@ export function AgenceDetail({
             loading={stats.status === 'loading'}
             value={k ? satisfactionTexte(k.satisfaction?.valeur_num ?? null, avis) : '—'}
             tone={statut === 'sous' ? 'critical' : avis ? 'positive' : 'neutral'}
-            trend={sat ? { value: sat.text, isPositive: sat.isPositive, direction: sat.direction, period: 'vs période préc.' } : undefined}
+            trend={sat ? { value: sat.text, isPositive: sat.isPositive, direction: sat.direction, period: 'vs période précédente' } : undefined}
             subtitle={k ? `${avis} avis · ${periode}` : undefined}
             sparkline={sparkline}
           />
@@ -229,11 +229,11 @@ export function AgenceDetail({
           <KpiCard
             compact
             icon={<AlertTriangleIcon />}
-            label="Feedbacks critiques"
+            label="Avis critiques"
             loading={stats.status === 'loading'}
             value={k ? String(k.alertes_critiques?.valeur_num ?? 0) : '—'}
             tone={(k?.alertes_critiques?.valeur_num ?? 0) > 0 ? 'critical' : 'neutral'}
-            trend={crit ? { value: crit.text, isPositive: crit.isPositive, direction: crit.direction, period: 'vs période préc.' } : undefined}
+            trend={crit ? { value: crit.text, isPositive: crit.isPositive, direction: crit.direction, period: 'vs période précédente' } : undefined}
             subtitle={periode}
           />
         </div>
@@ -252,7 +252,7 @@ export function AgenceDetail({
           <Skeleton variant="text" />
         ) : theme ? (
           <p className="siege-drawer__line">
-            <strong>{theme.label}</strong> — {theme.pourcentage.toLocaleString('fr-FR')} % des retours analysés ({theme.count} mention{theme.count > 1 ? 's' : ''})
+            <strong>{theme.label}</strong> — {theme.pourcentage.toLocaleString('fr-FR')} % des avis analysés ({theme.count} mention{theme.count > 1 ? 's' : ''})
           </p>
         ) : (
           <p className="siege-note">Aucun thème détecté sur la période.</p>
@@ -264,8 +264,8 @@ export function AgenceDetail({
         <h3 id="drawer-suivi" className="siege-subtitle">Suivi en cours — toutes périodes</h3>
         <ul className="siege-drawer__list">
           <li>
-            {issues.status === 'loading' ? <Skeleton variant="text" width={180} /> : issues.status === 'error' ? 'Issues indisponibles' : (
-              <><strong>{issues.data.tronquee ? '≥ ' : ''}{issuesAction}</strong> Issue{issuesAction !== 1 ? 's' : ''} ouverte{issuesAction !== 1 ? 's' : ''} nécessitant une action</>
+            {issues.status === 'loading' ? <Skeleton variant="text" width={180} /> : issues.status === 'error' ? 'Problèmes à traiter indisponibles' : (
+              <><strong>{issues.data.tronquee ? '≥ ' : ''}{issuesAction}</strong> problème{issuesAction !== 1 ? 's' : ''} en cours nécessitant une action</>
             )}
           </li>
           <li>
@@ -279,7 +279,7 @@ export function AgenceDetail({
       <div className="siege-drawer-actions">
         <Button onClick={() => navigate(`/agences/${agenceId}/apercu`)}>Voir l'agence</Button>
         <AskYam question={`Pourquoi la satisfaction de l'agence ${agenceNom} évolue-t-elle ainsi sur les ${YAM_PERIODE}, et quelles actions recommandes-tu ?`} />
-        <BlockLink to="/issues">Voir les Issues</BlockLink>
+        <BlockLink to="/issues">Voir les problèmes</BlockLink>
       </div>
     </div>
   );

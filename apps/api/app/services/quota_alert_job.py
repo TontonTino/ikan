@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 # clé dans le dict retourné par utilisation_organisation() -> (code métrique stocké
 # en base, libellé affiché dans l'email)
 METRIQUES = {
-    "feedbacks_ce_mois": ("feedbacks", "Feedbacks ce mois-ci"),
+    "feedbacks_ce_mois": ("feedbacks", "Avis clients reçus ce mois-ci"),
     "agences": ("agences", "Agences"),
     "cx_managers": ("cx_managers", "CX Managers"),
 }

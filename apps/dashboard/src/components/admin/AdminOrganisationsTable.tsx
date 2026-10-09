@@ -61,7 +61,7 @@ export default function AdminOrganisationsTable({
 
   // Helper pour formater la date relative / d'activité
   const formatRelativeActivity = (isoDate?: string | null) => {
-    if (!isoDate) return "Récemment";
+    if (!isoDate) return "Aucune connexion enregistrée";
     try {
       const date = new Date(isoDate);
       const now = new Date();
@@ -70,14 +70,14 @@ export default function AdminOrganisationsTable({
       const diffHours = Math.floor(diffMins / 60);
       const diffDays = Math.floor(diffHours / 24);
 
-      if (diffMins < 5) return "Il y a 5 min";
+      if (diffMins < 5) return "À l’instant";
       if (diffMins < 60) return `Il y a ${diffMins} min`;
       if (diffHours < 24) return `Il y a ${diffHours} h`;
       if (diffDays === 1) return "Hier";
       if (diffDays < 7) return `Il y a ${diffDays} j`;
       return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
     } catch {
-      return "Récemment";
+      return "Date inconnue";
     }
   };
 
@@ -144,7 +144,7 @@ export default function AdminOrganisationsTable({
               fontWeight: 500,
             }}
           >
-            Supervision hiérarchique : CX Managers, Agency Managers, Agences et Forfaits
+            CX Managers, responsables d’agence, agences et forfaits de chaque organisation
           </p>
         </div>
 
@@ -238,7 +238,7 @@ export default function AdminOrganisationsTable({
               {[
                 { label: 'Organisation', align: 'left' },
                 { label: 'CX Managers', align: 'center' },
-                { label: 'Agency Managers', align: 'center' },
+                { label: 'Responsables d’agence', align: 'center' },
                 { label: 'Agences', align: 'center' },
                 { label: 'Forfait', align: 'center' },
                 { label: 'Statut', align: 'center' },
@@ -685,11 +685,11 @@ export default function AdminOrganisationsTable({
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                                   <UsersIcon size={16} color="#3C7730" />
                                   <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#3C7730', textTransform: 'uppercase' }}>
-                                    Agency Managers ({org.agency_managers.length})
+                                    Responsables d’agence ({org.agency_managers.length})
                                   </span>
                                 </div>
                                 {org.agency_managers.length === 0 ? (
-                                  <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Aucun Agency Manager</div>
+                                  <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Aucun responsable d’agence</div>
                                 ) : (
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                     {org.agency_managers.map((am) => (
@@ -754,7 +754,7 @@ export default function AdminOrganisationsTable({
                                     <thead>
                                       <tr style={{ background: '#F1F5F2', borderBottom: '1px solid #E2E8F0' }}>
                                         <th style={{ textAlign: 'left', padding: '10px 14px', color: '#475569', fontWeight: 700, borderRadius: '8px 0 0 8px' }}>Nom</th>
-                                        <th style={{ textAlign: 'left', padding: '10px 14px', color: '#475569', fontWeight: 700 }}>Email</th>
+                                        <th style={{ textAlign: 'left', padding: '10px 14px', color: '#475569', fontWeight: 700 }}>E-mail</th>
                                         <th style={{ textAlign: 'left', padding: '10px 14px', color: '#475569', fontWeight: 700 }}>Rôle</th>
                                         <th style={{ textAlign: 'left', padding: '10px 14px', color: '#475569', fontWeight: 700 }}>Agences</th>
                                         <th style={{ textAlign: 'center', padding: '10px 14px', color: '#475569', fontWeight: 700 }}>Statut</th>

@@ -14,8 +14,8 @@ import { AlertTriangleIcon, ClockIcon, XCloseIcon } from '../../components/commo
 
 const SOURCE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   stripe: { label: 'Stripe', color: '#3C7730', bg: '#EAF5EC' },
-  admin_override: { label: 'Override Admin', color: '#B45309', bg: '#FEF3C7' },
-  auto_downgrade: { label: 'Dégradation auto', color: '#B91C1C', bg: '#FEE2E2' },
+  admin_override: { label: 'Changement manuel (admin)', color: '#B45309', bg: '#FEF3C7' },
+  auto_downgrade: { label: 'Retour automatique au forfait Gratuit', color: '#B91C1C', bg: '#FEE2E2' },
 };
 
 function cardStyle(): React.CSSProperties {
@@ -60,7 +60,7 @@ function ModaleChangerForfait({
       await organisationsApi.changerPlan(org.id, planId, raison.trim());
       onSuccess();
     } catch (err: any) {
-      setErreur(err?.response?.data?.detail || 'Erreur lors du changement de forfait.');
+      setErreur(err?.response?.data?.detail || 'Impossible de changer le forfait. Réessayez.');
     } finally {
       setEnvoi(false);
     }
@@ -264,7 +264,7 @@ export default function AdminFacturationPage() {
         ))}
         <div style={{ ...cardStyle(), background: '#EAF5EC', border: '1px solid #CFE3D3' }}>
           <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#3C7730', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-            Conversion Gratuit→payant (30j)
+            Passage du forfait Gratuit à un forfait payant (30 jours)
           </div>
           <div style={{ fontSize: '1.7rem', fontWeight: 800, color: '#02302D', marginTop: '4px' }}>
             {vueEnsemble?.taux_conversion_30j === null || vueEnsemble?.taux_conversion_30j === undefined
@@ -284,7 +284,7 @@ export default function AdminFacturationPage() {
           Paiements en échec
         </h3>
         <p style={{ margin: '0 0 14px', fontSize: '0.8rem', color: '#64748B' }}>
-          Triés par proximité de la dégradation automatique en Gratuit (7 jours de grâce).
+          Triés par date du retour automatique au forfait Gratuit (7 jours de délai après l’échec).
         </p>
 
         {!paiementsEchoues || paiementsEchoues.length === 0 ? (
@@ -316,8 +316,8 @@ export default function AdminFacturationPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: critique ? '#B91C1C' : '#B45309', fontWeight: 700, fontSize: '0.8rem' }}>
                     <ClockIcon size={14} color={critique ? '#B91C1C' : '#B45309'} />
                     {p.jours_restants_avant_degradation <= 0
-                      ? 'Dégradation imminente'
-                      : `${p.jours_restants_avant_degradation} jour(s) avant dégradation`}
+                      ? 'Retour au forfait Gratuit imminent'
+                      : `${p.jours_restants_avant_degradation} jour(s) avant le retour au forfait Gratuit`}
                   </div>
                 </div>
               );

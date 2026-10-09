@@ -46,10 +46,10 @@ export default function AlertesSyntheseCard({
           </div>
           <div>
             <div style={{ fontSize: '0.90rem', fontWeight: 800, color: '#02302D' }}>
-              Synthèse des Alertes Critiques
+              Avis de gravité critique
             </div>
             <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
-              Détection automatique par le moteur de criticité IA
+              Gravité calculée automatiquement à partir de la note, du ton et de mots-clés
             </div>
           </div>
         </div>
@@ -65,7 +65,7 @@ export default function AlertesSyntheseCard({
               fontSize: '0.84rem',
             }}
           >
-            {alertes.total_critiques} critique{alertes.total_critiques > 1 ? 's' : ''}
+            {alertes.total_critiques} avis critique{alertes.total_critiques > 1 ? 's' : ''}
           </span>
           {alertes.evolution_pct && (
             <span
@@ -83,7 +83,7 @@ export default function AlertesSyntheseCard({
               ) : (
                 <ArrowUpRightIcon size={12} color="#DC2626" />
               )}
-              {alertes.evolution_pct}
+              {alertes.evolution_pct} vs période précédente
             </span>
           )}
         </div>
@@ -141,7 +141,7 @@ export default function AlertesSyntheseCard({
         </div>
       ) : (
         <div style={{ fontSize: '0.80rem', color: '#3C7730', fontWeight: 600 }}>
-          ✅ Aucune alerte critique sur cette période. Toutes les agences respectent leurs seuils.
+          ✅ Aucun avis critique sur cette période.
         </div>
       )}
     </div>

@@ -177,7 +177,7 @@ def test_definitions(code):
     assert d.unit == "percent"
     assert d.famille == "sectoriel"
     assert d.secteur_code == "telecom"
-    assert "basé sur les feedbacks" in d.label
+    assert "d’après les avis" in d.label
     assert code in KPI_FUNCTIONS
 
 

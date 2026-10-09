@@ -39,7 +39,7 @@ export default function SentimentDonutChart({
           border: '1px dashed #D6E8D9',
         }}
       >
-        Aucun sentiment analysé pour cette période.
+        Aucun avis analysé pour cette période.
       </div>
     );
   }

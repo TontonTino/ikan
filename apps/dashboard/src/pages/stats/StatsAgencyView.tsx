@@ -37,7 +37,7 @@ export default function StatsAgencyView() {
       const res = await statisticsApi.agency({ jours });
       setData(res.data);
     } catch (err: any) {
-      setError(err?.response?.data?.detail || "Erreur lors du chargement des statistiques de l'agence.");
+      setError(err?.response?.data?.detail || "Impossible de charger les statistiques de l’agence.");
     } finally {
       setLoading(false);
     }
@@ -62,11 +62,11 @@ export default function StatsAgencyView() {
   const kpis = data?.kpis || {};
 
   const tabsConfig = [
-    { id: 'satisfaction', label: 'Satisfaction & Flux', icon: <SmileIcon size={16} /> },
-    { id: 'sentiments_themes', label: 'Sentiments & Thématiques', icon: <TagIcon size={16} /> },
+    { id: 'satisfaction', label: 'Satisfaction et volume', icon: <SmileIcon size={16} /> },
+    { id: 'sentiments_themes', label: 'Ton des avis et thèmes', icon: <TagIcon size={16} /> },
     {
       id: 'alertes',
-      label: 'Alertes & Conseils IA',
+      label: 'Avis critiques et analyse',
       badge: data?.alertes_synthese.total_critiques,
       badgeColor: (data?.alertes_synthese.total_critiques || 0) > 0 ? ('red' as const) : ('default' as const),
     },
@@ -84,8 +84,8 @@ export default function StatsAgencyView() {
     >
       {/* Header */}
       <PageHeader
-        title="Statistiques & Analyses"
-        subtitle={`Analyse locale approfondie de l'agence ${data?.agence_nom || ''} (${data?.periode_label || '30 derniers jours'})`}
+        title="Statistiques"
+        subtitle={`Agence ${data?.agence_nom || ''} (${data?.periode_label || '30 derniers jours'})`}
         onRefresh={fetchData}
         onExport={handleExport}
       >
@@ -105,14 +105,15 @@ export default function StatsAgencyView() {
         >
           <KpiCard
             icon={<SmileIcon size={20} />}
-            label="Satisfaction locale"
+            label="Satisfaction"
+            hint="Part des avis notés 4 ou 5 sur 5 sur la période."
             value={kpis.satisfaction?.valeur ?? "Pas d'avis"}
             trend={
               kpis.satisfaction?.evolution
                 ? {
                     value: kpis.satisfaction.evolution,
                     isPositive: kpis.satisfaction.is_positive,
-                    period: 'vs. période préc.',
+                    period: 'vs période précédente',
                   }
                 : undefined
             }
@@ -124,14 +125,14 @@ export default function StatsAgencyView() {
 
           <KpiCard
             icon={<MessageSquareIcon size={20} />}
-            label="Feedbacks reçus"
+            label="Avis reçus"
             value={kpis.total_feedbacks?.valeur ?? 0}
             trend={
               kpis.total_feedbacks?.evolution
                 ? {
                     value: kpis.total_feedbacks.evolution,
                     isPositive: kpis.total_feedbacks.is_positive,
-                    period: 'vs. période préc.',
+                    period: 'vs période précédente',
                   }
                 : undefined
             }
@@ -141,14 +142,15 @@ export default function StatsAgencyView() {
 
           <KpiCard
             icon={<TrendingUpIcon size={20} />}
-            label="Taux de traitement"
+            label="Avis pris en charge"
+            hint="Part des avis de la période ouverts par l’agence ou plus avancés (action en cours, résolus). Ne mesure pas la résolution."
             value={kpis.taux_traitement?.valeur ?? "Pas d'avis"}
             trend={
               kpis.taux_traitement?.evolution
                 ? {
                     value: kpis.taux_traitement.evolution,
                     isPositive: kpis.taux_traitement.is_positive,
-                    period: 'vs. période préc.',
+                    period: 'vs période précédente',
                   }
                 : undefined
             }
@@ -179,15 +181,15 @@ export default function StatsAgencyView() {
           {activeTab === 'satisfaction' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <StatsSectionCard
-                title="Évolution Détaillée de la Satisfaction Locale"
-                subtitle="Courbe de suivi au fil des jours"
+                title="Évolution de la satisfaction"
+                subtitle="Part des avis notés 4 ou 5 sur 5, période par période"
               >
                 <SatisfactionEvolutionChart data={data.evolution_satisfaction} height={260} />
               </StatsSectionCard>
 
               <StatsSectionCard
-                title="Avis Critiques / Négatifs Reçus et Pris en Charge"
-                subtitle="Activité quotidienne en agence"
+                title="Avis critiques ou négatifs : reçus et pris en charge"
+                subtitle="Avis reçus comparés aux avis pris en charge par l’agence"
               >
                 <VolumeEvolutionChart data={data.evolution_volume} height={260} showTreated={true} />
               </StatsSectionCard>
@@ -199,15 +201,15 @@ export default function StatsAgencyView() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '20px' }}>
                 <StatsSectionCard
-                  title="Climat Émotionnel de l'Agence"
-                  subtitle="Proportion de retours favorables et axes d'amélioration"
+                  title="Ton des avis"
+                  subtitle="Ton détecté automatiquement à partir du commentaire (ou de la note si l’avis n’a pas de commentaire)"
                 >
                   <SentimentDonutChart data={data.sentiments} height={240} />
                 </StatsSectionCard>
 
                 <StatsSectionCard
-                  title="Principaux Thèmes Remontés"
-                  subtitle="Points clés mentionnés par les clients de l'agence"
+                  title="Thèmes les plus cités"
+                  subtitle="Selon la catégorie choisie par le client dans le formulaire"
                 >
                   <ThemesBarList themes={data.themes} maxItems={8} />
                 </StatsSectionCard>

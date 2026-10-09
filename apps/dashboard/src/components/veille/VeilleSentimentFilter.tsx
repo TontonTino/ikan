@@ -18,7 +18,7 @@ export default function VeilleSentimentFilter({ value, onChange }: VeilleSentime
   return (
     <div
       role="group"
-      aria-label="Filtrer les mentions par sentiment"
+      aria-label="Filtrer les mentions par ton"
       style={{
         display: 'inline-flex',
         alignItems: 'center',

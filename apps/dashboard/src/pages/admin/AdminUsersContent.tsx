@@ -30,7 +30,7 @@ type UserRow = {
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Administrateur',
   cx_manager: 'CX Manager (Siège)',
-  agency_manager: "Chef d'Agence",
+  agency_manager: "Responsable d’agence",
 };
 
 const ROLE_BADGES: Record<string, { bg: string; text: string; border: string }> = {
@@ -147,7 +147,7 @@ export default function AdminUsersContent() {
         showToast(isAdmin ? 'CX Manager modifié' : 'Utilisateur modifié');
       } else {
         await utilisateursApi.create(payload);
-        showToast(isAdmin ? 'CX Manager créé' : "Chef d'agence créé");
+        showToast(isAdmin ? 'CX Manager créé' : "Responsable d’agence créé");
       }
 
       const r = await utilisateursApi.list();
@@ -155,7 +155,7 @@ export default function AdminUsersContent() {
       setShowForm(false);
       setEditingUser(null);
     } catch (err: any) {
-      showToast(err.response?.data?.detail || "Erreur lors de l'enregistrement");
+      showToast(err.response?.data?.detail || "Impossible d’enregistrer. Vérifiez les informations puis réessayez.");
     } finally {
       setSaving(false);
     }
@@ -186,11 +186,11 @@ export default function AdminUsersContent() {
   }, [users, isAdmin, isCXManager, search]);
 
   const tabsConfig = [
-    { id: 'equipe', label: 'Équipe & Accès', icon: <UsersIcon size={16} />, badge: displayedUsers.length },
-    { id: 'activite', label: 'Activité & Prises en charge', icon: <ClockIcon size={16} /> },
+    { id: 'equipe', label: 'Équipe et accès', icon: <UsersIcon size={16} />, badge: displayedUsers.length },
+    { id: 'activite', label: 'Activité', icon: <ClockIcon size={16} /> },
   ];
 
-  if (loading) return <div style={{ padding: '32px', color: '#64748B', fontWeight: 600 }}>Chargement des utilisateurs...</div>;
+  if (loading) return <div style={{ padding: '32px', color: '#64748B', fontWeight: 600 }}>Chargement des utilisateurs…</div>;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
@@ -204,7 +204,7 @@ export default function AdminUsersContent() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#02302D' }}>
-            {isAdmin ? `CX Managers (${displayedUsers.length})` : `Chefs d'Agence (${displayedUsers.length})`}
+            {isAdmin ? `CX Managers (${displayedUsers.length})` : `Responsables d’agence (${displayedUsers.length})`}
           </h2>
           <p style={{ margin: '4px 0 0', fontSize: '0.84rem', color: '#64748B' }}>
             {isAdmin ? 'Gérez les accès et les comptes des responsables CX.' : 'Gérez les comptes des responsables d’agences du réseau.'}
@@ -237,7 +237,7 @@ export default function AdminUsersContent() {
           }}
         >
           <PlusIcon size={16} />
-          {isCXManager ? "Nouveau Chef d'Agence" : (showForm ? 'Fermer' : 'Nouveau CX Manager')}
+          {isCXManager ? "Nouveau responsable d’agence" : (showForm ? 'Fermer' : 'Nouveau CX Manager')}
         </button>
       </div>
 
@@ -246,7 +246,7 @@ export default function AdminUsersContent() {
           onClose={() => setShowCreateAgencyManager(false)}
           onCreated={() => {
             utilisateursApi.list().then((r) => setUsers(r.data));
-            showToast("Chef d'agence créé");
+            showToast("Responsable d’agence créé");
           }}
         />
       )}
@@ -262,7 +262,7 @@ export default function AdminUsersContent() {
       {showForm && (
         <div style={{ background: '#FFFFFF', borderRadius: '24px', padding: '24px 28px', border: '1px solid #D6E8D9', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
           <h3 style={{ margin: '0 0 16px', fontSize: '1.1rem', fontWeight: 800, color: '#02302D' }}>
-            {editingUser ? "Modifier l'utilisateur" : (isAdmin ? 'Créer un CX Manager' : "Créer un Chef d'Agence")}
+            {editingUser ? "Modifier l'utilisateur" : (isAdmin ? 'Créer un CX Manager' : "Créer un responsable d’agence")}
           </h3>
 
           <form onSubmit={saveUser} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
@@ -289,7 +289,7 @@ export default function AdminUsersContent() {
             </div>
 
             <div>
-              <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Email professionnel *</label>
+              <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>E-mail professionnel *</label>
               <input
                 type="email"
                 required
@@ -358,7 +358,7 @@ export default function AdminUsersContent() {
             <SearchIcon size={16} color="#94A3B8" />
             <input
               type="text"
-              placeholder="Rechercher par nom, prénom ou email..."
+              placeholder="Rechercher par nom, prénom ou e-mail…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{ border: 'none', marginLeft: '10px', width: '100%', fontSize: '0.86rem' }}
@@ -370,7 +370,7 @@ export default function AdminUsersContent() {
               <thead>
                 <tr style={{ borderBottom: '1px solid #E8ECE6', background: '#F8FAFB' }}>
                   <th style={{ textAlign: 'left', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.76rem', textTransform: 'uppercase' }}>Utilisateur</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.76rem', textTransform: 'uppercase' }}>Email</th>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.76rem', textTransform: 'uppercase' }}>E-mail</th>
                   <th style={{ textAlign: 'left', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.76rem', textTransform: 'uppercase' }}>Rôle</th>
                   <th style={{ textAlign: 'center', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.76rem', textTransform: 'uppercase' }}>Statut</th>
                   <th style={{ textAlign: 'right', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.76rem', textTransform: 'uppercase' }}>Actions</th>
@@ -428,23 +428,15 @@ export default function AdminUsersContent() {
       {activeTab === 'activite' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ background: '#FFFFFF', borderRadius: '20px', padding: '24px', border: '1px solid #E8ECE6' }}>
-            <h3 style={{ margin: '0 0 14px', fontSize: '1rem', fontWeight: 800, color: '#02302D' }}>
-              Activité des Gestionnaires et Prises en Charge
+            <h3 style={{ margin: '0 0 8px', fontSize: '1rem', fontWeight: 800, color: '#02302D' }}>
+              Activité des utilisateurs
             </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {displayedUsers.map((u) => (
-                <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#F8FAFC', borderRadius: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <CheckCircleIcon size={16} color="#3C7730" />
-                    <div>
-                      <strong style={{ fontSize: '0.86rem', color: '#02302D' }}>{u.prenom} {u.nom}</strong>
-                      <div style={{ fontSize: '0.74rem', color: '#64748B' }}>Dernière action : Traitement des retours clients</div>
-                    </div>
-                  </div>
-                  <span style={{ fontSize: '0.74rem', color: '#3C7730', fontWeight: 700 }}>Connecté récemment</span>
-                </div>
-              ))}
-            </div>
+            {/* Aucune donnée d'activité (dernière connexion, dernière action) n'est exposée par
+                GET /utilisateurs/ : on ne l'invente pas. */}
+            <p style={{ margin: 0, fontSize: '0.86rem', color: '#64748B', lineHeight: 1.5 }}>
+              L’historique d’activité des utilisateurs (connexions, avis pris en charge) n’est pas encore disponible.
+              Le suivi des avis se fait aujourd’hui depuis la page Avis clients.
+            </p>
           </div>
         </div>
       )}

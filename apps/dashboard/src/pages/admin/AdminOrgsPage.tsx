@@ -196,7 +196,7 @@ export default function AdminOrgsPage() {
 
             <div>
               <label style={{ display: 'block', fontWeight: 700, marginBottom: '6px', fontSize: '0.84rem', color: '#1E293B' }}>
-                Email professionnel *
+                E-mail professionnel *
               </label>
               <input
                 type="email"
@@ -369,7 +369,7 @@ export default function AdminOrgsPage() {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
           <thead style={{ background: '#F8FAFB', borderBottom: '1px solid #E8ECE6' }}>
             <tr>
-              {['Organisation', "Secteur d'activité", 'Pays / Région', 'Email Pro', 'Statut', 'Actions'].map((h) => (
+              {['Organisation', "Secteur d'activité", 'Pays / Région', 'E-mail professionnel', 'Statut', 'Actions'].map((h) => (
                 <th
                   key={h}
                   style={{

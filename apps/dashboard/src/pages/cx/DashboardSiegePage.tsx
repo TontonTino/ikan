@@ -65,9 +65,9 @@ export default function DashboardSiegePage() {
     [ranking, alertes, issues, jours],
   );
   const sourcesIndisponibles = [
-    stats.status === 'error' && 'feedbacks critiques et baisses',
+    stats.status === 'error' && 'avis critiques et baisses',
     alertes.status === 'error' && 'seuils (alertes)',
-    issues.status === 'error' && 'Issues',
+    issues.status === 'error' && 'problèmes à traiter',
   ].filter(Boolean) as string[];
 
   const repartition = stats.status === 'ok' ? repartitionReseau(ranking, seuils) : null;

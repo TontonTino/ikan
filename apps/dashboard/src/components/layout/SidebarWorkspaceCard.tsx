@@ -156,7 +156,7 @@ export default function SidebarWorkspaceCard({ user, collapsed = false }: Sideba
   const orgLogo = (!isAdmin && !imgError && user.organisation_logo) ? user.organisation_logo : null;
 
   // Calcul du sous-titre de l'espace
-  let spaceSub = 'Espace de Travail';
+  let spaceSub = 'Espace de travail';
   if (isAdmin) {
     spaceSub = 'Espace Administration';
   } else if (user.role === 'cx_manager') {

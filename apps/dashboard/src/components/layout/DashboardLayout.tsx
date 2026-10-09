@@ -33,13 +33,13 @@ interface BackRoute {
 }
 
 const dashboardDuRole = (role: UserRole): BackFallback =>
-  role === 'agency_manager' ? { to: '/agence', label: 'au Dashboard Agence' } : { to: '/siege', label: 'au Dashboard' };
+  role === 'agency_manager' ? { to: '/agence', label: 'à la vue d’ensemble' } : { to: '/siege', label: 'à la vue d’ensemble' };
 
 const BACK_ROUTES: BackRoute[] = [
   {
     pattern: '/agences/:agenceId/apercu',
     roles: ['cx_manager', 'agency_manager'],
-    fallback: (role) => (role === 'cx_manager' ? { to: '/admin/gestion-agences', label: 'au Répertoire' } : dashboardDuRole(role)),
+    fallback: (role) => (role === 'cx_manager' ? { to: '/admin/gestion-agences', label: 'à la gestion des agences' } : dashboardDuRole(role)),
   },
   { pattern: '/parametres', roles: ['cx_manager', 'agency_manager'], fallback: dashboardDuRole },
 ];
@@ -230,26 +230,26 @@ export default function DashboardLayout() {
 
   // Fil d'Ariane dynamique
   const getBreadcrumb = () => {
-    if (location.pathname.includes('/statistiques')) return user?.role === 'admin' ? 'Statistiques de la plateforme' : 'Performance CX';
+    if (location.pathname.includes('/statistiques')) return user?.role === 'admin' ? 'Statistiques de la plateforme' : 'Statistiques';
     if (location.pathname.includes('/admin/organisations')) return 'Organisations';
     if (location.pathname.includes('/admin/facturation')) return 'Facturation';
     if (location.pathname.includes('/admin/gestion-agences')) return 'Gestion des agences';
-    if (location.pathname.includes('/admin/permissions')) return 'Permissions';
+    if (location.pathname.includes('/admin/permissions')) return 'Rôles & permissions';
     if (location.pathname.includes('/admin/settings')) return 'Paramètres';
     if (location.pathname.includes('/parametres')) return 'Paramètres';
     if (location.pathname.includes('/mon-agence')) return 'Mon agence';
     if (location.pathname.includes('/apercu')) return 'Agence';
-    if (location.pathname.includes('/admin/dashboard')) return 'Dashboard';
+    if (location.pathname.includes('/admin/dashboard')) return 'Tableau de bord';
     if (location.pathname.includes('/siege')) return 'Vue d\'ensemble';
     if (location.pathname.includes('/agence')) return 'Vue d\'ensemble';
-    if (location.pathname.includes('/feedbacks')) return 'Feedbacks';
+    if (location.pathname.includes('/feedbacks')) return 'Avis clients';
     if (location.pathname.includes('/alertes')) return 'Alertes';
-    if (location.pathname.includes('/actions')) return 'Actions correctives';
-    if (location.pathname.includes('/issues')) return 'Issues';
-    if (location.pathname.includes('/veille')) return 'Veille';
+    if (location.pathname.includes('/actions')) return 'Actions à mener';
+    if (location.pathname.includes('/issues')) return 'Problèmes à traiter';
+    if (location.pathname.includes('/veille')) return 'Veille réseaux sociaux';
     if (location.pathname.includes('/suggestions')) return 'Suggestions';
     if (location.pathname.includes('/demandes-rappel')) return 'Demandes de rappel';
-    return 'Dashboard';
+    return 'Tableau de bord';
   };
 
   // Pages dont la bannière d'en-tête (et donc le fil d'Ariane) a été retirée :

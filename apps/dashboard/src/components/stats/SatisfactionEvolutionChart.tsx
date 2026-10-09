@@ -38,7 +38,7 @@ function CustomTooltip({ active, payload, label }: any) {
           <span style={{ fontWeight: 800, fontSize: '0.90rem' }}>{pt.satisfaction}%</span>
         </div>
         <div style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '4px' }}>
-          {pt.feedbacks} avis ({pt.positifs} pos, {pt.neutres} neu, {pt.negatifs} nég)
+          {pt.feedbacks} avis ({pt.positifs} positifs, {pt.neutres} neutres, {pt.negatifs} négatifs)
         </div>
       </div>
     );

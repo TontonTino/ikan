@@ -16,8 +16,8 @@ export type PilotageSection = 'alertes' | 'suggestions' | 'actions' | 'issues';
 const SECTION_HEADER: Record<PilotageSection, { title: string; cx: string; agency: string }> = {
   alertes: {
     title: 'Alertes',
-    cx: 'Agences sous leur seuil de satisfaction, feedbacks à risque et recommandations IA du réseau : filtrer, analyser, traiter.',
-    agency: 'Ce qui demande votre attention dans votre agence : seuil de satisfaction, feedbacks à risque, recommandations IA.',
+    cx: 'Agences sous leur seuil de satisfaction, avis à risque et recommandations du réseau. Une alerte signale une situation ; elle ne crée pas de problème à traiter.',
+    agency: 'Ce qui demande votre attention dans votre agence : satisfaction sous le seuil, avis à risque, recommandations.',
   },
   suggestions: {
     title: 'Suggestions',
@@ -25,14 +25,14 @@ const SECTION_HEADER: Record<PilotageSection, { title: string; cx: string; agenc
     agency: 'Idées remontées par les clients de votre agence : étudier, décider, suivre.',
   },
   actions: {
-    title: 'Actions correctives',
-    cx: 'Suivi des actions décidées dans le réseau, en cours et réalisées.',
-    agency: 'Suivi de vos actions, en cours et réalisées.',
+    title: 'Actions à mener',
+    cx: 'Actions décidées dans le réseau pour traiter les problèmes : à faire, en cours et terminées.',
+    agency: 'Vos actions à mener : à faire, en cours et terminées.',
   },
   issues: {
-    title: 'Issues',
-    cx: 'Problèmes récurrents détectés à partir des feedbacks, avec leurs actions et leur vérification.',
-    agency: 'Problèmes récurrents détectés dans votre agence, avec leurs actions et leur vérification.',
+    title: 'Problèmes à traiter',
+    cx: 'Situations que vos équipes ont décidé de suivre, créées à partir d’un ou plusieurs avis, avec leurs actions et leur vérification.',
+    agency: 'Situations suivies dans votre agence, créées à partir d’un ou plusieurs avis, avec leurs actions et leur vérification.',
   },
 };
 
@@ -173,7 +173,7 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
       setSuggestions((prev) => prev.map((s) => (s.id === id ? { ...s, statut } : s)));
       showToast(`Statut mis à jour : ${STATUS_LABELS[statut]}`);
     } catch {
-      showToast('Erreur lors de la mise à jour');
+      showToast('Impossible d’enregistrer la modification. Réessayez.');
     }
   };
 
@@ -243,7 +243,7 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
       setActionsEnCoursTotal((total) => Math.max(0, total - 1));
       showToast('Action marquée comme réalisée');
     } catch {
-      showToast("Erreur lors de la confirmation de l'action");
+      showToast("Impossible de confirmer l’action. Réessayez.");
     }
   };
 
@@ -300,7 +300,7 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
       const response = await issuesApi.list(params);
       setIssuesListRaw((current) => [...current, ...(response.data || [])]);
     } catch {
-      showToast('Impossible de charger les issues suivantes');
+      showToast('Impossible de charger les problèmes suivants');
     } finally {
       setIssuesLoadingMore(false);
     }
@@ -352,7 +352,7 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
       const res = await issuesApi.get(issueId);
       setIssueDetail(res.data);
     } catch {
-      showToast('Impossible de charger le détail de cette Issue');
+      showToast('Impossible de charger le détail de ce problème');
       setSelectedIssueId(null);
     } finally {
       setIssueDetailLoading(false);
@@ -381,17 +381,17 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
       showToast('Action marquée comme terminée');
       await rafraichirApresActionIssue(issueId);
     } catch {
-      showToast("Erreur lors de la clôture de l'action");
+      showToast("Impossible de terminer l’action. Réessayez.");
     }
   };
 
   const verifierIssue = async (issueId: string) => {
     try {
       await issuesApi.verifier(issueId);
-      showToast('Issue marquée comme vérifiée');
+      showToast('Résolution du problème vérifiée');
       await rafraichirApresActionIssue(issueId);
     } catch {
-      showToast("Erreur lors de la vérification de l'Issue");
+      showToast("Impossible d’enregistrer la vérification du problème");
     }
   };
 

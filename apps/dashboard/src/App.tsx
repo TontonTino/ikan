@@ -40,7 +40,7 @@ function FeedbackRedirect() {
   window.location.href = clientUrl;
   return (
     <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'sans-serif' }}>
-      Redirection vers le formulaire de feedback...
+      Redirection vers le formulaire d’avis...
     </div>
   );
 }

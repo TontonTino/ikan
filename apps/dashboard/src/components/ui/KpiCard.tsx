@@ -103,7 +103,7 @@ export default function KpiCard({
   const direction = trend ? resolveDirection(trend) : 'flat';
   const deltaClass = !trend ? '' : trend.isPositive === false ? 'down' : direction === 'flat' ? 'flat' : 'up';
   // Pas de période de comparaison affichée sans delta : elle suggérerait une comparaison inexistante.
-  const period = trend ? trend.period || subtitle || 'vs. mois dernier' : subtitle;
+  const period = trend ? trend.period || subtitle || 'vs période précédente' : subtitle;
   const iconSize = compact ? 14 : 20;
 
   const classes = [

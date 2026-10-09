@@ -169,7 +169,7 @@ def creer_issue(
 
     details = data.description
     if issue_origine is not None:
-        details = f"Occurrence de l'Issue {issue_origine.id}" + (f" — {details}" if details else "")
+        details = f"Récurrence du problème {issue_origine.id}" + (f" — {details}" if details else "")
     _log_issue_event(db, issue, current_user, "creation", nouveau_statut="ouverte", details=details)
 
     if data.feedback_ids:
@@ -354,12 +354,12 @@ def rattacher_feedback(
     if ancienne_issue:
         _log_issue_event(
             db, ancienne_issue, current_user, "feedback_deplace_sortant", feedback_id=feedback.id,
-            details=f"Feedback déplacé vers l'Issue « {issue.titre} » ({issue.id})",
+            details=f"Avis déplacé vers le problème « {issue.titre} » ({issue.id})",
         )
         _log_issue_event(
             db, issue, current_user, "feedback_deplace_entrant", feedback_id=feedback.id,
             ancien_statut=ancien_statut, nouveau_statut=nouveau_statut,
-            details=f"Feedback déplacé depuis l'Issue « {ancienne_issue.titre} » ({ancienne_issue.id})",
+            details=f"Avis déplacé depuis le problème « {ancienne_issue.titre} » ({ancienne_issue.id})",
         )
     else:
         _log_issue_event(

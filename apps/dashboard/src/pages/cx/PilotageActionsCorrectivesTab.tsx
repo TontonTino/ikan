@@ -69,7 +69,7 @@ export default function PilotageActionsCorrectivesTab({ isAgencyManager, agences
           </div>
 
           {actionsLoading ? (
-            <div aria-busy="true" aria-label="Chargement des actions correctives" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div aria-busy="true" aria-label="Chargement des actions à mener" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {[0, 1, 2].map((i) => (
                 <SkeletonBlock key={i} height={90} radius="var(--radius-2xl)" />
               ))}
@@ -81,7 +81,7 @@ export default function PilotageActionsCorrectivesTab({ isAgencyManager, agences
                 title={actionsToggle === 'en_cours' ? 'Aucune action en cours' : 'Aucune action terminée pour l’instant'}
                 message={
                   actionsToggle === 'en_cours'
-                    ? 'Toutes les actions correctives définies ont été confirmées comme réalisées.'
+                    ? 'Toutes les actions définies ont été confirmées comme réalisées.'
                     : 'Les actions confirmées comme réalisées apparaîtront ici.'
                 }
               />
@@ -131,7 +131,7 @@ export default function PilotageActionsCorrectivesTab({ isAgencyManager, agences
 
                   <div style={{ background: '#F8FAFB', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px 14px' }}>
                     <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      Action à prendre
+                      Action à mener
                     </div>
                     <p style={{ margin: '4px 0 0 0', fontSize: '0.86rem', color: '#02302D', fontWeight: 600 }}>
                       {f.action_a_prendre || '—'}
@@ -142,7 +142,7 @@ export default function PilotageActionsCorrectivesTab({ isAgencyManager, agences
                     {f.assigne_a_nom && <span>Assigné à : {f.assigne_a_nom}</span>}
                     {formatDate(f.date_assignation) && <span>Assignée le {formatDate(f.date_assignation)}</span>}
                     {actionsToggle === 'terminees' && formatDate(f.date_resolution) && (
-                      <span>Résolue le {formatDate(f.date_resolution)}</span>
+                      <span>Résolu le {formatDate(f.date_resolution)}</span>
                     )}
                   </div>
 

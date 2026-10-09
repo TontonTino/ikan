@@ -47,15 +47,15 @@ export default function AgencesRankingTable({
             <th style={{ textAlign: 'left', padding: '8px 14px', fontWeight: 700 }}>Rang & Agence</th>
             <th
               style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700, cursor: 'help' }}
-              title="Borne inférieure de l'intervalle de confiance de Wilson (95%) — favorise les agences avec un volume d'avis fiable plutôt qu'un petit nombre d'avis parfaits."
+              title="Satisfaction corrigée selon le nombre d’avis (méthode de Wilson, 95 %) : une agence avec peu d’avis ne passe pas en tête grâce à quelques notes parfaites."
             >
-              Score Wilson
+              Score fiabilisé
             </th>
             <th style={{ textAlign: 'left', padding: '8px 14px', fontWeight: 700 }}>Ville</th>
             <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Satisfaction</th>
             <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Avis collectés</th>
-            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Traitement</th>
-            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Alertes</th>
+            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Pris en charge</th>
+            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Avis critiques</th>
             <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Tendance</th>
             {onSelectAgence && (
               <th style={{ textAlign: 'right', padding: '8px 14px', fontWeight: 700 }}>Action</th>
@@ -123,7 +123,7 @@ export default function AgencesRankingTable({
                 <td style={{ padding: '12px 14px', textAlign: 'center' }}>
                   <span
                     style={{ fontWeight: 700, color: '#0F172A', cursor: 'help' }}
-                    title="Borne inférieure de l'intervalle de confiance de Wilson (95%) — favorise les agences avec un volume d'avis fiable plutôt qu'un petit nombre d'avis parfaits."
+                    title="Satisfaction corrigée selon le nombre d’avis (méthode de Wilson, 95 %) : une agence avec peu d’avis ne passe pas en tête grâce à quelques notes parfaites."
                   >
                     {sansAvis ? '—' : `${Math.round(ag.wilson_score * 100)}%`}
                   </span>

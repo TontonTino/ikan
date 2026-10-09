@@ -37,7 +37,7 @@ function CustomTooltip({ active, payload, label }: any) {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
-            <span style={{ color: '#94A3B8' }}>Critiques / Négatifs reçus :</span>
+            <span style={{ color: '#94A3B8' }}>Avis critiques ou négatifs reçus :</span>
             <strong style={{ color: '#FFFFFF' }}>{pt.feedbacks}</strong>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
@@ -72,7 +72,7 @@ export default function VolumeEvolutionChart({
           border: '1px dashed #D6E8D9',
         }}
       >
-        Aucun feedback critique ou négatif enregistré pour cette période.
+        Aucun avis critique ou négatif enregistré pour cette période.
       </div>
     );
   }

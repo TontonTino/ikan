@@ -98,7 +98,7 @@ export default function CreateAgencyManagerModal({ onClose, onCreated, manager, 
       onCreated();
       onClose();
     } catch (err: any) {
-      setErreur(err?.response?.data?.detail || (enEdition ? 'Erreur lors de la modification du chef d’agence.' : 'Erreur lors de la création du chef d’agence.'));
+      setErreur(err?.response?.data?.detail || (enEdition ? 'Impossible de modifier le responsable d’agence.' : 'Impossible de créer le responsable d’agence.'));
     } finally {
       setSaving(false);
     }
@@ -118,7 +118,7 @@ export default function CreateAgencyManagerModal({ onClose, onCreated, manager, 
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
           <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#02302D' }}>
-            {enEdition ? "Modifier le Chef d'Agence" : "Créer un Chef d'Agence"}
+            {enEdition ? "Modifier le responsable d’agence" : "Créer un responsable d’agence"}
           </h3>
           <button
             type="button"
@@ -140,7 +140,7 @@ export default function CreateAgencyManagerModal({ onClose, onCreated, manager, 
             <input type="text" required value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} style={inputStyle} />
           </div>
           <div>
-            <label style={labelStyle}>Email professionnel *</label>
+            <label style={labelStyle}>E-mail professionnel *</label>
             <input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={inputStyle} />
           </div>
           <div>

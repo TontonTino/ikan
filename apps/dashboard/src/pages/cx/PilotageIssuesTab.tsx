@@ -49,7 +49,7 @@ export default function PilotageIssuesTab(props: Props) {
             <button
               type="button"
               onClick={() => setBacklogActif((v) => !v)}
-              title="Trie les Issues non closes par ancienneté (les plus anciennes d'abord)"
+              title="Affiche les problèmes pas encore résolus, du plus ancien au plus récent"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -67,7 +67,7 @@ export default function PilotageIssuesTab(props: Props) {
               }}
             >
               <ClockIcon size={14} color={backlogActif ? '#3C7730' : '#64748B'} />
-              Vue Backlog
+              Problèmes en attente
             </button>
           </div>
 
@@ -77,16 +77,16 @@ export default function PilotageIssuesTab(props: Props) {
           {/* Liste des Issues */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', flexWrap: 'wrap' }}>
-              <SectionHeading>Issues ({issuesFirstLoadDone ? `${issuesAffichees.length} affichées · ${issuesListRaw.length}/${issuesTotal} chargées` : '…'})</SectionHeading>
+              <SectionHeading>Problèmes à traiter ({issuesFirstLoadDone ? `${issuesAffichees.length} affichées · ${issuesListRaw.length}/${issuesTotal} chargées` : '…'})</SectionHeading>
               {ancienneteTexte && (
                 <span style={{ fontSize: '0.78rem', color: '#B45309', fontWeight: 700 }}>{ancienneteTexte}</span>
               )}
             </div>
 
             {issuesListError ? (
-              <StatsErrorState message="Impossible de charger la liste des Issues." onRetry={fetchIssuesList} />
+              <StatsErrorState message="Impossible de charger la liste des problèmes." onRetry={fetchIssuesList} />
             ) : issuesListLoading ? (
-              <div aria-busy="true" aria-label="Chargement des Issues" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div aria-busy="true" aria-label="Chargement des problèmes" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 {[0, 1, 2].map((i) => (
                   <SkeletonBlock key={i} height={100} radius="var(--radius-2xl)" />
                 ))}
@@ -95,8 +95,8 @@ export default function PilotageIssuesTab(props: Props) {
               <div className="saas-card saas-card--success">
                 <EmptyState
                   illustration="no-alert"
-                  title="Aucune Issue sur cette période"
-                  message="Aucun problème récurrent n'a été identifié pour les filtres sélectionnés."
+                  title="Aucun problème sur cette période"
+                  message="Aucun problème à traiter n’a été enregistré pour les filtres sélectionnés."
                 />
               </div>
             ) : (
@@ -143,7 +143,7 @@ export default function PilotageIssuesTab(props: Props) {
                     </div>
 
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '0.78rem', color: '#64748B', fontWeight: 600, borderTop: '1px solid #F1F4EE', paddingTop: '10px' }}>
-                      <span>Détectée le {formatDate(issue.premiere_detection)}</span>
+                      <span>Enregistré le {formatDate(issue.premiere_detection)}</span>
                     </div>
                   </div>
                 ))}

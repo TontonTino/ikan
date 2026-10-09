@@ -62,7 +62,7 @@ def create_utilisateur(
     # Vérification des rôles et organisation
     if current_user.role == UserRole.CX_MANAGER:
         if data.role != UserRole.AGENCY_MANAGER:
-            raise HTTPException(status_code=403, detail="Un CX Manager ne peut créer que des comptes Agency Manager")
+            raise HTTPException(status_code=403, detail="Un CX Manager ne peut créer que des comptes de responsable d'agence")
         target_org_id = current_user.organisation_id
         target_agence_id = data.agence_id
         # Isolation : l'agence doit appartenir à l'organisation du CX Manager (jamais un

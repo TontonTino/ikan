@@ -97,10 +97,10 @@ def get_statistics_admin(
     total_agency = _compter_utilisateurs_actifs(db, UserRole.AGENCY_MANAGER)
 
     kpis = {
-        "organisations_actives": CompteurStructurel(valeur=len(orgs), sous_titre="Comptes entreprises déployés"),
-        "total_agences": CompteurStructurel(valeur=total_agences, sous_titre="Points de vente et bornes connectées"),
+        "organisations_actives": CompteurStructurel(valeur=len(orgs), sous_titre="Organisations clientes actives"),
+        "total_agences": CompteurStructurel(valeur=total_agences, sous_titre="Agences enregistrées"),
         "utilisateurs_actifs": CompteurStructurel(
-            valeur=total_utilisateurs, sous_titre="Comptes actifs (Admin, CX Managers, Agency Managers)"
+            valeur=total_utilisateurs, sous_titre="Comptes actifs (administrateurs, CX Managers, responsables d'agence)"
         ),
         "cx_managers": CompteurStructurel(valeur=total_cx, sous_titre="Responsables expérience client (siège)"),
         "agency_managers": CompteurStructurel(valeur=total_agency, sous_titre="Responsables d'agence"),

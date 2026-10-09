@@ -75,7 +75,7 @@ export default function StatsCXView() {
       });
       setData(res.data);
     } catch (err: any) {
-      setError(err?.response?.data?.detail || 'Erreur lors du chargement des statistiques.');
+      setError(err?.response?.data?.detail || 'Impossible de charger les statistiques.');
     } finally {
       setLoading(false);
     }
@@ -108,11 +108,11 @@ export default function StatsCXView() {
 
   const tabsConfig = [
     { id: 'satisfaction', label: 'Satisfaction', icon: <SmileIcon size={16} /> },
-    { id: 'feedbacks', label: 'Feedbacks', icon: <MessageSquareIcon size={16} /> },
-    { id: 'sentiments', label: 'Sentiments', icon: <ThumbsUpIcon size={16} /> },
-    { id: 'thematiques', label: 'Thématiques IA', icon: <TagIcon size={16} />, badge: data?.themes.length },
+    { id: 'feedbacks', label: 'Avis clients', icon: <MessageSquareIcon size={16} /> },
+    { id: 'sentiments', label: 'Ton des avis', icon: <ThumbsUpIcon size={16} /> },
+    { id: 'thematiques', label: 'Thèmes', icon: <TagIcon size={16} />, badge: data?.themes.length },
     { id: 'agences', label: 'Agences', icon: <StoreIcon size={16} />, badge: data?.agences_ranking.length },
-    { id: 'tendances', label: 'Tendances & IA' },
+    { id: 'tendances', label: 'Ce que révèle l’analyse' },
   ];
 
   return (
@@ -159,8 +159,8 @@ export default function StatsCXView() {
           {activeTab === 'satisfaction' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <StatsSectionCard
-                title="Courbe Détaillée de Satisfaction Client"
-                subtitle="Calcul dynamique au fil de l'eau avec variations et points d'inflexion"
+                title="Évolution de la satisfaction"
+                subtitle="Part des avis notés 4 ou 5 sur 5, période par période"
               >
                 <SatisfactionEvolutionChart data={data.evolution_satisfaction} height={280} />
               </StatsSectionCard>
@@ -173,8 +173,8 @@ export default function StatsCXView() {
           {activeTab === 'feedbacks' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <StatsSectionCard
-                title="Flux des Avis Critiques / Négatifs : Reçus vs Pris en Charge"
-                subtitle="Comparatif quotidien entre avis critiques/négatifs entrants et volume pris en charge par les agences"
+                title="Avis critiques ou négatifs : reçus et pris en charge"
+                subtitle="Avis reçus comparés aux avis pris en charge par les agences"
               >
                 <VolumeEvolutionChart data={data.evolution_volume} height={280} showTreated={true} />
               </StatsSectionCard>
@@ -188,8 +188,8 @@ export default function StatsCXView() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
                 <StatsSectionCard
-                  title="Répartition Émotionnelle des Avis"
-                  subtitle="Classification automatique effectuée par le modèle sémantique"
+                  title="Ton des avis"
+                  subtitle="Ton détecté automatiquement à partir du commentaire (ou de la note si l’avis n’a pas de commentaire)"
                 >
                   <SentimentDonutChart data={data.sentiments} height={260} />
                 </StatsSectionCard>
@@ -207,29 +207,30 @@ export default function StatsCXView() {
                 >
                   <div>
                     <h3 style={{ margin: '0 0 6px', fontSize: '1.05rem', fontWeight: 800, color: '#02302D' }}>
-                      Indicateurs de Climat Client
+                      Répartition des notes
                     </h3>
                     <p style={{ margin: '0 0 18px', fontSize: '0.78rem', color: '#64748B' }}>
-                      Ratios de recommandation et niveau de détracteurs
+                      Avis classés selon la note donnée par le client
                     </p>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: '#EBF6ED', borderRadius: '12px' }}>
-                        <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>Avis Promoteurs (Positifs)</span>
+                        <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>Notés 4 ou 5 sur 5</span>
                         <strong style={{ fontSize: '0.92rem', color: '#3C7730' }}>
                           {kpis.feedbacks_positifs?.valeur ?? 0} avis
                         </strong>
                       </div>
 
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: '#FEF3C7', borderRadius: '12px' }}>
-                        <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>Avis Neutres</span>
+                        <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>Notés 3 sur 5</span>
                         <strong style={{ fontSize: '0.92rem', color: '#D97706' }}>
-                          {data.sentiments.find((s) => s.sentiment.toLowerCase() === 'neutre')?.count || 0} avis
+                          {/* Même base que les deux autres lignes (la note), pas le ton détecté. */}
+                          {Math.max(0, (kpis.total_feedbacks?.valeur_num ?? 0) - (kpis.feedbacks_positifs?.valeur_num ?? 0) - (kpis.feedbacks_negatifs?.valeur_num ?? 0))} avis
                         </strong>
                       </div>
 
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: '#FEE2E2', borderRadius: '12px' }}>
-                        <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>Avis Détracteurs (Négatifs)</span>
+                        <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>Notés 1 ou 2 sur 5</span>
                         <strong style={{ fontSize: '0.92rem', color: '#DC2626' }}>
                           {kpis.feedbacks_negatifs?.valeur ?? 0} avis
                         </strong>
@@ -247,8 +248,8 @@ export default function StatsCXView() {
           {activeTab === 'thematiques' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <StatsSectionCard
-                title="Cartographie des Thématiques Client Détectées"
-                subtitle="Extraction sémantique automatique par le moteur IKAN NLP"
+                title="Thèmes les plus cités"
+                subtitle="Selon la catégorie choisie par le client dans le formulaire"
               >
                 <ThemesBarList themes={data.themes} maxItems={15} />
               </StatsSectionCard>
@@ -261,8 +262,8 @@ export default function StatsCXView() {
           {activeTab === 'agences' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <StatsSectionCard
-                title="Classement & Performance Comparative des Agences"
-                subtitle="Benchmark consolidé par taux de satisfaction, volume traité et alertes"
+                title="Classement des agences"
+                subtitle="Comparaison par score fiabilisé, satisfaction, avis pris en charge et avis critiques"
               >
                 <AgencesRankingTable
                   agences={data.agences_ranking}

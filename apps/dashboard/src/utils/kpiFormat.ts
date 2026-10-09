@@ -11,6 +11,7 @@
 import type { ComponentType } from 'react';
 import type { IconProps } from '../components/common/Icons';
 import type { KPIResult } from '../types';
+import { INDICATEUR_AIDE, LIBELLES } from './vocabulaire';
 import {
   SmileIcon,
   ThumbsDownIcon,
@@ -63,8 +64,10 @@ export function kpiIconComponent(code: string): ComponentType<IconProps> {
 // exploitable n'existe pour la période — jamais un 0%/0 trompeur. Le frontend ne doit
 // pas la contredire en affichant un faux zéro.
 export function formatKpiValue(k: KPIResult): string {
-  if (k.status === 'no_data' || k.value === null) return 'Pas de données';
-  if (k.unit === 'percent') return `${k.value}%`;
+  if (k.status === 'no_data' || k.value === null) return LIBELLES.aucuneDonneeCourt;
+  if (k.unit === 'percent') return `${k.value} %`;
+  // NPS : score en points (−100 à +100), jamais un pourcentage.
+  if (k.unit === 'points') return `${k.value > 0 ? '+' : ''}${Math.round(k.value)} pts`;
   if (k.unit === 'hours') return `${k.value} h`;
   return `${Math.round(k.value)}`;
 }
@@ -83,7 +86,7 @@ export function formatKpiSubtitle(k: KPIResult, jours: number): string {
   // information que "aucune Issue non classée" — voir app/services/kpi/engine.py.
   if (k.code === 'TEL_PART_HORS_PERIMETRE' && k.non_classees_count != null) {
     const n = k.non_classees_count;
-    const base = `${n} Issue${n !== 1 ? 's' : ''} non classée${n !== 1 ? 's' : ''}`;
+    const base = `${n} problème${n !== 1 ? 's' : ''} non classé${n !== 1 ? 's' : ''}`;
     return k.status === 'no_data' ? base : `${base} · ${jours} derniers jours`;
   }
   // NPS : le dénominateur EST le nombre de réponses (voir calculer_nps,
@@ -93,6 +96,11 @@ export function formatKpiSubtitle(k: KPIResult, jours: number): string {
     const n = k.denominator;
     return `Échantillon faible (${n} réponse${n !== 1 ? 's' : ''})`;
   }
-  if (k.status === 'no_data') return 'sur cette période';
+  if (k.status === 'no_data') return `Pas assez de données sur ${jours} jours`;
   return `${jours} derniers jours`;
+}
+
+/** Explication courte d'un indicateur (infobulle « ? »), absente si le code est inconnu. */
+export function kpiAide(code: string): string | undefined {
+  return INDICATEUR_AIDE[code];
 }

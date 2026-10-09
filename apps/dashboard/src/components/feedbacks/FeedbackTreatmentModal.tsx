@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Feedback, StatutTraitement, HistoriqueFeedback, ReponseClient, UserRole, Issue, IssueStatut, Categorie, CriticiteType } from '../../types';
 import { feedbacksApi, issuesApi, agencesApi } from '../../services/api';
+import { AVIS_STATUT_LABELS, GRAVITE_LABELS, PROBLEME_STATUT_LABELS, ROLE_LABELS, SENTIMENT_LABELS } from '../../utils/vocabulaire';
+import { themeLabel } from '../../utils/themeLabels';
 import EmptyState from '../ui/EmptyState';
 import {
   AlertTriangleIcon,
@@ -18,19 +20,15 @@ import {
   TargetIcon,
 } from '../common/Icons';
 
-const ISSUE_STATUT_LABELS: Record<IssueStatut, string> = {
-  ouverte: 'Ouverte',
-  action_en_cours: 'Action en cours',
-  resolue: 'Résolue',
-  verifiee: 'Vérifiée',
-  reouverte: 'Réouverte',
-};
+const ISSUE_STATUT_LABELS: Record<IssueStatut, string> = PROBLEME_STATUT_LABELS;
+const ISSUE_SEVERITE_LABELS: Record<CriticiteType, string> = GRAVITE_LABELS;
 
-const ISSUE_SEVERITE_LABELS: Record<CriticiteType, string> = {
-  faible: 'Faible',
-  moyenne: 'Moyenne',
-  elevee: 'Élevée',
-  critique: 'Critique',
+/** Canaux possibles d'une réponse au client — IKAN AI n'envoie rien lui-même. */
+const CANAL_LABELS: Record<string, string> = {
+  telephone: 'Téléphone',
+  whatsapp: 'WhatsApp',
+  email: 'E-mail',
+  sms: 'SMS',
 };
 
 interface FeedbackTreatmentModalProps {
@@ -42,29 +40,13 @@ interface FeedbackTreatmentModalProps {
   currentUserName?: string;
 }
 
-const THEME_LABELS: Record<string, string> = {
-  attente: 'Attente & Délais en caisse',
-  accueil: 'Accueil & Conseillers',
-  disponibilite_accessibilite: 'Accessibilité & Horaires',
-  tarifs: 'Tarifs & Frais',
-  qualite_produit: 'Qualité Produit & Forfaits',
-  proprete_cadre: 'Propreté & Cadre agence',
-  application_mobile: 'Application Mobile & E-espace',
-  reseau: 'Réseau 4G/5G & Connexion',
-  facturation: 'Facturation & Prélèvements',
-  communication_information: 'Communication & Conseils',
-  livraison_logistique: 'Livraison & Disponibilité SIM',
-  resolution_probleme: 'SAV & Résolution',
-  securite_confidentialite: 'Sécurité & Confidentialité',
-  disponibilite_produit: 'Disponibilité Stocks / Terminaux',
-  personnalisation_besoin: 'Écoute & Personnalisation',
-};
+// Libellés de thèmes : source unique dans utils/themeLabels.ts (l'ancienne copie locale divergeait).
 
 const STEPPER_STEPS = [
-  { key: 'nouveau', label: 'Nouveau' },
-  { key: 'en_traitement', label: 'En traitement' },
-  { key: 'en_cours', label: 'En cours' },
-  { key: 'resolu', label: 'Résolu' },
+  { key: 'nouveau', label: AVIS_STATUT_LABELS.nouveau },
+  { key: 'en_traitement', label: AVIS_STATUT_LABELS.en_traitement },
+  { key: 'en_cours', label: AVIS_STATUT_LABELS.en_cours },
+  { key: 'resolu', label: AVIS_STATUT_LABELS.resolu },
 ];
 
 export default function FeedbackTreatmentModal({
@@ -154,7 +136,7 @@ export default function FeedbackTreatmentModal({
           const res = await feedbacksApi.open(fb.id);
           if (isMounted) {
             onUpdateFeedback(res.data);
-            showToast('Feedback pris en charge : Nouveau → En traitement');
+            showToast('Avis pris en charge : il vous est désormais attribué');
           }
         } catch (err) {
           console.error('Erreur ouverture feedback:', err);
@@ -273,7 +255,7 @@ export default function FeedbackTreatmentModal({
       const res = await feedbacksApi.definirActionCX(feedback.id, actionInput.trim());
       onUpdateFeedback(res.data);
       await loadHistoriqueAndReponses(feedback.id);
-      showToast('Action enregistrée : Statut passé à "En cours"');
+      showToast('Action enregistrée : statut passé à « Action en cours »');
     } catch {
       showToast('Erreur lors de l’enregistrement de l’action');
     } finally {
@@ -288,7 +270,7 @@ export default function FeedbackTreatmentModal({
       const res = await feedbacksApi.confirmerActionRealisee(feedback.id);
       onUpdateFeedback(res.data);
       await loadHistoriqueAndReponses(feedback.id);
-      showToast('✓ Action confirmée : Feedback résolu avec succès');
+      showToast('✓ Action confirmée : avis marqué comme résolu');
     } catch {
       showToast('Erreur lors de la confirmation de l’action');
     } finally {
@@ -307,9 +289,9 @@ export default function FeedbackTreatmentModal({
       setReponseInput('');
       setShowReponseForm(false);
       await loadHistoriqueAndReponses(feedback.id);
-      showToast('Réponse client envoyée et enregistrée');
+      showToast('Réponse au client enregistrée');
     } catch {
-      showToast('Erreur lors de l’envoi de la réponse');
+      showToast('Impossible d’enregistrer la réponse. Réessayez.');
     } finally {
       setLoadingAction(false);
     }
@@ -322,7 +304,7 @@ export default function FeedbackTreatmentModal({
       const res = await feedbacksApi.reouvrir(feedback.id);
       onUpdateFeedback(res.data);
       await loadHistoriqueAndReponses(feedback.id);
-      showToast('Feedback rouvert : Statut passé à "En traitement"');
+      showToast('Avis rouvert : statut repassé à « Pris en charge »');
     } catch {
       showToast('Erreur lors de la réouverture');
     } finally {
@@ -387,9 +369,9 @@ export default function FeedbackTreatmentModal({
       setIssueLiee(res.data);
       setIssueMode('choix');
       await refreshFeedback();
-      showToast('Issue créée et feedback rattaché');
+      showToast('Problème créé et avis rattaché');
     } catch {
-      showToast("Erreur lors de la création de l'Issue");
+      showToast("Impossible de créer le problème");
     } finally {
       setLoadingAction(false);
     }
@@ -403,7 +385,7 @@ export default function FeedbackTreatmentModal({
       setIssueLiee(res.data);
       setIssueMode('choix');
       await refreshFeedback();
-      showToast('Feedback rattaché à l’Issue');
+      showToast('Avis rattaché au problème');
     } catch {
       showToast('Erreur lors du rattachement');
     } finally {
@@ -413,14 +395,14 @@ export default function FeedbackTreatmentModal({
 
   const handleDetacherIssue = async () => {
     if (!feedback.issue_id) return;
-    if (!window.confirm(`Détacher ce feedback de l'Issue "${issueLiee?.titre || ''}" ?`)) return;
+    if (!window.confirm(`Détacher cet avis du problème "${issueLiee?.titre || ''}" ?`)) return;
     setLoadingAction(true);
     try {
       await issuesApi.detacherFeedback(feedback.issue_id, feedback.id);
       setIssueLiee(null);
       setIssueMode('choix');
       await refreshFeedback();
-      showToast('Feedback détaché de l’Issue');
+      showToast('Avis détaché du problème');
     } catch {
       showToast('Erreur lors du détachement');
     } finally {
@@ -511,11 +493,11 @@ export default function FeedbackTreatmentModal({
                   letterSpacing: '0.5px',
                 }}
               >
-                Traitement Feedback
+                Traitement de l’avis
               </span>
             </div>
             <h2 id="feedback-treatment-title" style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
-              Feedback #{feedback.id.slice(0, 8)}
+              Avis #{feedback.id.slice(0, 8)}
             </h2>
           </div>
 
@@ -670,16 +652,16 @@ export default function FeedbackTreatmentModal({
           >
             {feedback.analyse_ia?.sentiment === 'positif' && <ThumbsUpIcon size={12} color="#3C7730" />}
             {feedback.analyse_ia?.sentiment === 'negatif' && <ThumbsDownIcon size={12} color="#B91C1C" />}
-            <span style={{ textTransform: 'capitalize' }}>Ressenti : {feedback.analyse_ia ? feedback.analyse_ia.sentiment || 'Non évalué' : 'Analyse indisponible'}</span>
+            <span>Ton : {feedback.analyse_ia ? (feedback.analyse_ia.sentiment ? SENTIMENT_LABELS[feedback.analyse_ia.sentiment] ?? feedback.analyse_ia.sentiment : 'Non évalué') : 'Non analysé'}</span>
           </div>
 
           {/* Criticité : afficher uniquement l'analyse réelle et distinguer une valeur absente. */}
           <div style={{ background: feedback.analyse_ia?.criticite === 'critique' ? '#FEE2E2' : feedback.analyse_ia?.criticite === 'elevee' ? '#FFEDD5' : '#F8FAFC', color: feedback.analyse_ia?.criticite === 'critique' ? '#B91C1C' : feedback.analyse_ia?.criticite === 'elevee' ? '#C2410C' : '#475569', padding: '4px 10px', borderRadius: '8px', border: '1px solid #E2E8F0', fontWeight: 800 }}>
-            Criticité : {feedback.analyse_ia ? feedback.analyse_ia.criticite || 'Non évaluée' : 'Analyse indisponible'}
+            Gravité : {feedback.analyse_ia ? (feedback.analyse_ia.criticite ? GRAVITE_LABELS[feedback.analyse_ia.criticite] ?? feedback.analyse_ia.criticite : 'Non évaluée') : 'Non analysé'}
           </div>
           {feedback.analyse_ia?.discordance_detectee && (
             <div role="status" style={{ background: '#FFF7ED', color: '#9A3412', padding: '4px 10px', borderRadius: '8px', border: '1px solid #FED7AA', fontWeight: 800 }}>
-              Discordance détectée
+              <span title="La note donnée ne correspond pas au ton du commentaire (ex. 5/5 avec un commentaire négatif).">Note et commentaire contradictoires</span>
             </div>
           )}
 
@@ -696,7 +678,7 @@ export default function FeedbackTreatmentModal({
                 color: currentStatut === 'resolu' ? '#3C7730' : currentStatut === 'en_cours' ? '#D97706' : currentStatut === 'en_traitement' ? '#0369A1' : '#DC2626',
               }}
             >
-              {currentStatut === 'resolu' ? 'Résolu' : currentStatut === 'en_cours' ? 'En cours' : currentStatut === 'en_traitement' ? 'En traitement' : 'Nouveau'}
+              {AVIS_STATUT_LABELS[currentStatut] ?? AVIS_STATUT_LABELS.nouveau}
             </span>
           </div>
         </div>
@@ -704,9 +686,9 @@ export default function FeedbackTreatmentModal({
         {/* ── Navigation Onglets ────────────────────────────────── */}
         <div className="feedback-treatment-tabs" style={{ display: 'flex', borderBottom: '1px solid #E2E8F0', background: '#FAFAFA', padding: '0 28px' }}>
           {[
-            { id: 'traitement', label: 'Traitement Opérationnel', icon: <ClockIcon size={14} /> },
+            { id: 'traitement', label: 'Traitement', icon: <ClockIcon size={14} /> },
             { id: 'historique', label: `Historique (${historiqueList.length})`, icon: <UsersIcon size={14} /> },
-            { id: 'reponses', label: `Réponses Client (${reponsesList.length})`, icon: <MessageSquareIcon size={14} /> },
+            { id: 'reponses', label: `Réponses au client (${reponsesList.length})`, icon: <MessageSquareIcon size={14} /> },
           ].map((tab) => {
             const active = activeTab === tab.id;
             return (
@@ -755,14 +737,14 @@ export default function FeedbackTreatmentModal({
                   COMMENTAIRE DU CLIENT
                 </div>
                 <p style={{ margin: 0, fontSize: '0.94rem', color: '#0F172A', lineHeight: 1.55, fontStyle: feedback.commentaire ? 'normal' : 'italic' }}>
-                  "{feedback.commentaire || 'Aucun commentaire texte rédigé.'}"
+                  "{feedback.commentaire || 'Pas de commentaire écrit.'}"
                 </p>
               </div>
 
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', padding: '0 2px', color: '#64748B', fontSize: '0.82rem' }} aria-label="Contexte du feedback">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', padding: '0 2px', color: '#64748B', fontSize: '0.82rem' }} aria-label="Contexte de l’avis">
                 <span><strong style={{ color: '#334155' }}>Agence :</strong> {feedback.agence_nom || 'Non renseignée'}</span>
                 <span><strong style={{ color: '#334155' }}>Date :</strong> {new Date(feedback.date_soumission).toLocaleString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                <span><strong style={{ color: '#334155' }}>Thème :</strong> {feedback.analyse_ia?.theme_principal ? THEME_LABELS[feedback.analyse_ia.theme_principal] || feedback.analyse_ia.theme_principal : 'Non catégorisé'}</span>
+                <span><strong style={{ color: '#334155' }}>Thème :</strong> {feedback.analyse_ia?.theme_principal ? themeLabel(feedback.analyse_ia.theme_principal) : 'Non catégorisé'}</span>
                 {feedback.assigne_a_nom && <span><strong style={{ color: '#334155' }}>Pris en charge par :</strong> {feedback.assigne_a_nom}</span>}
               </div>
 
@@ -782,7 +764,7 @@ export default function FeedbackTreatmentModal({
                 >
                   <ThumbsUpIcon size={20} color="#3C7730" />
                   <div style={{ fontSize: '0.86rem', fontWeight: 700 }}>
-                    Feedback positif — aucune action corrective requise sur ce retour client.
+                    Avis positif : aucune action à mener n’est nécessaire.
                   </div>
                 </div>
               )}
@@ -821,7 +803,7 @@ export default function FeedbackTreatmentModal({
                     )}
                     {feedback.demande_contact.email && (
                       <div>
-                        <strong>Email :</strong>{' '}
+                        <strong>E-mail :</strong>{' '}
                         <a href={`mailto:${feedback.demande_contact.email}`} style={{ color: '#C2410C', fontWeight: 700, textDecoration: 'none' }}>
                           {feedback.demande_contact.email}
                         </a>
@@ -837,10 +819,15 @@ export default function FeedbackTreatmentModal({
                       style={{ padding: '8px 14px', fontSize: '0.8rem', borderRadius: '10px' }}
                     >
                       <MessageSquareIcon size={14} />
-                      <span>Répondre au client</span>
+                      <span>Enregistrer une réponse au client</span>
                     </button>
                   ) : (
                     <form onSubmit={handleEnvoyerReponseClient} style={{ marginTop: '12px', background: '#FFFFFF', padding: '14px', borderRadius: '12px', border: '1px solid #FFEDD5' }}>
+                      {/* POST /feedbacks/{id}/reponses enregistre la réponse : aucun message n'est envoyé au client. */}
+                      <p style={{ margin: '0 0 10px', fontSize: '0.78rem', color: '#64748B', lineHeight: 1.5 }}>
+                        IKAN AI n’envoie aucun message au client. Contactez-le par le canal choisi, puis notez ici ce que vous lui avez répondu.
+                        L’enregistrement marque aussi la demande de rappel comme traitée.
+                      </p>
                       <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                         {(['telephone', 'whatsapp', 'email', 'sms'] as const).map((canal) => (
                           <button
@@ -859,7 +846,7 @@ export default function FeedbackTreatmentModal({
                               textTransform: 'capitalize',
                             }}
                           >
-                            {canal}
+                            {CANAL_LABELS[canal] ?? canal}
                           </button>
                         ))}
                       </div>
@@ -867,7 +854,7 @@ export default function FeedbackTreatmentModal({
                         rows={3}
                         value={reponseInput}
                         onChange={(e) => setReponseInput(e.target.value)}
-                        placeholder="Rédigez la réponse client (ex: Bonjour, nous avons bien pris en compte votre remarque et vous informons que...)"
+                        placeholder="Ce que vous avez répondu au client (ex. : appelé ce jour, problème de facturation expliqué et corrigé)…"
                         style={{
                           width: '100%',
                           padding: '10px',
@@ -901,7 +888,7 @@ export default function FeedbackTreatmentModal({
                           }}
                         >
                           <SendIcon size={12} />
-                          <span>{loadingAction ? 'Envoi...' : 'Envoyer la réponse'}</span>
+                          <span>{loadingAction ? 'Enregistrement…' : 'Enregistrer la réponse'}</span>
                         </button>
                       </div>
                     </form>
@@ -923,7 +910,7 @@ export default function FeedbackTreatmentModal({
                     Suggestion pour le CX Manager
                   </div>
                   <p style={{ fontSize: '0.82rem', color: '#64748B', margin: '0 0 12px 0' }}>
-                    Proposez une solution ou une amélioration terrain au CX Manager. Le feedback restera "En traitement" jusqu'à validation de l'action.
+                    Proposez une solution ou une amélioration terrain au CX Manager. L’avis restera « Pris en charge » jusqu’à ce qu’une action soit définie.
                   </p>
 
                   {feedback.suggestion_agence ? (
@@ -972,7 +959,7 @@ export default function FeedbackTreatmentModal({
                         }}
                       >
                         <SendIcon size={13} />
-                        <span>{loadingAction ? 'Envoi en cours...' : 'Envoyer la suggestion au CX'}</span>
+                        <span>{loadingAction ? 'Envoi en cours...' : 'Envoyer la suggestion au CX Manager'}</span>
                       </button>
                     </form>
                   )}
@@ -1016,13 +1003,13 @@ export default function FeedbackTreatmentModal({
                     }}
                   >
                     <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#02302D', marginBottom: '8px', textTransform: 'uppercase' }}>
-                      ACTION CORRECTIVE DU CX MANAGER
+                      ACTION À MENER (DÉFINIE PAR LE CX MANAGER)
                     </div>
 
                     {currentStatut === 'en_traitement' && (
                       <form onSubmit={handleDefinirActionCX}>
                         <p style={{ fontSize: '0.82rem', color: '#64748B', margin: '0 0 10px 0' }}>
-                          Définissez l'action corrective. Dès l'enregistrement, le statut passera automatiquement à <strong>"En cours"</strong>.
+                          Décrivez l’action à mener. Dès l’enregistrement, le statut passera à <strong>« Action en cours »</strong>.
                         </p>
                         <textarea
                           rows={3}
@@ -1055,7 +1042,7 @@ export default function FeedbackTreatmentModal({
                           }}
                         >
                           <PlusIcon size={14} />
-                          <span>{loadingAction ? 'Enregistrement...' : 'Enregistrer l’action (Passer en cours)'}</span>
+                          <span>{loadingAction ? 'Enregistrement...' : 'Enregistrer l’action à mener'}</span>
                         </button>
                       </form>
                     )}
@@ -1063,7 +1050,7 @@ export default function FeedbackTreatmentModal({
                     {currentStatut === 'en_cours' && (
                       <div>
                         <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: '12px', padding: '12px 14px', marginBottom: '14px' }}>
-                          <div style={{ fontSize: '0.78rem', color: '#92400E', fontWeight: 800 }}>ACTION EN COURS D’EXÉCUTION :</div>
+                          <div style={{ fontSize: '0.78rem', color: '#92400E', fontWeight: 800 }}>ACTION À MENER (PAS ENCORE CONFIRMÉE) :</div>
                           <p style={{ margin: '4px 0 0 0', fontSize: '0.88rem', color: '#78350F', fontWeight: 600 }}>
                             "{feedback.action_a_prendre || actionInput}"
                           </p>
@@ -1075,7 +1062,7 @@ export default function FeedbackTreatmentModal({
                           style={{ width: '100%', padding: '12px', fontWeight: 800, fontSize: '0.86rem', justifyContent: 'center' }}
                         >
                           <CheckCircleIcon size={16} />
-                          <span>{loadingAction ? 'Validation en cours...' : 'Confirmer l’action réalisée → Résoudre le feedback'}</span>
+                          <span>{loadingAction ? 'Validation en cours...' : 'Confirmer l’action réalisée → Résoudre l’avis'}</span>
                         </button>
                       </div>
                     )}
@@ -1085,7 +1072,7 @@ export default function FeedbackTreatmentModal({
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#3C7730', fontWeight: 800, fontSize: '0.88rem' }}>
                             <CheckCircleIcon size={16} />
-                            <span>Feedback Résolu avec succès</span>
+                            <span>Avis marqué comme résolu</span>
                           </div>
                           {feedback.action_a_prendre && (
                             <div style={{ fontSize: '0.82rem', color: '#02302D', marginTop: '4px' }}>
@@ -1119,7 +1106,7 @@ export default function FeedbackTreatmentModal({
               >
                 <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#02302D', marginBottom: '10px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <TargetIcon size={15} color="#02302D" />
-                  <span>Issue liée</span>
+                  <span>Problème à traiter lié</span>
                 </div>
 
                 {issueLieeLoading ? (
@@ -1139,7 +1126,7 @@ export default function FeedbackTreatmentModal({
                     }}
                   >
                     <div style={{ fontSize: '0.86rem', color: '#02302D' }}>
-                      Lié à l'Issue : <strong>{issueLiee?.titre || '…'}</strong>
+                      Rattaché au problème : <strong>{issueLiee?.titre || '…'}</strong>
                       {issueLiee && (
                         <span style={{ marginLeft: '8px', fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
                           ({ISSUE_STATUT_LABELS[issueLiee.statut]} · {ISSUE_SEVERITE_LABELS[issueLiee.severite]})
@@ -1164,7 +1151,7 @@ export default function FeedbackTreatmentModal({
                       style={{ padding: '8px 14px', fontSize: '0.8rem', borderRadius: '10px' }}
                     >
                       <PlusIcon size={13} />
-                      <span>Créer une nouvelle Issue</span>
+                      <span>Créer un nouveau problème</span>
                     </button>
                     <button
                       type="button"
@@ -1172,7 +1159,7 @@ export default function FeedbackTreatmentModal({
                       className="btn-secondary"
                       style={{ padding: '8px 14px', fontSize: '0.8rem', borderRadius: '10px' }}
                     >
-                      Rattacher à une Issue existante
+                      Rattacher à un problème existant
                     </button>
                   </div>
                 ) : issueMode === 'creer' ? (
@@ -1181,7 +1168,7 @@ export default function FeedbackTreatmentModal({
                       type="text"
                       value={creerTitre}
                       onChange={(e) => setCreerTitre(e.target.value)}
-                      placeholder="Titre de l'Issue"
+                      placeholder="Titre du problème"
                       required
                       style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.86rem', fontFamily: 'inherit', boxSizing: 'border-box' }}
                     />
@@ -1199,7 +1186,7 @@ export default function FeedbackTreatmentModal({
                         required
                         style={{ padding: '8px 10px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.82rem', fontFamily: 'inherit' }}
                       >
-                        <option value="">Choisir la sévérité</option>
+                        <option value="">Choisir la gravité</option>
                         {(Object.keys(ISSUE_SEVERITE_LABELS) as CriticiteType[]).map((s) => (
                           <option key={s} value={s}>{ISSUE_SEVERITE_LABELS[s]}</option>
                         ))}
@@ -1225,19 +1212,19 @@ export default function FeedbackTreatmentModal({
                         className="btn-primary"
                         style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '10px', opacity: creerTitre.trim() && creerSeverite ? 1 : 0.5, cursor: creerTitre.trim() && creerSeverite ? 'pointer' : 'not-allowed' }}
                       >
-                        {loadingAction ? 'Création...' : 'Créer l’Issue'}
+                        {loadingAction ? 'Création...' : 'Créer le problème'}
                       </button>
                     </div>
                   </form>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {issuesExistantesLoading ? (
-                      <div style={{ fontSize: '0.84rem', color: '#64748B' }}>Chargement des Issues...</div>
+                      <div style={{ fontSize: '0.84rem', color: '#64748B' }}>Chargement des problèmes…</div>
                     ) : issuesExistantes.length === 0 ? (
                       <EmptyState
                         illustration="no-data"
-                        title="Aucune Issue disponible"
-                        message="Aucune Issue ouverte n'existe pour cette agence (les Issues déjà vérifiées ne sont pas proposées ici). Créez-en une nouvelle."
+                        title="Aucun problème disponible"
+                        message="Aucun problème en cours pour cette agence (les problèmes dont la résolution est vérifiée ne sont pas proposés). Créez-en un nouveau."
                       />
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto' }}>
@@ -1282,7 +1269,7 @@ export default function FeedbackTreatmentModal({
                         className="btn-primary"
                         style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '10px', opacity: issueSelectionneeId ? 1 : 0.5, cursor: issueSelectionneeId ? 'pointer' : 'not-allowed' }}
                       >
-                        {loadingAction ? 'Rattachement...' : 'Rattacher à cette Issue'}
+                        {loadingAction ? 'Rattachement...' : 'Rattacher à ce problème'}
                       </button>
                     </div>
                   </div>
@@ -1299,7 +1286,7 @@ export default function FeedbackTreatmentModal({
                 }}
               >
                 <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#02302D', marginBottom: '8px', textTransform: 'uppercase' }}>
-                  Commentaire Interne (Main Courante)
+                  Note interne
                 </div>
                 <form onSubmit={handleAddNote}>
                   <textarea
@@ -1402,7 +1389,7 @@ export default function FeedbackTreatmentModal({
                                 fontWeight: 700,
                               }}
                             >
-                              {evt.auteur_role === 'cx_manager' ? 'CX Manager' : evt.auteur_role === 'agency_manager' ? 'Agency Manager' : evt.auteur_role}
+                              {ROLE_LABELS[evt.auteur_role as UserRole] ?? evt.auteur_role}
                             </span>
                           </div>
                           <span style={{ fontSize: '0.74rem', color: '#64748B' }}>
@@ -1412,7 +1399,7 @@ export default function FeedbackTreatmentModal({
 
                         {evt.ancien_statut && evt.nouveau_statut && evt.ancien_statut !== evt.nouveau_statut && (
                           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#02302D', margin: '4px 0' }}>
-                            Transition : <span style={{ textTransform: 'capitalize' }}>{evt.ancien_statut}</span> → <strong style={{ color: '#3C7730', textTransform: 'capitalize' }}>{evt.nouveau_statut}</strong>
+                            Statut : <span>{AVIS_STATUT_LABELS[evt.ancien_statut as StatutTraitement] ?? evt.ancien_statut}</span> → <strong style={{ color: '#3C7730' }}>{AVIS_STATUT_LABELS[evt.nouveau_statut as StatutTraitement] ?? evt.nouveau_statut}</strong>
                           </div>
                         )}
 
@@ -1453,7 +1440,7 @@ export default function FeedbackTreatmentModal({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <strong style={{ fontSize: '0.84rem', color: '#02302D' }}>{rep.auteur_nom}</strong>
                           <span style={{ fontSize: '0.72rem', background: '#FFF7ED', color: '#C2410C', padding: '2px 8px', borderRadius: '6px', fontWeight: 700, textTransform: 'uppercase' }}>
-                            Via {rep.canal}
+                            Par {CANAL_LABELS[rep.canal] ?? rep.canal}
                           </span>
                         </div>
                         <span style={{ fontSize: '0.74rem', color: '#64748B' }}>

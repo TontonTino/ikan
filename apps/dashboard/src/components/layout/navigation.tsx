@@ -79,10 +79,10 @@ export const ROLE_HOME: Record<UserRole, string> = {
 export const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
   admin: [
     {
-      title: 'WORKSPACE',
+      title: 'ADMINISTRATION',
       items: [
-        { path: '/admin/dashboard', label: 'Dashboard', icon: <LayoutGridIcon size={18} /> },
-        { path: '/admin/statistiques', label: 'Statistiques Plateforme', icon: <BarChartIcon size={18} /> },
+        { path: '/admin/dashboard', label: 'Tableau de bord', icon: <LayoutGridIcon size={18} /> },
+        { path: '/admin/statistiques', label: 'Statistiques', icon: <BarChartIcon size={18} /> },
         { path: '/admin/organisations', label: 'Organisations', icon: <BuildingIcon size={18} /> },
         { path: '/admin/facturation', label: 'Facturation', icon: <LandmarkIcon size={18} /> },
         { path: '/admin/gestion-agences', label: 'Gestion des agences', icon: <UsersIcon size={18} /> },
@@ -98,16 +98,16 @@ export const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
       title: 'COMPRENDRE',
       items: [
         { path: '/siege', label: "Vue d'ensemble", icon: <LayoutGridIcon size={18} /> },
-        { path: '/statistiques', label: 'Performance CX', icon: <BarChartIcon size={18} /> },
-        { path: '/feedbacks', label: 'Feedbacks', icon: <MessageSquareIcon size={18} /> },
+        { path: '/statistiques', label: 'Statistiques', icon: <BarChartIcon size={18} /> },
+        { path: '/feedbacks', label: 'Avis clients', icon: <MessageSquareIcon size={18} /> },
       ],
     },
     {
       title: 'AGIR',
       items: [
         { path: '/alertes', label: 'Alertes', icon: <BellIcon size={18} /> },
-        { path: '/issues', label: 'Issues', icon: <ActivityIcon size={18} /> },
-        { path: '/actions', label: 'Actions correctives', icon: <TargetIcon size={18} /> },
+        { path: '/issues', label: 'Problèmes à traiter', icon: <ActivityIcon size={18} /> },
+        { path: '/actions', label: 'Actions à mener', icon: <TargetIcon size={18} /> },
       ],
     },
     {
@@ -120,7 +120,7 @@ export const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
     {
       title: 'RÉSEAU',
       items: [
-        { path: '/veille', label: 'Veille', icon: <MegaphoneIcon size={18} /> },
+        { path: '/veille', label: 'Réseaux sociaux', icon: <MegaphoneIcon size={18} /> },
         { path: '/admin/gestion-agences', label: 'Gestion des agences', icon: <StoreIcon size={18} /> },
       ],
     },
@@ -130,16 +130,16 @@ export const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
       title: 'MON AGENCE',
       items: [
         { path: '/agence', label: "Vue d'ensemble", icon: <LayoutGridIcon size={18} /> },
-        { path: '/statistiques', label: 'Performance CX', icon: <BarChartIcon size={18} /> },
-        { path: '/feedbacks', label: 'Feedbacks', icon: <MessageSquareIcon size={18} /> },
+        { path: '/statistiques', label: 'Statistiques', icon: <BarChartIcon size={18} /> },
+        { path: '/feedbacks', label: 'Avis clients', icon: <MessageSquareIcon size={18} /> },
       ],
     },
     {
       title: 'AGIR',
       items: [
         { path: '/alertes', label: 'Alertes', icon: <BellIcon size={18} /> },
-        { path: '/issues', label: 'Issues', icon: <ActivityIcon size={18} /> },
-        { path: '/actions', label: 'Mes actions', icon: <TargetIcon size={18} /> },
+        { path: '/issues', label: 'Problèmes à traiter', icon: <ActivityIcon size={18} /> },
+        { path: '/actions', label: 'Actions à mener', icon: <TargetIcon size={18} /> },
       ],
     },
     {

@@ -11,7 +11,7 @@ import type { NavSection } from './navigation';
 
 export const SIDEBAR_ID = 'dashboard-sidebar';
 
-const ROLE_LABEL: Record<User['role'], string> = { admin: 'ADMIN', cx_manager: 'CX MANAGER', agency_manager: 'AGENCE' };
+const ROLE_LABEL: Record<User['role'], string> = { admin: 'ADMINISTRATION', cx_manager: 'CX MANAGER', agency_manager: 'AGENCE' };
 
 export interface SidebarProps {
   user: User | null;

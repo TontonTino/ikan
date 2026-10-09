@@ -34,9 +34,9 @@ export default function LoginPage() {
       } else if (!err.response) {
         setError('Impossible de joindre le serveur. Veuillez vérifier votre connexion ou réessayer.');
       } else if (status === 500 || status === 503) {
-        setError('Le serveur d’authentification est indisponible. Vérifiez que l’API est bien démarrée.');
+        setError('Le service de connexion est momentanément indisponible. Réessayez dans quelques instants.');
       } else {
-        setError(err?.response?.data?.detail || 'Email ou mot de passe incorrect');
+        setError(err?.response?.data?.detail || 'E-mail ou mot de passe incorrect');
       }
     } finally {
       setLoading(false);
@@ -152,7 +152,7 @@ export default function LoginPage() {
             >
               <img
                 src="/scan2.png"
-                alt="Scan QR Code Feedback"
+                alt="Scanner le QR code pour donner son avis"
                 style={{
                   maxHeight: '340px',
                   maxWidth: '100%',
@@ -275,7 +275,7 @@ export default function LoginPage() {
                   color: '#0F172A',
                 }}
               >
-                Adresse Email
+                Adresse e-mail
               </label>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <span
@@ -542,7 +542,7 @@ export default function LoginPage() {
               lineHeight: 1.4,
             }}
           >
-            IKAN AI © 2026 — Plateforme sécurisée d'analyse de retours clients
+            IKAN AI © 2026 — Plateforme sécurisée d’analyse des avis clients
           </div>
         </div>
       </div>
