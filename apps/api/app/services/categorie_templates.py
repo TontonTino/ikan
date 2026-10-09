@@ -5,8 +5,8 @@ SECTEUR_CATEGORIES_DEPART associe un secteur_code (app/services/secteurs.py) à 
 des catégories à créer automatiquement pour toute NOUVELLE agence de ce secteur, chacune
 avec sa clé stable (app/models/categorie.py::Categorie.cle) et son état actif par défaut.
 
-Vide pour tous les secteurs sauf telecom (voir SECTEUR_CATEGORIES_DEPART["telecom"]
-rempli ci-dessous, pack v1) : creer_categories_depart() ne fait rien pour un secteur sans
+Rempli pour telecom (pack v1) et restauration (pack restauration v1) ; vide pour tous les
+autres secteurs : creer_categories_depart() ne fait rien pour un secteur sans
 entrée, et le comportement actuel (catégorie "Général" créée à la volée par
 app.services.categorie_service.get_or_create_categories_actives) reste intact.
 """
@@ -41,6 +41,15 @@ SECTEUR_CATEGORIES_DEPART: dict[str, list[CategorieDepart]] = {
         CategorieDepart("facturation_paiement", "Facturation & Paiement"),
         CategorieDepart("equipements_boutique", "Équipements & Boutique"),
         CategorieDepart("mobile_money", "Mobile Money", active=False),
+    ],
+    "restauration": [
+        CategorieDepart("accueil_service_salle", "Accueil & service en salle"),
+        CategorieDepart("qualite_plats", "Qualité des plats"),
+        CategorieDepart("rapidite_attente", "Rapidité / Attente"),
+        CategorieDepart("proprete_cadre", "Propreté & cadre"),
+        CategorieDepart("addition_paiement", "Addition & paiement"),
+        CategorieDepart("livraison_emporter", "Livraison / À emporter"),
+        CategorieDepart("suggestion_compliment", "Suggestion / Compliment"),
     ],
 }
 

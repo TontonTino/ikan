@@ -5,6 +5,7 @@ Registre de packs KPI (app/services/kpi/packs.py) — architecture en couches :
 - Extension Banking (PACKS["banque"]) : 7 KPI, famille sectorielle, secteur_code="banque".
 - Extension Telecom (PACKS["telecom"]) : les 6 TEL_* + NPS (décision métier explicite) —
   jamais les 6 autres KPI bancaires.
+- Extension Restauration (PACKS["restauration"]) : les 3 KPI RESTO_*.
 - Les autres secteurs n'ont que le CX Core.
 - Avec un pack injecté UNIQUEMENT dans un test (jamais dans PACKS réel), seule
   l'organisation du bon secteur voit son KPI dans la collection et peut l'obtenir par son
@@ -68,7 +69,8 @@ TELECOM = {
     "TEL_PART_HORS_PERIMETRE", "TEL_RECURRENCE_AGENCE", "TEL_RECURRENCE_HORS_PERIMETRE", "NPS",
     "TEL_RECLAMATIONS_RESEAU", "TEL_RECLAMATIONS_RECHARGE_FORFAIT", "TEL_RECLAMATIONS_FACTURATION",
 }
-SECTEURS_SANS_PACK = [c for c in SECTEUR_CODES if c not in ("banque", "telecom")] + [None, "code_vraiment_inconnu_du_registre"]
+RESTAURATION = {"RESTO_TAUX_TRAITEMENT_RECONTACTS", "RESTO_RISQUE_SILENCIEUX", "RESTO_RECIDIVE_CATEGORIE"}
+SECTEURS_SANS_PACK = [c for c in SECTEUR_CODES if c not in ("banque", "telecom", "restauration")] + [None, "code_vraiment_inconnu_du_registre"]
 
 
 def test_communs_sont_exactement_les_8_kpi_cx_core():
@@ -148,6 +150,26 @@ def test_nps_visible_uniquement_pour_banque_et_telecom(secteur_code):
     assert ("NPS" in packs.kpis_visibles(secteur_code)) == (secteur_code in ("banque", "telecom"))
 
 
+def test_pack_restauration_est_exactement_les_3_resto():
+    assert set(packs.PACKS["restauration"]) == RESTAURATION
+    assert len(packs.PACKS["restauration"]) == 3
+    for code in RESTAURATION:
+        assert KPI_DEFINITIONS[code].famille == "sectoriel"
+        assert KPI_DEFINITIONS[code].secteur_code == "restauration"
+
+
+def test_kpis_visibles_restauration_cx_core_plus_les_3_resto():
+    visibles = packs.kpis_visibles("restauration")
+    assert set(visibles) == CX_CORE | RESTAURATION
+    assert len(visibles) == 11
+    assert visibles[:8] == packs.COMMUNS
+
+
+@pytest.mark.parametrize("secteur_code", [c for c in SECTEUR_CODES if c != "restauration"] + [None])
+def test_kpi_resto_jamais_visibles_hors_restauration(secteur_code):
+    assert not (set(packs.kpis_visibles(secteur_code)) & RESTAURATION)
+
+
 def test_pack_sectoriel_accessible_vrai_pour_tous_les_forfaits_aujourdhui():
     """Décision produit pas encore prise (voir rapport d'audit KPI) : True pour tous."""
     assert all(packs.pack_sectoriel_accessible(p) for p in ("gratuit", "starter", "pro", "entreprise", None))
@@ -155,11 +177,11 @@ def test_pack_sectoriel_accessible_vrai_pour_tous_les_forfaits_aujourdhui():
 
 # ── API, avec un pack injecté uniquement dans le test ───────────────────────────
 
-FAUX_KPI = "TEST_SECTORIEL_RESTAURATION"
+FAUX_KPI = "TEST_SECTORIEL_HOTELLERIE"
 
 
 def _faux_calculateur(db, organisation_id, agence_id=None, jours=30) -> KPIResult:
-    return KPIResult(code=FAUX_KPI, label="Faux KPI restauration (test)", unit="count", status="ok", value=1.0)
+    return KPIResult(code=FAUX_KPI, label="Faux KPI hotellerie (test)", unit="count", status="ok", value=1.0)
 
 
 @pytest.fixture()
@@ -177,12 +199,12 @@ def ctx_packs():
     Session = sessionmaker(bind=engine)
     db = Session()
 
-    org_resto = Organisation(id=uuid4(), nom="Org Restauration", active=True, secteur_code="restauration")
+    org_hotel = Organisation(id=uuid4(), nom="Org Hôtellerie", active=True, secteur_code="hotellerie")
     org_banque = Organisation(id=uuid4(), nom="Org Banque", active=True, secteur_code="banque")
     org_autre = Organisation(id=uuid4(), nom="Org Autre", active=True, secteur_code="autre")
-    db.add_all([org_resto, org_banque, org_autre])
+    db.add_all([org_hotel, org_banque, org_autre])
     db.commit()
-    ids = SimpleNamespace(org_resto=org_resto.id, org_banque=org_banque.id, org_autre=org_autre.id)
+    ids = SimpleNamespace(org_hotel=org_hotel.id, org_banque=org_banque.id, org_autre=org_autre.id)
     db.close()
 
     def _db():
@@ -197,7 +219,7 @@ def ctx_packs():
     app.dependency_overrides[get_db] = _db
 
     users = {
-        "cx_resto": SimpleNamespace(role=UserRole.CX_MANAGER, active=True, agence_id=None, organisation_id=ids.org_resto),
+        "cx_hotel": SimpleNamespace(role=UserRole.CX_MANAGER, active=True, agence_id=None, organisation_id=ids.org_hotel),
         "cx_banque": SimpleNamespace(role=UserRole.CX_MANAGER, active=True, agence_id=None, organisation_id=ids.org_banque),
         "cx_autre": SimpleNamespace(role=UserRole.CX_MANAGER, active=True, agence_id=None, organisation_id=ids.org_autre),
     }
@@ -211,35 +233,35 @@ def ctx_packs():
 
 
 @pytest.fixture()
-def pack_restauration_injecte(monkeypatch):
+def pack_hotellerie_injecte(monkeypatch):
     """Injecte un pack sectoriel UNIQUEMENT pour la durée du test — jamais dans le
     registre réel. monkeypatch restaure automatiquement PACKS/KPI_FUNCTIONS/KPI_DEFINITIONS
-    après le test, y compris si celui-ci échoue. "restauration" n'a pas de pack réel : le
-    vrai PACKS["banque"] n'est jamais écrasé."""
-    monkeypatch.setitem(packs.PACKS, "restauration", (FAUX_KPI,))
+    après le test, y compris si celui-ci échoue. "hotellerie" n'a pas de pack réel : aucun
+    vrai pack (banque, telecom, restauration) n'est jamais écrasé."""
+    monkeypatch.setitem(packs.PACKS, "hotellerie", (FAUX_KPI,))
     monkeypatch.setitem(KPI_FUNCTIONS, FAUX_KPI, _faux_calculateur)
     from app.services.kpi.definitions import KPIDefinition, FAMILLE_SECTORIEL
     monkeypatch.setitem(
         KPI_DEFINITIONS, FAUX_KPI,
-        KPIDefinition(code=FAUX_KPI, label="Faux KPI restauration (test)", description="Test", unit="count",
-                      famille=FAMILLE_SECTORIEL, secteur_code="restauration"),
+        KPIDefinition(code=FAUX_KPI, label="Faux KPI hotellerie (test)", description="Test", unit="count",
+                      famille=FAMILLE_SECTORIEL, secteur_code="hotellerie"),
     )
 
 
-def test_pack_injecte_visible_pour_le_bon_secteur_dans_la_collection(ctx_packs, pack_restauration_injecte):
-    r = ctx_packs.call("cx_resto", "get", "/kpis/")
+def test_pack_injecte_visible_pour_le_bon_secteur_dans_la_collection(ctx_packs, pack_hotellerie_injecte):
+    r = ctx_packs.call("cx_hotel", "get", "/kpis/")
     assert r.status_code == 200, r.text
     data = r.json()
     codes = {k["code"] for k in data["kpis"]}
     assert codes == CX_CORE | {FAUX_KPI}
-    assert data["secteur_code"] == "restauration"
+    assert data["secteur_code"] == "hotellerie"
     assert data["pack_disponible"] is True
     faux_kpi = next(k for k in data["kpis"] if k["code"] == FAUX_KPI)
     assert faux_kpi["famille"] == "sectoriel"
 
 
 @pytest.mark.parametrize("user_key,attendu", [("cx_autre", CX_CORE), ("cx_banque", CX_CORE | BANKING)])
-def test_pack_injecte_absent_de_la_collection_pour_un_autre_secteur(ctx_packs, pack_restauration_injecte, user_key, attendu):
+def test_pack_injecte_absent_de_la_collection_pour_un_autre_secteur(ctx_packs, pack_hotellerie_injecte, user_key, attendu):
     r = ctx_packs.call(user_key, "get", "/kpis/")
     assert r.status_code == 200, r.text
     codes = {k["code"] for k in r.json()["kpis"]}
@@ -247,14 +269,14 @@ def test_pack_injecte_absent_de_la_collection_pour_un_autre_secteur(ctx_packs, p
     assert codes == attendu
 
 
-def test_pack_injecte_accessible_par_code_pour_le_bon_secteur(ctx_packs, pack_restauration_injecte):
-    r = ctx_packs.call("cx_resto", "get", f"/kpis/{FAUX_KPI}")
+def test_pack_injecte_accessible_par_code_pour_le_bon_secteur(ctx_packs, pack_hotellerie_injecte):
+    r = ctx_packs.call("cx_hotel", "get", f"/kpis/{FAUX_KPI}")
     assert r.status_code == 200, r.text
     assert r.json()["code"] == FAUX_KPI
 
 
 @pytest.mark.parametrize("user_key", ["cx_autre", "cx_banque"])
-def test_pack_injecte_404_par_code_pour_un_autre_secteur(ctx_packs, pack_restauration_injecte, user_key):
+def test_pack_injecte_404_par_code_pour_un_autre_secteur(ctx_packs, pack_hotellerie_injecte, user_key):
     """404 — identique à un code totalement inconnu, jamais un 403 qui révélerait que ce
     KPI existe pour un autre secteur (voir le rapport d'audit KPI, section Sécurité)."""
     r = ctx_packs.call(user_key, "get", f"/kpis/{FAUX_KPI}")
@@ -265,9 +287,9 @@ def test_pack_injecte_404_par_code_pour_un_autre_secteur(ctx_packs, pack_restaur
 
 
 def test_sans_injection_le_faux_kpi_nexiste_nulle_part(ctx_packs):
-    """Contrôle négatif : sans la fixture pack_restauration_injecte, PACKS est le vrai
-    registre — "restauration" n'y a pas de pack et ne voit que le CX Core."""
-    r = ctx_packs.call("cx_resto", "get", "/kpis/")
+    """Contrôle négatif : sans la fixture pack_hotellerie_injecte, PACKS est le vrai
+    registre — "hotellerie" n'y a pas de pack et ne voit que le CX Core."""
+    r = ctx_packs.call("cx_hotel", "get", "/kpis/")
     codes = {k["code"] for k in r.json()["kpis"]}
     assert codes == CX_CORE
     assert r.json()["pack_disponible"] is False

@@ -42,6 +42,7 @@ from app.models.action_corrective import ActionCorrective
 from app.models.agence import Agence
 from app.models.analyse_ia import AnalyseIA
 from app.models.categorie import Categorie
+from app.models.demande_contact import DemandeContact
 from app.models.enums import CriticiteType, SentimentType, UserRole
 from app.models.feedback import Feedback
 from app.models.historique_issue import HistoriqueIssue
@@ -75,7 +76,7 @@ def ctx():
         engine,
         tables=[Plan.__table__, Organisation.__table__, Agence.__table__, QRCode.__table__, Categorie.__table__,
                 Feedback.__table__, AnalyseIA.__table__, Issue.__table__, HistoriqueIssue.__table__,
-                ActionCorrective.__table__, IssueEscalation.__table__],
+                ActionCorrective.__table__, IssueEscalation.__table__, DemandeContact.__table__],
     )
     Session = sessionmaker(bind=engine)
     db = Session()
