@@ -221,14 +221,17 @@ try {
                         aria-label="Numéro de téléphone pour être recontacté"
                         placeholder="Votre numéro de téléphone"
                         class="styled-input"
+                        aria-describedby="contactTelError"
                       />
                     </div>
                   </div>
+                  <p class="field-error" id="contactTelError" role="alert" hidden></p>
                 </div>
               </div>
 
               <!-- BOUTON D'ENVOI PRINCIPAL -->
               <div class="submit-wrap">
+                <p class="field-error submit-error" id="submitError" role="alert" hidden></p>
                 <button type="button" id="btnSubmitFeedback" class="btn-submit">
                   <span class="btn-text">Envoyer mon avis</span>
                   <svg class="btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
@@ -1139,6 +1142,26 @@ try {
     color: #3C7730;
   }
 
+  .field-error {
+    margin: 6px 2px 0;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: #B91C1C;
+  }
+
+  .field-error[hidden] {
+    display: none;
+  }
+
+  .submit-error {
+    margin: 0 2px 10px;
+  }
+
+  .styled-input.is-invalid {
+    border-color: #B91C1C;
+  }
+
   /* =========================================================
      BOUTON D'ENVOI & PIED
      ========================================================= */
@@ -1499,6 +1522,8 @@ try {
 </style>
 
 <script>
+  import { normaliserTelephone, MESSAGE_TELEPHONE_INVALIDE } from '../../utils/telephone';
+
   // Navigation & Paramètres
   const DEFAULT_API_URL = 'https://ikan-772d.onrender.com/api/v1';
   const pageOuter = document.querySelector('.page-outer') as HTMLElement | null;
@@ -1978,6 +2003,28 @@ try {
   const screenSentiment = document.getElementById('screen-sentiment');
   const screenSuccess = document.getElementById('screen-success');
 
+  const contactTelInputEl = document.getElementById('contactTelInput') as HTMLInputElement | null;
+  const contactTelErrorEl = document.getElementById('contactTelError');
+  const submitErrorEl = document.getElementById('submitError');
+
+  function afficherErreurTelephone(message: string | null) {
+    if (contactTelErrorEl) {
+      contactTelErrorEl.textContent = message || '';
+      contactTelErrorEl.hidden = !message;
+    }
+    contactTelInputEl?.classList.toggle('is-invalid', !!message);
+    if (message) contactTelInputEl?.focus();
+  }
+
+  function afficherErreurEnvoi(message: string | null) {
+    if (submitErrorEl) {
+      submitErrorEl.textContent = message || '';
+      submitErrorEl.hidden = !message;
+    }
+  }
+
+  contactTelInputEl?.addEventListener('input', () => afficherErreurTelephone(null));
+
   btnSubmit?.addEventListener('click', async () => {
     const commentaireTexte = commentInput?.value.trim() || '';
     const contactTel = (document.getElementById('contactTelInput') as HTMLInputElement)?.value.trim() || null;
@@ -1988,10 +2035,17 @@ try {
     }
 
     if (wantsRecontact && !contactTel) {
-      alert("Veuillez renseigner un numéro de téléphone pour être recontacté.");
+      afficherErreurTelephone("Veuillez renseigner un numéro de téléphone pour être recontacté.");
       return;
     }
+    if (wantsRecontact && contactTel && !normaliserTelephone(contactTel)) {
+      afficherErreurTelephone(MESSAGE_TELEPHONE_INVALIDE);
+      return;
+    }
+    afficherErreurTelephone(null);
+    afficherErreurEnvoi(null);
 
+    const libelleBoutonInitial = btnSubmit.innerHTML;
     btnSubmit.disabled = true;
     btnSubmit.innerHTML = '<span class="btn-spinner"></span><span>Envoi de votre avis...</span>';
 
@@ -2035,18 +2089,24 @@ try {
           afficherQuestionNPS(created.id, created.nps_token);
         }
       } else {
+        // Échec : on NE montre PAS l'écran de succès (l'avis n'a pas été enregistré) et on
+        // conserve toutes les données du formulaire pour que le client puisse corriger.
         const err = await res.json().catch(() => ({}));
-        alert(`Information : ${err.detail || 'Votre avis a été pris en compte.'}`);
-        if (screenSentiment) screenSentiment.style.display = 'none';
-        if (screenSuccess) screenSuccess.style.display = 'flex';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        const erreurTelephone = res.status === 422 && Array.isArray(err.detail) &&
+          err.detail.some((d: any) => Array.isArray(d?.loc) && d.loc.includes('contact_telephone'));
+        if (erreurTelephone) {
+          afficherErreurTelephone(MESSAGE_TELEPHONE_INVALIDE);
+        } else {
+          afficherErreurEnvoi("Votre avis n'a pas pu être envoyé. Vérifiez les informations saisies puis réessayez.");
+        }
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = libelleBoutonInitial;
       }
     } catch (e) {
       console.error("Erreur d'envoi feedback:", e);
-      // Mode tolérant hors-ligne pour ne pas frustrer le client
-      if (screenSentiment) screenSentiment.style.display = 'none';
-      if (screenSuccess) screenSuccess.style.display = 'flex';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      afficherErreurEnvoi("Votre avis n'a pas pu être envoyé. Vérifiez votre connexion internet puis réessayez.");
+      btnSubmit.disabled = false;
+      btnSubmit.innerHTML = libelleBoutonInitial;
     }
   });
 
@@ -2132,6 +2192,8 @@ try {
     recontactNo?.click();
     const tel = document.getElementById('contactTelInput') as HTMLInputElement;
     if (tel) tel.value = '';
+    afficherErreurTelephone(null);
+    afficherErreurEnvoi(null);
 
     if (btnSubmit) {
       btnSubmit.disabled = false;

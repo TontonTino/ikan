@@ -10,6 +10,7 @@ import type { DemandeContactListItem, Agence } from '../../types';
 import AgenceFilterSelect from '../../components/stats/AgenceFilterSelect';
 import { StatsErrorState } from '../../components/stats/StatsStates';
 import EmptyState from '../../components/ui/EmptyState';
+import WhatsAppReplyButton from '../../components/feedbacks/WhatsAppReplyButton';
 import SkeletonBlock from '../../components/ui/SkeletonBlock';
 import SectionHeading from '../../components/ui/SectionHeading';
 import { PhoneIcon, MailIcon, CheckCircleIcon, AlertTriangleIcon } from '../../components/common/Icons';
@@ -20,6 +21,7 @@ const formatDate = (iso: string) =>
 export default function DemandesRappelPage() {
   const user = useAuthStore((s) => s.user);
   const isCXManager = user?.role === 'cx_manager';
+  const isAgencyManager = user?.role === 'agency_manager';
 
   const [toggle, setToggle] = useState<'attente' | 'traitees'>('attente');
   const [demandes, setDemandes] = useState<DemandeContactListItem[]>([]);
@@ -263,6 +265,10 @@ export default function DemandesRappelPage() {
                   {d.feedback_commentaire || 'Aucun commentaire.'}
                 </p>
               </div>
+
+              {isAgencyManager && (
+                <WhatsAppReplyButton telephone={d.telephone} telephoneWhatsapp={d.telephone_whatsapp} />
+              )}
 
               {toggle === 'attente' && (
                 <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #F1F4EE', paddingTop: '12px' }}>

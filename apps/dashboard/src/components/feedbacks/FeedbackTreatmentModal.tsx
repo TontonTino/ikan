@@ -4,6 +4,7 @@ import { feedbacksApi, issuesApi, agencesApi } from '../../services/api';
 import { AVIS_STATUT_LABELS, GRAVITE_LABELS, PROBLEME_STATUT_LABELS, ROLE_LABELS, SENTIMENT_LABELS } from '../../utils/vocabulaire';
 import { themeLabel } from '../../utils/themeLabels';
 import EmptyState from '../ui/EmptyState';
+import WhatsAppReplyButton from './WhatsAppReplyButton';
 import {
   AlertTriangleIcon,
   ClockIcon,
@@ -810,6 +811,16 @@ export default function FeedbackTreatmentModal({
                       </div>
                     )}
                   </div>
+
+                  {/* Réponse WhatsApp (Agency Manager uniquement) : ouvre wa.me, aucun envoi ni marquage « traitée ». */}
+                  {isAgencyManager && (
+                    <div style={{ marginBottom: '12px' }}>
+                      <WhatsAppReplyButton
+                        telephone={feedback.demande_contact.telephone}
+                        telephoneWhatsapp={feedback.demande_contact.telephone_whatsapp}
+                      />
+                    </div>
+                  )}
 
                   {/* Bouton pour afficher le formulaire de réponse */}
                   {!showReponseForm ? (
