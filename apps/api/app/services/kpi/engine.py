@@ -31,7 +31,13 @@ from app.models.categorie import Categorie
 from app.models.qr_code import QRCode
 from app.schemas.kpi import KPIResult
 from app.services.kpi.definitions import KPI_DEFINITIONS
-from app.services.kpi.packs_telecom import PERIMETRE_AGENCE, PERIMETRE_CATEGORIES, PERIMETRE_HORS_AGENCE, TOUTES_LES_CLES_DU_PACK
+from app.services.kpi.packs_telecom import (
+    CLE_PAR_KPI_RECLAMATIONS,
+    PERIMETRE_AGENCE,
+    PERIMETRE_CATEGORIES,
+    PERIMETRE_HORS_AGENCE,
+    TOUTES_LES_CLES_DU_PACK,
+)
 
 ISSUE_STATUTS_RESOLUS = ("resolue", "verifiee")
 ISSUE_STATUTS_BACKLOG = ("ouverte", "action_en_cours", "reouverte")
@@ -386,6 +392,53 @@ def calculer_tel_recurrence_hors_perimetre(db: Session, organisation_id: UUID, a
     return _calculer_tel_recurrence("TEL_RECURRENCE_HORS_PERIMETRE", PERIMETRE_HORS_AGENCE, db, organisation_id, agence_id, jours)
 
 
+# Réclamations basées sur les feedbacks : même seuil que les autres KPI TEL_*, appliqué ici
+# au nombre total de feedbacks de la période (le dénominateur).
+SEUIL_MIN_FEEDBACKS_TELECOM = 5
+
+
+def _calculer_tel_reclamations(code: str, db: Session, organisation_id: UUID,
+                               agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
+    """Feedbacks de la période dont la catégorie a la clé du `code`
+    (packs_telecom.CLE_PAR_KPI_RECLAMATIONS — jamais le nom de la catégorie) ET dont le
+    sentiment IA est NEGATIF (définition de NEGATIVE_SENTIMENT_RATE), divisés par TOUS les
+    feedbacks de la période (même population que FEEDBACK_VOLUME, via _base_feedback_query).
+    Outer joins : un feedback sans catégorie ou sans AnalyseIA reste au dénominateur et
+    n'est jamais compté négatif. AnalyseIA.feedback_id est unique : aucun double compte."""
+    cle = CLE_PAR_KPI_RECLAMATIONS[code]
+    total, negatifs = (
+        _base_feedback_query(db, organisation_id, agence_id, jours)
+        .outerjoin(Categorie, Feedback.categorie_id == Categorie.id)
+        .outerjoin(AnalyseIA, AnalyseIA.feedback_id == Feedback.id)
+        .with_entities(
+            func.count(Feedback.id),
+            func.sum(case((and_(Categorie.cle == cle, AnalyseIA.sentiment == SentimentType.NEGATIF), 1), else_=0)),
+        )
+        .one()
+    )
+    total = total or 0
+    negatifs = negatifs or 0
+    if total < SEUIL_MIN_FEEDBACKS_TELECOM:
+        return _no_data(code, numerator=negatifs, denominator=total)
+    d = KPI_DEFINITIONS[code]
+    return KPIResult(
+        code=code, label=d.label, unit=d.unit, status="ok",
+        value=round(negatifs / total * 100, 1), numerator=negatifs, denominator=total,
+    )
+
+
+def calculer_tel_reclamations_reseau(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
+    return _calculer_tel_reclamations("TEL_RECLAMATIONS_RESEAU", db, organisation_id, agence_id, jours)
+
+
+def calculer_tel_reclamations_recharge_forfait(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
+    return _calculer_tel_reclamations("TEL_RECLAMATIONS_RECHARGE_FORFAIT", db, organisation_id, agence_id, jours)
+
+
+def calculer_tel_reclamations_facturation(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
+    return _calculer_tel_reclamations("TEL_RECLAMATIONS_FACTURATION", db, organisation_id, agence_id, jours)
+
+
 def calculer_escalation_rate(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
     """Share of Issues present in backlog during the period with an explicit escalation.
 
@@ -523,4 +576,7 @@ KPI_FUNCTIONS = {
     "TEL_PART_HORS_PERIMETRE": calculer_tel_part_hors_perimetre,
     "TEL_RECURRENCE_AGENCE": calculer_tel_recurrence_agence,
     "TEL_RECURRENCE_HORS_PERIMETRE": calculer_tel_recurrence_hors_perimetre,
+    "TEL_RECLAMATIONS_RESEAU": calculer_tel_reclamations_reseau,
+    "TEL_RECLAMATIONS_RECHARGE_FORFAIT": calculer_tel_reclamations_recharge_forfait,
+    "TEL_RECLAMATIONS_FACTURATION": calculer_tel_reclamations_facturation,
 }

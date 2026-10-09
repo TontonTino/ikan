@@ -25,3 +25,11 @@ PERIMETRE_CATEGORIES: dict[str, frozenset[str]] = {
 # Toutes les clés couvertes par le pack (les 3 groupes réunis) — une Issue dont la
 # catégorie a une clé hors de cet ensemble (ou pas de catégorie du tout) est "non classée".
 TOUTES_LES_CLES_DU_PACK: frozenset[str] = frozenset().union(*PERIMETRE_CATEGORIES.values())
+
+# KPI de réclamations basés sur les feedbacks (calculer_tel_reclamations_* dans engine.py) :
+# code KPI -> clé stable de catégorie (categories_agence.cle), jamais le nom affiché.
+CLE_PAR_KPI_RECLAMATIONS: dict[str, str] = {
+    "TEL_RECLAMATIONS_RESEAU": "internet_reseau_mobile",
+    "TEL_RECLAMATIONS_RECHARGE_FORFAIT": "forfaits_recharge",
+    "TEL_RECLAMATIONS_FACTURATION": "facturation_paiement",
+}

@@ -246,4 +246,42 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
         famille=FAMILLE_SECTORIEL,
         secteur_code="telecom",
     ),
+    # Réclamations basées sur les feedbacks (pas sur les Issues, contrairement à
+    # TEL_PART_HORS_PERIMETRE) — clé de catégorie : packs_telecom.CLE_PAR_KPI_RECLAMATIONS.
+    "TEL_RECLAMATIONS_RESEAU": KPIDefinition(
+        code="TEL_RECLAMATIONS_RESEAU",
+        label="Réclamations réseau (basé sur les feedbacks)",
+        description=(
+            "Pourcentage de feedbacks de la période dont la catégorie a la clé "
+            "internet_reseau_mobile ET dont le sentiment IA est NEGATIF (même définition "
+            "que NEGATIVE_SENTIMENT_RATE), parmi TOUS les feedbacks de la période "
+            "(population de FEEDBACK_VOLUME). Un feedback non analysé n'est jamais compté "
+            "comme négatif. Moins de 5 feedbacks dans la période : no_data."
+        ),
+        unit="percent",
+        famille=FAMILLE_SECTORIEL,
+        secteur_code="telecom",
+    ),
+    "TEL_RECLAMATIONS_RECHARGE_FORFAIT": KPIDefinition(
+        code="TEL_RECLAMATIONS_RECHARGE_FORFAIT",
+        label="Réclamations recharge & forfaits (basé sur les feedbacks)",
+        description=(
+            "Même formule que TEL_RECLAMATIONS_RESEAU, pour la clé de catégorie "
+            "forfaits_recharge. Moins de 5 feedbacks dans la période : no_data."
+        ),
+        unit="percent",
+        famille=FAMILLE_SECTORIEL,
+        secteur_code="telecom",
+    ),
+    "TEL_RECLAMATIONS_FACTURATION": KPIDefinition(
+        code="TEL_RECLAMATIONS_FACTURATION",
+        label="Réclamations facturation (basé sur les feedbacks)",
+        description=(
+            "Même formule que TEL_RECLAMATIONS_RESEAU, pour la clé de catégorie "
+            "facturation_paiement. Moins de 5 feedbacks dans la période : no_data."
+        ),
+        unit="percent",
+        famille=FAMILLE_SECTORIEL,
+        secteur_code="telecom",
+    ),
 }

@@ -1,6 +1,6 @@
 """
 GET /kpis — périmètre réel du pack telecom (pas un pack injecté pour le test, le vrai
-PACKS["telecom"]) : une organisation telecom voit le CX Core + NPS + les 3 KPI TEL_* (12),
+PACKS["telecom"]) : une organisation telecom voit le CX Core + NPS + les 6 KPI TEL_* (15),
 jamais les 6 autres KPI bancaires (404 par code) ; une organisation banque ou autre ne voit
 jamais les codes TEL_* (404 par code).
 """
@@ -34,7 +34,8 @@ from app.models.plan import Plan
 from app.models.qr_code import QRCode
 from app.services.kpi.packs import COMMUNS
 
-TEL_CODES = ("TEL_PART_HORS_PERIMETRE", "TEL_RECURRENCE_AGENCE", "TEL_RECURRENCE_HORS_PERIMETRE")
+TEL_CODES = ("TEL_PART_HORS_PERIMETRE", "TEL_RECURRENCE_AGENCE", "TEL_RECURRENCE_HORS_PERIMETRE",
+             "TEL_RECLAMATIONS_RESEAU", "TEL_RECLAMATIONS_RECHARGE_FORFAIT", "TEL_RECLAMATIONS_FACTURATION")
 BANKING_SANS_NPS = ("ISSUE_BACKLOG", "BACKLOG_AGE", "ACTION_COMPLETION_RATE", "SLA_COMPLIANCE_RATE",
                     "ISSUE_RECURRENCE_RATE", "ESCALATION_RATE")
 BANKING = ("NPS",) + BANKING_SANS_NPS
@@ -91,7 +92,7 @@ def test_organisation_telecom_voit_cx_core_plus_nps_plus_le_pack(ctx):
     data = r.json()
     codes = {k["code"] for k in data["kpis"]}
     assert codes == set(COMMUNS) | {"NPS"} | set(TEL_CODES)
-    assert len(data["kpis"]) == 8 + 1 + 3 == 12
+    assert len(data["kpis"]) == 8 + 1 + 6 == 15
     assert data["secteur_code"] == "telecom"
     assert data["pack_disponible"] is True
     sectoriels = {k["code"] for k in data["kpis"] if k["famille"] == "sectoriel"}

@@ -11,8 +11,9 @@ PACKS ajoute, par secteur_code (app/services/secteurs.py), les KPI d'extension d
 secteur — décision produit, jamais déduite du seul fait qu'un calcul est réutilisable :
 - "banque" : extension Banking, les 7 KPI bancaires (NPS, backlog et son âge, actions,
   SLA, récurrence, escalades), déclarés avec secteur_code="banque" dans definitions.py.
-- "telecom" : pack telecom v1 (3 KPI TEL_*, voir app/services/kpi/packs_telecom.py pour
-  les groupes de catégories) + NPS, ouvert explicitement au telecom. Les 6 autres KPI
+- "telecom" : pack telecom (3 KPI TEL_* basés sur les Issues, 3 KPI TEL_RECLAMATIONS_*
+  basés sur les feedbacks — voir app/services/kpi/packs_telecom.py pour les groupes et
+  les clés de catégories) + NPS, ouvert explicitement au telecom. Les 6 autres KPI
   bancaires n'y sont volontairement pas : leurs règles (délais, SLA, récurrence,
   escalades) ne sont pas transposées automatiquement à un autre secteur.
 Tous les autres secteurs restent vides (CX Core seulement). Un KPI peut figurer dans
@@ -50,7 +51,15 @@ PACKS["banque"] = (
     "ISSUE_RECURRENCE_RATE",
     "ESCALATION_RATE",
 )
-PACKS["telecom"] = ("TEL_PART_HORS_PERIMETRE", "TEL_RECURRENCE_AGENCE", "TEL_RECURRENCE_HORS_PERIMETRE", "NPS")
+PACKS["telecom"] = (
+    "TEL_PART_HORS_PERIMETRE",
+    "TEL_RECURRENCE_AGENCE",
+    "TEL_RECURRENCE_HORS_PERIMETRE",
+    "NPS",
+    "TEL_RECLAMATIONS_RESEAU",
+    "TEL_RECLAMATIONS_RECHARGE_FORFAIT",
+    "TEL_RECLAMATIONS_FACTURATION",
+)
 
 
 def pack_sectoriel_accessible(plan_code: str | None) -> bool:

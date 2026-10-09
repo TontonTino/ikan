@@ -3,7 +3,7 @@ Registre de packs KPI (app/services/kpi/packs.py) — architecture en couches :
 - CX Core (COMMUNS) : 8 KPI universels, visibles par TOUS les secteurs, y compris un
   secteur inconnu du registre ou None — jamais une exception.
 - Extension Banking (PACKS["banque"]) : 7 KPI, famille sectorielle, secteur_code="banque".
-- Extension Telecom (PACKS["telecom"]) : les 3 TEL_* + NPS (décision métier explicite) —
+- Extension Telecom (PACKS["telecom"]) : les 6 TEL_* + NPS (décision métier explicite) —
   jamais les 6 autres KPI bancaires.
 - Les autres secteurs n'ont que le CX Core.
 - Avec un pack injecté UNIQUEMENT dans un test (jamais dans PACKS réel), seule
@@ -64,7 +64,10 @@ BANKING = {
     "SLA_COMPLIANCE_RATE", "ISSUE_RECURRENCE_RATE", "ESCALATION_RATE",
 }
 BANKING_SANS_NPS = BANKING - {"NPS"}
-TELECOM = {"TEL_PART_HORS_PERIMETRE", "TEL_RECURRENCE_AGENCE", "TEL_RECURRENCE_HORS_PERIMETRE", "NPS"}
+TELECOM = {
+    "TEL_PART_HORS_PERIMETRE", "TEL_RECURRENCE_AGENCE", "TEL_RECURRENCE_HORS_PERIMETRE", "NPS",
+    "TEL_RECLAMATIONS_RESEAU", "TEL_RECLAMATIONS_RECHARGE_FORFAIT", "TEL_RECLAMATIONS_FACTURATION",
+}
 SECTEURS_SANS_PACK = [c for c in SECTEUR_CODES if c not in ("banque", "telecom")] + [None, "code_vraiment_inconnu_du_registre"]
 
 
@@ -91,9 +94,9 @@ def test_les_7_kpi_bancaires_sont_identifies_comme_tels():
     assert len(packs.PACKS["banque"]) == 7
 
 
-def test_pack_telecom_est_exactement_les_3_tel_plus_nps():
+def test_pack_telecom_est_exactement_les_6_tel_plus_nps():
     assert set(packs.PACKS["telecom"]) == TELECOM
-    assert len(packs.PACKS["telecom"]) == 4
+    assert len(packs.PACKS["telecom"]) == 7
     assert not (set(packs.PACKS["telecom"]) & BANKING_SANS_NPS)
 
 
@@ -127,10 +130,10 @@ def test_kpis_visibles_banque_cx_core_plus_les_7_bancaires():
     assert visibles[:8] == packs.COMMUNS  # CX Core d'abord, puis le pack
 
 
-def test_kpis_visibles_telecom_cx_core_plus_nps_plus_les_3_tel():
+def test_kpis_visibles_telecom_cx_core_plus_nps_plus_les_6_tel():
     visibles = packs.kpis_visibles("telecom")
     assert set(visibles) == CX_CORE | TELECOM
-    assert len(visibles) == 12
+    assert len(visibles) == 15
     assert visibles[:8] == packs.COMMUNS
     assert not (set(visibles) & BANKING_SANS_NPS)
 
