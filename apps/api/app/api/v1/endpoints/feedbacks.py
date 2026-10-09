@@ -45,13 +45,25 @@ from app.schemas.feedback import (
 from app.core.security import create_nps_token, decode_token
 from app.services.ai.analyse_service import analyser_feedback
 from app.core.config import settings
+from app.utils.phone import normaliser_telephone
 
 router = APIRouter()
 
 
-def _format_feedback_response(f: Feedback) -> FeedbackResponse:
-    """Transforme une entité Feedback SQLAlchemy en schéma Pydantic FeedbackResponse complet."""
+def _telephone_whatsapp(telephone: Optional[str], user: Optional[Utilisateur]) -> Optional[str]:
+    """Numéro normalisé pour wa.me, réservé à l'Agency Manager (seul rôle qui répond au
+    client). None pour tout autre rôle, ou si le numéro stocké est absent/invalide."""
+    if user is None or user.role != UserRole.AGENCY_MANAGER:
+        return None
+    return normaliser_telephone(telephone)
+
+
+def _format_feedback_response(f: Feedback, user: Optional[Utilisateur] = None) -> FeedbackResponse:
+    """Transforme une entité Feedback SQLAlchemy en schéma Pydantic FeedbackResponse complet.
+    `user` : utilisateur authentifié ; absent (soumission publique) => pas de telephone_whatsapp."""
     res = FeedbackResponse.model_validate(f)
+    if res.demande_contact:
+        res.demande_contact.telephone_whatsapp = _telephone_whatsapp(res.demande_contact.telephone, user)
     if f.qr_code and f.qr_code.agence:
         res.agence_id = f.qr_code.agence_id
         res.agence_nom = f.qr_code.agence.nom
@@ -68,7 +80,7 @@ def _tronquer(texte: Optional[str], max_len: int = 140) -> Optional[str]:
     return texte if len(texte) <= max_len else f"{texte[:max_len]}…"
 
 
-def _format_demande_contact(dc: DemandeContact) -> DemandeContactListItem:
+def _format_demande_contact(dc: DemandeContact, user: Optional[Utilisateur] = None) -> DemandeContactListItem:
     """Transforme une DemandeContact (avec son feedback pré-chargé) en DemandeContactListItem."""
     feedback = dc.feedback
     agence_nom = None
@@ -78,6 +90,7 @@ def _format_demande_contact(dc: DemandeContact) -> DemandeContactListItem:
         id=dc.id,
         nom=dc.nom,
         telephone=dc.telephone,
+        telephone_whatsapp=_telephone_whatsapp(dc.telephone, user),
         email=dc.email,
         souhaite_etre_rappele=dc.souhaite_etre_rappele,
         traitee=dc.traitee,
@@ -330,7 +343,7 @@ def list_feedbacks(
     response.headers["X-Total-Count"] = str(query.order_by(None).count())
     feedbacks = query.order_by(Feedback.date_soumission.desc()).offset(offset).limit(limit).all()
 
-    return [_format_feedback_response(f) for f in feedbacks]
+    return [_format_feedback_response(f, current_user) for f in feedbacks]
 
 
 @router.get("/demandes-contact", response_model=List[DemandeContactListItem])
@@ -371,7 +384,7 @@ def lister_demandes_contact(
 
     response.headers["X-Total-Count"] = str(query.order_by(None).count())
     demandes = query.order_by(DemandeContact.date_demande.desc()).offset(offset).limit(limit).all()
-    return [_format_demande_contact(d) for d in demandes]
+    return [_format_demande_contact(d, current_user) for d in demandes]
 
 
 @router.get("/{feedback_id}", response_model=FeedbackResponse)
@@ -406,7 +419,7 @@ def get_feedback(
         except Exception as e:
             logger.warning(f"Auto-analyse fallback pour feedback {feedback.id}: {e}")
 
-    return _format_feedback_response(feedback)
+    return _format_feedback_response(feedback, current_user)
 
 
 @router.post("/{feedback_id}/open", response_model=FeedbackResponse)
@@ -461,7 +474,7 @@ def open_feedback(
         db.commit()
         db.refresh(feedback)
 
-    return _format_feedback_response(feedback)
+    return _format_feedback_response(feedback, current_user)
 
 
 @router.post("/{feedback_id}/notes", response_model=FeedbackResponse)
@@ -497,7 +510,7 @@ def add_note_interne(
     db.commit()
     db.refresh(feedback)
 
-    return _format_feedback_response(feedback)
+    return _format_feedback_response(feedback, current_user)
 
 
 @router.post("/{feedback_id}/suggestion-agence", response_model=FeedbackResponse)
@@ -542,7 +555,7 @@ def envoyer_suggestion_agence(
     db.commit()
     db.refresh(feedback)
 
-    return _format_feedback_response(feedback)
+    return _format_feedback_response(feedback, current_user)
 
 
 @router.post("/{feedback_id}/action-cx", response_model=FeedbackResponse)
@@ -587,7 +600,7 @@ def definir_action_cx(
     db.commit()
     db.refresh(feedback)
 
-    return _format_feedback_response(feedback)
+    return _format_feedback_response(feedback, current_user)
 
 
 @router.post("/{feedback_id}/confirmer-action", response_model=FeedbackResponse)
@@ -629,7 +642,7 @@ def confirmer_action_realisee(
     db.commit()
     db.refresh(feedback)
 
-    return _format_feedback_response(feedback)
+    return _format_feedback_response(feedback, current_user)
 
 
 @router.post("/{feedback_id}/reponses-client", response_model=List[ReponseClientResponse])
@@ -727,7 +740,7 @@ def reouvrir_feedback(
     db.commit()
     db.refresh(feedback)
 
-    return _format_feedback_response(feedback)
+    return _format_feedback_response(feedback, current_user)
 
 
 @router.get("/{feedback_id}/historique", response_model=List[HistoriqueFeedbackResponse])

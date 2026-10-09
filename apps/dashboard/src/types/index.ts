@@ -132,6 +132,8 @@ export interface DemandeContact {
   id: string;
   nom?: string;
   telephone?: string;
+  /** Numéro normalisé pour wa.me ; renseigné par l'API pour l'Agency Manager uniquement, null si invalide. */
+  telephone_whatsapp?: string | null;
   email?: string;
   souhaite_etre_rappele: boolean;
   traitee: boolean;
@@ -692,6 +694,8 @@ export interface DemandeContactListItem {
   id: string;
   nom?: string;
   telephone?: string;
+  /** Numéro normalisé pour wa.me ; renseigné par l'API pour l'Agency Manager uniquement, null si invalide. */
+  telephone_whatsapp?: string | null;
   email?: string;
   souhaite_etre_rappele: boolean;
   traitee: boolean;

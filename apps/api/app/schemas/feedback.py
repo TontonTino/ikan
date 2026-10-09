@@ -4,8 +4,10 @@ Schémas Pydantic pour les feedbacks (soumission client et workflow de traitemen
 from __future__ import annotations
 import uuid
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
+
+from app.utils.phone import MESSAGE_TELEPHONE_INVALIDE, normaliser_telephone
 
 
 class FeedbackCreate(BaseModel):
@@ -23,6 +25,17 @@ class FeedbackCreate(BaseModel):
     contact_email: Optional[str] = None
     souhaite_etre_rappele: bool = False
 
+    @field_validator("contact_telephone")
+    @classmethod
+    def _valider_contact_telephone(cls, valeur: Optional[str]) -> Optional[str]:
+        """Vide -> None ; sinon doit être un numéro valide (Burkina Faso). La valeur saisie
+        est conservée telle quelle (trimée) : la normalisation se fait à la lecture."""
+        if valeur is None or not valeur.strip():
+            return None
+        if normaliser_telephone(valeur) is None:
+            raise ValueError(MESSAGE_TELEPHONE_INVALIDE)
+        return valeur.strip()
+
 
 class AnalyseIAInfo(BaseModel):
     id: uuid.UUID
@@ -39,6 +52,9 @@ class DemandeContactInfo(BaseModel):
     id: uuid.UUID
     nom: Optional[str] = None
     telephone: Optional[str] = None
+    # Numéro normalisé pour wa.me (ex. "22670123456"). Renseigné UNIQUEMENT pour l'Agency
+    # Manager et seulement si le numéro stocké est valide ; None sinon (jamais stocké en base).
+    telephone_whatsapp: Optional[str] = None
     email: Optional[str] = None
     souhaite_etre_rappele: bool = False
     traitee: bool = False

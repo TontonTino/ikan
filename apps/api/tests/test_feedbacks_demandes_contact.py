@@ -33,6 +33,7 @@ from app.models.feedback import Feedback
 from app.models.historique_feedback import HistoriqueFeedback
 from app.models.organisation import Organisation
 from app.models.qr_code import QRCode
+from app.models.suggestion import Suggestion
 from app.models.utilisateur import Utilisateur
 
 NOW = datetime.now(timezone.utc)
@@ -45,7 +46,7 @@ def ctx():
         engine,
         tables=[Organisation.__table__, Agence.__table__, Utilisateur.__table__,
                 QRCode.__table__, Categorie.__table__, Feedback.__table__, HistoriqueFeedback.__table__,
-                DemandeContact.__table__, AnalyseIA.__table__],
+                DemandeContact.__table__, AnalyseIA.__table__, Suggestion.__table__],
     )
     Session = sessionmaker(bind=engine)
     db = Session()
@@ -266,3 +267,104 @@ def test_cx_a_peut_traiter_une_demande_de_son_organisation(ctx):
     dc = db.query(DemandeContact).filter(DemandeContact.id == ctx.dc_a1).first()
     assert dc.traitee is True
     db.close()
+
+
+# ── Validation du numéro à la création de la demande de rappel ────────────────────
+
+def _soumettre_avec_telephone(ctx, telephone):
+    return ctx.call(
+        "cx_a", "post", "/feedbacks/", params={"qr_code": "QR-A"},
+        json={"categorie_id": str(ctx.categorie_a), "note": 2, "souhaite_etre_rappele": True,
+              "contact_telephone": telephone},
+    )
+
+
+@pytest.mark.parametrize("saisie", ["70 12 34 56", "+226 70123456", "0022670123456"])
+def test_soumission_avec_telephone_valide_est_acceptee_et_stockee_telle_quelle(ctx, monkeypatch, saisie):
+    monkeypatch.setattr(feedbacks, "analyser_feedback", lambda feedback_id, db: None)
+    response = _soumettre_avec_telephone(ctx, saisie)
+    assert response.status_code == 201, response.text
+    db = ctx.Session()
+    dc = db.query(DemandeContact).filter(DemandeContact.feedback_id == UUID(response.json()["id"])).one()
+    assert dc.telephone == saisie
+    db.close()
+
+
+@pytest.mark.parametrize("saisie", ["7012345", "70 12 34 5a", "abcdefgh", "+33 6 12 34 56 78"])
+def test_soumission_avec_telephone_invalide_refusee_422_sans_rien_creer(ctx, monkeypatch, saisie):
+    monkeypatch.setattr(feedbacks, "analyser_feedback", lambda feedback_id, db: None)
+    db = ctx.Session()
+    avant = db.query(Feedback).count()
+    db.close()
+    response = _soumettre_avec_telephone(ctx, saisie)
+    assert response.status_code == 422, response.text
+    assert "Numéro de téléphone invalide" in response.text
+    db = ctx.Session()
+    assert db.query(Feedback).count() == avant
+    db.close()
+
+
+def test_soumission_avec_telephone_vide_reste_acceptee(ctx, monkeypatch):
+    monkeypatch.setattr(feedbacks, "analyser_feedback", lambda feedback_id, db: None)
+    response = _soumettre_avec_telephone(ctx, "   ")
+    assert response.status_code == 201, response.text
+
+
+# ── telephone_whatsapp : exposé au seul Agency Manager ────────────────────────────
+
+def _definir_telephone(ctx, dc_id, telephone):
+    db = ctx.Session()
+    db.query(DemandeContact).filter(DemandeContact.id == dc_id).one().telephone = telephone
+    db.commit()
+    db.close()
+
+
+def test_am_recoit_telephone_whatsapp_normalise_sur_detail_liste_et_demandes(ctx, monkeypatch):
+    monkeypatch.setattr(feedbacks, "analyser_feedback", lambda feedback_id, db: None)
+    _definir_telephone(ctx, ctx.dc_a1, "+226 70 12 34 56")
+    detail = ctx.call("am_a", "get", f"/feedbacks/{ctx.fb_a1}").json()["demande_contact"]
+    assert detail["telephone"] == "+226 70 12 34 56"  # valeur stockée inchangée
+    assert detail["telephone_whatsapp"] == "22670123456"
+
+    liste = ctx.call("am_a", "get", "/feedbacks/").json()
+    dc = next(f["demande_contact"] for f in liste if f["id"] == str(ctx.fb_a1))
+    assert dc["telephone_whatsapp"] == "22670123456"
+
+    item = ctx.call("am_a", "get", "/feedbacks/demandes-contact").json()[0]
+    assert item["telephone_whatsapp"] == "22670123456"
+
+
+def test_cx_ne_recoit_jamais_telephone_whatsapp_mais_garde_le_numero_brut(ctx, monkeypatch):
+    monkeypatch.setattr(feedbacks, "analyser_feedback", lambda feedback_id, db: None)
+    _definir_telephone(ctx, ctx.dc_a1, "70 12 34 56")
+    detail = ctx.call("cx_a", "get", f"/feedbacks/{ctx.fb_a1}").json()["demande_contact"]
+    assert detail["telephone"] == "70 12 34 56"
+    assert detail["telephone_whatsapp"] is None
+    items = ctx.call("cx_a", "get", "/feedbacks/demandes-contact").json()
+    assert all(i["telephone_whatsapp"] is None for i in items)
+    assert any(i["telephone"] == "70 12 34 56" for i in items)
+
+
+def test_numero_stocke_invalide_donne_telephone_whatsapp_none_pour_am(ctx, monkeypatch):
+    monkeypatch.setattr(feedbacks, "analyser_feedback", lambda feedback_id, db: None)
+    # dc_a1 porte "0100000001" (10 chiffres) : numéro historique non valide.
+    detail = ctx.call("am_a", "get", f"/feedbacks/{ctx.fb_a1}").json()["demande_contact"]
+    assert detail["telephone"] == "0100000001"
+    assert detail["telephone_whatsapp"] is None
+
+
+def test_telephone_whatsapp_persiste_apres_une_action_du_workflow(ctx):
+    """Les endpoints d'action renvoient aussi le feedback : le champ ne doit pas disparaître."""
+    _definir_telephone(ctx, ctx.dc_a1, "70123456")
+    r = ctx.call("am_a", "post", f"/feedbacks/{ctx.fb_a1}/notes", json={"texte": "note"})
+    assert r.status_code == 200, r.text
+    assert r.json()["demande_contact"]["telephone_whatsapp"] == "22670123456"
+    # Rien n'est écrit en base : le numéro stocké reste celui saisi.
+    db = ctx.Session()
+    assert db.query(DemandeContact).filter(DemandeContact.id == ctx.dc_a1).one().telephone == "70123456"
+    db.close()
+
+
+def test_am_hors_agence_garde_403_et_ne_voit_pas_le_numero(ctx, monkeypatch):
+    monkeypatch.setattr(feedbacks, "analyser_feedback", lambda feedback_id, db: None)
+    assert ctx.call("am_b", "get", f"/feedbacks/{ctx.fb_a1}").status_code == 403
