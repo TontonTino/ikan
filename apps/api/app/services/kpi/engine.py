@@ -16,8 +16,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import and_, case, func, literal, or_, union_all
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, case, exists, func, literal, or_, union_all
+from sqlalchemy.orm import Session, aliased
 
 from app.models.agence import Agence
 from app.models.action_corrective import ActionCorrective
@@ -485,21 +485,23 @@ def calculer_resto_risque_silencieux(db: Session, organisation_id: UUID, agence_
 
 
 def calculer_resto_recidive_categorie(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
-    """Issues récurrentes (issue_origine_id non nul) ÷ Issues résolues ou vérifiées, parmi
-    les Issues de la période dont la catégorie a une clé du pack (CLES_RESTAURATION —
-    jamais par nom). Même approche que _calculer_tel_recurrence ; le numérateur n'est pas
-    un sous-ensemble du dénominateur (une récurrence peut être encore ouverte)."""
-    recurrentes, resolues = (
+    """Parmi les Issues résolues ou vérifiées de la période dont la catégorie a une clé du
+    pack (CLES_RESTAURATION — jamais par nom), part de celles qui ont donné lieu à au moins
+    une récurrence (une Issue de la même organisation dont issue_origine_id les désigne).
+    Numérateur et dénominateur portent sur le même ensemble d'Issues : jamais plus de 100 %."""
+    recurrence = aliased(Issue)
+    a_une_recurrence = (
+        exists()
+        .where(recurrence.issue_origine_id == Issue.id, recurrence.organisation_id == Issue.organisation_id)
+    )
+    resolues, avec_recurrence = (
         _base_issue_query(db, organisation_id, agence_id, jours)
         .join(Categorie, Issue.categorie_id == Categorie.id)
-        .filter(Categorie.cle.in_(CLES_RESTAURATION))
-        .with_entities(
-            func.sum(case((Issue.issue_origine_id.isnot(None), 1), else_=0)),
-            func.sum(case((Issue.statut.in_(ISSUE_STATUTS_RESOLUS), 1), else_=0)),
-        )
+        .filter(Categorie.cle.in_(CLES_RESTAURATION), Issue.statut.in_(ISSUE_STATUTS_RESOLUS))
+        .with_entities(func.count(Issue.id), func.sum(case((a_une_recurrence, 1), else_=0)))
         .one()
     )
-    return _resultat_seuil("RESTO_RECIDIVE_CATEGORIE", recurrentes or 0, resolues or 0)
+    return _resultat_seuil("RESTO_RECIDIVE_CATEGORIE", avec_recurrence or 0, resolues or 0)
 
 
 def calculer_escalation_rate(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:

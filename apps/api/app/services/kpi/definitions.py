@@ -316,12 +316,11 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
         code="RESTO_RECIDIVE_CATEGORIE",
         label="Récidive par catégorie",
         description=(
-            "Nombre d'Issues récurrentes (reliées à une Issue d'origine) divisé par le "
-            "nombre d'Issues actuellement résolues ou vérifiées, en %, parmi les Issues "
-            "détectées dans la période dont la catégorie a une clé du pack restauration "
-            "(jamais par nom). Une Issue récurrente encore ouverte compte au numérateur sans "
-            "compter au dénominateur : la valeur peut dépasser 100 %. Moins de 5 Issues "
-            "résolues ou vérifiées : no_data."
+            "Parmi les Issues détectées dans la période, actuellement résolues ou vérifiées, "
+            "dont la catégorie a une clé du pack restauration (jamais par nom) : pourcentage "
+            "de celles qui ont donné lieu à au moins une récurrence (une Issue ultérieure "
+            "reliée à elle comme origine). Numérateur et dénominateur portent sur le même "
+            "ensemble d'Issues. Moins de 5 Issues résolues ou vérifiées : no_data."
         ),
         unit="percent",
         famille=FAMILLE_SECTORIEL,

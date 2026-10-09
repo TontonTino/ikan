@@ -12,19 +12,20 @@ Org R (restauration), agence R1, période 30 jours :
   => RECONTACTS 4/6 = 66.7 ; RISQUE_SILENCIEUX 3/7 = 42.9
   Issues (catégorie à clé) : origines O1 resolue, O2 verifiee, O3 resolue ; S1 resolue,
     S2 verifiee, S3 ouverte ; récurrences Rc1 (O1) resolue, Rc2 (O2) ouverte.
-    + leurre : catégorie SANS clé nommée « Qualité des plats » (résolue, récurrente),
-      Issue sans catégorie (résolue), Issue récurrente résolue vieille de 40 jours.
-  => RECIDIVE 2/6 = 33.3
+    + leurre : catégorie SANS clé nommée « Qualité des plats » (résolue, récurrence de
+      O3), Issue sans catégorie (résolue), récurrence de O3 vieille de 40 jours.
+  => RECIDIVE : 6 résolues/vérifiées (O1, O2, O3, S1, S2, Rc1), dont 3 ont donné lieu à au
+     moins une récurrence (O1, O2, O3) = 50.0
 Org R, agence R2 : 1 NEGATIF + rappel traité, 1 NEGATIF sans contact, 1 POSITIF + rappel
   non traité ; Issues O4 resolue (catégorie nommée « Cuisine », clé qualite_plats), Rc3
   (O4) ouverte.
   => R2 seule : no_data partout ; org R entière : RECONTACTS 5/8 = 62.5,
-     RISQUE_SILENCIEUX 4/9 = 44.4, RECIDIVE 3/7 = 42.9
+     RISQUE_SILENCIEUX 4/9 = 44.4, RECIDIVE 4/7 = 57.1 (+ O4)
 Org X (restauration) : 5 NEGATIF + rappel traité ; 5 Issues résolues dont 1 récurrente
   => 100.0 / 0.0 / 20.0 (seuil de 5 exactement atteint)
 Org C (restauration) : 4 NEGATIF sans contact, 4 Issues résolues => no_data partout
-Org Y (restauration) : 5 origines résolues + 6 récurrences ouvertes => RECIDIVE 120.0
-  (le numérateur n'est pas un sous-ensemble du dénominateur — comportement documenté)
+Org Y (restauration) : 5 origines résolues, toutes suivies de récurrences ouvertes
+  => RECIDIVE 100.0 (borne atteinte, jamais dépassée)
 
 Les clés sont écrites en dur dans ce jeu de données : changer une clé dans
 SECTEUR_CATEGORIES_DEPART["restauration"] fait échouer ces tests.
@@ -264,17 +265,62 @@ def test_creer_categories_depart_restauration(ctx, db):
 def test_formules_agence_r1(ctx, db):
     assert _val(calculer_resto_taux_traitement_recontacts(db, ctx.org_r, agence_id=ctx.r1)) == ("ok", 66.7, 4, 6)
     assert _val(calculer_resto_risque_silencieux(db, ctx.org_r, agence_id=ctx.r1)) == ("ok", 42.9, 3, 7)
-    assert _val(calculer_resto_recidive_categorie(db, ctx.org_r, agence_id=ctx.r1)) == ("ok", 33.3, 2, 6)
+    assert _val(calculer_resto_recidive_categorie(db, ctx.org_r, agence_id=ctx.r1)) == ("ok", 50.0, 3, 6)
 
 
 def test_formules_organisation_entiere(ctx, db):
     assert _val(calculer_resto_taux_traitement_recontacts(db, ctx.org_r)) == ("ok", 62.5, 5, 8)
     assert _val(calculer_resto_risque_silencieux(db, ctx.org_r)) == ("ok", 44.4, 4, 9)
-    assert _val(calculer_resto_recidive_categorie(db, ctx.org_r)) == ("ok", 42.9, 3, 7)
+    assert _val(calculer_resto_recidive_categorie(db, ctx.org_r)) == ("ok", 57.1, 4, 7)
 
 
-def test_recidive_peut_depasser_100(ctx, db):
-    assert _val(calculer_resto_recidive_categorie(db, ctx.org_y)) == ("ok", 120.0, 6, 5)
+def test_recidive_atteint_100_sans_le_depasser(ctx, db):
+    """Org Y : 5 origines résolues et 6 récurrences ouvertes — les récurrences ouvertes ne
+    gonflent plus le numérateur."""
+    assert _val(calculer_resto_recidive_categorie(db, ctx.org_y)) == ("ok", 100.0, 5, 5)
+
+
+@pytest.mark.parametrize("graine", range(40))
+def test_recidive_ne_depasse_jamais_100(ctx, db, graine):
+    """Données aléatoires, y compris incohérentes (origine ouverte, récurrence de
+    récurrence, origine dans une autre agence, catégorie sans clé, dates hors période,
+    plusieurs récurrences par origine) : le numérateur reste toujours inclus dans le
+    dénominateur."""
+    import random
+    rng = random.Random(graine)
+    org = Organisation(id=uuid.uuid4(), nom=f"Org aléatoire {graine}", active=True, secteur_code="restauration")
+    db.add(org)
+    db.flush()
+    agences = []
+    for k in range(2):
+        a = Agence(id=uuid.uuid4(), organisation_id=org.id, nom=f"A{k}", active=True)
+        db.add(a)
+        db.flush()
+        cats = [Categorie(id=uuid.uuid4(), agence_id=a.id, nom=f"C{k}{j}", active=True, cle=cle)
+                for j, cle in enumerate(["qualite_plats", "rapidite_attente", None])]
+        db.add_all(cats)
+        db.flush()
+        agences.append((a, cats))
+    issues = []
+    for _ in range(rng.randint(5, 30)):
+        a, cats = rng.choice(agences)
+        origine = rng.choice(issues) if issues and rng.random() < 0.6 else None
+        cat = rng.choice(cats + [None])
+        i = Issue(id=uuid.uuid4(), organisation_id=org.id, agence_id=a.id, titre="Issue",
+                  statut=rng.choice(["ouverte", "action_en_cours", "resolue", "verifiee", "reouverte"]),
+                  severite=CriticiteType.FAIBLE, necessite_action=False,
+                  premiere_detection=NOW - timedelta(days=rng.choice([0, 3, 15, 29, 45])),
+                  categorie_id=cat.id if cat is not None else None,
+                  issue_origine_id=origine.id if origine else None)
+        db.add(i)
+        db.flush()
+        issues.append(i)
+    db.commit()
+    for agence_id in (None, agences[0][0].id):
+        r = calculer_resto_recidive_categorie(db, org.id, agence_id=agence_id)
+        assert 0 <= r.numerator <= r.denominator
+        if r.status == "ok":
+            assert 0.0 <= r.value <= 100.0
 
 
 # ── Seuil de 5 au dénominateur ─────────────────────────────────────────────────
@@ -303,12 +349,12 @@ def test_categorie_renommee_garde_son_kpi(ctx, db):
     avant = _val(calculer_resto_recidive_categorie(db, ctx.org_r, agence_id=ctx.r1))
     db.get(Categorie, ctx.plats_r1).nom = "Nom totalement différent"
     db.commit()
-    assert _val(calculer_resto_recidive_categorie(db, ctx.org_r, agence_id=ctx.r1)) == avant == ("ok", 33.3, 2, 6)
+    assert _val(calculer_resto_recidive_categorie(db, ctx.org_r, agence_id=ctx.r1)) == avant == ("ok", 50.0, 3, 6)
 
 
 def test_cle_retiree_sort_du_perimetre(ctx, db):
-    """Sans la clé qualite_plats sur R1, il ne reste que les Issues rapidite_attente de R1
-    (O2 verifiee, S1 resolue, Rc2 ouverte) : 1 récurrente / 2 résolues -> sous le seuil."""
+    """Sans la clé qualite_plats sur R1, il ne reste que les Issues rapidite_attente de R1 :
+    2 résolues/vérifiées (O2, S1), dont 1 avec récurrence (O2) -> sous le seuil."""
     db.get(Categorie, ctx.plats_r1).cle = None
     db.commit()
     assert _val(calculer_resto_recidive_categorie(db, ctx.org_r, agence_id=ctx.r1)) == ("no_data", None, 1, 2)
