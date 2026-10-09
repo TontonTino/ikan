@@ -16,6 +16,8 @@ secteur — décision produit, jamais déduite du seul fait qu'un calcul est ré
   les clés de catégories) + NPS, ouvert explicitement au telecom. Les 6 autres KPI
   bancaires n'y sont volontairement pas : leurs règles (délais, SLA, récurrence,
   escalades) ne sont pas transposées automatiquement à un autre secteur.
+- "restauration" : pack restauration v1 (recontacts, risque silencieux, récidive par
+  catégorie — voir app/services/kpi/packs_restauration.py pour les clés de catégories).
 Tous les autres secteurs restent vides (CX Core seulement). Un KPI peut figurer dans
 plusieurs packs ; GET /kpis/ (app/api/v1/endpoints/kpis.py) n'a besoin d'aucun changement.
 
@@ -40,7 +42,7 @@ COMMUNS: tuple[str, ...] = COMMUN_PRIORITAIRE + COMMUN_OPERATIONNEL
 
 # secteur_code -> codes KPI du pack de ce secteur. Une valeur ici doit être une liste de
 # codes présents dans KPI_DEFINITIONS avec famille=FAMILLE_SECTORIEL. Tous les secteurs
-# restent vides sauf banque et telecom.
+# restent vides sauf banque, telecom et restauration.
 PACKS: dict[str, tuple[str, ...]] = {code: () for code in SECTEUR_CODES}
 PACKS["banque"] = (
     "NPS",
@@ -59,6 +61,11 @@ PACKS["telecom"] = (
     "TEL_RECLAMATIONS_RESEAU",
     "TEL_RECLAMATIONS_RECHARGE_FORFAIT",
     "TEL_RECLAMATIONS_FACTURATION",
+)
+PACKS["restauration"] = (
+    "RESTO_TAUX_TRAITEMENT_RECONTACTS",
+    "RESTO_RISQUE_SILENCIEUX",
+    "RESTO_RECIDIVE_CATEGORIE",
 )
 
 

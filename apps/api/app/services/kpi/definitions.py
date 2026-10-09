@@ -284,4 +284,46 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
         famille=FAMILLE_SECTORIEL,
         secteur_code="telecom",
     ),
+    # ── Pack restauration (app/services/kpi/packs_restauration.py, app/services/kpi/packs.py) ──
+    "RESTO_TAUX_TRAITEMENT_RECONTACTS": KPIDefinition(
+        code="RESTO_TAUX_TRAITEMENT_RECONTACTS",
+        label="Taux de clients recontactés",
+        description=(
+            "Pourcentage des demandes de rappel (souhaite_etre_rappele) dont la demande de "
+            "contact est marquée traitée, parmi toutes les demandes de rappel des feedbacks "
+            "de la période (Feedback.date_soumission). Une réponse au client par n'importe "
+            "quel canal (téléphone, e-mail, WhatsApp, SMS) ou un marquage manuel « traitée » "
+            "compte : ce n'est pas forcément un appel. Moins de 5 demandes de rappel : no_data."
+        ),
+        unit="percent",
+        famille=FAMILLE_SECTORIEL,
+        secteur_code="restauration",
+    ),
+    "RESTO_RISQUE_SILENCIEUX": KPIDefinition(
+        code="RESTO_RISQUE_SILENCIEUX",
+        label="Risque silencieux",
+        description=(
+            "Pourcentage des feedbacks négatifs de la période (sentiment IA NEGATIF, même "
+            "définition que NEGATIVE_SENTIMENT_RATE) sans aucune demande de contact : ces "
+            "clients mécontents ne peuvent pas être recontactés. Un feedback non analysé "
+            "n'est jamais compté négatif. Moins de 5 feedbacks négatifs : no_data."
+        ),
+        unit="percent",
+        famille=FAMILLE_SECTORIEL,
+        secteur_code="restauration",
+    ),
+    "RESTO_RECIDIVE_CATEGORIE": KPIDefinition(
+        code="RESTO_RECIDIVE_CATEGORIE",
+        label="Récidive par catégorie",
+        description=(
+            "Parmi les Issues détectées dans la période, actuellement résolues ou vérifiées, "
+            "dont la catégorie a une clé du pack restauration (jamais par nom) : pourcentage "
+            "de celles qui ont donné lieu à au moins une récurrence (une Issue ultérieure "
+            "reliée à elle comme origine). Numérateur et dénominateur portent sur le même "
+            "ensemble d'Issues. Moins de 5 Issues résolues ou vérifiées : no_data."
+        ),
+        unit="percent",
+        famille=FAMILLE_SECTORIEL,
+        secteur_code="restauration",
+    ),
 }

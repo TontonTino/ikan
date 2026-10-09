@@ -2,7 +2,7 @@
 GET /kpis — couches CX Core / extension Banking, sur le vrai registre PACKS (aucune
 injection) :
 - chaque secteur voit exactement ses codes : banque 8 + 7 = 15, telecom 8 + NPS + 6 = 15,
-  sante / commerce / restauration / hotellerie / autre 8 ;
+  restauration 8 + 3 = 11, sante / commerce / hotellerie / autre 8 ;
 - un CX d'un secteur sans NPS reçoit 404 sur /kpis/NPS, même message qu'un code inconnu ;
 - le NPS ouvert au telecom reste cloisonné par organisation et par agence (RBAC inchangé).
 
@@ -30,6 +30,7 @@ from app.models.agence import Agence
 from app.models.action_corrective import ActionCorrective
 from app.models.analyse_ia import AnalyseIA
 from app.models.categorie import Categorie
+from app.models.demande_contact import DemandeContact
 from app.models.enums import UserRole
 from app.models.feedback import Feedback
 from app.models.historique_issue import HistoriqueIssue
@@ -54,12 +55,14 @@ TEL = {
     "TEL_RECLAMATIONS_RESEAU", "TEL_RECLAMATIONS_RECHARGE_FORFAIT", "TEL_RECLAMATIONS_FACTURATION",
 }
 
+RESTO = {"RESTO_TAUX_TRAITEMENT_RECONTACTS", "RESTO_RISQUE_SILENCIEUX", "RESTO_RECIDIVE_CATEGORIE"}
+
 ATTENDU_PAR_SECTEUR = {
     "banque": CX_CORE | BANKING,
     "telecom": CX_CORE | {"NPS"} | TEL,
     "sante": CX_CORE,
     "commerce": CX_CORE,
-    "restauration": CX_CORE,
+    "restauration": CX_CORE | RESTO,
     "hotellerie": CX_CORE,
     "autre": CX_CORE,
 }
@@ -73,7 +76,7 @@ def ctx():
         engine,
         tables=[Plan.__table__, Organisation.__table__, Agence.__table__, QRCode.__table__,
                 Feedback.__table__, AnalyseIA.__table__, Issue.__table__, HistoriqueIssue.__table__,
-                ActionCorrective.__table__, IssueEscalation.__table__, Categorie.__table__],
+                ActionCorrective.__table__, IssueEscalation.__table__, Categorie.__table__, DemandeContact.__table__],
     )
     Session = sessionmaker(bind=engine)
     db = Session()
@@ -139,13 +142,13 @@ def test_codes_visibles_exacts_par_secteur(ctx, secteur):
     assert set(codes) == ATTENDU_PAR_SECTEUR[secteur]
     assert len(codes) == len(ATTENDU_PAR_SECTEUR[secteur])  # aucun doublon
     assert data["secteur_code"] == secteur
-    assert data["pack_disponible"] is (secteur in ("banque", "telecom"))
+    assert data["pack_disponible"] is (secteur in ("banque", "telecom", "restauration"))
 
 
 def test_effectifs_par_secteur():
     assert {s: len(c) for s, c in ATTENDU_PAR_SECTEUR.items()} == {
         "banque": 15, "telecom": 15, "sante": 8, "commerce": 8,
-        "restauration": 8, "hotellerie": 8, "autre": 8,
+        "restauration": 11, "hotellerie": 8, "autre": 8,
     }
 
 

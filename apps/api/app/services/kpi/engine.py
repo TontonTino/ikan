@@ -16,8 +16,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import and_, case, func, literal, or_, union_all
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, case, exists, func, literal, or_, union_all
+from sqlalchemy.orm import Session, aliased
 
 from app.models.agence import Agence
 from app.models.action_corrective import ActionCorrective
@@ -28,9 +28,11 @@ from app.models.issue import Issue
 from app.models.issue_escalation import IssueEscalation
 from app.models.historique_issue import HistoriqueIssue
 from app.models.categorie import Categorie
+from app.models.demande_contact import DemandeContact
 from app.models.qr_code import QRCode
 from app.schemas.kpi import KPIResult
 from app.services.kpi.definitions import KPI_DEFINITIONS
+from app.services.kpi.packs_restauration import CLES_RESTAURATION
 from app.services.kpi.packs_telecom import (
     CLE_PAR_KPI_RECLAMATIONS,
     PERIMETRE_AGENCE,
@@ -439,6 +441,69 @@ def calculer_tel_reclamations_facturation(db: Session, organisation_id: UUID, ag
     return _calculer_tel_reclamations("TEL_RECLAMATIONS_FACTURATION", db, organisation_id, agence_id, jours)
 
 
+# ── Pack restauration (app/services/kpi/packs_restauration.py) — famille sectorielle ──
+# Même seuil que les KPI TEL_* : moins de 5 au dénominateur -> no_data.
+SEUIL_MIN_RESTAURATION = 5
+
+
+def _resultat_seuil(code: str, numerateur: int, denominateur: int) -> KPIResult:
+    if denominateur < SEUIL_MIN_RESTAURATION:
+        return _no_data(code, numerator=numerateur, denominator=denominateur)
+    d = KPI_DEFINITIONS[code]
+    return KPIResult(
+        code=code, label=d.label, unit=d.unit, status="ok",
+        value=round(numerateur / denominateur * 100, 1), numerator=numerateur, denominator=denominateur,
+    )
+
+
+def calculer_resto_taux_traitement_recontacts(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
+    """Demandes de rappel traitées ÷ demandes de rappel, pour les feedbacks de la période
+    (_base_feedback_query : même périmètre organisation/agence et même période que les
+    autres KPI feedback). DemandeContact.feedback_id est unique : aucun double compte."""
+    total, traitees = (
+        _base_feedback_query(db, organisation_id, agence_id, jours)
+        .join(DemandeContact, DemandeContact.feedback_id == Feedback.id)
+        .filter(DemandeContact.souhaite_etre_rappele == True)  # noqa: E712
+        .with_entities(func.count(DemandeContact.id), func.sum(case((DemandeContact.traitee == True, 1), else_=0)))  # noqa: E712
+        .one()
+    )
+    return _resultat_seuil("RESTO_TAUX_TRAITEMENT_RECONTACTS", traitees or 0, total or 0)
+
+
+def calculer_resto_risque_silencieux(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
+    """Feedbacks négatifs (AnalyseIA.sentiment NEGATIF, définition de
+    NEGATIVE_SENTIMENT_RATE) sans demande de contact ÷ feedbacks négatifs de la période."""
+    total, sans_contact = (
+        _base_feedback_query(db, organisation_id, agence_id, jours)
+        .join(AnalyseIA, AnalyseIA.feedback_id == Feedback.id)
+        .filter(AnalyseIA.sentiment == SentimentType.NEGATIF)
+        .outerjoin(DemandeContact, DemandeContact.feedback_id == Feedback.id)
+        .with_entities(func.count(Feedback.id), func.sum(case((DemandeContact.id.is_(None), 1), else_=0)))
+        .one()
+    )
+    return _resultat_seuil("RESTO_RISQUE_SILENCIEUX", sans_contact or 0, total or 0)
+
+
+def calculer_resto_recidive_categorie(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
+    """Parmi les Issues résolues ou vérifiées de la période dont la catégorie a une clé du
+    pack (CLES_RESTAURATION — jamais par nom), part de celles qui ont donné lieu à au moins
+    une récurrence (une Issue de la même organisation dont issue_origine_id les désigne).
+    Numérateur et dénominateur portent sur le même ensemble d'Issues : jamais plus de 100 %."""
+    recurrence = aliased(Issue)
+    a_une_recurrence = (
+        exists()
+        .where(recurrence.issue_origine_id == Issue.id, recurrence.organisation_id == Issue.organisation_id)
+    )
+    resolues, avec_recurrence = (
+        _base_issue_query(db, organisation_id, agence_id, jours)
+        .join(Categorie, Issue.categorie_id == Categorie.id)
+        .filter(Categorie.cle.in_(CLES_RESTAURATION), Issue.statut.in_(ISSUE_STATUTS_RESOLUS))
+        .with_entities(func.count(Issue.id), func.sum(case((a_une_recurrence, 1), else_=0)))
+        .one()
+    )
+    return _resultat_seuil("RESTO_RECIDIVE_CATEGORIE", avec_recurrence or 0, resolues or 0)
+
+
 def calculer_escalation_rate(db: Session, organisation_id: UUID, agence_id: Optional[UUID] = None, jours: int = 30) -> KPIResult:
     """Share of Issues present in backlog during the period with an explicit escalation.
 
@@ -579,4 +644,7 @@ KPI_FUNCTIONS = {
     "TEL_RECLAMATIONS_RESEAU": calculer_tel_reclamations_reseau,
     "TEL_RECLAMATIONS_RECHARGE_FORFAIT": calculer_tel_reclamations_recharge_forfait,
     "TEL_RECLAMATIONS_FACTURATION": calculer_tel_reclamations_facturation,
+    "RESTO_TAUX_TRAITEMENT_RECONTACTS": calculer_resto_taux_traitement_recontacts,
+    "RESTO_RISQUE_SILENCIEUX": calculer_resto_risque_silencieux,
+    "RESTO_RECIDIVE_CATEGORIE": calculer_resto_recidive_categorie,
 }
