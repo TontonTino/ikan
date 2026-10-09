@@ -437,3 +437,26 @@ def test_cx_manager_ne_voit_jamais_les_mentions_d_une_autre_organisation(ctx):
 
     s_b = ctx.client_pour(UserRole.CX_MANAGER, ctx.cx_b, ctx.org_b).get("/veille/synthese")
     assert s_b.json()["total"] == 2
+
+
+# ── Lien source : permalink réel du collecteur, https facebook.com / fb.com uniquement ──
+
+def test_ingestion_enregistre_le_permalink_et_ecarte_les_url_non_facebook(ctx):
+    client = ctx.client_pour(UserRole.CX_MANAGER, ctx.cx_a, ctx.org_a)
+    permalink = "https://www.facebook.com/111/posts/333?comment_id=222"
+    items = [
+        {"source_id": "111_222", "text": "Réseau très lent ce soir", "permalink": permalink,
+         "published_at": "2026-10-08T10:00:00+00:00"},
+        {"source_id": "111_223", "text": "Connexion coupée depuis midi", "permalink": "https://pirate.test/facebook.com"},
+        {"source_id": "111_224", "text": "Merci pour la réactivité", "url_source": "http://www.facebook.com/111"},
+        {"source_id": "111_225", "text": "Toujours pas de 4G ici", "permalink": "https://www.facebook.com/111_225"},
+    ]
+    r = client.post("/veille/ingest", json={"items": items})
+    assert r.status_code == 200, r.text
+
+    db = ctx.Session()
+    urls = {m.external_id: m.url_source for m in db.query(MentionVeille).all()}
+    date = db.query(MentionVeille).filter(MentionVeille.external_id == "111_222").one().date_publication
+    db.close()
+    assert urls == {"111_222": permalink, "111_223": None, "111_224": None, "111_225": None}
+    assert date is not None and date.date().isoformat() == "2026-10-08"

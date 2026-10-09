@@ -186,10 +186,16 @@ export const utilisateursApi = {
   delete: (id: string) => api.delete(`/utilisateurs/${id}`),
 };
 
-// ── Veille & Réseaux Sociaux (CX Manager uniquement, lecture seule ici) ──
+// ── Veille & Réseaux Sociaux (CX Manager uniquement) ──
+// L'organisation et la page de retour Facebook sont toujours déduites par l'API :
+// rien de tel n'est jamais envoyé d'ici.
 export const veilleApi = {
-  status: () =>
-    api.get<import('../types').VeilleStatusResponse>('/veille/status'),
+  facebookStatus: () =>
+    api.get<import('../types').VeilleFacebookStatus>('/veille/facebook/status'),
+  facebookConnect: () =>
+    api.post<{ authorize_url: string }>('/veille/facebook/connect'),
+  facebookScrape: () =>
+    api.post<import('../types').VeilleFacebookScrapeResponse>('/veille/facebook/scrape', { auto_ingest: true }, { timeout: 240000 }),
   mentions: (params?: {
     date_debut?: string;
     date_fin?: string;

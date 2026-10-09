@@ -544,25 +544,30 @@ export interface ChangementPlanHistoriqueItem {
 }
 
 // ── Veille & Réseaux Sociaux (CX Manager uniquement) ──────────────────
-export interface VeilleServiceHealth {
-  status: 'online' | 'offline' | 'disabled' | 'error';
-  details?: Record<string, unknown>;
-  code?: number;
-  detail?: string;
-  message?: string;
-  error?: string;
+/** Page Facebook connectée, telle qu'exposée par GET /veille/facebook/status (jamais de jeton). */
+export interface VeilleFacebookPage {
+  id: string;
+  page_id: string;
+  page_name: string;
+  status: 'active' | 'reauth_required' | 'revoked' | 'error';
+  /** Timestamp Unix (secondes) ; 0 ou null = pas d'expiration connue. */
+  expires_at: number | null;
+  data_access_expires_at: number | null;
+  needs_attention: boolean;
+  last_sync_at: string | null;
 }
 
-export interface VeilleFacebookSession {
-  valid: boolean;
-  is_expired?: boolean;
-  message?: string;
-  error?: string;
+export interface VeilleFacebookStatus {
+  service: 'online' | 'offline' | 'disabled' | 'error';
+  /** false si le service répond mais que la liste des Pages n'a pas pu être lue. */
+  pages_disponibles: boolean;
+  pages: VeilleFacebookPage[];
 }
 
-export interface VeilleStatusResponse {
-  service: VeilleServiceHealth;
-  facebook_session: VeilleFacebookSession;
+export interface VeilleFacebookScrapeResponse {
+  status: string;
+  collected_count: number;
+  ingestion: { ingested_count: number; duplicate_count: number; ignored_empty_count: number } | null;
 }
 
 export interface VeilleMention {

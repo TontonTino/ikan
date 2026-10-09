@@ -88,11 +88,11 @@ def test_status_refuse_hors_cx_manager(user_factory):
 
 @pytest.mark.parametrize("user_factory", [_agency_manager, _admin])
 def test_scrape_refuse_hors_cx_manager(user_factory, monkeypatch):
-    monkeypatch.setattr(veille, "trigger_facebook_scrape", lambda *a, **k: (_ for _ in ()).throw(
-        AssertionError("trigger_facebook_scrape appelé alors que le rôle aurait dû être refusé avant")
+    monkeypatch.setattr(veille, "list_connected_pages", lambda *a, **k: (_ for _ in ()).throw(
+        AssertionError("microservice appelé alors que le rôle aurait dû être refusé avant")
     ))
     client = _client(user_factory(), _DbInterdite())
-    res = client.post("/veille/facebook/scrape", json={"target": "https://facebook.com/exemple"})
+    res = client.post("/veille/facebook/scrape", json={"auto_ingest": True})
     assert res.status_code == 403
     assert res.json()["detail"] == "Accès réservé aux CX Managers"
 
@@ -133,10 +133,9 @@ def test_ingest_cx_manager_refuse_agence_d_une_autre_organisation(monkeypatch):
 
 
 def test_scrape_auto_ingest_cx_manager_refuse_agence_d_une_autre_organisation(monkeypatch):
-    async def _fake_scrape(*a, **k):
-        return {"success": True, "data": {"items": [{"text": "avis test"}]}}
-
-    monkeypatch.setattr(veille, "trigger_facebook_scrape", _fake_scrape)
+    monkeypatch.setattr(veille, "list_connected_pages", lambda *a, **k: (_ for _ in ()).throw(
+        AssertionError("microservice appelé : l'accès à l'agence aurait dû être refusé avant toute collecte")
+    ))
     monkeypatch.setattr(veille, "ingest_mentions", lambda *a, **k: (_ for _ in ()).throw(
         AssertionError("ingest_mentions appelé : l'accès aurait dû être refusé avant toute ingestion")
     ))
@@ -145,7 +144,7 @@ def test_scrape_auto_ingest_cx_manager_refuse_agence_d_une_autre_organisation(mo
     client = _client(user, _DbAgence(agence_autre_org))
     res = client.post(
         "/veille/facebook/scrape",
-        json={"target": "https://facebook.com/exemple", "agence_id": str(agence_autre_org.id), "auto_ingest": True},
+        json={"agence_id": str(agence_autre_org.id), "auto_ingest": True},
     )
     assert res.status_code == 403
     assert "organisation" in res.json()["detail"]

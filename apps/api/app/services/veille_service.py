@@ -9,6 +9,7 @@ import logging
 import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+from urllib.parse import quote, urlsplit
 from uuid import UUID
 
 import httpx
@@ -60,36 +61,148 @@ async def check_veille_service() -> Dict[str, Any]:
         return {"status": "offline", "error": str(e)}
 
 
-async def get_session_status(client_id: str) -> Dict[str, Any]:
-    """Récupère les Pages Facebook connectées pour l'organisation."""
-    url = f"{settings.VEILLE_SERVICE_URL.rstrip('/')}/pages"
+class VeilleServiceError(Exception):
+    """Échec d'un appel au microservice de veille ; `message` est affichable tel quel."""
+
+    def __init__(self, message: str, status_code: Optional[int] = None):
+        super().__init__(message)
+        self.message = message
+        self.status_code = status_code
+
+
+# Champs d'une Page connectée exposés au dashboard — liste blanche : rien d'autre ne sort
+# de /pages (ni jeton, ni client_id, ni scopes, ni erreur brute de Meta).
+_CHAMPS_PAGE_EXPOSES = ("id", "page_id", "page_name", "status", "expires_at", "data_access_expires_at", "needs_attention", "last_sync_at")
+
+
+def _page_publique(page: Dict[str, Any]) -> Dict[str, Any]:
+    return {champ: page.get(champ) for champ in _CHAMPS_PAGE_EXPOSES}
+
+
+def _base_url() -> str:
+    return settings.VEILLE_SERVICE_URL.rstrip("/")
+
+
+async def list_connected_pages(client_id: str) -> List[Dict[str, Any]]:
+    """Pages Facebook connectées pour l'organisation `client_id`, filtrées par liste blanche."""
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            res = await client.get(url, params={"client_id": client_id}, headers=_get_headers())
-            if res.status_code == 200:
-                pages = res.json().get("pages", [])
-                return {"valid": any(page.get("status") == "active" for page in pages), "pages": pages}
-            return {"valid": False, "error": f"Erreur {res.status_code}: {res.text}"}
-    except Exception as e:
-        return {"valid": False, "error": str(e)}
+            res = await client.get(f"{_base_url()}/pages", params={"client_id": client_id}, headers=_get_headers())
+    except httpx.HTTPError as e:
+        logger.warning(f"Lecture des Pages connectées impossible : {e}")
+        raise VeilleServiceError("Le service de veille est injoignable.") from e
+    if res.status_code != 200:
+        logger.warning(f"Lecture des Pages connectées refusée ({res.status_code})")
+        raise VeilleServiceError("Lecture des Pages connectées impossible.", res.status_code)
+    pages = res.json().get("pages", [])
+    return [_page_publique(page) for page in pages if isinstance(page, dict) and page.get("client_id") == client_id]
 
 
-async def trigger_facebook_scrape(target: str, max_items: int = 20) -> Dict[str, Any]:
-    """Déclenche une extraction de publications/avis Facebook via le microservice."""
-    url = f"{settings.VEILLE_SERVICE_URL.rstrip('/')}/scrape/facebook"
-    payload = {"target": target, "max_items": max_items}
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        res = await client.post(url, json=payload, headers=_get_headers())
-        if res.status_code != 200:
-            logger.error(f"Échec du scraping veille ({res.status_code}): {res.text}")
-            return {
-                "success": False,
-                "status_code": res.status_code,
-                "error": res.text,
-                "items": [],
-            }
-        data = res.json()
-        return {"success": True, "data": data}
+async def get_session_status(client_id: str) -> Dict[str, Any]:
+    """Récupère les Pages Facebook connectées pour l'organisation."""
+    try:
+        pages = await list_connected_pages(client_id)
+    except VeilleServiceError as e:
+        return {"valid": False, "error": e.message}
+    return {"valid": any(page.get("status") == "active" for page in pages), "pages": pages}
+
+
+def _est_url_facebook_https(url: Any, *, hotes: tuple[str, ...]) -> bool:
+    if not isinstance(url, str):
+        return False
+    try:
+        parsed = urlsplit(url.strip())
+    except ValueError:
+        return False
+    hote = (parsed.hostname or "").lower()
+    if parsed.scheme != "https" or parsed.username or parsed.password or parsed.port not in (None, 443):
+        return False
+    return any(hote == h or hote.endswith(f".{h}") for h in hotes)
+
+
+async def start_facebook_connection(client_id: str, return_to: str) -> str:
+    """Démarre l'OAuth Facebook pour `client_id` ; renvoie l'URL d'autorisation, uniquement si
+    elle pointe vers facebook.com (jamais une redirection arbitraire vers le navigateur)."""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            res = await client.post(
+                f"{_base_url()}/connect/facebook/start",
+                json={"client_id": client_id, "return_to": return_to},
+                headers=_get_headers(),
+            )
+    except httpx.HTTPError as e:
+        logger.warning(f"Démarrage de la connexion Facebook impossible : {e}")
+        raise VeilleServiceError("Le service de veille est injoignable.") from e
+    if res.status_code != 200:
+        logger.warning(f"Démarrage de la connexion Facebook refusé ({res.status_code})")
+        raise VeilleServiceError("La connexion Facebook est momentanément indisponible.", res.status_code)
+    authorize_url = res.json().get("authorize_url")
+    if not _est_url_facebook_https(authorize_url, hotes=("facebook.com",)):
+        logger.error("URL d'autorisation hors facebook.com renvoyée par le service de veille : refusée")
+        raise VeilleServiceError("Réponse inattendue du service de veille.")
+    return authorize_url
+
+
+async def sync_connected_page(page_uuid: str, client_id: str) -> Dict[str, Any]:
+    """Collecte une Page connectée avec SON jeton (stocké côté microservice) ; le microservice
+    vérifie lui aussi que la Page appartient à `client_id`."""
+    try:
+        async with httpx.AsyncClient(timeout=180.0) as client:
+            res = await client.post(
+                f"{_base_url()}/pages/{quote(page_uuid, safe='')}/sync",
+                params={"client_id": client_id},
+                headers=_get_headers(),
+            )
+    except httpx.HTTPError as e:
+        logger.warning(f"Collecte Facebook impossible : {e}")
+        raise VeilleServiceError("Le service de veille est injoignable.") from e
+    if res.status_code != 200:
+        logger.warning(f"Collecte Facebook refusée ({res.status_code})")
+        raise VeilleServiceError("La collecte Facebook a échoué.", res.status_code)
+    return res.json()
+
+
+# Plafond de lecture du stock du microservice par collecte (pages de 200 items).
+_MAX_PAGES_FEEDBACK = 50
+
+
+async def fetch_collected_items(client_id: str) -> List[Dict[str, Any]]:
+    """Lit les commentaires déjà collectés pour `client_id` (la déduplication à l'ingestion
+    évite tout doublon lors des relectures)."""
+    items: List[Dict[str, Any]] = []
+    cursor: Optional[int] = 0
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            for _ in range(_MAX_PAGES_FEEDBACK):
+                res = await client.get(
+                    f"{_base_url()}/feedback",
+                    params={"client_id": client_id, "limit": 200, "cursor": cursor},
+                    headers=_get_headers(),
+                )
+                if res.status_code != 200:
+                    logger.warning(f"Lecture des commentaires collectés refusée ({res.status_code})")
+                    raise VeilleServiceError("Lecture des commentaires collectés impossible.", res.status_code)
+                data = res.json()
+                items.extend(item for item in data.get("items", []) if isinstance(item, dict))
+                cursor = data.get("next_cursor")
+                if cursor is None:
+                    break
+    except httpx.HTTPError as e:
+        logger.warning(f"Lecture des commentaires collectés impossible : {e}")
+        raise VeilleServiceError("Le service de veille est injoignable.") from e
+    return items
+
+
+def url_source_sure(url: Any, source_id: Optional[str] = None) -> Optional[str]:
+    """Lien « Voir la source » : uniquement une URL https sur facebook.com ou fb.com, sinon None.
+    Le collecteur remplace un permalink_url absent par https://www.facebook.com/<source_id> :
+    ce lien reconstruit n'est pas le permalink réel du commentaire, il est donc écarté."""
+    if not _est_url_facebook_https(url, hotes=("facebook.com", "fb.com")):
+        return None
+    url = url.strip()
+    if source_id and url.rstrip("/") == f"https://www.facebook.com/{source_id}":
+        return None
+    return url
 
 
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
@@ -162,12 +275,15 @@ def ingest_mentions(
 
         plateforme = (item.get("plateforme") or item.get("platform") or "facebook").strip().lower() or "facebook"
         type_contenu = item.get("type_contenu") or item.get("type") or "avis"
-        url_source = item.get("url_source") or item.get("url") or None
-        date_publication = _parser_date_publication(item.get("date_publication") or item.get("date"))
+        date_publication = _parser_date_publication(
+            item.get("date_publication") or item.get("published_at") or item.get("date")
+        )
         external_id_value = item.get("external_id") or item.get("source_id")
         external_id = external_id_value.strip() if isinstance(external_id_value, str) else None
         if not external_id or len(external_id) > 255:
             external_id = None
+        # `permalink` = lien du commentaire renvoyé par le collecteur (FeedbackItem).
+        url_source = url_source_sure(item.get("permalink") or item.get("url_source") or item.get("url"), external_id)
 
         if external_id is not None:
             deja_present = (

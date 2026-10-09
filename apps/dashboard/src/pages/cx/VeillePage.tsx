@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { veilleApi, agencesApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
-import type { Agence, SentimentType, VeilleMention, VeilleStatusResponse, VeilleSyntheseResponse } from '../../types';
+import type { Agence, SentimentType, VeilleFacebookStatus, VeilleMention, VeilleSyntheseResponse } from '../../types';
 import SectionHeading from '../../components/ui/SectionHeading';
 import SkeletonBlock from '../../components/ui/SkeletonBlock';
 import EmptyState from '../../components/ui/EmptyState';
@@ -15,10 +15,49 @@ import VeilleKpiRow from '../../components/veille/VeilleKpiRow';
 import VeilleDailyChart from '../../components/veille/VeilleDailyChart';
 import VeilleThemeChart from '../../components/veille/VeilleThemeChart';
 import VeilleMentionCard from '../../components/veille/VeilleMentionCard';
-import { RefreshCwIcon, AlertTriangleIcon } from '../../components/common/Icons';
+import Alert, { type AlertTone } from '../../components/ui/Alert';
+import Button from '../../components/ui/Button';
+import { RefreshCwIcon, AlertTriangleIcon, ExternalLinkIcon } from '../../components/common/Icons';
 import { themeLabel } from '../../utils/themeLabels';
+import { userFacingError } from '../../utils/userFacingError';
 
 const PAGE_SIZE = 25;
+
+// Paramètres ajoutés par le service de veille au retour de l'autorisation Facebook
+// (status=success&pages=N | status=denied | status=error&code=...).
+const PARAMS_RETOUR_FACEBOOK = ['status', 'pages', 'code'];
+
+type MessageVeille = { tone: AlertTone; title: string; body?: string };
+
+function messageRetourFacebook(statut: string, pages: string | null): MessageVeille {
+  if (statut === 'success') {
+    const n = Number(pages) || 0;
+    return n > 0
+      ? { tone: 'success', title: n > 1 ? `${n} Pages Facebook connectées.` : 'Page Facebook connectée.', body: 'Vous pouvez maintenant collecter ses commentaires.' }
+      : { tone: 'warning', title: "Aucune Page n'a été connectée.", body: "Vérifiez que vous administrez la Page et qu'elle est bien sélectionnée dans la fenêtre Facebook, puis réessayez." };
+  }
+  if (statut === 'denied') {
+    return { tone: 'warning', title: 'Connexion Facebook annulée.', body: "L'autorisation n'a pas été accordée ; aucune Page n'a été connectée." };
+  }
+  return { tone: 'critical', title: 'La connexion Facebook a échoué.', body: 'Veuillez réessayer dans quelques minutes.' };
+}
+
+// Défense en profondeur : l'API ne renvoie déjà qu'une URL facebook.com.
+function estUrlAutorisationFacebook(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && !u.username && !u.password && (u.hostname === 'facebook.com' || u.hostname.endsWith('.facebook.com'));
+  } catch {
+    return false;
+  }
+}
+
+function messageErreurCollecte(err: any): string {
+  const code = err?.response?.status;
+  if (code === 409) return 'Reconnectez votre Page Facebook pour relancer la collecte.';
+  if (code === 404) return "Cette Page n'est pas connectée à votre organisation.";
+  return userFacingError(err, 'La collecte Facebook a échoué. Veuillez réessayer dans quelques minutes.');
+}
 
 export default function VeillePage() {
   const user = useAuthStore((s) => s.user);
@@ -36,7 +75,11 @@ export default function VeillePage() {
   const [page, setPage] = useState(0);
 
   const [agencesList, setAgencesList] = useState<Agence[]>([]);
-  const [status, setStatus] = useState<VeilleStatusResponse | null>(null);
+  const [status, setStatus] = useState<VeilleFacebookStatus | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [message, setMessage] = useState<MessageVeille | null>(null);
+  const [connecting, setConnecting] = useState(false);
+  const [collecting, setCollecting] = useState(false);
   const [synthese, setSynthese] = useState<VeilleSyntheseResponse | null>(null);
   const [mentions, setMentions] = useState<VeilleMention[]>([]);
   const [total, setTotal] = useState(0);
@@ -56,13 +99,28 @@ export default function VeillePage() {
       .catch(() => setAgencesList([]));
   }, [isCxManager]);
 
-  useEffect(() => {
+  const fetchStatus = useCallback(() => {
     if (!isCxManager) return;
     veilleApi
-      .status()
+      .facebookStatus()
       .then((res) => setStatus(res.data))
       .catch(() => setStatus(null));
   }, [isCxManager]);
+
+  useEffect(() => {
+    fetchStatus();
+  }, [fetchStatus]);
+
+  // Retour de l'autorisation Facebook : message, statut rafraîchi, puis URL nettoyée.
+  const statutRetour = searchParams.get('status');
+  useEffect(() => {
+    if (!isCxManager || !statutRetour) return;
+    setMessage(messageRetourFacebook(statutRetour, searchParams.get('pages')));
+    fetchStatus();
+    const nettoyes = new URLSearchParams(searchParams);
+    PARAMS_RETOUR_FACEBOOK.forEach((cle) => nettoyes.delete(cle));
+    setSearchParams(nettoyes, { replace: true });
+  }, [isCxManager, statutRetour, searchParams, setSearchParams, fetchStatus]);
 
   const dateDebut = useMemo(() => {
     const d = new Date();
@@ -94,18 +152,18 @@ export default function VeillePage() {
         setMentions(mentionsRes.value.data.items);
         setTotal(mentionsRes.value.data.total);
       } else {
-        setMentionsError(mentionsRes.reason?.response?.data?.detail || 'Lecture des mentions impossible.');
+        setMentionsError(userFacingError(mentionsRes.reason, 'Impossible de charger les mentions. Veuillez réessayer.'));
       }
       if (syntheseRes.status === 'fulfilled') {
         setSynthese(syntheseRes.value.data);
       } else {
-        setSyntheseError(syntheseRes.reason?.response?.data?.detail || 'Chargement des indicateurs impossible.');
+        setSyntheseError(userFacingError(syntheseRes.reason, 'Impossible de charger les indicateurs. Veuillez réessayer.'));
       }
       if (mentionsRes.status === 'rejected' && syntheseRes.status === 'rejected') {
         setError('Les mentions et les indicateurs sont momentanément indisponibles.');
       }
     } catch (err: any) {
-      setError(err?.response?.data?.detail || 'Erreur lors du chargement des mentions.');
+      setError(userFacingError(err, 'Impossible de charger les mentions. Veuillez réessayer.'));
     } finally {
       setLoading(false);
     }
@@ -120,12 +178,47 @@ export default function VeillePage() {
     setPage(0);
   }, [jours, selectedAgenceId, selectedSentiment, selectedTheme, plateforme, recherche]);
 
+  const connecterFacebook = async () => {
+    setConnecting(true);
+    setMessage(null);
+    try {
+      const res = await veilleApi.facebookConnect();
+      if (!estUrlAutorisationFacebook(res.data.authorize_url)) throw new Error('URL inattendue');
+      window.location.assign(res.data.authorize_url);
+    } catch (err) {
+      setMessage({ tone: 'critical', title: 'Connexion Facebook impossible.', body: userFacingError(err, 'Le service de veille ne répond pas. Veuillez réessayer dans quelques minutes.') });
+      setConnecting(false);
+    }
+  };
+
+  const collecterMaintenant = async () => {
+    setCollecting(true);
+    setMessage(null);
+    try {
+      const res = await veilleApi.facebookScrape();
+      const n = res.data.ingestion?.ingested_count ?? 0;
+      setMessage({
+        tone: 'success',
+        title: n === 0 ? 'Aucune nouvelle mention.' : n === 1 ? '1 nouvelle mention.' : `${n} nouvelles mentions.`,
+      });
+      fetchData();
+    } catch (err) {
+      setMessage({ tone: 'critical', title: 'Collecte impossible.', body: messageErreurCollecte(err) });
+    } finally {
+      fetchStatus();
+      setCollecting(false);
+    }
+  };
+
   if (!isCxManager) {
     return <Navigate to={user?.role === 'admin' ? '/admin/dashboard' : '/agence'} replace />;
   }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const serviceOffline = status !== null && status.service.status !== 'online';
+  const serviceOffline = status !== null && status.service !== 'online';
+  const serviceOnline = status?.service === 'online';
+  const pagesFacebook = status?.pages_disponibles ? status.pages : [];
+  const pageActive = pagesFacebook.some((p) => p.status === 'active');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
@@ -139,8 +232,35 @@ export default function VeillePage() {
             Mentions publiques (Facebook) analysées automatiquement par IKAN AI.
           </p>
         </div>
-        <VeilleServiceStatus status={status} />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+          <VeilleServiceStatus status={status} />
+          {serviceOnline && status?.pages_disponibles && (
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              {pageActive && (
+                <Button size="sm" icon={<RefreshCwIcon size={14} />} loading={collecting} disabled={connecting} onClick={collecterMaintenant}>
+                  Collecter maintenant
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant={pageActive ? 'secondary' : 'primary'}
+                iconEnd={<ExternalLinkIcon size={14} />}
+                loading={connecting}
+                disabled={collecting}
+                onClick={connecterFacebook}
+              >
+                {pagesFacebook.length > 0 ? 'Reconnecter ma Page Facebook' : 'Connecter ma Page Facebook'}
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
+
+      {message && (
+        <Alert tone={message.tone} title={message.title} onDismiss={() => setMessage(null)}>
+          {message.body}
+        </Alert>
+      )}
 
       {/* ── Filtres ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>

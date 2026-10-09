@@ -16,10 +16,10 @@ function formatDate(iso: string | null): string {
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-// N'affiche "Voir la source" que pour un lien http(s) réel — jamais pour une valeur
-// arbitraire renvoyée par le microservice (pas de lien cassé ou dangereux).
+// N'affiche "Voir la source" que si l'API a conservé un lien : elle ne garde que le permalink
+// https réel (facebook.com / fb.com) et met null sinon. Garde https par défense en profondeur.
 function estUrlSure(url: string | null): url is string {
-  return !!url && (url.startsWith('http://') || url.startsWith('https://'));
+  return !!url && url.startsWith('https://');
 }
 
 export default function VeilleMentionCard({ mention }: { mention: VeilleMention }) {

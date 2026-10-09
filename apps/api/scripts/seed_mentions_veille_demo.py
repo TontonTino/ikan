@@ -66,7 +66,8 @@ def construire_items(now: datetime, agences: list[Agence]) -> dict[object, list[
             "type_contenu": "commentaire",
             "text": texte,
             "date_publication": date_publication,
-            "url_source": f"https://www.facebook.com/OrangeBurkina/demo/posts/{external_id}",
+            # Mentions fictives : aucune publication réelle derrière, donc aucun lien source.
+            "url_source": None,
         })
     return groupes
 
