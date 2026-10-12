@@ -34,6 +34,7 @@ from app.models.historique_feedback import HistoriqueFeedback
 from app.models.organisation import Organisation
 from app.models.qr_code import QRCode
 from app.models.suggestion import Suggestion
+from app.models.system_settings import SystemSettings
 from app.models.utilisateur import Utilisateur
 
 NOW = datetime.now(timezone.utc)
@@ -46,7 +47,7 @@ def ctx():
         engine,
         tables=[Organisation.__table__, Agence.__table__, Utilisateur.__table__,
                 QRCode.__table__, Categorie.__table__, Feedback.__table__, HistoriqueFeedback.__table__,
-                DemandeContact.__table__, AnalyseIA.__table__, Suggestion.__table__],
+                DemandeContact.__table__, AnalyseIA.__table__, Suggestion.__table__, SystemSettings.__table__],
     )
     Session = sessionmaker(bind=engine)
     db = Session()
@@ -136,8 +137,7 @@ def test_soumission_feedback_persiste_nps_et_le_retourne(ctx, monkeypatch):
         json={"categorie_id": str(ctx.categorie_a), "note": 4, "nps_note": 10},
     )
     assert response.status_code == 201, response.text
-    assert response.json()["note"] == 4
-    assert response.json()["nps_note"] == 10
+    assert set(response.json()) == {"id", "nps_token", "message"}  # réponse publique minimale
 
     db = ctx.Session()
     persisted = db.query(Feedback).filter(Feedback.id == UUID(response.json()["id"])).one()
@@ -152,7 +152,10 @@ def test_soumission_feedback_sans_nps_reste_valide(ctx, monkeypatch):
         json={"categorie_id": str(ctx.categorie_a), "note": 3},
     )
     assert response.status_code == 201, response.text
-    assert response.json()["nps_note"] is None
+    assert set(response.json()) == {"id", "nps_token", "message"}
+    db = ctx.Session()
+    assert db.query(Feedback).filter(Feedback.id == UUID(response.json()["id"])).one().nps_note is None
+    db.close()
 
 
 # ── Liste : scoping organisation / agence ─────────────────────────────────────────
@@ -275,7 +278,7 @@ def _soumettre_avec_telephone(ctx, telephone):
     return ctx.call(
         "cx_a", "post", "/feedbacks/", params={"qr_code": "QR-A"},
         json={"categorie_id": str(ctx.categorie_a), "note": 2, "souhaite_etre_rappele": True,
-              "contact_telephone": telephone},
+              "contact_telephone": telephone, "consentement_contact": True},
     )
 
 

@@ -11,6 +11,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.session import Base
 
 
+# Durée de conservation par défaut (mois) : valeur du modèle, reprise quand aucune ligne de configuration n'existe.
+RETENTION_MOIS_DEFAUT = 24
+
+
 class SystemSettings(Base):
     __tablename__ = "system_settings"
 
@@ -21,7 +25,7 @@ class SystemSettings(Base):
         String(255), default="IKAN AI — Plateforme Feedback Client"
     )
     seuil_alerte_defaut: Mapped[float] = mapped_column(Float, default=80.0)
-    retention_mois: Mapped[int] = mapped_column(Integer, default=24)
+    retention_mois: Mapped[int] = mapped_column(Integer, default=RETENTION_MOIS_DEFAUT)
     mode_ia: Mapped[str] = mapped_column(String(50), default="deterministique")
     notifications_email_actives: Mapped[bool] = mapped_column(Boolean, default=True)
     date_modification: Mapped[datetime] = mapped_column(

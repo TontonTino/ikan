@@ -49,6 +49,21 @@ class Settings(BaseSettings):
     def allowed_origins_list(self) -> List[str]:
         return origines_autorisees(self.ALLOWED_ORIGINS, self.APP_ENV)
 
+    # Protection des endpoints publics (formulaire client). Compteurs EN MÉMOIRE : valables pour UNE instance.
+    # 0 = limite désactivée. Une agence partage souvent un seul Wi-Fi : ne pas descendre ces seuils sans mesurer.
+    RATE_LIMIT_FEEDBACK_PAR_IP: int = 10   # POST /feedbacks, par minute et par adresse IP
+    RATE_LIMIT_FEEDBACK_PAR_QR: int = 30   # POST /feedbacks, par minute et par code QR
+    RATE_LIMIT_PUBLIC_PAR_IP: int = 60     # /nps, /validate, /categories, par minute et par adresse IP
+    # Corps maximal (octets) accepté par POST /feedbacks et POST /feedbacks/{id}/nps.
+    PUBLIC_BODY_MAX_OCTETS: int = 16384
+    # Nombre de proxys de confiance DEVANT l'API (0 = aucun : l'adresse du socket fait foi et X-Forwarded-For est
+    # ignoré). À N > 0, l'adresse retenue est la N-ième en partant de la DROITE de X-Forwarded-For, c'est-à-dire celle
+    # ajoutée par notre propre proxy, jamais une valeur envoyée par le client.
+    TRUSTED_PROXY_HOPS: int = 0
+    # Secret partagé avec le serveur SSR du client (apps/client) : s'il est présent et exact, l'API prend l'adresse
+    # transmise dans X-Ikan-Client-Ip (sinon toutes les validations SSR compteraient pour l'IP du serveur client).
+    SSR_FORWARD_SECRET: str = ""
+
     # Agent IA YAM (optionnel — service séparé, port 8001). Vide = notification désactivée.
     # AGENT_WEBHOOK_URL = URL de BASE du service (ex. http://localhost:8001) ;
     # WEBHOOK_SECRET doit être IDENTIQUE à celui de apps/agent/.env.

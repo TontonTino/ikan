@@ -5,7 +5,7 @@ import logging
 import uuid
 from uuid import UUID
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Response, BackgroundTasks
 from sqlalchemy.exc import IntegrityError
@@ -32,9 +32,11 @@ from app.models.demande_contact import DemandeContact
 from app.models.historique_feedback import HistoriqueFeedback
 from app.models.reponse_client import ReponseClient
 from app.models.enums import UserRole
+from app.models.system_settings import SystemSettings, RETENTION_MOIS_DEFAUT
 from app.schemas.feedback import (
     FeedbackCreate,
     FeedbackResponse,
+    FeedbackSoumisResponse,
     HistoriqueFeedbackResponse,
     ReponseClientResponse,
     NoteInterneCreate,
@@ -46,6 +48,7 @@ from app.schemas.feedback import (
     NPSSubmitResponse,
 )
 from app.core.security import create_nps_token, decode_token
+from app.core.rate_limit import limiter_ip_public, limiter_soumission
 from app.services.ai.analyse_service import analyser_feedback
 from app.core.config import settings
 from app.utils.phone import normaliser_telephone
@@ -127,15 +130,23 @@ def _feedback_par_cle(db: Session, qr_code_id: UUID, cle: str) -> Optional[Feedb
     )
 
 
-def _reponse_soumission(feedback: Feedback):
-    """Réponse de POST /feedbacks. nps_token posé ICI seulement (pas dans _format_feedback_response, réutilisé par
-    les endpoints de lecture/workflow) : il n'a de sens qu'à la soumission, jamais régénéré sur une relecture."""
-    reponse = _format_feedback_response(feedback)
-    reponse.nps_token = create_nps_token(feedback.id)
-    return reponse
+def _reponse_soumission(feedback: Feedback) -> FeedbackSoumisResponse:
+    """Réponse PUBLIQUE de POST /feedbacks : id, nps_token et message, rien d'autre. Le nps_token n'a de sens qu'à la
+    soumission (jamais régénéré sur une relecture) ; les endpoints de lecture/workflow ont leur propre schéma."""
+    return FeedbackSoumisResponse(id=feedback.id, nps_token=create_nps_token(feedback.id))
 
 
-@router.post("/", response_model=FeedbackResponse, status_code=status.HTTP_201_CREATED)
+def _retention_mois_configuree(db: Session) -> int:
+    ligne = db.query(SystemSettings).first()
+    return ligne.retention_mois if ligne is not None and ligne.retention_mois else RETENTION_MOIS_DEFAUT
+
+
+@router.post(
+    "/",
+    response_model=FeedbackSoumisResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(limiter_soumission)],
+)
 def submit_feedback(
     qr_code: str,
     data: FeedbackCreate,
@@ -145,8 +156,13 @@ def submit_feedback(
 ):
     """
     Soumet un feedback client — endpoint PUBLIC (pas d'authentification requise).
+    Limité en débit (par IP et par QR, voir app/core/rate_limit.py) avant toute lecture en base.
     Déclenche l'analyse IA synchrone.
     """
+    # Champ piège : un robot remplit le champ invisible. Réponse identique à un succès, rien n'est enregistré.
+    if data.website and data.website.strip():
+        return FeedbackSoumisResponse(id=uuid.uuid4(), nps_token=create_nps_token(uuid.uuid4()))
+
     clean_code = qr_code.strip()
     # Résolution UNIQUE et partagée avec /validate et /categories : code exact, ou UUID d'une agence ACTIVE. Plus de
     # recherche approximative par nom/ville (ILIKE) : un code inconnu, partiel ou contenant « % » rattachait le
@@ -206,12 +222,18 @@ def submit_feedback(
             db.add(suggestion)
 
         if data.souhaite_etre_rappele or data.contact_email:
+            # Consentement : exigé par FeedbackCreate dès qu'un numéro est transmis. On enregistre qu'il a été donné, quand,
+            # et la durée de conservation affichée au client (lue ici dans la configuration, jamais reprise du client).
+            consenti = bool(data.contact_telephone and data.consentement_contact)
             contact = DemandeContact(
                 feedback_id=feedback.id,
                 nom=data.contact_nom,
                 telephone=data.contact_telephone,
                 email=data.contact_email,
                 souhaite_etre_rappele=data.souhaite_etre_rappele,
+                consentement_contact=True if consenti else None,
+                consentement_date=datetime.now(timezone.utc) if consenti else None,
+                consentement_retention_mois=_retention_mois_configuree(db) if consenti else None,
             )
             db.add(contact)
 
@@ -238,7 +260,8 @@ def submit_feedback(
             db.expire_all()
             db.refresh(feedback)
         except Exception as ai_err:
-            logger.error(f"Erreur lors de l'analyse IA synchrone du feedback {feedback.id}: {ai_err}")
+            # Jamais l'objet exception complet : son message peut reprendre le contenu de l'avis ou des coordonnées.
+            logger.error("Erreur lors de l'analyse IA synchrone du feedback %s (%s)", feedback.id, type(ai_err).__name__)
 
         return _reponse_soumission(feedback)
     except HTTPException:
@@ -248,7 +271,8 @@ def submit_feedback(
         db.rollback()
         existant = _feedback_par_cle(db, qr.id, cle) if cle else None
         if existant is None:
-            logger.exception("Erreur d'intégrité dans submit_feedback")
+            # Pas de logger.exception : la trace SQL embarque les paramètres de l'INSERT (dont téléphone et e-mail).
+            logger.error("Erreur d'intégrité dans submit_feedback (qr=%s)", qr.id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Erreur serveur : votre avis n'a pas pu être enregistré. Veuillez réessayer.",
@@ -258,14 +282,14 @@ def submit_feedback(
         return _reponse_soumission(existant)
     except Exception as e:
         db.rollback()
-        logger.error(f"Erreur submit_feedback: {e}")
+        logger.error("Erreur submit_feedback (qr=%s, %s)", qr.id, type(e).__name__)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Erreur serveur : votre avis n'a pas pu être enregistré. Veuillez réessayer.",
         )
 
 
-@router.post("/{feedback_id}/nps", response_model=NPSSubmitResponse)
+@router.post("/{feedback_id}/nps", response_model=NPSSubmitResponse, dependencies=[Depends(limiter_ip_public)])
 def soumettre_nps(feedback_id: UUID, data: NPSSubmit, db: Session = Depends(get_db)):
     """Réponse NPS facultative — endpoint PUBLIC, affiché après l'écran de remerciement
     (apps/client/src/pages/feedback/[code].astro). Ne modifie AUCUN autre champ du
@@ -466,7 +490,7 @@ def get_feedback(
             analyser_feedback(feedback.id, db)
             db.refresh(feedback)
         except Exception as e:
-            logger.warning(f"Auto-analyse fallback pour feedback {feedback.id}: {e}")
+            logger.warning(f"Auto-analyse fallback pour feedback {feedback.id} ({type(e).__name__})")
 
     return _format_feedback_response(feedback, current_user)
 

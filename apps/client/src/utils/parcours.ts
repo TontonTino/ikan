@@ -18,13 +18,14 @@ export interface NiveauSatisfaction {
   label: string;
 }
 
-/** Cinq niveaux, du plus mauvais au meilleur. Aucun n'est présélectionné : le client choisit lui-même. */
+/** Cinq niveaux, du plus mauvais au meilleur, tous au masculin (« Excellent », comme « Mauvais »). Aucun n'est présélectionné : le client choisit lui-même.
+ * La clé technique « excellente » est conservée (data-sentiment, classes CSS) : seul le libellé affiché change. */
 export const NIVEAUX: Record<string, NiveauSatisfaction> = {
   mauvais: { note: 1, apiSentiment: 'negatif', label: 'Mauvais' },
   passable: { note: 2, apiSentiment: 'negatif', label: 'Passable' },
   neutre: { note: 3, apiSentiment: 'neutre', label: 'Neutre' },
   bien: { note: 4, apiSentiment: 'positif', label: 'Bien' },
-  excellente: { note: 5, apiSentiment: 'positif', label: 'Excellente' },
+  excellente: { note: 5, apiSentiment: 'positif', label: 'Excellent' },
 };
 
 /**
@@ -62,21 +63,66 @@ export interface EntreeEnvoi {
   categorieId: string | null;
   souhaiteEtreRappele: boolean;
   telephone: string;
+  /** Case de consentement cochée (obligatoire dès qu'un téléphone est saisi pour être recontacté). */
+  consentement?: boolean;
 }
 
 export interface ProblemeSaisie {
-  champ: 'note' | 'categorie' | 'telephone';
+  champ: 'note' | 'categorie' | 'telephone' | 'consentement';
   message: string;
+}
+
+export const MESSAGE_NOTE_REQUISE = 'Choisissez une note pour envoyer votre avis.';
+export const MESSAGE_CONSENTEMENT_REQUIS = "Cochez la case pour autoriser l'agence à vous recontacter.";
+
+/**
+ * Texte de la case de consentement. La durée vient de la configuration de la plateforme (champ retention_mois de
+ * /qr-codes/{code}/validate), JAMAIS d'une valeur en dur ; null si elle n'est pas connue (le recontact est alors proposé nulle part).
+ * ⚠ Formulation à faire valider au regard de la loi burkinabè (CIL) : voir la note de la PR.
+ */
+export function libelleConsentement(retentionMois: unknown): string | null {
+  const mois = Number(retentionMois);
+  if (!Number.isInteger(mois) || mois <= 0) return null;
+  return `J'accepte que l'agence utilise mon numéro uniquement pour me recontacter au sujet de cet avis. Il sera conservé ${mois} mois.`;
+}
+
+/** « 1000 caractères restants sur 1000 », « 1 caractère restant sur 1000 » (0 et 1 au singulier, comme en français). */
+export function libelleCompteur(longueur: number, max: number = MAX_COMMENTAIRE): string {
+  const restants = Math.max(0, max - Math.max(0, longueur));
+  return `${restants} ${restants <= 1 ? 'caractère restant' : 'caractères restants'} sur ${max}`;
+}
+
+/**
+ * Navigation aux flèches dans un groupe de boutons radio (une seule tabulation d'entrée, tabindex itinérant) :
+ * retourne l'index à focaliser, ou null si la touche n'est pas gérée. Les flèches déplacent le focus, Espace/Entrée choisissent.
+ */
+export function indexNiveauSuivant(courant: number, touche: string, total: number): number | null {
+  if (total <= 0) return null;
+  switch (touche) {
+    case 'ArrowRight':
+    case 'ArrowDown':
+      return (courant + 1) % total;
+    case 'ArrowLeft':
+    case 'ArrowUp':
+      return (courant - 1 + total) % total;
+    case 'Home':
+      return 0;
+    case 'End':
+      return total - 1;
+    default:
+      return null;
+  }
 }
 
 /** Premier problème de saisie bloquant l'envoi, ou null. Ordre = ordre d'affichage du formulaire. */
 export function verifierSaisie(e: EntreeEnvoi): ProblemeSaisie | null {
   if (!e.categorieId) return { champ: 'categorie', message: 'Choisissez la catégorie de votre avis.' };
-  if (!e.niveau || !NIVEAUX[e.niveau]) return { champ: 'note', message: 'Choisissez une note pour envoyer votre avis.' };
+  if (!e.niveau || !NIVEAUX[e.niveau]) return { champ: 'note', message: MESSAGE_NOTE_REQUISE };
   if (e.souhaiteEtreRappele) {
     const tel = e.telephone.trim();
     if (!tel) return { champ: 'telephone', message: 'Indiquez un numéro de téléphone pour être recontacté.' };
     if (!normaliserTelephone(tel)) return { champ: 'telephone', message: MESSAGE_TELEPHONE_INVALIDE };
+    if (!e.consentement) return { champ: 'consentement', message: MESSAGE_CONSENTEMENT_REQUIS };
   }
   return null;
 }
@@ -84,9 +130,11 @@ export function verifierSaisie(e: EntreeEnvoi): ProblemeSaisie | null {
 export interface EntreePayload extends EntreeEnvoi {
   commentaire: string;
   cleEnvoi: string;
+  /** Valeur du champ piège (invisible) : vide pour une personne, rempli par un robot. */
+  piege?: string;
 }
 
-/** Corps de POST /feedbacks. Le commentaire est borné ; le téléphone n'est transmis que si le client demande à être rappelé. */
+/** Corps de POST /feedbacks. Le commentaire est borné ; le téléphone (et son consentement) n'est transmis que si le client demande à être rappelé. */
 export function construirePayload(e: EntreePayload) {
   const niveau = NIVEAUX[e.niveau ?? ''];
   if (!niveau || !e.categorieId) throw new Error('Saisie incomplète : verifierSaisie() doit être appelée avant.');
@@ -99,6 +147,8 @@ export function construirePayload(e: EntreePayload) {
     idempotency_key: e.cleEnvoi,
     souhaite_etre_rappele: e.souhaiteEtreRappele,
     contact_telephone: e.souhaiteEtreRappele ? e.telephone.trim() : null,
+    consentement_contact: e.souhaiteEtreRappele && !!e.consentement,
+    website: e.piege ?? '',
   };
 }
 
@@ -107,7 +157,7 @@ export type CauseEchecEnvoi = 'reseau' | 'delai' | 'qr_invalide' | 'saisie' | 't
 export function causeEchecHttp(status: number): CauseEchecEnvoi {
   if (status === 404) return 'qr_invalide';
   if (status === 429) return 'trop_de_demandes';
-  if (status === 400 || status === 422) return 'saisie';
+  if (status === 400 || status === 413 || status === 422) return 'saisie';
   return 'serveur';
 }
 
@@ -129,12 +179,13 @@ export function messageEchecEnvoi(cause: CauseEchecEnvoi): string {
   }
 }
 
-export type EtatQr = 'valide' | 'invalide' | 'indisponible';
+export type EtatQr = 'valide' | 'invalide' | 'indisponible' | 'trop_de_demandes';
 
-/** Issue de la validation du QR code : 2xx valide, 404 invalide, tout le reste (réseau, 5xx) indisponible. */
+/** Issue de la validation du QR code : 2xx valide, 404 invalide, 429 trop de demandes, tout le reste (réseau, 5xx) indisponible. */
 export function etatQrDepuisStatut(status: number | null): EtatQr {
   if (status === null) return 'indisponible';
   if (status >= 200 && status < 300) return 'valide';
   if (status === 404) return 'invalide';
+  if (status === 429) return 'trop_de_demandes';
   return 'indisponible';
 }

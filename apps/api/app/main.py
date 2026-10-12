@@ -2,6 +2,7 @@
 Point d'entrée principal de l'API IKAN AI.
 """
 import logging
+import traceback
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -9,7 +10,9 @@ from sqlalchemy import text
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.core.config import settings
+from app.core.body_limit import LimiteCorpsPublic
 from app.core.cors import appliquer_cors
+from app.utils.masquage import masquer_contacts
 from app.api.v1.router import api_router
 from app.db.session import engine, Base, SessionLocal
 import app.models.organisation
@@ -39,11 +42,18 @@ scheduler = BackgroundScheduler()
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    # Ni l'objet exception ni sa trace complète : le message d'une erreur SQL embarque les paramètres de la requête
+    # (texte d'un avis, téléphone, e-mail). On garde le type, un message masqué et les emplacements dans le code.
+    emplacements = " <- ".join(
+        f"{f.filename.rsplit('/', 1)[-1].rsplit(chr(92), 1)[-1]}:{f.lineno}" for f in traceback.extract_tb(exc.__traceback__)[-4:]
+    )
     logger.error(
-        "Erreur non gérée pendant %s %s",
+        "Erreur non gérée pendant %s %s : %s (%s) [%s]",
         request.method,
         request.url.path,
-        exc_info=(type(exc), exc, exc.__traceback__),
+        type(exc).__name__,
+        masquer_contacts(str(exc))[:200],
+        emplacements,
     )
     return JSONResponse(
         status_code=500,
@@ -165,6 +175,9 @@ def on_startup():
 _origines_cors = settings.allowed_origins_list
 # Ligne de démarrage : origines publiques uniquement, aucun secret.
 print(f"[CORS] APP_ENV={settings.APP_ENV} origines autorisées : {', '.join(_origines_cors)}")
+# Plafond de taille du corps des envois publics (POST /feedbacks, /feedbacks/{id}/nps). Ajouté AVANT le CORS : le CORS
+# l'enveloppe, donc un refus 413 porte les en-têtes CORS et reste lisible par le navigateur.
+app.add_middleware(LimiteCorpsPublic)
 appliquer_cors(app, _origines_cors)
 
 # Inclusion des routes

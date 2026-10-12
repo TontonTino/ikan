@@ -107,8 +107,7 @@ def _token(sub, type_="nps", exp_delta=timedelta(minutes=30)):
 
 def test_envoi_principal_renvoie_un_nps_token_sans_changer_les_autres_champs(ctx):
     data = _soumettre(ctx)
-    assert data["note"] == 4
-    assert data["nps_note"] is None
+    assert set(data) == {"id", "nps_token", "message"}  # réponse publique minimale
     assert isinstance(data["nps_token"], str) and len(data["nps_token"]) > 20
 
     payload = jwt.decode(data["nps_token"], settings.SECRET_KEY, algorithms=[settings.ALGORITHM])

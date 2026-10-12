@@ -22,6 +22,7 @@ from app.models.historique_feedback import HistoriqueFeedback
 from app.models.enums import UserRole
 from app.schemas.agence import AgenceCreate, AgenceUpdate, AgenceResponse, AgencePhotoUpdate, ActiviteAgenceItem, AgenceContexteItem
 from app.schemas.categorie import CategorieCreate, CategorieUpdate, CategorieResponse
+from app.services.categorie_service import get_or_create_categories_actives
 from app.services.categorie_templates import creer_categories_depart
 from app.services.plan_catalog import FEATURE_CATEGORIES
 from app.services.plan_service import organisation_a_la_fonctionnalite
@@ -210,10 +211,12 @@ def create_agence(
     db.add(qr)
 
     # Jeu de catégories de départ du secteur de l'organisation, s'il en existe un (sans
-    # effet aujourd'hui sauf pour le secteur telecom, voir categorie_templates.py). Ne
-    # remplace jamais le filet "Général" (get_or_create_categories_actives), qui ne se
-    # déclenche de toute façon que si aucune catégorie active n'existe encore.
+    # effet aujourd'hui sauf pour le secteur telecom, voir categorie_templates.py). Le filet
+    # "Général" (get_or_create_categories_actives) ne se déclenche que si aucune catégorie
+    # active n'existe encore : il est posé ICI (action authentifiée) et non plus par le GET
+    # public /qr-codes/{code}/categories, qui ne doit jamais écrire.
     creer_categories_depart(db, agence)
+    get_or_create_categories_actives(agence.id, db)
 
     db.commit()
     db.refresh(agence)
@@ -343,6 +346,10 @@ def list_categories(
         requete = requete.filter(Categorie.active == True)  # noqa: E712
     else:
         _check_cx_owns_agence(agence, current_user)
+
+    # Filet "Général" pour une agence sans catégorie active (ancienne agence jamais passée par la création actuelle) :
+    # posé ici, après le contrôle d'accès, et non plus par le GET public du formulaire client.
+    get_or_create_categories_actives(agence_id, db)
 
     return requete.order_by(Categorie.created_at.asc()).all()
 

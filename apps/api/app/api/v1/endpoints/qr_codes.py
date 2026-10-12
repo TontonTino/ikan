@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 import io
+import logging
 
 from app.api.deps import get_admin_user, get_db
 from app.models.utilisateur import Utilisateur
@@ -17,7 +18,11 @@ from app.models.qr_code import QRCode
 from app.models.agence import Agence
 from app.core.config import settings
 from app.schemas.categorie import CategoriePublicResponse
-from app.services.categorie_service import get_or_create_categories_actives
+from app.models.categorie import Categorie
+from app.models.system_settings import SystemSettings, RETENTION_MOIS_DEFAUT
+from app.core.rate_limit import limiter_ip_public
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -26,44 +31,43 @@ CLIENT_BASE_URL = settings.PUBLIC_CLIENT_URL.rstrip("/")
 
 def _resolve_qr(clean_code: str, db: Session) -> QRCode | None:
     """
-    Résout un code QR à partir d'un code exact, d'un UUID d'agence, ou d'un
-    nom/ville d'agence. Crée le QR Code à la volée si l'agence existe mais n'en
-    a pas encore. Logique partagée par /validate et /categories.
+    Résout un code QR à partir d'un code exact ou de l'UUID d'une agence. LECTURE SEULE : ne crée jamais de QR code
+    (un lien par UUID vers une agence sans QR répond 404 ; le QR est créé par une action authentifiée, voir
+    agences._enrich_agence_qr). Le QR doit être actif ET son agence aussi, sur toutes les voies (code et UUID).
+    Logique partagée par /validate, /categories et POST /feedbacks.
     """
     from sqlalchemy import func
 
-    qr = db.query(QRCode).filter(
-        func.lower(QRCode.code) == clean_code.lower(),
-        QRCode.actif == True,
-    ).first()
+    qr = (
+        db.query(QRCode)
+        .join(Agence, Agence.id == QRCode.agence_id)
+        .filter(
+            func.lower(QRCode.code) == clean_code.lower(),
+            QRCode.actif == True,  # noqa: E712
+            Agence.active == True,  # noqa: E712
+        )
+        .first()
+    )
     if qr:
         return qr
 
     # Repli par UUID d'agence : légitime (liens générés par le dashboard sous la forme
     # /feedback/{qr_code_token || agence.id}) et non énumérable (UUID aléatoire).
-    # Uniquement pour une agence ACTIVE.
     try:
         possible_uuid = UUID(clean_code)
-        agence = db.query(Agence).filter(Agence.id == possible_uuid, Agence.active == True).first()  # noqa: E712
-        if agence:
-            qr = db.query(QRCode).filter(QRCode.agence_id == agence.id, QRCode.actif == True).first()
-            if not qr:
-                clean_name = agence.nom.upper().replace(" ", "-")[:12]
-                code_str = f"QR-{clean_name}-{uuid.uuid4().hex[:6].upper()}"
-                qr = QRCode(
-                    id=uuid.uuid4(),
-                    agence_id=agence.id,
-                    code=code_str,
-                    url=f"{CLIENT_BASE_URL}/feedback/{code_str}",
-                    label=f"Borne Accueil - {agence.nom}",
-                    actif=True
-                )
-                db.add(qr)
-                db.commit()
-                db.refresh(qr)
-            return qr
     except ValueError:
-        pass
+        possible_uuid = None
+    if possible_uuid is not None:
+        return (
+            db.query(QRCode)
+            .join(Agence, Agence.id == QRCode.agence_id)
+            .filter(
+                Agence.id == possible_uuid,
+                Agence.active == True,  # noqa: E712
+                QRCode.actif == True,  # noqa: E712
+            )
+            .first()
+        )
 
     # SÉCURITÉ (5B-1) : plus de résolution par nom ou ville d'agence (recherche ILIKE sur
     # TOUTES les organisations). Elle permettait à un anonyme d'énumérer les agences de
@@ -171,21 +175,31 @@ def list_qr_codes(
     return db.query(QRCode).filter(QRCode.agence_id == agence_id).all()
 
 
-@router.get("/{code}/validate")
+def _retention_mois(db: Session) -> int:
+    """Durée de conservation configurée (SystemSettings.retention_mois), lue sans jamais écrire : sans ligne de
+    configuration, valeur par défaut du modèle."""
+    ligne = db.query(SystemSettings).first()
+    if ligne is not None and ligne.retention_mois:
+        return ligne.retention_mois
+    return RETENTION_MOIS_DEFAUT
+
+
+@router.get("/{code}/validate", dependencies=[Depends(limiter_ip_public)])
 def validate_qr_code(
     code: str,
     db: Session = Depends(get_db),
 ):
     """
-    Valide un code QR et retourne les infos de l'agence.
-    Endpoint public — appelé par la page Astro client.
+    Valide un code QR et retourne les infos de l'agence. LECTURE SEULE (aucune écriture en base).
+    Endpoint public — appelé par la page Astro client. 404 si le QR est inconnu, inactif, ou si son agence est désactivée.
+    `retention_mois` : durée de conservation affichée dans la case de consentement du formulaire.
     """
     try:
         clean_code = code.strip()
         qr = _resolve_qr(clean_code, db)
 
         if not qr:
-            raise HTTPException(status_code=404, detail=f"QR Code ou Agence '{clean_code}' introuvable ou inactif")
+            raise HTTPException(status_code=404, detail="QR Code ou agence introuvable ou inactif")
 
         agence_nom = qr.agence.nom if (qr and qr.agence) else "Agence"
         ville = qr.agence.ville if (qr and qr.agence) else None
@@ -196,32 +210,37 @@ def validate_qr_code(
             "agence_nom": agence_nom,
             "ville": ville,
             "label": qr.label,
+            "retention_mois": _retention_mois(db),
         }
     except HTTPException:
         raise
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        logger.error("Erreur validate_qr_code (%s)", type(e).__name__)
         raise HTTPException(status_code=500, detail="Erreur serveur lors de la validation du QR code.")
 
 
-@router.get("/{code}/categories", response_model=List[CategoriePublicResponse])
+@router.get("/{code}/categories", response_model=List[CategoriePublicResponse], dependencies=[Depends(limiter_ip_public)])
 def get_categories_for_qr(
     code: str,
     db: Session = Depends(get_db),
 ):
     """
-    Retourne les catégories actives de l'agence rattachée à ce QR Code.
+    Retourne les catégories actives de l'agence rattachée à ce QR Code. LECTURE SEULE.
     Endpoint public — appelé par le formulaire de feedback client (aucune authentification).
-    Si l'agence n'a encore aucune catégorie définie par son CX Manager, une
-    catégorie "Général" est créée à la volée pour ne jamais bloquer le formulaire.
+    La catégorie « Général » n'est plus créée ici : elle l'est à la création de l'agence ou à la consultation
+    authentifiée de ses catégories (voir categorie_service.get_or_create_categories_actives).
     """
     clean_code = code.strip()
     qr = _resolve_qr(clean_code, db)
     if not qr:
-        raise HTTPException(status_code=404, detail=f"QR Code ou Agence '{clean_code}' introuvable ou inactif")
+        raise HTTPException(status_code=404, detail="QR Code ou agence introuvable ou inactif")
 
-    return get_or_create_categories_actives(qr.agence_id, db)
+    return (
+        db.query(Categorie)
+        .filter(Categorie.agence_id == qr.agence_id, Categorie.active == True)  # noqa: E712
+        .order_by(Categorie.created_at.asc())
+        .all()
+    )
 
 
 @router.delete("/{qr_id}", status_code=status.HTTP_204_NO_CONTENT)

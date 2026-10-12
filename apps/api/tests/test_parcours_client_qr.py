@@ -28,6 +28,7 @@ from app.models.feedback import Feedback
 from app.models.historique_feedback import HistoriqueFeedback
 from app.models.organisation import Organisation
 from app.models.qr_code import QRCode
+from app.models.system_settings import SystemSettings
 from app.models.utilisateur import Utilisateur
 
 
@@ -40,7 +41,7 @@ def ctx(monkeypatch):
         engine,
         tables=[Organisation.__table__, Agence.__table__, Utilisateur.__table__, QRCode.__table__,
                 Categorie.__table__, Feedback.__table__, HistoriqueFeedback.__table__,
-                DemandeContact.__table__, AnalyseIA.__table__],
+                DemandeContact.__table__, AnalyseIA.__table__, SystemSettings.__table__],
     )
     Session = sessionmaker(bind=engine)
     db = Session()
@@ -165,7 +166,8 @@ def test_qr_invalide_donne_une_erreur_sans_detail_technique(ctx):
 
 def test_commentaire_facultatif(ctx):
     r = envoyer(ctx, ctx.a1)
-    assert r.status_code == 201 and r.json()["commentaire"] in (None, "")
+    assert r.status_code == 201
+    assert ctx.feedbacks()[0].commentaire in (None, "")
 
 
 def test_commentaire_de_1000_caracteres_accepte_1001_refuse(ctx):

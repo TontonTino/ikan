@@ -65,7 +65,7 @@ def _notifier_agent(feedback_id: uuid.UUID, criticite: str) -> None:
         if response.status_code >= 400:
             logger.warning(f"Webhook agent refusé ({response.status_code}) pour feedback {feedback_id}")
     except Exception as exc:
-        logger.warning(f"Webhook agent indisponible pour feedback {feedback_id} : {exc}")
+        logger.warning(f"Webhook agent indisponible pour feedback {feedback_id} ({type(exc).__name__})")
 
 
 def analyser_feedback(feedback_id: uuid.UUID, db: Session | None = None) -> None:
@@ -177,7 +177,8 @@ def analyser_feedback(feedback_id: uuid.UUID, db: Session | None = None) -> None
         _notifier_agent(feedback_id, criticite_enum.value)
 
     except Exception as e:
-        logger.error(f"Erreur lors de l'analyse du feedback {feedback_id}: {e}")
+        # Type seul : le message d'une exception SQL peut embarquer le texte de l'avis ou des coordonnées.
+        logger.error(f"Erreur lors de l'analyse du feedback {feedback_id} ({type(e).__name__})")
         db.rollback()
     finally:
         if close_db:

@@ -2,9 +2,9 @@
 Création d'agence (app/api/v1/endpoints/agences.py::create_agence) : vérifie que le jeu de
 catégories de départ du secteur de l'organisation est posé automatiquement
 (creer_categories_depart, app/services/categorie_templates.py) — secteur telecom : 7
-catégories actives + "Mobile Money" inactive. Secteur sans registre : comportement
-inchangé (aucune catégorie créée à la création, "Général" reste à la charge du filet
-get_or_create_categories_actives, non concerné par ce test).
+catégories actives + "Mobile Money" inactive. Secteur sans registre : seule la catégorie
+« Général » est posée à la création (filet get_or_create_categories_actives, désormais appelé
+ici, de façon authentifiée, et non plus par le GET public /qr-codes/{code}/categories).
 """
 import os
 from types import SimpleNamespace
@@ -92,8 +92,10 @@ def test_creation_agence_telecom_cree_8_categories_7_actives_1_inactive(ctx):
     }
 
 
-def test_creation_agence_secteur_sans_registre_ne_cree_aucune_categorie(ctx):
+def test_creation_agence_secteur_sans_registre_cree_uniquement_la_categorie_general(ctx):
+    """Le filet « Général » est posé à la création (action authentifiée) : le GET public /categories n'écrit plus."""
     r = ctx.call("cx_autre", "post", "/", json={"nom": "Nouvelle agence autre secteur"})
     assert r.status_code == 201, r.text
     agence_id = UUID(r.json()["id"])
-    assert ctx.db.query(Categorie).filter(Categorie.agence_id == agence_id).count() == 0
+    categories = ctx.db.query(Categorie).filter(Categorie.agence_id == agence_id).all()
+    assert [(c.nom, c.active) for c in categories] == [("Général", True)]
