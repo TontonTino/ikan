@@ -35,6 +35,7 @@ import {
   TagIcon,
   StoreIcon,
 } from '../../components/common/Icons';
+import { userFacingError } from '../../utils/userFacingError';
 
 export default function StatsCXView() {
   // Onglet piloté par l'URL (?tab=agences…) : le Dashboard CX peut pointer directement
@@ -75,7 +76,8 @@ export default function StatsCXView() {
       });
       setData(res.data);
     } catch (err: any) {
-      setError(err?.response?.data?.detail || 'Impossible de charger les statistiques.');
+      console.error('Erreur chargement statistiques:', err);
+      setError(userFacingError(err, 'Impossible de charger les statistiques. Veuillez réessayer.'));
     } finally {
       setLoading(false);
     }
@@ -112,7 +114,7 @@ export default function StatsCXView() {
     { id: 'sentiments', label: 'Ton des avis', icon: <ThumbsUpIcon size={16} /> },
     { id: 'thematiques', label: 'Thèmes', icon: <TagIcon size={16} />, badge: data?.themes.length },
     { id: 'agences', label: 'Agences', icon: <StoreIcon size={16} />, badge: data?.agences_ranking.length },
-    { id: 'tendances', label: 'Ce que révèle l’analyse' },
+    { id: 'tendances', label: 'Ce que suggère l’analyse' },
   ];
 
   return (
@@ -225,14 +227,14 @@ export default function StatsCXView() {
                         <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>Notés 3 sur 5</span>
                         <strong style={{ fontSize: '0.92rem', color: '#D97706' }}>
                           {/* Même base que les deux autres lignes (la note), pas le ton détecté. */}
-                          {Math.max(0, (kpis.total_feedbacks?.valeur_num ?? 0) - (kpis.feedbacks_positifs?.valeur_num ?? 0) - (kpis.feedbacks_negatifs?.valeur_num ?? 0))} avis
+                          {Math.max(0, (kpis.total_feedbacks?.valeur_num ?? 0) - (kpis.feedbacks_positifs?.valeur_num ?? 0) - (kpis.feedbacks_notes_faibles?.valeur_num ?? 0))} avis
                         </strong>
                       </div>
 
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: '#FEE2E2', borderRadius: '12px' }}>
                         <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>Notés 1 ou 2 sur 5</span>
                         <strong style={{ fontSize: '0.92rem', color: '#DC2626' }}>
-                          {kpis.feedbacks_negatifs?.valeur ?? 0} avis
+                          {kpis.feedbacks_notes_faibles?.valeur ?? 0} avis
                         </strong>
                       </div>
                     </div>

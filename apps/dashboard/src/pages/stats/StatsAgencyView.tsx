@@ -22,6 +22,7 @@ import {
   TrendingUpIcon,
   TagIcon,
 } from '../../components/common/Icons';
+import { userFacingError } from '../../utils/userFacingError';
 
 export default function StatsAgencyView() {
   const [activeTab, setActiveTab] = useState<'satisfaction' | 'sentiments_themes' | 'alertes'>('satisfaction');
@@ -37,7 +38,8 @@ export default function StatsAgencyView() {
       const res = await statisticsApi.agency({ jours });
       setData(res.data);
     } catch (err: any) {
-      setError(err?.response?.data?.detail || "Impossible de charger les statistiques de l’agence.");
+      console.error('Erreur chargement statistiques agence:', err);
+      setError(userFacingError(err, 'Impossible de charger les statistiques de l’agence. Veuillez réessayer.'));
     } finally {
       setLoading(false);
     }
@@ -143,7 +145,7 @@ export default function StatsAgencyView() {
           <KpiCard
             icon={<TrendingUpIcon size={20} />}
             label="Avis pris en charge"
-            hint="Part des avis de la période ouverts par l’agence ou plus avancés (action en cours, résolus). Ne mesure pas la résolution."
+            hint="Part des avis de la période dont le statut n’est plus Nouveau (pris en charge, action en cours ou résolu). L’analyse automatique par l’IA n’est pas une prise en charge ; cet indicateur ne mesure pas la résolution."
             value={kpis.taux_traitement?.valeur ?? "Pas d'avis"}
             trend={
               kpis.taux_traitement?.evolution

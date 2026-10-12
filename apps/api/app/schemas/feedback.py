@@ -17,6 +17,8 @@ class FeedbackCreate(BaseModel):
     nps_note: Optional[int] = Field(None, ge=0, le=10, description="Réponse NPS facultative (0 à 10)")
     sentiment: Optional[str] = Field(None, description="Sentiment sélectionné (negatif, neutre, positif)")
     commentaire: Optional[str] = Field(None, max_length=1000)
+    # Clé d'idempotence d'UN envoi (générée par le formulaire, rejouée à l'identique lors d'une nouvelle tentative).
+    idempotency_key: Optional[str] = Field(None, min_length=8, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
     # Suggestion optionnelle (BF-04)
     suggestion: Optional[str] = None
     # Demande de contact optionnelle (numéro ou email)
@@ -28,7 +30,7 @@ class FeedbackCreate(BaseModel):
     @field_validator("contact_telephone")
     @classmethod
     def _valider_contact_telephone(cls, valeur: Optional[str]) -> Optional[str]:
-        """Vide -> None ; sinon doit être un numéro valide (Burkina Faso). La valeur saisie
+        """Vide -> None ; sinon doit respecter la syntaxe internationale explicite. La valeur saisie
         est conservée telle quelle (trimée) : la normalisation se fait à la lecture."""
         if valeur is None or not valeur.strip():
             return None

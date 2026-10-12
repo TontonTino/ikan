@@ -5,19 +5,32 @@ import { useAuthStore } from '../../stores/authStore';
 import type { Organisation, SecteurInfo } from '../../types';
 import PageHeader from '../../components/ui/PageHeader';
 import { BuildingIcon, PlusIcon, AlertTriangleIcon, DownloadIcon } from '../../components/common/Icons';
+import { userFacingError } from '../../utils/userFacingError';
+import ConfirmActionModal from '../../components/admin/ConfirmActionModal';
 
+// Contrôle d'accès séparé du contenu : les hooks du contenu ne sont jamais appelés après un retour anticipé.
 export default function AdminOrgsPage() {
   const user = useAuthStore((s) => s.user);
-
   if (user?.role !== 'admin') {
     return <Navigate to="/siege" replace />;
   }
+  return <AdminOrgsPageContenu />;
+}
+
+function AdminOrgsPageContenu() {
   const [orgs, setOrgs] = useState<Organisation[]>([]);
   const [secteurs, setSecteurs] = useState<SecteurInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingOrg, setEditingOrg] = useState<Organisation | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [erreurChargement, setErreurChargement] = useState('');
+  const [enregistrement, setEnregistrement] = useState(false);
+  const [succes, setSucces] = useState('');
+  const [secteursIndisponibles, setSecteursIndisponibles] = useState(false);
+  const [aSupprimer, setASupprimer] = useState<Organisation | null>(null);
+  const [suppressionEnCours, setSuppressionEnCours] = useState(false);
+  const [erreurSuppression, setErreurSuppression] = useState('');
   const [form, setForm] = useState({
     nom: '',
     logo: '',
@@ -27,25 +40,35 @@ export default function AdminOrgsPage() {
   });
 
   const loadOrgs = () => {
+    setErreurChargement('');
     organisationsApi
       .list()
       .then((r) => {
         setOrgs(r.data);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((err) => {
+        console.error('Erreur chargement organisations:', err);
+        setErreurChargement(userFacingError(err, 'Impossible de charger les organisations. Veuillez réessayer.'));
+        setLoading(false);
+      });
   };
 
   useEffect(() => {
     loadOrgs();
     // Liste code/libellé des secteurs — source unique pour ce select (GET /secteurs).
-    secteursApi.list().then((r) => setSecteurs(r.data)).catch(() => setSecteurs([]));
+    secteursApi.list().then((r) => setSecteurs(r.data)).catch((err) => {
+      console.error('Erreur chargement des secteurs:', err);
+      setSecteurs([]);
+      setSecteursIndisponibles(true);
+    });
   }, []);
 
   const openCreate = () => {
     setEditingOrg(null);
-    setForm({ nom: '', logo: '', secteur_code: secteurs[0]?.code || '', pays_region: '', email_pro: '' });
+    setForm({ nom: '', logo: '', secteur_code: '', pays_region: '', email_pro: '' });
     setErrorMsg('');
+    setSucces('');
     setShowForm(true);
   };
 
@@ -54,7 +77,7 @@ export default function AdminOrgsPage() {
     setForm({
       nom: org.nom || '',
       logo: org.logo || '',
-      secteur_code: org.secteur_code || secteurs[0]?.code || '',
+      secteur_code: org.secteur_code || '',
       pays_region: org.pays_region || '',
       email_pro: org.email_pro || org.email || '',
     });
@@ -65,6 +88,8 @@ export default function AdminOrgsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    setSucces('');
+    setEnregistrement(true);
     try {
       const payload = {
         nom: form.nom,
@@ -76,33 +101,42 @@ export default function AdminOrgsPage() {
 
       if (editingOrg) {
         await organisationsApi.update(editingOrg.id, payload);
+        setSucces(`L’organisation « ${payload.nom} » a été mise à jour.`);
       } else {
         await organisationsApi.create(payload);
+        setSucces(`L’organisation « ${payload.nom} » a été créée.`);
       }
 
       loadOrgs();
       setShowForm(false);
       setEditingOrg(null);
-      setForm({ nom: '', logo: '', secteur_code: secteurs[0]?.code || '', pays_region: '', email_pro: '' });
+      setForm({ nom: '', logo: '', secteur_code: '', pays_region: '', email_pro: '' });
     } catch (err: any) {
       console.error('Erreur API organisation:', err?.response?.data);
-      let detail = err?.response?.data?.detail;
-      if (Array.isArray(detail)) {
-        detail = detail.map((d: any) => `${d.loc ? d.loc.join('.') : ''}: ${d.msg}`).join(', ');
-      } else if (typeof detail === 'object') {
-        detail = JSON.stringify(detail);
-      }
-      setErrorMsg(detail || err?.message || "Erreur lors de l'enregistrement de l'organisation.");
+      // 400 = seul cas renvoyé par POST/PATCH /organisations : e-mail professionnel déjà utilisé.
+      setErrorMsg(userFacingError(err, "Impossible d’enregistrer l’organisation. Veuillez réessayer.", undefined, {
+        400: 'Cette adresse e-mail professionnelle est déjà utilisée par une autre organisation.',
+      }));
+    } finally {
+      setEnregistrement(false);
     }
   };
 
-  const deleteOrg = async (id: string) => {
-    if (!confirm('Supprimer cette organisation ?')) return;
+  const confirmerSuppression = async () => {
+    if (!aSupprimer) return;
+    setSuppressionEnCours(true);
+    setErreurSuppression('');
     try {
-      await organisationsApi.delete(id);
-      setOrgs((prev) => prev.filter((o) => o.id !== id));
+      await organisationsApi.delete(aSupprimer.id);
+      setOrgs((prev) => prev.filter((o) => o.id !== aSupprimer.id));
+      setASupprimer(null);
     } catch (err: any) {
-      alert(err?.response?.data?.detail || 'Impossible de supprimer cette organisation.');
+      console.error('Erreur suppression organisation:', err?.response?.data);
+      setErreurSuppression(userFacingError(err, 'Impossible de supprimer cette organisation. Veuillez réessayer.', undefined, {
+        404: 'Cette organisation est introuvable, ou vous n’avez pas le droit de la supprimer.',
+      }));
+    } finally {
+      setSuppressionEnCours(false);
     }
   };
 
@@ -129,6 +163,19 @@ export default function AdminOrgsPage() {
           },
         }}
       />
+
+      {erreurChargement && (
+        <div role="alert" style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#B91C1C', padding: '10px 14px', borderRadius: '12px', fontSize: '0.86rem', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <span style={{ flex: '1 1 240px' }}>{erreurChargement} Cela ne signifie pas qu’aucune organisation n’existe.</span>
+          <button type="button" className="btn-secondary" onClick={loadOrgs}>Réessayer</button>
+        </div>
+      )}
+
+      {succes && (
+        <div role="status" style={{ background: '#EAF5EC', border: '1px solid #CFE3D3', color: '#2F5D26', padding: '10px 14px', borderRadius: '12px', fontSize: '0.86rem', fontWeight: 700 }}>
+          {succes}
+        </div>
+      )}
 
       {/* ── Formulaire Création / Édition ── */}
       {showForm && (
@@ -179,7 +226,7 @@ export default function AdminOrgsPage() {
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
             <div>
               <label style={{ display: 'block', fontWeight: 700, marginBottom: '6px', fontSize: '0.84rem', color: '#1E293B' }}>
                 Nom de l'entreprise *
@@ -218,7 +265,9 @@ export default function AdminOrgsPage() {
                 required
                 className="saas-input"
               >
-                {secteurs.length === 0 && <option value="">Chargement…</option>}
+                <option value="">
+                  {secteursIndisponibles ? 'Liste indisponible — rechargez la page' : secteurs.length === 0 ? 'Chargement…' : 'Choisir un secteur'}
+                </option>
                 {secteurs.map((s) => (
                   <option key={s.code} value={s.code}>{s.libelle}</option>
                 ))}
@@ -348,8 +397,8 @@ export default function AdminOrgsPage() {
             >
               Annuler
             </button>
-            <button type="submit" className="btn-primary">
-              {editingOrg ? 'Mettre à jour' : 'Enregistrer'}
+            <button type="submit" className="btn-primary" disabled={enregistrement} aria-busy={enregistrement}>
+              {enregistrement ? 'Enregistrement…' : editingOrg ? 'Mettre à jour' : 'Enregistrer'}
             </button>
           </div>
         </form>
@@ -388,6 +437,13 @@ export default function AdminOrgsPage() {
             </tr>
           </thead>
           <tbody>
+            {orgs.length === 0 && (
+              <tr>
+                <td colSpan={6} style={{ padding: '28px 20px', color: '#64748B', textAlign: 'center' }}>
+                  {erreurChargement ? 'Liste non chargée.' : 'Aucune organisation pour le moment. Créez la première avec « Nouvelle organisation ».'}
+                </td>
+              </tr>
+            )}
             {orgs.map((o) => (
               <tr
                 key={o.id}
@@ -451,7 +507,7 @@ export default function AdminOrgsPage() {
                       Modifier
                     </button>
                     <button
-                      onClick={() => deleteOrg(o.id)}
+                      onClick={() => { setErreurSuppression(''); setASupprimer(o); }}
                       style={{
                         background: '#FFFFFF',
                         color: '#DC2626',
@@ -476,6 +532,24 @@ export default function AdminOrgsPage() {
         </table>
         </div>
       </div>
+
+      {aSupprimer && (
+        <ConfirmActionModal
+          title="Supprimer cette organisation ?"
+          subject={aSupprimer.nom}
+          confirmLabel="Supprimer définitivement"
+          requireText={aSupprimer.nom}
+          busy={suppressionEnCours}
+          error={erreurSuppression}
+          onConfirm={confirmerSuppression}
+          onCancel={() => setASupprimer(null)}
+        >
+          <p style={{ margin: 0 }}>
+            Cette suppression est <strong>définitive</strong> et supprime aussi tout ce qui dépend de cette organisation :
+            ses agences et QR codes, ses comptes utilisateurs et les avis clients collectés.
+          </p>
+        </ConfirmActionModal>
+      )}
     </div>
   );
 }

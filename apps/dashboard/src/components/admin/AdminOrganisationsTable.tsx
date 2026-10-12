@@ -12,7 +12,6 @@ import {
   MoreVerticalIcon,
   CheckCircleIcon,
   ExternalLinkIcon,
-  EditIcon,
   BarChartIcon,
   ClockIcon,
 } from '../common/Icons';
@@ -156,31 +155,38 @@ export default function AdminOrganisationsTable({
               background: '#F8FAFB',
               border: '1px solid #E2E8F0',
               borderRadius: '12px',
-              padding: '7px 16px',
+              padding: '10px 16px',
+              minHeight: '44px',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              width: '280px',
+              width: 'min(280px, 100%)',
               boxSizing: 'border-box',
             }}
           >
             <SearchIcon size={15} color="#94A3B8" />
             <input
               type="text"
+              aria-label="Rechercher une organisation"
               placeholder="Rechercher une organisation..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
                 border: 'none',
                 background: 'transparent',
-                fontSize: '0.82rem',
+                fontSize: '0.875rem',
                 color: '#1E293B',
                 width: '100%',
+                minHeight: '24px',
+                boxSizing: 'border-box',
+                padding: 0,
                 fontFamily: 'inherit',
               }}
             />
             {searchTerm && (
               <button
+                type="button"
+                aria-label="Effacer la recherche"
                 onClick={() => setSearchTerm('')}
                 style={{
                   background: 'none',
@@ -200,6 +206,7 @@ export default function AdminOrganisationsTable({
 
           {/* Filtre Statut */}
           <select
+            aria-label="Filtrer les organisations par statut"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
             style={{
@@ -470,6 +477,8 @@ export default function AdminOrganisationsTable({
                               borderColor: isMenuActive ? '#DCE8DF' : 'transparent',
                               borderRadius: '8px',
                               padding: '6px',
+                              minWidth: 44,
+                              minHeight: 44,
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
@@ -478,6 +487,9 @@ export default function AdminOrganisationsTable({
                               transition: 'background 0.15s ease',
                             }}
                             title="Actions"
+                            aria-label={`Actions pour ${org.nom}`}
+                            aria-haspopup="menu"
+                            aria-expanded={isMenuActive}
                           >
                             <MoreVerticalIcon size={16} />
                           </button>
@@ -527,7 +539,7 @@ export default function AdminOrganisationsTable({
                                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                               >
                                 <BuildingIcon size={14} color="#3C7730" />
-                                <span>Voir organisation</span>
+                                <span>Ouvrir la page Organisations</span>
                               </button>
 
                               <button
@@ -555,7 +567,7 @@ export default function AdminOrganisationsTable({
                                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                               >
                                 <UsersIcon size={14} color="#3C7730" />
-                                <span>Voir utilisateurs</span>
+                                <span>Ouvrir les comptes CX Manager</span>
                               </button>
 
                               <button
@@ -584,36 +596,6 @@ export default function AdminOrganisationsTable({
                               >
                                 <BarChartIcon size={14} color="#3C7730" />
                                 <span>Voir le détail</span>
-                              </button>
-
-                              <div style={{ height: '1px', background: '#F1F5F2', margin: '4px 0' }} />
-
-                              <button
-                                onClick={() => {
-                                  setActiveMenuId(null);
-                                  navigate('/admin/organisations');
-                                }}
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '8px',
-                                  padding: '8px 12px',
-                                  background: 'transparent',
-                                  border: 'none',
-                                  borderRadius: '8px',
-                                  fontSize: '0.82rem',
-                                  fontWeight: 600,
-                                  color: '#02302D',
-                                  cursor: 'pointer',
-                                  textAlign: 'left',
-                                  width: '100%',
-                                  fontFamily: 'inherit',
-                                }}
-                                onMouseEnter={(e) => (e.currentTarget.style.background = '#F8FAFB')}
-                                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                              >
-                                <EditIcon size={14} color="#64748B" />
-                                <span>Modifier</span>
                               </button>
                             </div>
                           )}

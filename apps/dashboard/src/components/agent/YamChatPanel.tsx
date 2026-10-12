@@ -4,6 +4,8 @@ import RichText from './RichText';
 import YamAvatar from './YamAvatar';
 import { MAX_QUESTION_LENGTH, useYamChat } from './useYamChat';
 import { useYamStore } from '../../stores/yamStore';
+import { useAuthStore } from '../../stores/authStore';
+import { PERIODE_JOURS } from '../../services/agent';
 
 export const YAM_PANEL_ID = 'yam-chat-panel';
 
@@ -36,7 +38,7 @@ function ThinkingBubble() {
         </span>
         {slow && (
           <div className="yam-slow-hint">
-            Cela prend un peu plus de temps que d'habitude (le service se réveille), merci de patienter…
+            Cela prend un peu plus de temps que d’habitude (le service peut être en cours de réveil). Merci de patienter…
           </div>
         )}
       </div>
@@ -60,6 +62,14 @@ export default function YamChatPanel({ open, onClose }: Props) {
   const endRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
   const prefill = useYamStore((s) => s.prefill);
+  const user = useAuthStore((s) => s.user);
+
+  // Périmètre réellement appliqué par l'agent : un responsable d'agence est limité à son agence (côté serveur),
+  // un CX Manager voit toutes les agences de son organisation. L'utilisateur le voit ici, sans avoir à le deviner.
+  const perimetre =
+    user?.role === 'agency_manager'
+      ? `Votre agence${user.agence_nom ? ` : ${user.agence_nom}` : ''}`
+      : 'Toutes les agences de votre organisation';
 
   // Question contextuelle (ex. depuis le dashboard) : pré-remplie, jamais envoyée automatiquement.
   useEffect(() => {
@@ -73,6 +83,26 @@ export default function YamChatPanel({ open, onClose }: Props) {
     }, 260);
     return () => window.clearTimeout(t);
   }, [prefill]);
+
+  // À la fermeture, le focus retourne à l'élément qui avait ouvert le panneau (sinon il retombe sur <body>).
+  const declencheur = useRef<HTMLElement | null>(null);
+  const etaitOuvert = useRef(false);
+  useEffect(() => {
+    if (open) {
+      declencheur.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      etaitOuvert.current = true;
+    } else if (etaitOuvert.current) {
+      etaitOuvert.current = false;
+      const el = declencheur.current;
+      declencheur.current = null;
+      // Si l'élément d'origine a été remplacé entre-temps, on retombe sur le bouton d'entrée de YAM dans le menu.
+      // Léger différé : la barre latérale se re-rend à la fermeture et peut remplacer le bouton qu'on vient de focaliser.
+      window.setTimeout(() => {
+        const cible = el && document.contains(el) ? el : document.querySelector<HTMLElement>(`[aria-controls="${YAM_PANEL_ID}"]`);
+        cible?.focus();
+      }, 80);
+    }
+  }, [open]);
 
   // Focus sur le champ à l'ouverture ; Échap ferme le panneau.
   useEffect(() => {
@@ -152,6 +182,10 @@ export default function YamChatPanel({ open, onClose }: Props) {
         </button>
       </header>
 
+      <p className="yam-scope">
+        <strong>Périmètre :</strong> {perimetre} · {PERIODE_JOURS} derniers jours
+      </p>
+
       {/* Messages */}
       <div className="yam-messages" aria-live="polite" ref={messagesRef}>
         <div className="yam-row yam-row-assistant">
@@ -160,6 +194,9 @@ export default function YamChatPanel({ open, onClose }: Props) {
             <p className="yam-paragraph">
               Bonjour, je suis <strong>YAM</strong>. Je peux analyser les avis de votre
               périmètre : alertes, thèmes, problèmes récurrents, tendances et recommandations.
+            </p>
+            <p className="yam-paragraph">
+              Mes réponses sont générées automatiquement : vérifiez-les avant d’agir.
             </p>
             {messages.length === 0 && (
               <div className="yam-suggestions">
@@ -206,6 +243,16 @@ export default function YamChatPanel({ open, onClose }: Props) {
               <YamAvatar size={28} />
               <div className="yam-bubble yam-bubble-assistant">
                 <RichText text={m.text} />
+                {m.intention === 'autre' && (
+                  <div className="yam-suggestions">
+                    <span className="yam-suggestions-title">Voici des questions que je comprends :</span>
+                    {SUGGESTIONS.map((s) => (
+                      <button key={s} type="button" className="yam-chip" onClick={() => send(s)} disabled={loading}>
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ),
@@ -244,6 +291,9 @@ export default function YamChatPanel({ open, onClose }: Props) {
           <SendIcon size={17} />
         </button>
       </form>
+      <p className="yam-footnote">
+        Réponses générées automatiquement : vérifiez-les avant d’agir. YAM suggère, il n’exécute aucune action.
+      </p>
     </aside>
   );
 }

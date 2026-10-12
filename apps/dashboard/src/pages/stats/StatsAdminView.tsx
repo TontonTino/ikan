@@ -12,6 +12,7 @@ import {
   StatsSectionCard,
 } from '../../components/stats/StatsStates';
 import { BuildingIcon, StoreIcon, UsersIcon, TrendingUpIcon } from '../../components/common/Icons';
+import { userFacingError } from '../../utils/userFacingError';
 
 export default function StatsAdminView() {
   const [activeTab, setActiveTab] = useState<'overview' | 'organisations'>('overview');
@@ -26,7 +27,8 @@ export default function StatsAdminView() {
       const res = await statisticsApi.admin();
       setData(res.data);
     } catch (err: any) {
-      setError(err?.response?.data?.detail || 'Impossible de charger les statistiques de la plateforme.');
+      console.error('Erreur chargement statistiques plateforme:', err);
+      setError(userFacingError(err, 'Impossible de charger les statistiques de la plateforme. Veuillez réessayer.'));
     } finally {
       setLoading(false);
     }

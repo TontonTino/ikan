@@ -3,6 +3,9 @@ import { utilisateursApi, agencesApi, organisationsApi } from '../../services/ap
 import { useAuthStore } from '../../stores/authStore';
 import TabsNavigation from '../../components/ui/TabsNavigation';
 import CreateAgencyManagerModal from '../../components/admin/CreateAgencyManagerModal';
+import ConfirmActionModal from '../../components/admin/ConfirmActionModal';
+import Alert from '../../components/ui/Alert';
+import Button from '../../components/ui/Button';
 import {
   UsersIcon,
   PlusIcon,
@@ -14,6 +17,7 @@ import {
   MessageSquareIcon,
   AlertTriangleIcon,
 } from '../../components/common/Icons';
+import { userFacingError } from '../../utils/userFacingError';
 
 type UserRow = {
   id: string;
@@ -57,6 +61,11 @@ export default function AdminUsersContent() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
   const [search, setSearch] = useState('');
+  const [erreurChargement, setErreurChargement] = useState('');
+  const [rechargement, setRechargement] = useState(0);
+  const [aSuspendre, setASuspendre] = useState<UserRow | null>(null);
+  const [suspensionEnCours, setSuspensionEnCours] = useState(false);
+  const [erreurSuspension, setErreurSuspension] = useState('');
 
   const [form, setForm] = useState({
     nom: '',
@@ -69,6 +78,8 @@ export default function AdminUsersContent() {
   });
 
   useEffect(() => {
+    setLoading(true);
+    setErreurChargement('');
     const promises: Promise<any>[] = [utilisateursApi.list()];
     if (isCXManager) promises.push(agencesApi.list());
     else promises.push(Promise.resolve({ data: [] }));
@@ -81,16 +92,13 @@ export default function AdminUsersContent() {
         setUsers(u.data);
         setAgences(a.data);
         setOrgs(o.data);
-        if (o.data.length > 0) {
-          setForm((prev) => ({
-            ...prev,
-            organisation_id: o.data[0].id,
-            role: isAdmin ? 'cx_manager' : 'agency_manager',
-          }));
-        }
+      })
+      .catch((err) => {
+        console.error('Erreur chargement des comptes:', err);
+        setErreurChargement(userFacingError(err, 'Impossible de charger les comptes. Veuillez réessayer.'));
       })
       .finally(() => setLoading(false));
-  }, [currentUser, isCXManager, isAdmin]);
+  }, [currentUser, isCXManager, isAdmin, rechargement]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -105,7 +113,7 @@ export default function AdminUsersContent() {
       email: '',
       password: '',
       role: isAdmin ? 'cx_manager' : 'agency_manager',
-      organisation_id: orgs[0]?.id || '',
+      organisation_id: '',
       agence_id: '',
     });
     setShowForm(true);
@@ -119,7 +127,7 @@ export default function AdminUsersContent() {
       email: u.email,
       password: '',
       role: u.role,
-      organisation_id: u.organisation_id || (orgs[0]?.id || ''),
+      organisation_id: u.organisation_id || '',
       agence_id: u.agence_id || '',
     });
     setShowForm(true);
@@ -129,6 +137,10 @@ export default function AdminUsersContent() {
     e.preventDefault();
     if (!form.nom || !form.prenom || !form.email) return;
     if (!editingUser && !form.password) return;
+    if (isAdmin && !editingUser && !form.organisation_id) {
+      showToast('Choisissez l’organisation de ce CX Manager.');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -140,7 +152,8 @@ export default function AdminUsersContent() {
       };
       if (form.password) payload.password = form.password;
       if (isCXManager) payload.agence_id = form.agence_id || null;
-      if (isAdmin && form.organisation_id) payload.organisation_id = form.organisation_id;
+      // L'organisation se choisit à la création uniquement ; elle n'est jamais modifiable ensuite.
+      if (isAdmin && !editingUser) payload.organisation_id = form.organisation_id;
 
       if (editingUser) {
         await utilisateursApi.update(editingUser.id, payload);
@@ -155,21 +168,47 @@ export default function AdminUsersContent() {
       setShowForm(false);
       setEditingUser(null);
     } catch (err: any) {
-      showToast(err.response?.data?.detail || "Impossible d’enregistrer. Vérifiez les informations puis réessayez.");
+      showToast(userFacingError(err, "Impossible d’enregistrer. Vérifiez les informations puis réessayez."));
     } finally {
       setSaving(false);
     }
   };
 
-  const toggleUserActive = async (u: UserRow) => {
+  // Suspension : confirmée au préalable (le compte perd l'accès). Réactivation : directe.
+  const changerStatutCompte = async (u: UserRow, active: boolean) => {
     try {
-      await utilisateursApi.update(u.id, { active: !u.active });
-      setUsers((prev) => prev.map((item) => (item.id === u.id ? { ...item, active: !item.active } : item)));
-      showToast(u.active ? 'Compte suspendu' : 'Compte réactivé');
-    } catch {
-      showToast('Erreur lors de la modification');
+      await utilisateursApi.update(u.id, { active });
+      setUsers((prev) => prev.map((item) => (item.id === u.id ? { ...item, active } : item)));
+      showToast(active ? 'Compte réactivé' : 'Compte suspendu');
+      return true;
+    } catch (err) {
+      console.error('Erreur changement de statut du compte:', err);
+      return userFacingError(err, active ? 'Impossible de réactiver ce compte. Veuillez réessayer.' : 'Impossible de suspendre ce compte. Veuillez réessayer.');
     }
   };
+
+  const toggleUserActive = async (u: UserRow) => {
+    if (u.active !== false) {
+      setErreurSuspension('');
+      setASuspendre(u);
+      return;
+    }
+    const resultat = await changerStatutCompte(u, true);
+    if (resultat !== true) showToast(resultat);
+  };
+
+  const confirmerSuspension = async () => {
+    if (!aSuspendre) return;
+    setSuspensionEnCours(true);
+    setErreurSuspension('');
+    const resultat = await changerStatutCompte(aSuspendre, false);
+    setSuspensionEnCours(false);
+    if (resultat === true) setASuspendre(null);
+    else setErreurSuspension(resultat);
+  };
+
+  const nomOrganisation = (id?: string) => orgs.find((o) => o.id === id)?.nom;
+  const nomAgence = (id?: string) => agences.find((a) => a.id === id)?.nom;
 
   const displayedUsers = useMemo(() => {
     return users
@@ -195,7 +234,7 @@ export default function AdminUsersContent() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
       {toast && (
-        <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 1000, background: '#02302D', color: 'white', padding: '12px 20px', borderRadius: '12px', fontWeight: 700 }}>
+        <div role="status" style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 1000, background: '#02302D', color: 'white', padding: '12px 20px', borderRadius: '12px', fontWeight: 700 }}>
           {toast}
         </div>
       )}
@@ -310,7 +349,38 @@ export default function AdminUsersContent() {
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0', boxSizing: 'border-box' }}
               />
+              <p style={{ margin: '4px 0 0', fontSize: '0.74rem', color: '#64748B' }}>
+                {editingUser
+                  ? 'Remplace tout de suite le mot de passe actuel. Transmettez-le à la personne : il n’est pas envoyé par e-mail.'
+                  : 'Transmettez ce mot de passe à la personne : il n’est pas envoyé par e-mail.'}
+              </p>
             </div>
+
+            {isAdmin && (
+              <div>
+                <label htmlFor="user-org" style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Organisation *</label>
+                <select
+                  id="user-org"
+                  required
+                  disabled={!!editingUser}
+                  value={form.organisation_id}
+                  onChange={(e) => setForm({ ...form, organisation_id: e.target.value })}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0', boxSizing: 'border-box', background: '#FFFFFF', minHeight: 44 }}
+                >
+                  <option value="">{editingUser ? (nomOrganisation(editingUser.organisation_id) || 'Organisation non renseignée') : 'Choisir une organisation'}</option>
+                  {orgs.map((o) => (
+                    <option key={o.id} value={o.id}>{o.nom}</option>
+                  ))}
+                </select>
+                <p style={{ margin: '4px 0 0', fontSize: '0.74rem', color: '#64748B' }}>
+                  {editingUser
+                    ? 'L’organisation d’un compte ne peut pas être modifiée.'
+                    : orgs.length === 0
+                      ? 'Aucune organisation disponible : créez-en une avant d’ajouter un CX Manager.'
+                      : 'Le CX Manager ne verra que les données de cette organisation.'}
+                </p>
+              </div>
+            )}
 
             {isCXManager && (
               <div>
@@ -365,6 +435,26 @@ export default function AdminUsersContent() {
             />
           </div>
 
+          {erreurChargement ? (
+            <Alert
+              tone="critical"
+              title={erreurChargement}
+              action={<Button size="sm" variant="secondary" onClick={() => setRechargement((n) => n + 1)}>Réessayer</Button>}
+            >
+              Cela ne signifie pas qu’aucun compte n’existe.
+            </Alert>
+          ) : displayedUsers.length === 0 ? (
+            <div style={{ background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E8ECE6', padding: '32px 24px', textAlign: 'center', color: '#64748B', fontSize: '0.88rem' }}>
+              {search.trim() ? (
+                <>
+                  <p style={{ margin: '0 0 12px' }}>Aucun compte ne correspond à « {search.trim()} ».</p>
+                  <Button variant="secondary" onClick={() => setSearch('')}>Effacer la recherche</Button>
+                </>
+              ) : (
+                <p style={{ margin: 0 }}>{isAdmin ? 'Aucun CX Manager pour le moment.' : 'Aucun responsable d’agence pour le moment.'}</p>
+              )}
+            </div>
+          ) : (
           <div style={{ background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E8ECE6', overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
               <thead>
@@ -372,6 +462,7 @@ export default function AdminUsersContent() {
                   <th style={{ textAlign: 'left', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.76rem', textTransform: 'uppercase' }}>Utilisateur</th>
                   <th style={{ textAlign: 'left', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.76rem', textTransform: 'uppercase' }}>E-mail</th>
                   <th style={{ textAlign: 'left', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.76rem', textTransform: 'uppercase' }}>Rôle</th>
+                  <th style={{ textAlign: 'left', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.76rem', textTransform: 'uppercase' }}>{isAdmin ? 'Organisation' : 'Agence'}</th>
                   <th style={{ textAlign: 'center', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.76rem', textTransform: 'uppercase' }}>Statut</th>
                   <th style={{ textAlign: 'right', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.76rem', textTransform: 'uppercase' }}>Actions</th>
                 </tr>
@@ -389,6 +480,9 @@ export default function AdminUsersContent() {
                         <span style={{ background: rBadge.bg, color: rBadge.text, padding: '3px 10px', borderRadius: '9999px', fontSize: '0.74rem', fontWeight: 700 }}>
                           {ROLE_LABELS[u.role] || u.role}
                         </span>
+                      </td>
+                      <td style={{ padding: '14px 16px', color: '#64748B' }}>
+                        {isAdmin ? (nomOrganisation(u.organisation_id) || 'Non renseignée') : (nomAgence(u.agence_id) || 'Aucune agence')}
                       </td>
                       <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                         <span style={{ background: u.active !== false ? '#EBF6ED' : '#FEE2E2', color: u.active !== false ? '#3C7730' : '#DC2626', padding: '3px 10px', borderRadius: '9999px', fontSize: '0.74rem', fontWeight: 800 }}>
@@ -421,7 +515,25 @@ export default function AdminUsersContent() {
               </tbody>
             </table>
           </div>
+          )}
         </div>
+      )}
+
+      {aSuspendre && (
+        <ConfirmActionModal
+          title="Suspendre ce compte ?"
+          subject={`${aSuspendre.prenom} ${aSuspendre.nom} · ${aSuspendre.email}`}
+          confirmLabel="Suspendre le compte"
+          busy={suspensionEnCours}
+          error={erreurSuspension}
+          onConfirm={confirmerSuspension}
+          onCancel={() => setASuspendre(null)}
+        >
+          <p style={{ margin: 0 }}>
+            Cette personne n’aura plus accès à IKAN AI tant que son compte est suspendu. Ses données sont conservées
+            et vous pourrez réactiver le compte à tout moment.
+          </p>
+        </ConfirmActionModal>
       )}
 
       {/* ── 2. ONGLET ACTIVITÉ ── */}

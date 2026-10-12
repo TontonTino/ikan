@@ -59,6 +59,12 @@ class DashboardAgence(BaseModel):
     nombre_suggestions: int
     feedbacks_a_traiter: int = 0
     taux_prise_en_charge: float | None = None
+    # Cycle de traitement de la période (voir services/dashboard_helpers.py) : nouveaux + pris en charge = total ;
+    # « analysés par l'IA » est un indicateur technique distinct, jamais une prise en charge humaine.
+    feedbacks_nouveaux: int = 0
+    feedbacks_pris_en_charge: int = 0
+    feedbacks_resolus: int = 0
+    feedbacks_analyses_ia: int = 0
     actions_ouvertes: int = 0
     tendances: List[TendanceSatisfaction]
     themes: List[ThemeStats]

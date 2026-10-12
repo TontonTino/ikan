@@ -54,7 +54,8 @@ from app.schemas.dashboard import (
 )
 
 from app.services.dashboard_helpers import (
-    _calc_kpi_trend, _cle_semaine_iso, _compter_utilisateurs_actifs, _est_traite, _kpi_taux,
+    _calc_kpi_trend, _cle_semaine_iso, _compter_utilisateurs_actifs, _kpi_taux, compter_negatifs, est_negatif,
+    est_pris_en_charge,
     _libelles_semaines, _period_label, _repartition_forfaits, _taux,
 )
 
@@ -151,19 +152,24 @@ def get_statistics_cx(
     pos_curr = sum(1 for f in fbs_current if f.note >= 4)
     pos_prev = sum(1 for f in fbs_prev if f.note >= 4)
 
-    neg_curr = sum(1 for f in fbs_current if f.note <= 2)
-    neg_prev = sum(1 for f in fbs_prev if f.note <= 2)
+    # Répartition par NOTE (panneau « Répartition des notes ») : notés 1 ou 2, distincts des avis négatifs ci-dessous.
+    faibles_curr = sum(1 for f in fbs_current if f.note <= 2)
+    faibles_prev = sum(1 for f in fbs_prev if f.note <= 2)
+    # Avis négatifs : note faible OU sentiment négatif (dashboard_helpers.est_negatif), chaque avis une seule fois.
+    neg_curr = compter_negatifs(fbs_current, analyses_cur_map)
+    neg_prev = compter_negatifs(fbs_prev, {a.feedback_id: a for a in analyses_prev})
 
     # None si aucun avis sur la période (jamais 0.0) — même convention que le moteur KPI.
     sat_curr = _taux(pos_curr, total_curr)
     sat_prev = _taux(pos_prev, total_prev)
 
-    # Feedbacks traités : MÊME définition (_est_traite) pour les deux périodes.
+    # Feedbacks « pris en charge » : statut humain sorti de « nouveau » (est_pris_en_charge), MÊME définition pour
+    # les deux périodes et pour toutes les pages. L'analyse IA n'y entre jamais.
     def _is_treated(f: Feedback) -> bool:
-        return _est_traite(f, analyses_cur_map)
+        return est_pris_en_charge(f)
 
     traites_curr = sum(1 for f in fbs_current if _is_treated(f))
-    traites_prev = sum(1 for f in fbs_prev if _est_traite(f, analyses_prev_ids))
+    traites_prev = sum(1 for f in fbs_prev if est_pris_en_charge(f))
     attente_curr = max(0, total_curr - traites_curr)
 
     taux_trait_curr = _taux(traites_curr, total_curr)
@@ -206,7 +212,7 @@ def get_statistics_cx(
             valeur_precedente=max(0, total_prev - traites_prev),
             evolution=None,
             is_positive=attente_curr == 0,
-            sous_titre="Avis pas encore ouverts par une agence",
+            sous_titre="Avis encore au statut Nouveau (pas encore pris en charge)",
         ),
         "taux_traitement": _kpi_taux(taux_trait_curr, taux_trait_prev, "Part des avis pris en charge"),
         "feedbacks_positifs": StatKPI(
@@ -223,6 +229,14 @@ def get_statistics_cx(
             valeur_precedente=neg_prev,
             evolution=neg_ev,
             is_positive=neg_p_pos,
+            sous_titre="Note de 2 ou moins, ou ton négatif (chaque avis compté une fois)",
+        ),
+        "feedbacks_notes_faibles": StatKPI(
+            valeur=faibles_curr,
+            valeur_num=float(faibles_curr),
+            valeur_precedente=faibles_prev,
+            evolution=_calc_kpi_trend(faibles_curr, faibles_prev, invert_positive=True)[0],
+            is_positive=_calc_kpi_trend(faibles_curr, faibles_prev, invert_positive=True)[1],
             sous_titre="Avis notés 1 ou 2 sur 5",
         ),
         "alertes_critiques": StatKPI(
@@ -285,10 +299,10 @@ def get_statistics_cx(
             timeline_map[key]["negatifs"] += 1
 
         analyse = analyses_cur_map.get(f.id)
-        if analyse and (analyse.sentiment == SentimentType.NEGATIF or analyse.criticite in (CriticiteType.ELEVEE, CriticiteType.CRITIQUE)):
+        if est_negatif(f, analyse) or (analyse and analyse.criticite in (CriticiteType.ELEVEE, CriticiteType.CRITIQUE)):
             volume_map[key]["feedbacks"] += 1
             volume_map[key]["label"] = label
-            if f.statut_traitement != "nouveau":
+            if est_pris_en_charge(f):
                 volume_map[key]["traites"] += 1
 
     if jours > 60:

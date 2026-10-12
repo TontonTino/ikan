@@ -16,7 +16,7 @@ from typing import Iterable, Optional
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.models.enums import UserRole
+from app.models.enums import SentimentType, UserRole
 from app.models.utilisateur import Utilisateur
 from app.schemas.dashboard import RepartitionForfaitItem, StatKPI
 
@@ -118,18 +118,86 @@ def _kpi_taux(
     )
 
 
-# ── Prise en charge : UNE seule définition pour toutes les périodes ─────────────
+# ── Avis négatif : UNE seule définition (celle des alertes sur avis) ────────────────────────────
+#
+# Un avis est négatif si sa note est faible (≤ NOTE_FAIBLE_MAX) OU si l'analyse IA lui attribue un sentiment négatif.
+# Les deux critères sont indépendants et un avis qui les remplit tous deux compte UNE seule fois. Un sentiment
+# manquant (analyse en attente, échouée ou absente) n'est jamais déduit positif ni neutre : seule la note décide alors.
 
+NOTE_FAIBLE_MAX = 2
+
+
+def a_note_faible(feedback) -> bool:
+    return feedback.note <= NOTE_FAIBLE_MAX
+
+
+def a_sentiment_negatif(analyse) -> bool:
+    return analyse is not None and analyse.sentiment == SentimentType.NEGATIF
+
+
+def est_negatif(feedback, analyse=None) -> bool:
+    return a_note_faible(feedback) or a_sentiment_negatif(analyse)
+
+
+def compter_negatifs(feedbacks, analyses_par_feedback: dict) -> int:
+    """Nombre d'avis négatifs (chaque avis une seule fois) ; `analyses_par_feedback` : feedback.id -> AnalyseIA."""
+    return sum(1 for f in feedbacks if est_negatif(f, analyses_par_feedback.get(f.id)))
+
+
+# ── Cycle de traitement d'un avis : UNE seule définition pour toutes les pages et périodes ──────
+#
+# Deux dimensions DISTINCTES :
+#  - le statut métier humain (feedbacks.statut_traitement) : nouveau → en_traitement → en_cours → resolu ;
+#  - l'analyse IA, automatique : une ligne AnalyseIA existe et est exploitable.
+# Une analyse IA terminée n'est JAMAIS une prise en charge humaine.
+
+STATUT_NOUVEAU = "nouveau"
+STATUT_RESOLU = "resolu"
+# Statuts de traitement humain (les trois derniers sont hérités : aucun code ne les écrit aujourd'hui).
 STATUTS_PRIS_EN_CHARGE = frozenset({"en_cours", "en_traitement", "recontacte", "resolu", "escalade", "ferme"})
 
 
-def _est_traite(feedback, feedback_ids_analyses: set) -> bool:
-    """Feedback « traité » : statut sorti de « nouveau » (prise en charge humaine) OU
-    analyse IA disponible. Utilisée à l'identique pour la période courante et la période
-    précédente, afin que l'évolution compare deux grandeurs de même définition."""
-    if getattr(feedback, "statut_traitement", "nouveau") in STATUTS_PRIS_EN_CHARGE:
-        return True
+def est_nouveau(feedback) -> bool:
+    """Statut métier « nouveau », qu'une analyse IA existe ou non."""
+    return getattr(feedback, "statut_traitement", STATUT_NOUVEAU) == STATUT_NOUVEAU
+
+
+def est_pris_en_charge(feedback) -> bool:
+    """Prise en charge HUMAINE : le statut a quitté « nouveau » (action explicite ou transition métier).
+    Inclut les avis résolus (ils ont été pris en charge) ; ne dépend jamais de l'analyse IA."""
+    return getattr(feedback, "statut_traitement", STATUT_NOUVEAU) in STATUTS_PRIS_EN_CHARGE
+
+
+def est_resolu(feedback) -> bool:
+    """Statut de résolution officiel (« resolu »)."""
+    return getattr(feedback, "statut_traitement", STATUT_NOUVEAU) == STATUT_RESOLU
+
+
+def est_analyse_ia(feedback, feedback_ids_analyses: set) -> bool:
+    """Analyse IA terminée et exploitable : une ligne AnalyseIA existe pour cet avis.
+
+    Le schéma ne persiste pas d'état d'analyse : l'absence de ligne signifie « en attente OU échouée »
+    (indistinguables aujourd'hui) ; dans les deux cas l'avis n'est PAS déclaré analysé."""
     return feedback.id in feedback_ids_analyses
+
+
+def _est_traite(feedback, feedback_ids_analyses: set | None = None) -> bool:
+    """Ancien nom de « prise en charge ». L'analyse IA ne compte plus (le second paramètre est ignoré) :
+    un avis analysé mais encore « nouveau » n'est pas traité."""
+    return est_pris_en_charge(feedback)
+
+
+def repartition_cycle(feedbacks, feedback_ids_analyses: set) -> dict:
+    """Décompte du cycle de traitement d'une liste d'avis. Chaque avis compte UNE fois par dimension :
+    nouveaux + pris_en_charge = total (la résolution est un sous-ensemble de la prise en charge)."""
+    feedbacks = list(feedbacks)
+    return {
+        "total": len(feedbacks),
+        "nouveaux": sum(1 for f in feedbacks if not est_pris_en_charge(f)),
+        "pris_en_charge": sum(1 for f in feedbacks if est_pris_en_charge(f)),
+        "resolus": sum(1 for f in feedbacks if est_resolu(f)),
+        "analyses_ia": sum(1 for f in feedbacks if est_analyse_ia(f, feedback_ids_analyses)),
+    }
 
 
 # ── Semaines ISO ────────────────────────────────────────────────────────────────

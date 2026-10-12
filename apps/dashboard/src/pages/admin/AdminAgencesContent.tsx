@@ -16,6 +16,10 @@ import {
 } from '../../components/common/Icons';
 import { AgencyLocationPicker, LocationData } from '../../components/agency/AgencyLocationPicker';
 import CreateAgencyManagerModal, { AgencyManagerLite } from '../../components/admin/CreateAgencyManagerModal';
+import { userFacingError } from '../../utils/userFacingError';
+import ConfirmActionModal from '../../components/admin/ConfirmActionModal';
+import Alert from '../../components/ui/Alert';
+import Button from '../../components/ui/Button';
 
 interface AgenceForm {
   nom: string;
@@ -49,6 +53,12 @@ export default function AdminAgencesContent() {
   const [managers, setManagers] = useState<AgencyManagerLite[]>([]);
   const [managersIndisponibles, setManagersIndisponibles] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [erreurChargement, setErreurChargement] = useState('');
+  const [rechargement, setRechargement] = useState(0);
+  // Opération sensible en attente de confirmation : désactivation d'une agence ou suspension d'un compte.
+  const [confirmation, setConfirmation] = useState<{ type: 'agence'; agence: Agence } | { type: 'manager'; manager: AgencyManagerLite } | null>(null);
+  const [confirmationEnCours, setConfirmationEnCours] = useState(false);
+  const [erreurConfirmation, setErreurConfirmation] = useState('');
   const [showModal, setShowModal] = useState(false);
   // Modale chef d'agence : création (éventuellement agence présélectionnée) ou édition d'un compte existant.
   const [managerModal, setManagerModal] = useState<{ manager?: AgencyManagerLite; defaultAgenceId?: string } | null>(null);
@@ -80,13 +90,18 @@ export default function AdminAgencesContent() {
       });
 
   useEffect(() => {
+    setLoading(true);
+    setErreurChargement('');
     Promise.all([
       agencesApi.list().then((r) => setAgences(r.data || [])),
       chargerManagers(),
     ])
-      .catch((err) => console.error('Erreur chargement agences:', err))
+      .catch((err) => {
+        console.error('Erreur chargement agences:', err);
+        setErreurChargement(userFacingError(err, 'Impossible de charger les agences. Veuillez réessayer.'));
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [rechargement]);
 
   // Fermeture de la modale Nouvelle/Modifier Agence à la touche Échap.
   useEffect(() => {
@@ -129,6 +144,10 @@ export default function AdminAgencesContent() {
       showToast("Veuillez saisir un nom pour l'agence");
       return;
     }
+    if (!Number.isFinite(form.seuil_alerte) || form.seuil_alerte < 1 || form.seuil_alerte > 100) {
+      showToast('Le seuil d’alerte doit être compris entre 1 et 100 %.');
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
@@ -152,46 +171,75 @@ export default function AdminAgencesContent() {
       }
       setShowModal(false);
     } catch (err: any) {
-      showToast(err.response?.data?.detail || 'Impossible d’enregistrer l’agence. Réessayez.');
+      showToast(userFacingError(err, 'Impossible d’enregistrer l’agence. Réessayez.'));
     } finally {
       setSaving(false);
     }
   };
 
-  const handleToggleActive = async (a: Agence) => {
+  // Retourne true en cas de succès, sinon le message d'erreur à afficher.
+  const changerActiveAgence = async (a: Agence, active: boolean): Promise<true | string> => {
     try {
-      const r = await agencesApi.update(a.id, { active: !a.active });
+      const r = await agencesApi.update(a.id, { active });
       setAgences((prev) => prev.map((ag) => (ag.id === a.id ? r.data : ag)));
       showToast(r.data.active ? 'Agence réactivée' : 'Agence désactivée');
-    } catch {
-      showToast('Impossible de mettre à jour l’agence. Réessayez.');
+      return true;
+    } catch (err) {
+      console.error('Erreur changement de statut de l’agence:', err);
+      return userFacingError(err, active ? 'Impossible de réactiver cette agence. Veuillez réessayer.' : 'Impossible de désactiver cette agence. Veuillez réessayer.');
     }
   };
 
-  const handleDelete = async (a: Agence) => {
-    if (!window.confirm(`Supprimer définitivement l'agence "${a.nom}" ? Cette action est irréversible.`)) return;
-    try {
-      await agencesApi.delete(a.id);
-      setAgences((prev) => prev.filter((ag) => ag.id !== a.id));
-      showToast('Agence supprimée');
-    } catch {
-      showToast('Impossible de supprimer cette agence : des avis clients y sont rattachés.');
+  // Désactiver est confirmé au préalable ; réactiver est direct.
+  const handleToggleActive = async (a: Agence) => {
+    if (a.active !== false) {
+      setErreurConfirmation('');
+      setConfirmation({ type: 'agence', agence: a });
+      return;
     }
+    const resultat = await changerActiveAgence(a, true);
+    if (resultat !== true) showToast(resultat);
   };
+
 
   const copyQrUrl = (url: string) => {
     navigator.clipboard.writeText(url);
     showToast('Lien du QR code copié');
   };
 
-  const toggleManagerActive = async (m: AgencyManagerLite) => {
+  const changerActiveManager = async (m: AgencyManagerLite, active: boolean): Promise<true | string> => {
     try {
-      await utilisateursApi.update(m.id, { active: !m.active });
-      setManagers((prev) => prev.map((x) => (x.id === m.id ? { ...x, active: !x.active } : x)));
-      showToast(m.active ? 'Compte suspendu' : 'Compte réactivé');
-    } catch {
-      showToast('Impossible de modifier le compte. Réessayez.');
+      await utilisateursApi.update(m.id, { active });
+      setManagers((prev) => prev.map((x) => (x.id === m.id ? { ...x, active } : x)));
+      showToast(active ? 'Compte réactivé' : 'Compte suspendu');
+      return true;
+    } catch (err) {
+      console.error('Erreur changement de statut du compte:', err);
+      return userFacingError(err, active ? 'Impossible de réactiver ce compte. Veuillez réessayer.' : 'Impossible de suspendre ce compte. Veuillez réessayer.');
     }
+  };
+
+  // Suspendre est confirmé au préalable ; réactiver est direct.
+  const toggleManagerActive = async (m: AgencyManagerLite) => {
+    if (m.active) {
+      setErreurConfirmation('');
+      setConfirmation({ type: 'manager', manager: m });
+      return;
+    }
+    const resultat = await changerActiveManager(m, true);
+    if (resultat !== true) showToast(resultat);
+  };
+
+  const confirmerOperation = async () => {
+    if (!confirmation) return;
+    setConfirmationEnCours(true);
+    setErreurConfirmation('');
+    const resultat = confirmation.type === 'agence'
+      ? await changerActiveAgence(confirmation.agence, false)
+      : await changerActiveManager(confirmation.manager, false);
+    setConfirmationEnCours(false);
+    if (resultat === true) setConfirmation(null);
+    else setErreurConfirmation(resultat);
   };
 
   // Chefs d'agence groupés par agence ; comptes sans agence (invisibles sinon, aucune carte pour les porter).
@@ -227,10 +275,22 @@ export default function AdminAgencesContent() {
 
   if (loading) return <div style={{ padding: '32px', color: '#64748B', fontWeight: 600 }}>Chargement des agences…</div>;
 
+  if (erreurChargement) {
+    return (
+      <Alert
+        tone="critical"
+        title={erreurChargement}
+        action={<Button size="sm" variant="secondary" onClick={() => setRechargement((n) => n + 1)}>Réessayer</Button>}
+      >
+        Cela ne signifie pas qu’aucune agence n’existe.
+      </Alert>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
       {toast && (
-        <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 1000, background: '#02302D', color: 'white', padding: '12px 20px', borderRadius: '12px', fontWeight: 700 }}>
+        <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 1300, background: '#02302D', color: 'white', padding: '12px 20px', borderRadius: '12px', fontWeight: 700 }}>
           {toast}
         </div>
       )}
@@ -331,7 +391,7 @@ export default function AdminAgencesContent() {
           )}
 
           {/* Recherche + filtre */}
-          <div style={{ display: 'flex', alignItems: 'center', background: '#FFFFFF', borderRadius: '16px', padding: '12px 18px', border: '1px solid #E2E8F0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', rowGap: '8px', background: '#FFFFFF', borderRadius: '16px', padding: '12px 18px', border: '1px solid #E2E8F0' }}>
             <SearchIcon size={16} color="#94A3B8" />
             <input
               type="text"
@@ -339,7 +399,7 @@ export default function AdminAgencesContent() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               aria-label="Rechercher dans le répertoire"
-              style={{ border: 'none', marginLeft: '10px', width: '100%', fontSize: '0.86rem' }}
+              style={{ border: 'none', marginLeft: '10px', flex: '1 1 200px', minWidth: 0, fontSize: '0.86rem' }}
             />
             <button
               type="button"
@@ -366,7 +426,11 @@ export default function AdminAgencesContent() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
             {filteredAgences.length === 0 && (
               <div style={{ gridColumn: '1 / -1' }}>
-                <EmptyState title="Aucune agence trouvée" message="Aucune agence ne correspond à votre recherche." />
+                {agences.length === 0 ? (
+                  <EmptyState title="Aucune agence pour le moment" message="Créez votre première agence pour générer son QR code." />
+                ) : (
+                  <EmptyState title="Aucune agence trouvée" message="Aucune agence ne correspond à votre recherche ou au filtre choisi." />
+                )}
               </div>
             )}
             {filteredAgences.map((a) => (
@@ -413,7 +477,7 @@ export default function AdminAgencesContent() {
 
                 {/* Chef d'agence */}
                 <div style={{ paddingTop: '12px', borderTop: '1px solid #F1F5F9' }}>
-                  <div style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94A3B8', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: '8px' }}>
                     Responsable d’agence
                   </div>
                   {(managersParAgence.get(a.id) || []).length === 0 ? (
@@ -688,6 +752,41 @@ export default function AdminAgencesContent() {
           </div>
         );
       })()}
+      {confirmation?.type === 'agence' && (
+        <ConfirmActionModal
+          title="Désactiver cette agence ?"
+          subject={confirmation.agence.nom}
+          confirmLabel="Désactiver l’agence"
+          busy={confirmationEnCours}
+          error={erreurConfirmation}
+          onConfirm={confirmerOperation}
+          onCancel={() => setConfirmation(null)}
+        >
+          <p style={{ margin: 0 }}>
+            L’agence ne sera plus prise en compte dans les alertes ni dans les statistiques du réseau. Les avis déjà reçus
+            sont conservés et vous pourrez la réactiver à tout moment. Cette désactivation ne garantit pas qu’un QR code
+            déjà imprimé cesse d’accepter des avis.
+          </p>
+        </ConfirmActionModal>
+      )}
+
+      {confirmation?.type === 'manager' && (
+        <ConfirmActionModal
+          title="Suspendre ce compte ?"
+          subject={`${confirmation.manager.prenom} ${confirmation.manager.nom} · ${confirmation.manager.email}`}
+          confirmLabel="Suspendre le compte"
+          busy={confirmationEnCours}
+          error={erreurConfirmation}
+          onConfirm={confirmerOperation}
+          onCancel={() => setConfirmation(null)}
+        >
+          <p style={{ margin: 0 }}>
+            Cette personne n’aura plus accès à IKAN AI tant que son compte est suspendu. Ses données sont conservées
+            et vous pourrez réactiver le compte à tout moment.
+          </p>
+        </ConfirmActionModal>
+      )}
+
     </div>
   );
 }

@@ -279,7 +279,7 @@ def _soumettre_avec_telephone(ctx, telephone):
     )
 
 
-@pytest.mark.parametrize("saisie", ["70 12 34 56", "+226 70123456", "0022670123456"])
+@pytest.mark.parametrize("saisie", ["+226 70 12 34 56", "+33 6 12 34 56 78", "0022670123456"])
 def test_soumission_avec_telephone_valide_est_acceptee_et_stockee_telle_quelle(ctx, monkeypatch, saisie):
     monkeypatch.setattr(feedbacks, "analyser_feedback", lambda feedback_id, db: None)
     response = _soumettre_avec_telephone(ctx, saisie)
@@ -290,7 +290,7 @@ def test_soumission_avec_telephone_valide_est_acceptee_et_stockee_telle_quelle(c
     db.close()
 
 
-@pytest.mark.parametrize("saisie", ["7012345", "70 12 34 5a", "abcdefgh", "+33 6 12 34 56 78"])
+@pytest.mark.parametrize("saisie", ["7012345", "70 12 34 56", "22670123456", "70 12 34 5a", "abcdefgh", "+1234567"])
 def test_soumission_avec_telephone_invalide_refusee_422_sans_rien_creer(ctx, monkeypatch, saisie):
     monkeypatch.setattr(feedbacks, "analyser_feedback", lambda feedback_id, db: None)
     db = ctx.Session()
@@ -358,7 +358,7 @@ def test_telephone_whatsapp_persiste_apres_une_action_du_workflow(ctx):
     _definir_telephone(ctx, ctx.dc_a1, "70123456")
     r = ctx.call("am_a", "post", f"/feedbacks/{ctx.fb_a1}/notes", json={"texte": "note"})
     assert r.status_code == 200, r.text
-    assert r.json()["demande_contact"]["telephone_whatsapp"] == "22670123456"
+    assert r.json()["demande_contact"]["telephone_whatsapp"] is None
     # Rien n'est écrit en base : le numéro stocké reste celui saisi.
     db = ctx.Session()
     assert db.query(DemandeContact).filter(DemandeContact.id == ctx.dc_a1).one().telephone == "70123456"

@@ -18,7 +18,7 @@ import type { KPIResult } from '../../types';
 import KpiCard from '../ui/KpiCard';
 import SkeletonBlock from '../ui/SkeletonBlock';
 import { StatsErrorState } from '../stats/StatsStates';
-import { kpiIconComponent, formatKpiValue, formatKpiSubtitle, kpiAide } from '../../utils/kpiFormat';
+import { kpiIconComponent, kpiLibelle, formatKpiValue, formatKpiSubtitle, kpiAide } from '../../utils/kpiFormat';
 
 export interface KpiCoreGridProps {
   jours: number;
@@ -52,7 +52,7 @@ function Grille({ kpis, jours }: { kpis: KPIResult[]; jours: number }) {
             key={k.code}
             compact
             icon={<Icon size={16} />}
-            label={k.label}
+            label={kpiLibelle(k)}
             value={formatKpiValue(k)}
             subtitle={formatKpiSubtitle(k, jours)}
             hint={kpiAide(k.code)}

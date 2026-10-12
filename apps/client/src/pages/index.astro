@@ -66,10 +66,15 @@ import IkanLogo from '../components/IkanLogo.astro';
   <script>
     const urlParams = new URLSearchParams(window.location.search);
     const qrParam = urlParams.get('qr') || urlParams.get('code');
-    if (qrParam) {
-      window.location.href = `/feedback/${encodeURIComponent(qrParam)}`;
+    if (qrParam && qrParam.trim()) {
+      window.location.href = `/feedback/${encodeURIComponent(qrParam.trim())}`;
     } else {
-      window.location.href = '/feedback/QR-ORANGE-TUNIS-01';
+      // Aucune agence par défaut : sans code QR, on n'ouvre aucun formulaire.
+      const titre = document.querySelector('.redirect-title');
+      const sous = document.querySelector('.redirect-sub');
+      document.querySelector('.spinner-ring')?.remove();
+      if (titre) titre.textContent = 'QR Code non détecté';
+      if (sous) sous.textContent = "Scannez le QR code affiché en agence pour donner votre avis.";
     }
   </script>
 </FeedbackLayout>

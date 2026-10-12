@@ -23,7 +23,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
-from sqlalchemy import func
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 from app.models.readonly import Feedback, AnalyseIA, Agence, QRCode, DemandeContact, MentionVeille
@@ -786,3 +786,35 @@ def query_recommandations(
         "periode_analysee": predictions["periode_analysee"],
         "donnees_disponibles": bool(alertes_prioritaires or problemes_systemiques or risques_detectes),
     }
+
+
+def lister_agences_organisation(db: Session, organisation_id: uuid.UUID) -> list[dict[str, Any]]:
+    """
+    Agences (id, nom, ville) de l'organisation de l'appelant — et d'elle seule. Sert uniquement à reconnaître
+    une agence NOMMÉE dans une question (voir app.agent.perimetre) : jamais à accorder un accès.
+    """
+    _exiger_organisation(organisation_id)
+    lignes = (
+        db.query(Agence.id, Agence.nom, Agence.ville)
+        .filter(Agence.organisation_id == organisation_id)
+        .order_by(Agence.nom)
+        .all()
+    )
+    return [{"id": ligne.id, "nom": ligne.nom, "ville": ligne.ville} for ligne in lignes]
+
+
+def get_secteur_organisation(db: Session, organisation_id: uuid.UUID) -> Optional[str]:
+    """
+    `organisations.secteur_code` (colonne ajoutée par la migration 023 de apps/api), ou None si elle est
+    absente ou illisible. Requête SQL directe : le modèle en lecture seule ne la déclare pas, et une base non
+    migrée ne doit jamais faire échouer une réponse — YAM reste alors sans contexte sectoriel.
+    """
+    _exiger_organisation(organisation_id)
+    try:
+        ligne = db.execute(
+            text("SELECT secteur_code FROM organisations WHERE id = :id"), {"id": organisation_id}
+        ).first()
+    except Exception:
+        db.rollback()
+        return None
+    return ligne[0] if ligne else None

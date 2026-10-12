@@ -8,6 +8,7 @@ from typing import List, Optional
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Response, BackgroundTasks
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 logger = logging.getLogger(__name__)
@@ -19,8 +20,10 @@ from app.api.deps import (
     get_feedback_viewer_user,
     get_db,
 )
+from app.api.v1.endpoints.qr_codes import _resolve_qr
 from app.models.utilisateur import Utilisateur
 from app.models.feedback import Feedback
+from app.models.analyse_ia import AnalyseIA
 from app.models.qr_code import QRCode
 from app.models.agence import Agence
 from app.models.categorie import Categorie
@@ -104,15 +107,32 @@ def _format_demande_contact(dc: DemandeContact, user: Optional[Utilisateur] = No
 
 def _check_feedback_access(feedback: Feedback, user: Utilisateur) -> None:
     """Vérifie que l'utilisateur a accès au feedback selon son périmètre RBAC."""
-    if not feedback.qr_code:
-        return
+    qr_code = feedback.qr_code
     if user.role == UserRole.AGENCY_MANAGER:
-        if feedback.qr_code.agence_id != user.agence_id:
+        if not user.agence_id or not qr_code or qr_code.agence_id != user.agence_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès refusé à ce feedback hors de votre agence")
     elif user.role == UserRole.CX_MANAGER:
-        if user.organisation_id and feedback.qr_code.agence:
-            if feedback.qr_code.agence.organisation_id != user.organisation_id:
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès refusé à ce feedback hors de votre organisation")
+        # Refus par défaut : sans organisation ou sans agence rattachée, aucun accès (jamais d'accès « par omission »).
+        if not user.organisation_id or not qr_code or not qr_code.agence or qr_code.agence.organisation_id != user.organisation_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès refusé à ce feedback hors de votre organisation")
+    else:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès refusé à ce feedback")
+
+
+def _feedback_par_cle(db: Session, qr_code_id: UUID, cle: str) -> Optional[Feedback]:
+    return (
+        db.query(Feedback)
+        .filter(Feedback.qr_code_id == qr_code_id, Feedback.cle_idempotence == cle)
+        .first()
+    )
+
+
+def _reponse_soumission(feedback: Feedback):
+    """Réponse de POST /feedbacks. nps_token posé ICI seulement (pas dans _format_feedback_response, réutilisé par
+    les endpoints de lecture/workflow) : il n'a de sens qu'à la soumission, jamais régénéré sur une relecture."""
+    reponse = _format_feedback_response(feedback)
+    reponse.nps_token = create_nps_token(feedback.id)
+    return reponse
 
 
 @router.post("/", response_model=FeedbackResponse, status_code=status.HTTP_201_CREATED)
@@ -120,52 +140,29 @@ def submit_feedback(
     qr_code: str,
     data: FeedbackCreate,
     background_tasks: BackgroundTasks,
+    response: Response = None,  # injecté par FastAPI ; None quand la fonction est appelée directement (scripts de seed)
     db: Session = Depends(get_db),
 ):
     """
     Soumet un feedback client — endpoint PUBLIC (pas d'authentification requise).
     Déclenche l'analyse IA synchrone.
     """
-    from sqlalchemy import func
     clean_code = qr_code.strip()
-    qr = db.query(QRCode).filter(
-        func.lower(QRCode.code) == clean_code.lower(),
-        QRCode.actif == True,
-    ).first()
-
+    # Résolution UNIQUE et partagée avec /validate et /categories : code exact, ou UUID d'une agence ACTIVE. Plus de
+    # recherche approximative par nom/ville (ILIKE) : un code inconnu, partiel ou contenant « % » rattachait le
+    # feedback à la première agence correspondante, toutes organisations confondues.
+    qr = _resolve_qr(clean_code, db)
     if not qr:
-        try:
-            possible_uuid = UUID(clean_code)
-            agence = db.query(Agence).filter(Agence.id == possible_uuid).first()
-            if agence:
-                qr = db.query(QRCode).filter(QRCode.agence_id == agence.id, QRCode.actif == True).first()
-                if not qr:
-                    base_url = settings.PUBLIC_CLIENT_URL.rstrip("/")
-                    clean_name = agence.nom.upper().replace(" ", "-")[:12]
-                    code_str = f"QR-{clean_name}-{uuid.uuid4().hex[:6].upper()}"
-                    qr = QRCode(
-                        id=uuid.uuid4(),
-                        agence_id=agence.id,
-                        code=code_str,
-                        url=f"{base_url}/feedback/{code_str}",
-                        label=f"Borne Accueil - {agence.nom}",
-                        actif=True
-                    )
-                    db.add(qr)
-                    db.commit()
-                    db.refresh(qr)
-        except ValueError:
-            pass
-        if not qr:
-            agence = db.query(Agence).filter(
-                (func.lower(Agence.nom).ilike(f"%{clean_code.lower()}%")) |
-                (func.lower(Agence.ville).ilike(f"%{clean_code.lower()}%"))
-            ).first()
-            if agence:
-                qr = db.query(QRCode).filter(QRCode.agence_id == agence.id, QRCode.actif == True).first()
+        raise HTTPException(status_code=404, detail="QR Code ou agence introuvable ou inactif")
 
-        if not qr:
-            raise HTTPException(status_code=404, detail=f"QR Code ou Agence '{clean_code}' invalide ou inactif")
+    # Idempotence : un renvoi du MÊME envoi (double clic, nouvelle tentative après coupure réseau) ne crée rien.
+    cle = data.idempotency_key
+    if cle:
+        existant = _feedback_par_cle(db, qr.id, cle)
+        if existant is not None:
+            if response is not None:
+                response.status_code = status.HTTP_200_OK
+            return _reponse_soumission(existant)
 
     categorie = db.query(Categorie).filter(
         Categorie.id == data.categorie_id,
@@ -195,6 +192,7 @@ def submit_feedback(
             note=note_val,
             nps_note=data.nps_note,
             commentaire=data.commentaire,
+            cle_idempotence=cle,
             statut_traitement="nouveau",
         )
         db.add(feedback)
@@ -242,20 +240,28 @@ def submit_feedback(
         except Exception as ai_err:
             logger.error(f"Erreur lors de l'analyse IA synchrone du feedback {feedback.id}: {ai_err}")
 
-        reponse = _format_feedback_response(feedback)
-        # nps_token posé ICI seulement (pas dans _format_feedback_response, réutilisé par
-        # les endpoints de lecture/workflow ailleurs dans ce fichier) : n'a de sens qu'au
-        # moment de la soumission, jamais régénéré sur une relecture.
-        reponse.nps_token = create_nps_token(feedback.id)
-        return reponse
+        return _reponse_soumission(feedback)
     except HTTPException:
         raise
+    except IntegrityError:
+        # Course : deux envois simultanés de la même clé. Le second perd la course et rend le feedback du premier.
+        db.rollback()
+        existant = _feedback_par_cle(db, qr.id, cle) if cle else None
+        if existant is None:
+            logger.exception("Erreur d'intégrité dans submit_feedback")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Erreur serveur : votre avis n'a pas pu être enregistré. Veuillez réessayer.",
+            )
+        if response is not None:
+            response.status_code = status.HTTP_200_OK
+        return _reponse_soumission(existant)
     except Exception as e:
         db.rollback()
         logger.error(f"Erreur submit_feedback: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erreur serveur submit_feedback: {str(e)}"
+            detail="Erreur serveur : votre avis n'a pas pu être enregistré. Veuillez réessayer.",
         )
 
 
@@ -297,6 +303,7 @@ def list_feedbacks(
     date_fin: Optional[datetime] = Query(None),
     avec_action: Optional[bool] = Query(None),
     action_realisee: Optional[bool] = Query(None),
+    theme: Optional[str] = Query(None, min_length=1, max_length=100),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ):
@@ -320,10 +327,10 @@ def list_feedbacks(
     if current_user.role == UserRole.AGENCY_MANAGER:
         query = query.filter(QRCode.agence_id == current_user.agence_id)
     elif current_user.role == UserRole.CX_MANAGER:
-        if current_user.organisation_id:
-            query = query.join(Agence, QRCode.agence_id == Agence.id).filter(
-                Agence.organisation_id == current_user.organisation_id
-            )
+        # Sans organisation, le périmètre est vide (jamais « toutes les organisations »).
+        query = query.join(Agence, QRCode.agence_id == Agence.id).filter(
+            Agence.organisation_id == current_user.organisation_id
+        )
         if agence_id:
             query = query.filter(QRCode.agence_id == agence_id)
 
@@ -339,11 +346,53 @@ def list_feedbacks(
         query = query.filter(Feedback.action_a_prendre.is_(None))
     if action_realisee is not None:
         query = query.filter(Feedback.action_realisee == action_realisee)
+    if theme:
+        query = query.outerjoin(AnalyseIA, AnalyseIA.feedback_id == Feedback.id)
+        if theme == "non_categorise":
+            query = query.filter((AnalyseIA.id.is_(None)) | (AnalyseIA.theme_principal.is_(None)) | (AnalyseIA.theme_principal == ""))
+        else:
+            query = query.filter(AnalyseIA.theme_principal == theme)
 
     response.headers["X-Total-Count"] = str(query.order_by(None).count())
     feedbacks = query.order_by(Feedback.date_soumission.desc()).offset(offset).limit(limit).all()
 
     return [_format_feedback_response(f, current_user) for f in feedbacks]
+
+
+@router.get("/themes", response_model=List[str])
+def list_feedback_themes(
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_feedback_viewer_user),
+    agence_id: Optional[UUID] = Query(None),
+):
+    """Catalogue de thèmes distincts dans le périmètre RBAC, indépendant de la pagination."""
+    query = db.query(AnalyseIA.theme_principal).join(Feedback, AnalyseIA.feedback_id == Feedback.id).join(
+        QRCode, Feedback.qr_code_id == QRCode.id
+    ).filter(AnalyseIA.theme_principal.isnot(None), AnalyseIA.theme_principal != "")
+    if current_user.role == UserRole.AGENCY_MANAGER:
+        query = query.filter(QRCode.agence_id == current_user.agence_id)
+    elif current_user.role == UserRole.CX_MANAGER:
+        query = query.join(Agence, QRCode.agence_id == Agence.id).filter(Agence.organisation_id == current_user.organisation_id)
+        if agence_id:
+            query = query.filter(QRCode.agence_id == agence_id)
+    themes = {row[0] for row in query.distinct().all()}
+    uncategorised = (
+        db.query(Feedback.id)
+        .join(QRCode, Feedback.qr_code_id == QRCode.id)
+        .outerjoin(AnalyseIA, AnalyseIA.feedback_id == Feedback.id)
+        .filter((AnalyseIA.id.is_(None)) | (AnalyseIA.theme_principal.is_(None)) | (AnalyseIA.theme_principal == ""))
+    )
+    if current_user.role == UserRole.AGENCY_MANAGER:
+        uncategorised = uncategorised.filter(QRCode.agence_id == current_user.agence_id)
+    elif current_user.role == UserRole.CX_MANAGER:
+        uncategorised = uncategorised.join(Agence, QRCode.agence_id == Agence.id).filter(
+            Agence.organisation_id == current_user.organisation_id
+        )
+        if agence_id:
+            uncategorised = uncategorised.filter(QRCode.agence_id == agence_id)
+    if uncategorised.first():
+        themes.add("non_categorise")
+    return sorted(themes)
 
 
 @router.get("/demandes-contact", response_model=List[DemandeContactListItem])
@@ -372,10 +421,10 @@ def lister_demandes_contact(
     if current_user.role == UserRole.AGENCY_MANAGER:
         query = query.filter(QRCode.agence_id == current_user.agence_id)
     elif current_user.role == UserRole.CX_MANAGER:
-        if current_user.organisation_id:
-            query = query.join(Agence, QRCode.agence_id == Agence.id).filter(
-                Agence.organisation_id == current_user.organisation_id
-            )
+        # Sans organisation, le périmètre est vide (jamais « toutes les organisations »).
+        query = query.join(Agence, QRCode.agence_id == Agence.id).filter(
+            Agence.organisation_id == current_user.organisation_id
+        )
         if agence_id:
             query = query.filter(QRCode.agence_id == agence_id)
 
@@ -422,6 +471,46 @@ def get_feedback(
     return _format_feedback_response(feedback, current_user)
 
 
+# ── Machine à états du traitement d'un avis (statut_traitement) ────────────────────────────────────
+#
+#   nouveau --prise en charge (Responsable d'agence)--> en_traitement
+#   en_traitement --action à mener définie (CX Manager)--> en_cours
+#   en_cours --action confirmée réalisée (CX ou Responsable)--> resolu
+#   resolu --réouverture (CX ou Responsable)--> en_traitement
+#
+# Le siège ne peut PAS faire passer un avis de « nouveau » à « en_cours » : l'action à mener se définit sur un avis
+# déjà pris en charge. Aucune transition ne ramène un avis à « nouveau ». Chaque transition est un UPDATE conditionnel
+# (atomique) : une répétition ou deux appels simultanés n'écrivent qu'UN événement d'historique.
+
+
+def _conflit(detail: str) -> HTTPException:
+    return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
+
+
+def _transitionner(db: Session, feedback_id: UUID, depuis: str, valeurs: dict) -> bool:
+    """Applique `valeurs` uniquement si l'avis est encore au statut `depuis` ; True si la transition a eu lieu."""
+    return bool(
+        db.query(Feedback)
+        .filter(Feedback.id == feedback_id, Feedback.statut_traitement == depuis)
+        .update(valeurs, synchronize_session=False)
+    )
+
+
+def _evenement(db: Session, feedback: Feedback, user: Utilisateur, type_evenement: str, ancien: str, nouveau: str, details: str) -> None:
+    db.add(HistoriqueFeedback(
+        feedback_id=feedback.id,
+        utilisateur_id=user.id,
+        auteur_nom=f"{user.prenom} {user.nom}",
+        auteur_role=user.role.value,
+        agence_nom=feedback.qr_code.agence.nom if (feedback.qr_code and feedback.qr_code.agence) else None,
+        agence_id=feedback.qr_code.agence_id if feedback.qr_code else None,
+        type_evenement=type_evenement,
+        ancien_statut=ancien,
+        nouveau_statut=nouveau,
+        details=details,
+    ))
+
+
 @router.post("/{feedback_id}/open", response_model=FeedbackResponse)
 def open_feedback(
     feedback_id: UUID,
@@ -429,11 +518,10 @@ def open_feedback(
     current_user: Utilisateur = Depends(get_agency_manager),
 ):
     """
-    Action automatique lors de l'ouverture du feedback dans la modale :
-    Si le statut est 'nouveau', passe automatiquement à 'en_traitement',
-    assigne le feedback à l'utilisateur connecté et enregistre l'événement dans l'historique.
-    Agency Manager UNIQUEMENT : seul lui traite un feedback jusqu'à sa résolution — le
-    CX Manager consulte (GET reste ouvert aux deux via get_feedback_viewer_user).
+    CONSULTATION d'un avis (Agency Manager) : renvoie l'avis, SANS aucun effet de bord.
+    Ouvrir un avis ne change ni son statut ni son attribution : la prise en charge est une action
+    explicite (POST /{feedback_id}/prendre-en-charge). Conservée pour les clients existants ; appelée
+    plusieurs fois, elle ne produit toujours aucune transition ni aucune écriture.
     """
     feedback = (
         db.query(Feedback)
@@ -452,27 +540,66 @@ def open_feedback(
 
     _check_feedback_access(feedback, current_user)
 
-    # Transition automatique Nouveau -> En traitement
-    if feedback.statut_traitement == "nouveau":
-        feedback.statut_traitement = "en_traitement"
-        feedback.assigne_a_id = current_user.id
-        feedback.date_assignation = datetime.now()
+    return _format_feedback_response(feedback, current_user)
 
-        hist = HistoriqueFeedback(
+
+@router.post("/{feedback_id}/prendre-en-charge", response_model=FeedbackResponse)
+def prendre_en_charge_feedback(
+    feedback_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_agency_manager),
+):
+    """
+    Prise en charge EXPLICITE d'un avis par le Responsable d'agence de SON agence : Nouveau -> En traitement,
+    attribution à l'utilisateur connecté, événement tracé dans l'historique.
+    - Réservée à l'Agency Manager (seul lui traite un avis jusqu'à sa résolution ; le CX Manager consulte).
+    - Idempotente : si l'avis n'est plus « nouveau », rien n'est modifié (ni statut, ni attribution, ni historique).
+    - Atomique : la transition est un UPDATE conditionnel, deux appels simultanés n'écrivent qu'un seul événement.
+    """
+    feedback = (
+        db.query(Feedback)
+        .options(
+            joinedload(Feedback.analyse_ia),
+            joinedload(Feedback.demande_contact),
+            joinedload(Feedback.qr_code).joinedload(QRCode.agence),
+            joinedload(Feedback.categorie),
+            joinedload(Feedback.assigne_a),
+        )
+        .filter(Feedback.id == feedback_id)
+        .first()
+    )
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback introuvable")
+
+    _check_feedback_access(feedback, current_user)
+
+    transition = (
+        db.query(Feedback)
+        .filter(Feedback.id == feedback.id, Feedback.statut_traitement == "nouveau")
+        .update(
+            {
+                Feedback.statut_traitement: "en_traitement",
+                Feedback.assigne_a_id: current_user.id,
+                Feedback.date_assignation: datetime.now(),
+            },
+            synchronize_session=False,
+        )
+    )
+    if transition:
+        db.add(HistoriqueFeedback(
             feedback_id=feedback.id,
             utilisateur_id=current_user.id,
             auteur_nom=f"{current_user.prenom} {current_user.nom}",
             auteur_role=current_user.role.value,
             agence_nom=feedback.qr_code.agence.nom if (feedback.qr_code and feedback.qr_code.agence) else None,
-        agence_id=feedback.qr_code.agence_id if feedback.qr_code else None,
-            type_evenement="ouverture",
+            agence_id=feedback.qr_code.agence_id if feedback.qr_code else None,
+            type_evenement="prise_en_charge",
             ancien_statut="nouveau",
             nouveau_statut="en_traitement",
-            details="Avis ouvert et pris en charge",
-        )
-        db.add(hist)
+            details="Avis pris en charge par le Responsable d'agence",
+        ))
         db.commit()
-        db.refresh(feedback)
+    db.refresh(feedback)
 
     return _format_feedback_response(feedback, current_user)
 
@@ -566,9 +693,9 @@ def definir_action_cx(
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ):
     """
-    CX Manager uniquement : Définit l'action corrective à entreprendre.
-    Transition automatique du statut : En traitement -> En cours.
-    Trace l'action dans l'historique.
+    CX Manager uniquement : définit l'action à mener sur un avis DÉJÀ PRIS EN CHARGE par le Responsable d'agence.
+    Transition : En traitement -> En cours (jamais depuis « Nouveau » ni « Résolu »). Répétée avec le même texte, elle est
+    sans effet ; avec un autre texte sur un avis déjà « En cours », elle est refusée (409).
     """
     if current_user.role != UserRole.CX_MANAGER and current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Seul le CX Manager peut définir une Action à prendre")
@@ -579,26 +706,31 @@ def definir_action_cx(
 
     _check_feedback_access(feedback, current_user)
 
-    ancien_statut = feedback.statut_traitement
-    feedback.action_a_prendre = data.action.strip()
-    feedback.action_realisee = False
-    feedback.statut_traitement = "en_cours"
+    action = data.action.strip()
+    statut = feedback.statut_traitement
+    if statut == "en_cours":
+        if (feedback.action_a_prendre or "").strip() == action:
+            return _format_feedback_response(feedback, current_user)
+        raise _conflit("Une action à mener est déjà définie pour cet avis.")
+    if statut == "nouveau":
+        raise _conflit("Cet avis n'a pas encore été pris en charge par le Responsable d'agence : l'action à mener se définit ensuite.")
+    if statut == "resolu":
+        raise _conflit("Cet avis est résolu : rouvrez-le avant de définir une nouvelle action.")
+    if statut != "en_traitement":
+        raise _conflit("Le statut de cet avis ne permet pas de définir une action à mener.")
 
-    hist = HistoriqueFeedback(
-        feedback_id=feedback.id,
-        utilisateur_id=current_user.id,
-        auteur_nom=f"{current_user.prenom} {current_user.nom}",
-        auteur_role=current_user.role.value,
-        agence_nom=feedback.qr_code.agence.nom if (feedback.qr_code and feedback.qr_code.agence) else None,
-        agence_id=feedback.qr_code.agence_id if feedback.qr_code else None,
-        type_evenement="action_definie",
-        ancien_statut=ancien_statut,
-        nouveau_statut="en_cours",
-        details=data.action.strip(),
-    )
-    db.add(hist)
-    db.commit()
+    if _transitionner(db, feedback.id, "en_traitement", {
+        Feedback.statut_traitement: "en_cours",
+        Feedback.action_a_prendre: action,
+        Feedback.action_realisee: False,
+    }):
+        _evenement(db, feedback, current_user, "action_definie", "en_traitement", "en_cours", action)
+        db.commit()
+    else:
+        db.rollback()  # un autre appel a déjà fait évoluer l'avis : on ne l'écrase pas
     db.refresh(feedback)
+    if feedback.statut_traitement == "en_cours" and (feedback.action_a_prendre or "").strip() != action:
+        raise _conflit("Une action à mener est déjà définie pour cet avis.")
 
     return _format_feedback_response(feedback, current_user)
 
@@ -610,10 +742,9 @@ def confirmer_action_realisee(
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ):
     """
-    CX Manager ou Agency Manager (sur sa propre agence) : Confirme que
-    l'action a été réalisée sur le terrain.
-    Transition automatique du statut : En cours -> Résolu.
-    Trace la résolution dans l'historique.
+    CX Manager ou Agency Manager (sur sa propre agence) : confirme que l'action à mener a été réalisée.
+    Transition : En cours -> Résolu. Sur un avis déjà résolu, sans effet (ni nouvel événement, ni date écrasée) ;
+    sur un avis sans action à mener en cours (Nouveau, En traitement), refusée (409).
     """
     feedback = db.query(Feedback).filter(Feedback.id == feedback_id).first()
     if not feedback:
@@ -621,25 +752,20 @@ def confirmer_action_realisee(
 
     _check_feedback_access(feedback, current_user)
 
-    ancien_statut = feedback.statut_traitement
-    feedback.action_realisee = True
-    feedback.statut_traitement = "resolu"
-    feedback.date_resolution = datetime.now()
+    if feedback.statut_traitement == "resolu":
+        return _format_feedback_response(feedback, current_user)
+    if feedback.statut_traitement != "en_cours":
+        raise _conflit("Aucune action à confirmer : une action à mener doit d'abord être définie sur cet avis.")
 
-    hist = HistoriqueFeedback(
-        feedback_id=feedback.id,
-        utilisateur_id=current_user.id,
-        auteur_nom=f"{current_user.prenom} {current_user.nom}",
-        auteur_role=current_user.role.value,
-        agence_nom=feedback.qr_code.agence.nom if (feedback.qr_code and feedback.qr_code.agence) else None,
-        agence_id=feedback.qr_code.agence_id if feedback.qr_code else None,
-        type_evenement="action_realisee",
-        ancien_statut=ancien_statut,
-        nouveau_statut="resolu",
-        details=feedback.action_a_prendre or "Action réalisée sur le terrain",
-    )
-    db.add(hist)
-    db.commit()
+    if _transitionner(db, feedback.id, "en_cours", {
+        Feedback.action_realisee: True,
+        Feedback.statut_traitement: "resolu",
+        Feedback.date_resolution: datetime.now(),
+    }):
+        _evenement(db, feedback, current_user, "action_realisee", "en_cours", "resolu", feedback.action_a_prendre or "Action réalisée sur le terrain")
+        db.commit()
+    else:
+        db.rollback()
     db.refresh(feedback)
 
     return _format_feedback_response(feedback, current_user)
@@ -710,8 +836,8 @@ def reouvrir_feedback(
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ):
     """
-    Réouverture d'un feedback résolu suite à un nouveau signalement client.
-    Transition : Résolu -> En traitement (conserve l'intégralité de l'historique).
+    Réouverture d'un feedback RÉSOLU suite à un nouveau signalement client (historique conservé).
+    Transition : Résolu -> En traitement. Refusée (409) sur tout autre statut : un avis jamais résolu n'a rien à rouvrir.
     """
     feedback = db.query(Feedback).filter(Feedback.id == feedback_id).first()
     if not feedback:
@@ -719,25 +845,18 @@ def reouvrir_feedback(
 
     _check_feedback_access(feedback, current_user)
 
-    ancien_statut = feedback.statut_traitement
-    feedback.statut_traitement = "en_traitement"
-    feedback.action_realisee = False
-    feedback.date_resolution = None
+    if feedback.statut_traitement != "resolu":
+        raise _conflit("Seul un avis résolu peut être rouvert.")
 
-    hist = HistoriqueFeedback(
-        feedback_id=feedback.id,
-        utilisateur_id=current_user.id,
-        auteur_nom=f"{current_user.prenom} {current_user.nom}",
-        auteur_role=current_user.role.value,
-        agence_nom=feedback.qr_code.agence.nom if (feedback.qr_code and feedback.qr_code.agence) else None,
-        agence_id=feedback.qr_code.agence_id if feedback.qr_code else None,
-        type_evenement="reouverture",
-        ancien_statut=ancien_statut,
-        nouveau_statut="en_traitement",
-        details="Avis rouvert suite à un nouveau signalement du client",
-    )
-    db.add(hist)
-    db.commit()
+    if _transitionner(db, feedback.id, "resolu", {
+        Feedback.statut_traitement: "en_traitement",
+        Feedback.action_realisee: False,
+        Feedback.date_resolution: None,
+    }):
+        _evenement(db, feedback, current_user, "reouverture", "resolu", "en_traitement", "Avis rouvert suite à un nouveau signalement du client")
+        db.commit()
+    else:
+        db.rollback()
     db.refresh(feedback)
 
     return _format_feedback_response(feedback, current_user)

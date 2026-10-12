@@ -33,15 +33,17 @@ import requests
 
 from sqlalchemy.orm import Session
 
-from app.agent import conversation_manager, queries
+from app.agent import calculs, coherence, conversation_manager, perimetre, queries, secteur, verification
 from app.agent.minimisation import pour_llm
 from app.agent.intent_classifier import (
-    MOTS_CLES_INTENTIONS, _strip_accents, classifier_intention, detect_followup_question,
+    MOTS_CLES_INTENTIONS, _strip_accents, categoriser_question_sans_intention, classifier_intention,
+    detect_followup_question,
 )
 from app.models.conversation import Conversation, ConversationTurn
 from app.models.enums import UserRole
 from app.providers import llm_provider
-from app.providers.llm_provider import LLMProviderError
+from app.providers.llm_provider import LLMEmptyResponseError, LLMProviderError
+from app.config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -89,67 +91,168 @@ _PATTERN_IDENTITE = re.compile(
     re.IGNORECASE,
 )
 
-_SYSTEM_PROMPT_CLASSEMENT = """
-Tu es YAM, l'assistant d'analyse business d'IKAN AI pour un opérateur télécom.
-Le manager te demande de COMPARER SES AGENCES : ta réponse doit NOMMER les agences.
+_REGLES_DONNEES = """RÈGLES ABSOLUES SUR LES DONNÉES :
+- Tu réponds UNIQUEMENT à partir des données JSON fournies (et de l'historique de la conversation).
+- Tu n'inventes AUCUN chiffre, pourcentage, volume, durée, délai, effectif, budget, ni nom d'équipe, d'outil,
+  de dispositif ou de procédure qui ne figure pas dans les données. Pour illustrer une idée, reste qualitatif.
+- Tu ne fais AUCUN calcul. Utilise les valeurs du champ `calculs_verifies` quand il existe. Si une valeur
+  dont tu as besoin n'y est pas, dis que tu ne peux pas la donner plutôt que de la calculer.
+- Le champ 'agence_nom' est le SEUL identifiant officiel d'une agence. Un lieu cité dans un 'commentaire'
+  n'est jamais un nom d'agence officiel.
+- Distingue toujours FAIT (ce que disent les données), INTERPRÉTATION, HYPOTHÈSE (« semble », « les données
+  suggèrent » ; jamais une cause présentée comme certaine) et RECOMMANDATION (une suggestion à valider : tu
+  n'exécutes aucune action et tu ne prétends jamais qu'un problème est résolu).
+- Pour toute proportion (moitié, majorité, minorité, totalité…), reprends la formulation du champ
+  `formulation` fourni ; sans ce champ, cite seulement les chiffres, sans qualificatif de proportion.
+- Si les données sont insuffisantes (peu de feedbacks, valeurs null, périodes vides), dis-le clairement et
+  reste prudent ; si tu ne peux pas répondre à partir des données, dis-le plutôt que d'improviser.
+- Ne mentionne jamais d'identifiants techniques (UUID) ni de scores internes bruts sans les expliquer.
+- Ne cite jamais le nom d'un champ ou la structure du JSON (calculs_verifies, agence_nom, score_priorite…) :
+  exprime-toi comme à un manager, avec des phrases naturelles."""
 
-RÈGLES ABSOLUES :
-- Tu réponds UNIQUEMENT à partir du JSON fourni ; tu n'inventes aucun chiffre ni aucune agence.
-- Commence par le verdict, en nommant explicitement l'agence : « L'agence X a la
-  satisfaction la plus faible : 32,5 % sur 40 feedbacks. » Ne réponds JAMAIS par
-  thème ou de façon générale à la place d'une agence.
-- Selon la question : « la plus faible / la pire / la moins performante / en difficulté »
-  → utilise `plus_faibles` ; « la meilleure / la plus haute / en tête / top » → utilise
-  `meilleures`. Si la question ne précise pas le sens, donne les deux extrémités.
-- Nomme les 2 ou 3 premières agences du classement demandé (pas seulement la première),
-  avec pour chacune : `satisfaction_pct`, `nb_feedbacks`, `nb_alertes_elevees_ou_critiques`.
-- Si `volume_faible` est vrai pour une agence, précise que son taux repose sur très peu de
-  feedbacks (fiabilité limitée) ; ne la présente pas comme un constat solide.
-- Si `perimetre_restreint_a_une_agence` est vrai ou `nb_agences_classees` vaut 1, tu n'as
-  accès qu'à UNE agence : dis-le, ne prétends pas la comparer à d'autres, donne sa situation.
-- Si `agences_actives_sans_feedback` n'est pas vide, mentionne-les en une phrase
-  (non classables faute de feedback sur la période).
+_SYSTEM_PROMPT_CLASSEMENT = """
+Tu es YAM, l'assistant d'analyse d'IKAN AI. Le manager te demande de COMPARER SES AGENCES : ta réponse doit
+NOMMER les agences.
+
+""" + _REGLES_DONNEES + """
+
+CONSIGNES SPÉCIFIQUES :
+- Commence par le verdict, en nommant explicitement l'agence : « L'agence X a la satisfaction la plus faible :
+  32,5 % sur 40 feedbacks. » (valeurs prises telles quelles dans les données). Ne réponds JAMAIS par thème ou
+  de façon générale à la place d'une agence.
+- Selon la question : « la plus faible / la pire / la moins performante / en difficulté » → utilise
+  `plus_faibles` ; « la meilleure / en tête / top » → utilise `meilleures`. Si le sens n'est pas précisé,
+  donne les deux extrémités.
+- Nomme les 2 ou 3 premières agences du classement demandé, avec `satisfaction_pct`, `nb_feedbacks`,
+  `nb_alertes_elevees_ou_critiques`.
+- Si `volume_faible` est vrai pour une agence, précise que son taux repose sur très peu de feedbacks
+  (fiabilité limitée).
+- Si `perimetre_restreint_a_une_agence` est vrai ou `nb_agences_classees` vaut 1, tu n'as accès qu'à UNE
+  agence : dis-le, ne prétends pas la comparer à d'autres.
+- Si `agences_actives_sans_feedback` n'est pas vide, mentionne-les en une phrase.
 - Rappelle la période (`periode_jours` jours) et le volume total analysé.
 - « Satisfaction » = part des clients ayant noté 4 ou 5 sur 5.
-- Distingue FAIT (chiffres) et HYPOTHÈSE ; ne propose aucune cause qui ne soit pas dans les données.
-- Termine par UNE recommandation concrète et ciblée sur l'agence nommée.
-- Réponds en français, de façon concise (une courte liste ou un tableau des 2-3 agences).
+- Ne propose aucune cause absente des données. Une recommandation n'est donnée que si elle est justifiée par
+  ces chiffres, et ciblée sur l'agence nommée.
+- Réponds en français, de façon concise (une courte liste ou un petit tableau des 2-3 agences).
 """
 
 _SYSTEM_PROMPT_BASE = """
-Tu es YAM, l'assistant d'analyse business d'IKAN AI pour un opérateur télécom.
-Tu travailles aux côtés du manager comme un analyste business expert.
-Si on te demande qui tu es, présente-toi comme YAM, l'assistant IKAN AI.
+Tu es YAM, l'assistant d'analyse d'IKAN AI : tu aides un manager à comprendre les retours de ses clients et à
+décider. Si on te demande qui tu es, présente-toi comme YAM, l'assistant IKAN AI.
 
-PRINCIPE FONDAMENTAL — INSIGHT FIRST, DATA SECOND :
-Commence TOUJOURS par la conclusion la plus importante, pas par les données.
-Structure chaque réponse ainsi :
-1. SITUATION : ce qui se passe en une phrase directe
-2. INTERPRÉTATION : ce que cela signifie pour le manager
-3. CAUSE PROBABLE : si les données permettent de l'identifier
-   (utilise "semble", "probablement", "les données suggèrent" —
-   jamais de certitude absolue)
-4. RECOMMANDATION : une action concrète et spécifique
-5. DONNÉES : les chiffres qui justifient ton analyse
-   (résumés, pas un tableau exhaustif sauf si nécessaire)
+""" + _REGLES_DONNEES + """
 
-RÈGLES ABSOLUES :
-- Tu réponds UNIQUEMENT à partir des données JSON fournies
-- Tu n'inventes JAMAIS de chiffre ou de feedback absent des données
-- Le champ 'agence_nom' est le SEUL identifiant officiel de lieu
-- Un lieu mentionné dans 'commentaire' n'est jamais un nom d'agence officiel
-- Quand les données sont insuffisantes, dis-le clairement
-- Distingue toujours FAIT / INTERPRÉTATION / HYPOTHÈSE / RECOMMANDATION
-- Réponds en français, de façon concise et utile pour un manager
+FORME DE LA RÉPONSE — adapte-la à la question :
+- Question simple ou factuelle : réponds directement, en 1 à 4 phrases, sans titres ni rubriques.
+- Analyse (situation, alertes, thèmes, tendances) : commence par la conclusion en une phrase, puis donne les
+  éléments qui la justifient. Utilise des intertitres UNIQUEMENT s'ils clarifient une réponse longue, et
+  jamais de rubrique vide. Intertitres possibles, en majuscules et seuls sur leur ligne : SITUATION,
+  INTERPRÉTATION, CAUSE PROBABLE, RECOMMANDATION, DONNÉES.
+- Recommandation : seulement si les données la justifient. Elle est concrète, nomme l'agence ou le thème
+  concerné et indique l'élément des données sur lequel elle repose. Si rien ne la justifie, n'en donne pas.
+- Reste concis : pas de répétition des chiffres déjà cités, pas de tableau exhaustif sauf si nécessaire.
+- Réponds en français.
 
-POUR LES QUESTIONS DE SUIVI (marquées [CONTEXTE]) :
-Réponds directement à la question posée en utilisant l'historique.
-Ne répète pas les données du tour précédent sauf si nécessaire.
-Concentre-toi sur ce que le manager veut savoir maintenant.
-
-Si tu ne peux pas répondre à partir des données disponibles,
-dis-le clairement plutôt que d'improviser.
+POUR LES QUESTIONS DE SUIVI (marquées [CONTEXTE]) : réponds directement à la question posée en utilisant
+l'historique ; ne répète pas les données du tour précédent sauf si nécessaire.
 """
+
+_SYSTEM_PROMPT_RECOMMANDATIONS = (
+    "Tu es YAM, l'assistant d'analyse d'IKAN AI. À partir des données fournies, propose au manager un plan "
+    "d'action PRIORISÉ. Ce sont des SUGGESTIONS à valider : tu n'exécutes rien.\n\n"
+    + _REGLES_DONNEES + "\n\n"
+    "FORME :\n"
+    "🔴 URGENT :\n"
+    "- [action] — fondée sur : [élément précis des données]\n\n"
+    "🟡 IMPORTANT :\n"
+    "- [action] — fondée sur : [élément précis des données]\n\n"
+    "🟢 À SURVEILLER :\n"
+    "- [action préventive] — fondée sur : [élément précis des données]\n\n"
+    "RÈGLES :\n"
+    "- Chaque action nomme l'agence ou le thème concerné ET cite l'élément de données qui la justifie "
+    "(alerte, problème récurrent, risque détecté, tendance).\n"
+    "- Jamais d'action générique (« améliorer le service client ») ni de quantité, durée, effectif, "
+    "dispositif ou nom d'équipe absents des données.\n"
+    "- Maximum 2 actions par niveau. Omets un niveau qui n'est pas justifié ; si aucun niveau ne l'est, dis-le.\n"
+    "- Une action est une SUGGESTION. Fonctions réellement disponibles dans IKAN AI : prendre en charge un avis, "
+    "créer un problème à traiter, définir une action à mener (CX Manager), transmettre une suggestion au siège "
+    "(responsable d'agence). Toute autre action (formation, réorganisation, matériel…) est une action de terrain "
+    "que YAM ne peut ni exécuter ni suivre : présente-la comme telle.\n"
+    "- N'invente aucune équipe, aucun effectif, délai, budget ou capacité opérationnelle : propose une orientation "
+    "(« revoir la gestion de la file d'attente ») plutôt qu'un dispositif.\n"
+    "- Si `limites_des_donnees` n'est pas vide, termine par UNE phrase indiquant ce qui manque pour une "
+    "recommandation plus précise.\n"
+    "- Ne conclus pas par une phrase de synthèse chiffrée : elle est ajoutée par le système."
+)
+
+# Consigne de relance quand la réponse précédente contenait des nombres absents des données.
+_CONSIGNE_CORRECTION_NOMBRES = (
+    "Ta réponse contient des valeurs qui ne figurent pas dans les données : {nombres}. Réécris-la en les "
+    "retirant ou en les remplaçant par une formulation qualitative. N'ajoute aucune autre valeur."
+)
+
+MARQUEUR_AFFIRMATIONS_NON_VERIFIEES = (
+    "\n\n⚠ Vérification automatique : cette réponse contient des éléments que les données ne confirment pas "
+    "({details}). Considérez-les comme non vérifiés."
+)
+MARQUEUR_SUGGESTIONS_RETIREES = (
+    "\n\n(Des suggestions qui ne s'appuyaient sur aucun constat des données ont été retirées de cette réponse.)"
+)
+MARQUEUR_TRONQUEE = (
+    "\n\n[Réponse interrompue : la fin n'a pas pu être générée. Reformulez ou posez une question plus précise.]"
+)
+MARQUEUR_VALEURS_NON_VERIFIEES = (
+    "\n\n⚠ Vérification automatique : les valeurs suivantes ne figurent pas dans les données et ne doivent pas "
+    "être prises en compte : {nombres}."
+)
+
+MESSAGE_AGENCE_HORS_PERIMETRE = (
+    "Je ne peux répondre que pour votre agence ({agence}). Je n'ai pas accès aux données des autres agences, "
+    "donc je ne réponds pas à cette question. Posez-la sur votre agence et je l'analyserai."
+)
+MESSAGE_AGENCE_AMBIGUE = (
+    "Plusieurs agences peuvent correspondre à votre question : {liste}. Laquelle voulez-vous analyser ? "
+    "Donnez son nom complet, ou demandez-moi une vue sur tout le réseau."
+)
+MESSAGE_AGENCES_MULTIPLES = (
+    "Votre question cite plusieurs agences : {liste}. J'analyse une agence à la fois : dites-moi laquelle, "
+    "ou demandez-moi un classement de toutes les agences."
+)
+MESSAGE_AGENCE_EN_CONFLIT = (
+    "Une agence est déjà sélectionnée ({selection}), mais votre question en cite d'autres : {liste}. "
+    "Précisez l'agence à analyser."
+)
+MESSAGE_AGENCE_AMBIGUE_RESPONSABLE = (
+    "Votre formulation peut désigner plusieurs agences, et je ne peux répondre que pour votre agence ({agence}). "
+    "Reformulez sans nom d'agence, ou en nommant la vôtre."
+)
+MESSAGE_PRECISER_HOMONYMES = " Si deux agences portent le même nom, ajoutez leur ville ou leur adresse."
+MESSAGE_RECO_DONNEES_INSUFFISANTES = (
+    "YAM : je n'ai pas encore assez de données pour formuler des recommandations fiables. Continuez à collecter "
+    "des feedbacks."
+)
+ACTIONS_IKAN_CX = (
+    "Dans IKAN AI, vous pouvez suivre une suggestion en créant un problème à traiter ou en définissant une action à "
+    "mener depuis l'avis concerné (écran « Avis clients »). Les actions de terrain (formation, réorganisation…) "
+    "restent à votre charge : YAM ne les exécute pas."
+)
+ACTIONS_IKAN_RESPONSABLE = (
+    "Dans IKAN AI, vous pouvez prendre en charge l'avis concerné, créer un problème à traiter ou transmettre une "
+    "suggestion au siège depuis l'écran « Avis clients ». Les actions de terrain (formation, réorganisation…) "
+    "restent à votre charge : YAM ne les exécute pas."
+)
+_SEUIL_VOLUME_RECO = 5  # en dessous, des suggestions « prioritaires » reposent sur trop peu d'avis
+MESSAGE_METIER_NON_COMPRIS = (
+    "Je n'ai pas bien compris votre question. Je peux analyser les feedbacks, alertes, thèmes, tendances, "
+    "problèmes récurrents et recommandations de votre périmètre : essayez par exemple « Fais-moi un résumé de "
+    "la période » ou « Y a-t-il des alertes critiques ? »."
+)
+MESSAGE_DONNEE_INDISPONIBLE = (
+    "Je n'ai pas accès à cette information : je travaille uniquement à partir des feedbacks clients et de leur "
+    "analyse (alertes, thèmes, tendances), pas du suivi des problèmes, des actions, de la facturation ni des "
+    "comptes. Vous la trouverez dans les écrans correspondants d'IKAN AI."
+)
 
 
 def _jours_pour_classement(question: str, jours: int) -> int:
@@ -238,7 +341,7 @@ def _prompt_veille(exemples: list[dict[str, Any]]) -> str:
     while True:
         # Accents lisibles (ensure_ascii=False) ; < et > n'apparaissent que dans des chaînes JSON,
         # où leur forme < / > reste du JSON valide : un texte ne peut pas fermer le bloc.
-        serialise = json.dumps(exemples_bornes, ensure_ascii=False, separators=(",", ":"))
+        serialise = json.dumps(pour_llm(exemples_bornes), ensure_ascii=False, separators=(",", ":"))
         serialise = serialise.replace("<", "\\u003c").replace(">", "\\u003e")
         prompt = debut + serialise + fin
         if len(_VEILLE_SYSTEM_PROMPT) + len(prompt) <= _VEILLE_PROMPT_MAX_CHARS:
@@ -354,10 +457,14 @@ def _finaliser_tour(
     donnees: Any,
     agence_id: Optional[uuid.UUID],
     jours: int,
+    tronquee: bool = False,
+    avertissements: Optional[list[str]] = None,
+    perimetre_texte: Optional[str] = None,
 ) -> dict[str, Any]:
     """
     Persiste le tour courant (best-effort — voir _charger_memoire) et
-    construit le résultat final avec conversation_id.
+    construit le résultat final avec conversation_id. `tronquee`, `avertissements` et `perimetre` sont des
+    champs additifs du contrat (le dashboard historique les ignore).
     """
     if conversation is not None:
         try:
@@ -379,6 +486,9 @@ def _finaliser_tour(
         "reponse": reponse,
         "donnees": donnees,
         "conversation_id": conversation_id_effectif,
+        "tronquee": tronquee,
+        "avertissements": avertissements or [],
+        "perimetre": perimetre_texte,
     }
 
 
@@ -421,6 +531,221 @@ def _resoudre_references(question: str, contexte: dict) -> str:
             resultat = re.sub(pattern, agence_nom, resultat, flags=re.IGNORECASE)
 
     return resultat
+
+
+
+
+# --- Fiabilité des réponses : données, calculs, périmètre, sortie du LLM ---
+
+def _calculs_pour(intention: str, donnees: Any) -> Optional[dict[str, Any]]:
+    """Calculs déterministes transmis au LLM (champ `calculs_verifies`) pour les intentions qui en ont besoin."""
+    if intention == "alertes_critiques" and isinstance(donnees, list):
+        return calculs.alertes(donnees)
+    if intention == "statistiques_theme" and isinstance(donnees, dict):
+        return calculs.repartition_themes(donnees.get("par_theme", {}))
+    if intention == "resume_periode" and isinstance(donnees, dict):
+        return calculs.resume_periode(donnees)
+    if intention == "evolution_satisfaction" and isinstance(donnees, list):
+        return calculs.evolution(donnees)
+    return None
+
+
+def _json_prompt(donnees: Any, calculs_verifies: Optional[dict[str, Any]] = None) -> str:
+    """JSON des données du prompt (toujours filtré par pour_llm), avec les calculs vérifiés si fournis."""
+    nettoyees = pour_llm(donnees)
+    if calculs_verifies is None:
+        payload = nettoyees
+    elif isinstance(nettoyees, dict):
+        payload = {**nettoyees, "calculs_verifies": calculs_verifies}
+    else:
+        payload = {"donnees": nettoyees, "calculs_verifies": calculs_verifies}
+    return json.dumps(pour_llm(payload), ensure_ascii=False)
+
+
+def _perimetre_texte(
+    role: Optional[UserRole], agence_nom: Optional[str], nommee_par_question: bool, plusieurs_citees: bool = False
+) -> str:
+    if role == UserRole.AGENCY_MANAGER:
+        cible = f"« {agence_nom} »" if agence_nom else "de son agence"
+        return (
+            f"Périmètre des données : uniquement l'agence {cible}. Le manager n'a pas accès aux autres agences : "
+            "ne compare pas son agence à d'autres et ne prétends pas connaître le reste du réseau."
+        )
+    if agence_nom:
+        origine = "car la question la nomme" if nommee_par_question else "sélectionnée par le manager"
+        return f"Périmètre des données : uniquement l'agence « {agence_nom} », {origine}."
+    if plusieurs_citees:
+        return (
+            "Périmètre des données : toutes les agences de l'organisation (la question en cite plusieurs : "
+            "mets en avant celles qui sont citées, sans exclure les autres du classement)."
+        )
+    return "Périmètre des données : toutes les agences de l'organisation."
+
+
+def _avec_perimetre(reponse: str, role: Optional[UserRole], agence_nom: Optional[str]) -> str:
+    """
+    Quand la réponse porte sur UNE agence alors que le manager peut en voir plusieurs (CX Manager qui nomme ou
+    sélectionne une agence), le périmètre est rappelé en tête, de façon déterministe : le lecteur ne doit jamais
+    avoir à deviner de quelle agence parlent les chiffres. Un responsable d'agence n'a qu'une agence : rien à préciser.
+    """
+    if agence_nom and role != UserRole.AGENCY_MANAGER:
+        return f"Périmètre : agence « {agence_nom} ».\n\n{reponse}"
+    return reponse
+
+
+def _prompt_systeme(base: str, secteur_code: Optional[str], perimetre: str) -> str:
+    """Prompt système + périmètre réel + consigne sectorielle (seulement si le secteur est connu en base)."""
+    parties = [base.rstrip(), "", perimetre]
+    consigne = secteur.consigne_secteur(secteur_code)
+    if consigne:
+        parties.append(consigne)
+    return "\n".join(parties) + "\n"
+
+
+def _textes_des_messages(messages: list[dict]) -> str:
+    """Contenu des messages hors prompt système : tout ce que le LLM a le droit de citer (données, historique)."""
+    return "\n".join(str(m.get("content", "")) for m in messages if m.get("role") != "system")
+
+
+def _controles(texte: str, autorises: set[str], source_texte: str, justification_requise: bool) -> dict[str, list[str]]:
+    """Problèmes détectables mécaniquement dans une réponse (voir app.agent.verification et app.agent.coherence)."""
+    problemes: dict[str, list[str]] = {}
+    inconnus = verification.nombres_non_justifies(texte, autorises)
+    if inconnus:
+        problemes["nombres"] = inconnus
+    proportions = coherence.incoherences_proportions(texte)
+    if proportions:
+        problemes["proportions"] = proportions
+    capacites = coherence.capacites_inventees(texte, source_texte)
+    if capacites:
+        problemes["capacites"] = capacites
+    if justification_requise:
+        sans_justification = coherence.recommandations_sans_justification(texte, source_texte)
+        if sans_justification:
+            problemes["justification"] = sans_justification
+    return problemes
+
+
+def _consigne_de_correction(problemes: dict[str, list[str]]) -> str:
+    lignes = ["Corrige ta réponse précédente. Problèmes détectés :"]
+    if "nombres" in problemes:
+        lignes.append("- " + _CONSIGNE_CORRECTION_NOMBRES.format(nombres=", ".join(problemes["nombres"])))
+    if "proportions" in problemes:
+        lignes.append(
+            "- Formulations de proportion contredites par les chiffres : " + " ; ".join(problemes["proportions"])
+            + ". Reprends la formulation du champ `formulation` fourni, ou cite seulement les chiffres."
+        )
+    if "capacites" in problemes:
+        lignes.append(
+            "- Éléments absents des données (équipe, effectif, dispositif) : " + ", ".join(problemes["capacites"])
+            + ". Retire-les : propose une orientation, pas un dispositif."
+        )
+    if "justification" in problemes:
+        lignes.append(
+            "- Actions sans justification ancrée dans les données : " + " ; ".join(problemes["justification"])
+            + ". Termine chaque action par « fondée sur : » suivi d'un élément précis des données (agence, thème, "
+            "nombre d'occurrences, alerte), ou retire-la."
+        )
+    lignes.append("Ne rajoute aucune valeur absente des données.")
+    return "\n".join(lignes)
+
+
+def _generer(
+    system_prompt: str,
+    user_prompt: str,
+    messages: list[dict],
+    max_tokens: int,
+    sources: tuple[Any, ...] = (),
+    justification_requise: bool = False,
+) -> tuple[str, bool, list[str]]:
+    """
+    Génère une réponse fiable : (texte, tronquee, avertissements).
+
+    - Sortie vide (même après le nouvel essai du provider) → LLMEmptyResponseError : jamais une réponse vide.
+    - Sortie tronquée → texte conservé, marqueur explicite ajouté, `tronquee=True`.
+    - Contrôles mécaniques (nombres absents des données, proportion contredite par ses chiffres, équipe/effectif/
+      dispositif absents des données, action sans « fondée sur » ancré) → UNE relance de correction groupée.
+      Ce qui subsiste est SIGNALÉ dans le texte et dans `avertissements` — jamais caché ; seules les suggestions
+      sans aucune justification ancrée sont retirées (avec mention), car une suggestion « prioritaire » doit
+      reposer sur un constat. Ces contrôles ne garantissent pas la véracité de toutes les phrases.
+    """
+    budget = max(max_tokens, settings.LLM_MAX_TOKENS_REPONSE)
+    texte = llm_provider.generate_text(system_prompt, user_prompt, messages_history=messages, max_tokens=budget)
+    if not str(texte).strip():
+        raise LLMEmptyResponseError("Le LLM n'a renvoyé aucun texte, même après un nouvel essai.")
+    tronquee = bool(getattr(texte, "tronquee", False))
+
+    historique = _textes_des_messages(messages)
+    autorises = verification.nombres_autorises(historique, *sources)
+    source_texte = historique + "\n" + str(sources)
+    problemes = _controles(str(texte), autorises, source_texte, justification_requise)
+    if problemes and not tronquee:
+        correction = _consigne_de_correction(problemes)
+        messages_correction = messages + [
+            {"role": "assistant", "content": str(texte)},
+            {"role": "user", "content": correction},
+        ]
+        logger.warning("Contrôles de cohérence échoués (%s) — relance de correction.", ", ".join(problemes))
+        nouveau = llm_provider.generate_text(
+            system_prompt, correction, messages_history=messages_correction, max_tokens=budget
+        )
+        if str(nouveau).strip():
+            texte = nouveau
+            tronquee = bool(getattr(nouveau, "tronquee", False))
+            problemes = _controles(str(texte), autorises, source_texte, justification_requise)
+
+    avertissements: list[str] = []
+    resultat = str(texte)
+    if "justification" in problemes:
+        resultat = coherence.retirer_lignes(resultat, problemes["justification"]).rstrip()
+        avertissements.append("suggestions_non_justifiees_retirees")
+        resultat += MARQUEUR_SUGGESTIONS_RETIREES
+    if "nombres" in problemes:
+        avertissements.append("valeurs_non_verifiees: " + ", ".join(problemes["nombres"]))
+        resultat += MARQUEUR_VALEURS_NON_VERIFIEES.format(nombres=", ".join(problemes["nombres"]))
+    autres = [f"proportion : {p}" for p in problemes.get("proportions", [])]
+    autres += [f"élément absent des données : {c}" for c in problemes.get("capacites", [])]
+    if autres:
+        avertissements += [("proportion_incoherente" if a.startswith("proportion") else "capacite_non_demontree") for a in autres]
+        details = " ; ".join(a[:160] for a in autres)
+        resultat += MARQUEUR_AFFIRMATIONS_NON_VERIFIEES.format(details=details)
+    if tronquee:
+        avertissements.append("reponse_tronquee")
+        resultat += MARQUEUR_TRONQUEE
+    return resultat, tronquee, avertissements
+
+
+def _limites_reco(donnees: dict[str, Any], nb_feedbacks: int) -> list[str]:
+    """Ce qui manque pour une recommandation précise, établi par le code (transmis au modèle, jamais deviné par lui)."""
+    limites = []
+    if not donnees.get("alertes_prioritaires"):
+        limites.append("aucune alerte prioritaire sur la période")
+    if not donnees.get("problemes_systemiques"):
+        limites.append("aucun problème récurrent détecté")
+    if not donnees.get("risques_detectes"):
+        limites.append("aucun risque détecté")
+    if donnees.get("tendance_globale") in (None, "insuffisant"):
+        limites.append("tendance globale non établie : période précédente sans feedbacks")
+    if nb_feedbacks < _SEUIL_VOLUME_RECO:
+        limites.append(f"volume faible : {nb_feedbacks} feedback{'s' if nb_feedbacks > 1 else ''} sur la période")
+    return limites
+
+
+def _agences_organisation(db: Session, organisation_id: uuid.UUID) -> list[dict[str, Any]]:
+    """Agences de l'organisation de l'appelant (jamais d'une autre) ; liste vide si la lecture échoue."""
+    try:
+        return queries.lister_agences_organisation(db, organisation_id)
+    except Exception:
+        logger.warning("Lecture des agences de l'organisation impossible — détection d'agence nommée ignorée.", exc_info=True)
+        return []
+
+
+def _secteur_organisation(db: Session, organisation_id: uuid.UUID) -> Optional[str]:
+    try:
+        return queries.get_secteur_organisation(db, organisation_id)
+    except Exception:
+        logger.warning("Lecture du secteur de l'organisation impossible — aucun contexte sectoriel utilisé.", exc_info=True)
+        return None
 
 
 def repondre_question(
@@ -473,6 +798,54 @@ def repondre_question(
 
     contexte_actif = conversation.contexte_actif if conversation else None
     question_resolue = _resoudre_references(question, contexte_actif or {})
+
+    # --- Périmètre. Le NOM d'agence lu dans le texte n'est jamais une source de droits (voir app.agent.perimetre) :
+    # il ne fait que restreindre un CX Manager à UNE agence de son organisation, ou faire refuser clairement un
+    # responsable d'agence qui nomme une autre agence que la sienne. L'agence du responsable vient du JWT.
+    agences_org = _agences_organisation(db, organisation_id)
+    noms_agences = {a["id"]: a["nom"] for a in agences_org}
+    agence_nommee: Optional[dict[str, Any]] = None
+    plusieurs_agences_citees = False
+    resolution = perimetre.resoudre_agences(question_resolue, agences_org)
+    ids_citees = {a["id"] for a in resolution.agences}
+
+    def _demander_precision(label: str, message: str) -> dict[str, Any]:
+        return _finaliser_tour(db, conversation, conversation_id_effectif, question, label, message, None, agence_id, jours)
+
+    if role == UserRole.AGENCY_MANAGER:
+        if resolution.statut != perimetre.AUCUNE and ids_citees != {agence_id}:
+            nom_propre = noms_agences.get(agence_id) or "votre agence"
+            if agence_id in ids_citees:
+                # Le texte peut désigner la sienne ET d'autres : on ne devine pas, sans rien dire des autres.
+                return _demander_precision("agence_a_preciser", MESSAGE_AGENCE_AMBIGUE_RESPONSABLE.format(agence=nom_propre))
+            return _demander_precision("agence_hors_perimetre", MESSAGE_AGENCE_HORS_PERIMETRE.format(agence=nom_propre))
+    elif resolution.statut != perimetre.AUCUNE:
+        liste = ", ".join(perimetre.libelle_agence(a) for a in resolution.agences)
+        homonymes = len({(perimetre.normaliser(a["nom"]), perimetre.normaliser(a.get("ville") or "")) for a in resolution.agences}) < len(resolution.agences)
+        suite_homonymes = MESSAGE_PRECISER_HOMONYMES if homonymes else ""
+        if agence_id is not None:
+            if ids_citees != {agence_id}:
+                return _demander_precision(
+                    "agence_a_preciser",
+                    MESSAGE_AGENCE_EN_CONFLIT.format(selection=noms_agences.get(agence_id) or "sélectionnée", liste=liste),
+                )
+        elif resolution.statut == perimetre.UNIQUE:
+            agence_nommee = resolution.agences[0]
+            agence_id = agence_nommee["id"]
+            queries.verifier_agence_dans_organisation(db, organisation_id, agence_id)
+        elif resolution.statut == perimetre.AMBIGUE:
+            return _demander_precision("agence_a_preciser", MESSAGE_AGENCE_AMBIGUE.format(liste=liste) + suite_homonymes)
+        elif classifier_intention(question_resolue, contexte_actif) == "classement_agences":
+            plusieurs_agences_citees = True  # comparer plusieurs agences = un classement de tout le réseau, dit comme tel
+        else:
+            return _demander_precision("agence_a_preciser", MESSAGE_AGENCES_MULTIPLES.format(liste=liste))
+    perimetre_txt = _perimetre_texte(
+        role, noms_agences.get(agence_id) if agence_id else None, agence_nommee is not None, plusieurs_agences_citees
+    )
+    secteur_code = _secteur_organisation(db, organisation_id)
+    sys_base = _prompt_systeme(_SYSTEM_PROMPT_BASE, secteur_code, perimetre_txt)
+    sys_classement = _prompt_systeme(_SYSTEM_PROMPT_CLASSEMENT, secteur_code, perimetre_txt)
+    sys_reco = _prompt_systeme(_SYSTEM_PROMPT_RECOMMANDATIONS, secteur_code, perimetre_txt)
     intention = classifier_intention(question_resolue, contexte_actif)
     est_relance_avec_contexte = (
         detect_followup_question(question_resolue)
@@ -540,9 +913,14 @@ def repondre_question(
         )
 
     if intention == "autre":
+        categorie = categoriser_question_sans_intention(question_resolue)
+        message_autre = {
+            "donnee_indisponible": MESSAGE_DONNEE_INDISPONIBLE,
+            "metier_non_compris": MESSAGE_METIER_NON_COMPRIS,
+        }.get(categorie, MESSAGE_HORS_PERIMETRE)
         return _finaliser_tour(
             db, conversation, conversation_id_effectif, question, "autre",
-            MESSAGE_HORS_PERIMETRE, None, agence_id, jours,
+            message_autre, None, agence_id, jours,
         )
 
     if intention == "classement_agences":
@@ -556,7 +934,7 @@ def repondre_question(
         user_prompt = (
             f"Question du manager : « {question} »\n\n"
             "Voici le classement des agences (rang 1 = la moins satisfaisante) sur la période, "
-            f"au format JSON :\n{json.dumps(pour_llm(donnees), ensure_ascii=False)}"
+            f"au format JSON :\n{_json_prompt(donnees, _calculs_pour(intention, donnees))}"
         )
         if est_relance_avec_contexte:
             user_prompt = (
@@ -564,15 +942,16 @@ def repondre_question(
                 + user_prompt
             )
         messages_classement = conversation_manager.build_messages_history(
-            turns_precedents, _SYSTEM_PROMPT_CLASSEMENT, user_prompt
+            turns_precedents, sys_classement, user_prompt
         )
-        reponse_classement = llm_provider.generate_text(
-            _SYSTEM_PROMPT_CLASSEMENT, user_prompt,
-            messages_history=messages_classement, max_tokens=600,
+        reponse_classement, tronquee, avertissements = _generer(
+            sys_classement, user_prompt, messages_classement, 600, sources=(donnees, question),
         )
+        reponse_classement = _avec_perimetre(reponse_classement, role, noms_agences.get(agence_id) if agence_id else None)
         return _finaliser_tour(
             db, conversation, conversation_id_effectif, question, intention,
             reponse_classement, donnees, agence_id, jours_classement,
+            tronquee=tronquee, avertissements=avertissements, perimetre_texte=perimetre_txt,
         )
 
     # Relance confirmée : même intention que le tour précédent, avec de
@@ -605,23 +984,26 @@ def repondre_question(
             "élevée ou critique) des derniers jours, DÉJÀ TRIÉE par ordre "
             "de priorité décroissant (champ 'score_priorite', qui combine "
             "criticité, fraîcheur et fréquence du thème), au format JSON :\n"
-            f"{json.dumps(pour_llm(donnees), ensure_ascii=False)}\n\n"
+            f"{_json_prompt(donnees, _calculs_pour(intention, donnees))}\n\n"
             "Commence par identifier le problème dominant et son urgence. "
             "Explique POURQUOI ces alertes sont préoccupantes (volume, "
             "concentration, récurrence). Identifie l'agence ou le thème le "
-            "plus critique. Termine par une recommandation d'action concrète "
-            "et prioritaire. Les données détaillées viennent en dernier."
+            "plus critique. Les répartitions sont dans `calculs_verifies` : "
+            "cite-les telles quelles, sans les recalculer. Si les données le "
+            "justifient, termine par une suggestion prudente appuyée sur ces "
+            "alertes ; sinon n'en donne pas."
         )
 
     elif intention == "statistiques_theme":
         donnees = queries.query_statistiques_theme(db, organisation_id, agence_id=agence_id, jours=jours)
         user_prompt = (
             "Voici la répartition des feedbacks par thème sur la période, "
-            f"au format JSON :\n{json.dumps(pour_llm(donnees), ensure_ascii=False)}\n\n"
+            f"au format JSON :\n{_json_prompt(donnees, _calculs_pour(intention, donnees))}\n\n"
             "Commence par identifier le thème dominant et ce qu'il révèle "
             "sur la satisfaction client. Explique si la répartition est "
-            "normale ou préoccupante. Donne une recommandation sur quoi "
-            "prioriser. Les chiffres viennent ensuite pour justifier."
+            "normale ou préoccupante. Les pourcentages sont dans "
+            "`calculs_verifies` : cite-les tels quels, sans les recalculer. "
+            "N'indique une priorité que si les données la justifient."
         )
 
     elif intention == "a_verifier":
@@ -629,7 +1011,7 @@ def repondre_question(
         user_prompt = (
             "Voici les feedbacks signalés comme nécessitant une "
             f"vérification manuelle, au format JSON :\n"
-            f"{json.dumps(pour_llm(donnees), ensure_ascii=False)}\n\n"
+            f"{_json_prompt(donnees, _calculs_pour(intention, donnees))}\n\n"
             "Commence par expliquer pourquoi ces feedbacks nécessitent "
             "attention (discordance entre note et sentiment). Évalue le "
             "risque que ces cas représentent. Recommande une action de "
@@ -641,11 +1023,12 @@ def repondre_question(
         donnees = _resume_agregats(feedbacks)
         user_prompt = (
             "Voici les agrégats de l'activité feedbacks sur la période, au "
-            f"format JSON :\n{json.dumps(pour_llm(donnees), ensure_ascii=False)}\n\n"
+            f"format JSON :\n{_json_prompt(donnees, _calculs_pour(intention, donnees))}\n\n"
             "Commence par le verdict global de la période en une phrase. "
             "Identifie la tendance principale (amélioration, dégradation, "
             "stable). Mets en avant le fait le plus important que le "
-            "manager doit retenir. Les détails chiffrés viennent après."
+            "manager doit retenir. Les pourcentages sont dans "
+            "`calculs_verifies` : cite-les tels quels, sans les recalculer."
         )
 
     elif intention == "problemes_recurrents":
@@ -653,11 +1036,12 @@ def repondre_question(
         user_prompt = (
             "Voici les problèmes récurrents détectés (même thème signalé "
             "plusieurs fois dans la même agence), au format JSON :\n"
-            f"{json.dumps(pour_llm(donnees), ensure_ascii=False)}\n\n"
+            f"{_json_prompt(donnees, _calculs_pour(intention, donnees))}\n\n"
             "Commence par identifier le problème récurrent le plus grave. "
-            "Explique ce que la récurrence signifie (problème systémique, "
-            "pas un incident isolé). Recommande une action pour briser le "
-            "cycle. Les données de fréquence viennent en justification."
+            "Explique ce que la récurrence signifie sans affirmer une cause "
+            "qui n'est pas dans les données. Si elles le justifient, suggère "
+            "une action pour briser le cycle. Les fréquences justifient ton "
+            "propos."
         )
 
     elif intention == "tendances_anomalies":
@@ -666,7 +1050,7 @@ def repondre_question(
             "Voici une comparaison entre la période actuelle et la période "
             "précédente de même durée, avec les anomalies déjà détectées "
             f"(champ 'anomalies'), au format JSON :\n"
-            f"{json.dumps(pour_llm(donnees), ensure_ascii=False)}\n\n"
+            f"{_json_prompt(donnees, _calculs_pour(intention, donnees))}\n\n"
             "Une valeur 'null' signifie qu'aucun feedback n'a été reçu sur la "
             "période : dis-le, et ne conclus alors à aucune hausse ni baisse. "
             "Commence par identifier si la situation s'améliore ou se "
@@ -680,13 +1064,13 @@ def repondre_question(
         user_prompt = (
             "Voici l'évolution du sentiment moyen sur plusieurs périodes "
             f"consécutives, de la plus ancienne à la plus récente, au format JSON :\n"
-            f"{json.dumps(pour_llm(donnees), ensure_ascii=False)}\n\n"
-            "Calcule toi-même la tendance à partir des valeurs 'sentiment_moyen' "
-            "successives ('null' = pas assez de feedbacks sur cette période, "
-            "dis-le si c'est le cas plutôt que de l'ignorer). Commence par le "
-            "verdict (s'améliore / se dégrade / stable), explique ce qui "
-            "explique cette évolution si les données le permettent, et "
-            "recommande comment maintenir ou inverser la tendance."
+            f"{_json_prompt(donnees, _calculs_pour(intention, donnees))}\n\n"
+            "La tendance est DÉJÀ calculée dans `calculs_verifies` (champ 'sens') : "
+            "reprends-la telle quelle, sans la recalculer ('null' = pas assez "
+            "de feedbacks sur cette période : dis-le plutôt que de l'ignorer ; "
+            "'indeterminee' = aucune tendance ne peut être établie). Commence "
+            "par le verdict, n'explique la cause que si les données le "
+            "permettent, et ne suggère une action que si elles la justifient."
         )
 
     elif intention == "predictions_risques":
@@ -703,7 +1087,7 @@ def repondre_question(
         user_prompt = (
             "Voici les risques et opportunités détectés par comparaison entre "
             "la période actuelle et la période précédente, au format JSON :\n"
-            f"{json.dumps(pour_llm(donnees), ensure_ascii=False)}\n\n"
+            f"{_json_prompt(donnees, _calculs_pour(intention, donnees))}\n\n"
             "Le champ 'donnees_insuffisantes' indique si l'analyse est fiable. "
             "Pour chaque RISQUE : commence par l'urgence, explique le signal "
             "détecté et recommande une action préventive spécifique. Pour "
@@ -724,48 +1108,44 @@ def repondre_question(
         if not donnees.get("donnees_disponibles"):
             return _finaliser_tour(
                 db, conversation, conversation_id_effectif, question, intention,
-                (
-                    "YAM : je n'ai pas encore assez de données pour formuler des "
-                    "recommandations fiables. Continuez à collecter des "
-                    "feedbacks."
-                ),
+                MESSAGE_RECO_DONNEES_INSUFFISANTES
+                + " Il manque : aucune alerte prioritaire, aucun problème récurrent et aucun risque détecté sur la période.",
                 donnees, agence_id, jours,
             )
 
-        system_prompt_recommandations = (
-            "Tu es YAM, l'assistant IKAN AI, dans un rôle de consultant business expert. À partir des données "
-            "fournies, produis un plan d'action PRIORISÉ pour le manager.\n\n"
-            "Structure ta réponse STRICTEMENT ainsi :\n"
-            "🔴 URGENT (à traiter dans les 24h) :\n"
-            "- [action concrète et spécifique avec l'agence concernée]\n\n"
-            "🟡 IMPORTANT (cette semaine) :\n"
-            "- [action concrète]\n\n"
-            "🟢 À SURVEILLER :\n"
-            "- [action préventive]\n\n"
-            "RÈGLES :\n"
-            "- Chaque action doit mentionner l'agence ou le thème concerné\n"
-            "- Jamais d'action générique comme 'améliorer le service client'\n"
-            "- Maximum 2 actions par niveau de priorité\n"
-            "- Si un niveau n'a pas d'action justifiée par les données, "
-            "omets-le\n"
-            "- Termine par : 'Ces recommandations sont basées sur X "
-            "feedbacks analysés sur les Y derniers jours.'"
-        )
+        nb_feedbacks = len(queries.get_feedbacks(db, organisation_id, agence_id=agence_id, jours=jours))
+        limites = _limites_reco(donnees, nb_feedbacks)
         user_prompt_recommandations = (
             "Voici les données agrégées (alertes prioritaires, problèmes "
             "systémiques, risques détectés, tendance globale), au format "
-            f"JSON :\n{json.dumps(pour_llm(donnees), ensure_ascii=False)}"
+            f"JSON :\n{_json_prompt(donnees, {'limites_des_donnees': limites})}"
         )
         messages_recommandations = conversation_manager.build_messages_history(
-            turns_precedents, system_prompt_recommandations, user_prompt_recommandations
+            turns_precedents, sys_reco, user_prompt_recommandations
         )
-        reponse_recommandations = llm_provider.generate_text(
-            system_prompt_recommandations, user_prompt_recommandations,
-            messages_history=messages_recommandations, max_tokens=500,
+        reponse_recommandations, tronquee, avertissements = _generer(
+            sys_reco, user_prompt_recommandations, messages_recommandations, 500,
+            sources=(donnees, question), justification_requise=True,
+        )
+        # Pied de réponse : volume, période, limites et fonctions disponibles viennent du code, jamais du LLM.
+        reponse_recommandations += (
+            f"\n\nCes suggestions sont fondées sur {nb_feedbacks} feedback{'s' if nb_feedbacks > 1 else ''} "
+            f"analysé{'s' if nb_feedbacks > 1 else ''} sur les {jours} derniers jours. Elles sont à valider : "
+            "rien n'a été exécuté."
+        )
+        if nb_feedbacks < _SEUIL_VOLUME_RECO:
+            reponse_recommandations += (
+                f"\nAttention : le volume est faible ({nb_feedbacks}), ces suggestions sont à confirmer avec "
+                "davantage de données."
+            )
+        reponse_recommandations += "\n" + (ACTIONS_IKAN_RESPONSABLE if role == UserRole.AGENCY_MANAGER else ACTIONS_IKAN_CX)
+        reponse_recommandations = _avec_perimetre(
+            reponse_recommandations, role, noms_agences.get(agence_id) if agence_id else None
         )
         return _finaliser_tour(
             db, conversation, conversation_id_effectif, question, intention,
             reponse_recommandations, donnees, agence_id, jours,
+            tronquee=tronquee, avertissements=avertissements, perimetre_texte=perimetre_txt,
         )
 
     else:
@@ -785,17 +1165,19 @@ def repondre_question(
         )
         user_prompt = prefixe_relance + user_prompt
 
-    messages = conversation_manager.build_messages_history(turns_precedents, _SYSTEM_PROMPT_BASE, user_prompt)
+    messages = conversation_manager.build_messages_history(turns_precedents, sys_base, user_prompt)
     logger.info(
         f"Appel LLM pour intention='{intention}' avec {len(turns_precedents)} "
         f"tour(s) d'historique ({len(messages)} message(s) au total transmis au LLM)"
     )
-    reponse = llm_provider.generate_text(
-        _SYSTEM_PROMPT_BASE, user_prompt, messages_history=messages, max_tokens=600
+    reponse, tronquee, avertissements = _generer(
+        sys_base, user_prompt, messages, 600, sources=(donnees, question, {"jours": jours}),
     )
 
+    reponse = _avec_perimetre(reponse, role, noms_agences.get(agence_id) if agence_id else None)
     return _finaliser_tour(
         db, conversation, conversation_id_effectif, question, intention, reponse, donnees, agence_id, jours,
+        tronquee=tronquee, avertissements=avertissements, perimetre_texte=perimetre_txt,
     )
 
 

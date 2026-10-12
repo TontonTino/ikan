@@ -15,7 +15,7 @@ from app.api.deps import require_agent_access
 from app.config.settings import settings
 from app.db.session import SessionLocal, get_db
 from app.models.enums import CriticiteType
-from app.providers.llm_provider import LLMProviderError
+from app.providers.llm_provider import LLMEmptyResponseError, LLMProviderError
 from app.models.enums import UserRole
 from app.models.readonly import Utilisateur
 from app.schemas.models import (
@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 # révéler de l'existence de données d'une autre organisation.
 _RESSOURCE_INTROUVABLE = "Ressource introuvable."
 MESSAGE_YAM_INDISPONIBLE = "YAM est momentanément indisponible. Réessayez dans quelques instants."
+MESSAGE_YAM_SANS_REPONSE = "YAM n'a pas pu formuler de réponse à cette question. Réessayez ou reformulez-la."
 
 # RESTRICTION AGENCY MANAGER : comme dans apps/api, un Agency Manager est limité
 # à SON agence (pas à toute l'organisation). Un Agency Manager sans agence
@@ -83,6 +84,9 @@ def ask(
         )
     except queries.PerimetreOrganisationError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_RESSOURCE_INTROUVABLE) from exc
+    except LLMEmptyResponseError as exc:
+        logger.warning("Le LLM n'a produit aucun texte exploitable : %s", exc)
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=MESSAGE_YAM_SANS_REPONSE) from exc
     except (LLMProviderError, requests.RequestException) as exc:
         logger.exception("Échec de l'appel au LLM")
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=MESSAGE_YAM_INDISPONIBLE) from exc

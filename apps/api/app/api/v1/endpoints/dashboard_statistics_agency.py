@@ -54,7 +54,8 @@ from app.schemas.dashboard import (
 )
 
 from app.services.dashboard_helpers import (
-    _calc_kpi_trend, _cle_semaine_iso, _compter_utilisateurs_actifs, _est_traite, _kpi_taux,
+    _calc_kpi_trend, _cle_semaine_iso, _compter_utilisateurs_actifs, _kpi_taux, compter_negatifs, est_negatif,
+    est_pris_en_charge,
     _libelles_semaines, _period_label, _repartition_forfaits, _taux,
 )
 from app.services.ai.recommandations import SOURCE_RECOMMANDATIONS
@@ -136,16 +137,21 @@ def get_statistics_agency(
     pos_curr = sum(1 for f in fbs_current if f.note >= 4)
     pos_prev = sum(1 for f in fbs_prev if f.note >= 4)
 
+    # Avis négatifs : note faible OU sentiment négatif (dashboard_helpers.est_negatif), chaque avis une seule fois.
+    neg_curr = compter_negatifs(fbs_current, analyses_cur_map)
+    neg_prev = compter_negatifs(fbs_prev, {a.feedback_id: a for a in analyses_prev})
+
     # None si aucun avis sur la période (jamais 0.0) — même convention que le moteur KPI.
     sat_curr = _taux(pos_curr, total_curr)
     sat_prev = _taux(pos_prev, total_prev)
 
-    # Feedbacks traités : MÊME définition (_est_traite) pour les deux périodes.
+    # Feedbacks « pris en charge » : statut humain sorti de « nouveau » (est_pris_en_charge), MÊME définition pour
+    # les deux périodes et pour toutes les pages. L'analyse IA n'y entre jamais.
     def _is_treated(f: Feedback) -> bool:
-        return _est_traite(f, analyses_cur_map)
+        return est_pris_en_charge(f)
 
     traites_curr = sum(1 for f in fbs_current if _is_treated(f))
-    traites_prev = sum(1 for f in fbs_prev if _est_traite(f, analyses_prev_ids))
+    traites_prev = sum(1 for f in fbs_prev if est_pris_en_charge(f))
     attente_curr = max(0, total_curr - traites_curr)
 
     taux_trait_curr = _taux(traites_curr, total_curr)
@@ -185,9 +191,25 @@ def get_statistics_agency(
             valeur_precedente=max(0, total_prev - traites_prev),
             evolution=None,
             is_positive=attente_curr == 0,
-            sous_titre="Avis pas encore ouverts par l'agence",
+            sous_titre="Avis encore au statut Nouveau (pas encore pris en charge)",
         ),
         "taux_traitement": _kpi_taux(taux_trait_curr, taux_trait_prev, "Part des avis pris en charge"),
+        "feedbacks_positifs": StatKPI(
+            valeur=pos_curr,
+            valeur_num=float(pos_curr),
+            valeur_precedente=pos_prev,
+            evolution=_calc_kpi_trend(pos_curr, pos_prev)[0],
+            is_positive=_calc_kpi_trend(pos_curr, pos_prev)[1],
+            sous_titre="Avis notés 4 ou 5 sur 5",
+        ),
+        "feedbacks_negatifs": StatKPI(
+            valeur=neg_curr,
+            valeur_num=float(neg_curr),
+            valeur_precedente=neg_prev,
+            evolution=_calc_kpi_trend(neg_curr, neg_prev, invert_positive=True)[0],
+            is_positive=_calc_kpi_trend(neg_curr, neg_prev, invert_positive=True)[1],
+            sous_titre="Note de 2 ou moins, ou ton négatif (chaque avis compté une fois)",
+        ),
         "alertes_critiques": StatKPI(
             valeur=critiques_curr,
             valeur_num=float(critiques_curr),
@@ -248,10 +270,10 @@ def get_statistics_agency(
             timeline_map[key]["negatifs"] += 1
 
         analyse = analyses_cur_map.get(f.id)
-        if analyse and (analyse.sentiment == SentimentType.NEGATIF or analyse.criticite in (CriticiteType.ELEVEE, CriticiteType.CRITIQUE)):
+        if est_negatif(f, analyse) or (analyse and analyse.criticite in (CriticiteType.ELEVEE, CriticiteType.CRITIQUE)):
             volume_map[key]["feedbacks"] += 1
             volume_map[key]["label"] = label
-            if f.statut_traitement != "nouveau":
+            if est_pris_en_charge(f):
                 volume_map[key]["traites"] += 1
 
     if jours > 60:

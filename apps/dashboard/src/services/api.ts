@@ -82,13 +82,20 @@ export const feedbacksApi = {
     statut?: string;
     avec_action?: boolean;
     action_realisee?: boolean;
+    date_debut?: string;
+    theme?: string;
     limit?: number;
     offset?: number;
   }) => api.get('/feedbacks/', { params }),
+  themes: (params?: { agence_id?: string }) => api.get<string[]>('/feedbacks/themes', { params }),
   get: (feedbackId: string) =>
     api.get(`/feedbacks/${feedbackId}`),
+  /** @deprecated Consultation sans effet de bord (le serveur ne modifie plus rien) : inutile côté interface. */
   open: (feedbackId: string) =>
     api.post(`/feedbacks/${feedbackId}/open`),
+  /** Prise en charge EXPLICITE (Responsable d'agence) : Nouveau → Pris en charge, attribution à l'utilisateur. Idempotente. */
+  prendreEnCharge: (feedbackId: string) =>
+    api.post(`/feedbacks/${feedbackId}/prendre-en-charge`),
   addNote: (feedbackId: string, texte: string) =>
     api.post(`/feedbacks/${feedbackId}/notes`, { texte }),
   envoyerSuggestionAgence: (feedbackId: string, suggestion: string) =>
@@ -111,7 +118,7 @@ export const feedbacksApi = {
 
 // ── Suggestions ───────────────────────────────────────
 export const suggestionsApi = {
-  list: (params?: { limit?: number; offset?: number }) => api.get('/suggestions/', { params }),
+  list: (params?: { limit?: number; offset?: number; agence_id?: string }) => api.get('/suggestions/', { params }),
   updateStatut: (id: string, statut: string, commentaire?: string) =>
     api.patch(`/suggestions/${id}/statut`, { statut, commentaire }),
 };
@@ -227,6 +234,11 @@ export const issuesApi = {
     api.post<import('../types').ActionCorrective>(`/issues/${issueId}/actions/${actionId}/terminer`),
   verifier: (issueId: string) =>
     api.post<import('../types').Issue>(`/issues/${issueId}/verifier`),
+  // Journal d'escalade : une escalade est un enregistrement manuel, sans changement de statut ni notification.
+  listEscalades: (issueId: string) =>
+    api.get<import('../types').IssueEscalation[]>(`/issues/${issueId}/escalations`),
+  escalader: (issueId: string, motif: import('../types').EscaladeMotif) =>
+    api.post<import('../types').IssueEscalation>(`/issues/${issueId}/escalations`, { motif }),
 };
 
 // ── Demandes de contact (rappel client) ────────────────

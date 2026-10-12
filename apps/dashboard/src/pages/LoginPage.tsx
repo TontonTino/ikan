@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { AlertTriangleIcon } from '../components/common/Icons';
+import { userFacingError } from '../utils/userFacingError';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -36,7 +37,7 @@ export default function LoginPage() {
       } else if (status === 500 || status === 503) {
         setError('Le service de connexion est momentanément indisponible. Réessayez dans quelques instants.');
       } else {
-        setError(err?.response?.data?.detail || 'E-mail ou mot de passe incorrect');
+        setError(status === 401 || status === 400 ? 'E-mail ou mot de passe incorrect' : userFacingError(err, 'Connexion impossible. Veuillez réessayer.'));
       }
     } finally {
       setLoading(false);
@@ -224,7 +225,7 @@ export default function LoginPage() {
           {/* Logo IKAN AI */}
           <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
             <img
-              src="/ikanai-logo-horizontal.png"
+              src="/ikanai-logo-horizontal-green.png"
               alt="IKAN AI"
               style={{
                 height: '90px',
@@ -429,7 +430,7 @@ export default function LoginPage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#94A3B8',
+                    color: 'var(--color-text-muted)',
                   }}
                   title={showPassword ? 'Masquer' : 'Afficher'}
                 >
@@ -470,6 +471,7 @@ export default function LoginPage() {
             {/* Message d'Erreur éventuel */}
             {error && (
               <div
+                role="alert"
                 style={{
                   background: '#FEE2E2',
                   border: '1px solid #FCA5A5',
@@ -537,7 +539,7 @@ export default function LoginPage() {
               marginTop: '48px',
               textAlign: 'center',
               fontSize: '0.78rem',
-              color: '#94A3B8',
+              color: 'var(--color-text-muted)',
               fontWeight: 500,
               lineHeight: 1.4,
             }}

@@ -2,15 +2,19 @@ import React, { Dispatch, SetStateAction, useMemo } from 'react';
 import type { Suggestion, IdeaStatus } from '../../types';
 import TabsNavigation, { TabItem } from '../../components/ui/TabsNavigation';
 import { ClockIcon, LightbulbIcon, CheckCircleIcon } from '../../components/common/Icons';
+import EmptyState from '../../components/ui/EmptyState';
+import SkeletonBlock from '../../components/ui/SkeletonBlock';
+import { StatsErrorState } from '../../components/stats/StatsStates';
 import { STATUS_LABELS, STATUS_STYLE, NEXT_STATUS } from './pilotageConstants';
 
 type Props = {
   suggestions: Suggestion[]; suggestionsTotal: number; suggestionsLoading: boolean; suggestionsLoadingMore: boolean;
+  suggestionsError: boolean; onRetrySuggestions: () => void;
   loadMoreSuggestions: () => void; updateStatut: (id: string, statut: IdeaStatus) => Promise<void>;
   activeSubTab: 'toutes' | 'a_etudier' | 'decisions'; setActiveSubTab: Dispatch<SetStateAction<'toutes' | 'a_etudier' | 'decisions'>>;
 };
 
-export default function PilotageIdeasTab({ suggestions, suggestionsTotal, suggestionsLoading, suggestionsLoadingMore, loadMoreSuggestions, updateStatut, activeSubTab, setActiveSubTab }: Props) {
+export default function PilotageIdeasTab({ suggestions, suggestionsTotal, suggestionsLoading, suggestionsLoadingMore, suggestionsError, onRetrySuggestions, loadMoreSuggestions, updateStatut, activeSubTab, setActiveSubTab }: Props) {
   const aEtudierCount = useMemo(() => suggestions.filter((s) => s.statut === 'nouveau' || s.statut === 'en_cours').length, [suggestions]);
   const decisionsCount = useMemo(() => suggestions.filter((s) => s.statut === 'traite' || s.statut === 'rejete').length, [suggestions]);
   const filteredSuggestions = useMemo(() => {
@@ -26,15 +30,32 @@ export default function PilotageIdeasTab({ suggestions, suggestionsTotal, sugges
   return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {suggestionsLoading ? (
-            <div style={{ color: '#64748B', padding: '32px', fontWeight: 600 }}>Chargement des suggestions...</div>
+            <div role="status" aria-busy="true" aria-label="Chargement des suggestions" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+              {[0, 1, 2].map((i) => <SkeletonBlock key={i} height={150} radius="var(--radius-2xl)" />)}
+            </div>
+          ) : suggestionsError && suggestions.length === 0 ? (
+            <StatsErrorState message="Impossible de charger les suggestions." onRetry={onRetrySuggestions} />
           ) : (
             <>
+              {suggestionsError && (
+                <StatsErrorState message="Les suggestions n’ont pas pu être actualisées. La liste affichée peut être incomplète." onRetry={onRetrySuggestions} />
+              )}
               <TabsNavigation tabs={ideesTabsConfig} activeTab={activeSubTab} onChange={(id) => setActiveSubTab(id as any)} />
 
               {filteredSuggestions.length === 0 ? (
-                <div style={{ background: '#FFFFFF', borderRadius: '24px', padding: '48px', textAlign: 'center', color: '#64748B', border: '1px solid #E8ECE6', fontWeight: 600 }}>
-                  Aucune suggestion dans cette catégorie.
-                </div>
+                suggestions.length === 0 ? (
+                  <EmptyState
+                    illustration="no-data"
+                    title="Aucune suggestion pour le moment"
+                    message="Les idées déposées par les clients apparaîtront ici."
+                  />
+                ) : (
+                  <EmptyState
+                    illustration="no-data"
+                    title="Aucune suggestion dans cette catégorie."
+                    message="Changez d’onglet pour voir les autres suggestions."
+                  />
+                )
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
                   {filteredSuggestions.map((s) => {
@@ -60,7 +81,7 @@ export default function PilotageIdeasTab({ suggestions, suggestionsTotal, sugges
                             <span style={{ background: st.bg, color: st.text, border: `1px solid ${st.border}`, padding: '3px 10px', borderRadius: '9999px', fontSize: '0.74rem', fontWeight: 800 }}>
                               {STATUS_LABELS[s.statut]}
                             </span>
-                            <span style={{ fontSize: '0.76rem', color: '#94A3B8', fontWeight: 600 }}>
+                            <span style={{ fontSize: '0.76rem', color: '#64748B', fontWeight: 600 }}>
                               {new Date(s.date_soumission).toLocaleDateString('fr-FR')}
                             </span>
                           </div>

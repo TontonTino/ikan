@@ -43,7 +43,7 @@ export class AgentError extends Error {
 // 90 s : le premier appel peut inclure le réveil d'un service Render gratuit.
 const REQUEST_TIMEOUT_MS = 90_000;
 // Période d'analyse envoyée à l'agent (alignée sur les 30 jours par défaut du dashboard).
-const PERIODE_JOURS = 30;
+export const PERIODE_JOURS = 30;
 const TOKEN_MARGE_MS = 60_000;
 
 const agentHttp = axios.create({

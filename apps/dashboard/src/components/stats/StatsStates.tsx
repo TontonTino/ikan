@@ -39,12 +39,15 @@ export function StatsLoadingState({ message = 'Calcul des statistiques en cours.
 export function StatsErrorState({
   message = 'Une erreur est survenue lors de la récupération des statistiques.',
   onRetry,
+  title = 'Impossible de charger ces informations',
 }: {
   message?: string;
   onRetry?: () => void;
+  title?: string;
 }) {
   return (
     <div
+      role="alert"
       style={{
         padding: '48px 24px',
         display: 'flex',
@@ -73,7 +76,7 @@ export function StatsErrorState({
         <AlertTriangleIcon size={24} />
       </div>
       <div style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0F172A' }}>
-        Impossible de charger les analyses
+        {title}
       </div>
       <p style={{ fontSize: '0.84rem', color: '#64748B', maxWidth: '420px', margin: 0 }}>
         {message}

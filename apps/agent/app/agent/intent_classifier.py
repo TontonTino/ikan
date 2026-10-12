@@ -181,6 +181,11 @@ MOTS_CLES_INTENTIONS: dict[str, list[str]] = {
         # (apostrophe) est la forme réellement tapée par un manager
         # ("Vue d'ensemble s'il te plaît") — absente jusqu'ici, ajoutée.
         "vue d'ensemble",
+        # Questions de situation (« Où en est mon réseau ? ») : aucune de ces formes n'était reconnue, la
+        # question légitime tombait en « hors périmètre ». Expressions multi-mots, donc 2 points chacune.
+        "ou en est", "ou en sont", "ou en sommes", "ou en suis", "en ce moment", "la situation",
+        "situation de", "etat des lieux", "etat general", "point sur", "comment vont", "comment va",
+        "vue globale", "panorama", "tableau de bord", "actuellement",
         # Expression ×2 pour départager l'égalité avec tendances_anomalies
         # sur le mot-clé partagé "recemment" (ex. "qu'est-ce qui s'est
         # passé récemment ?"). La forme demandée "quest ce qui s est passe"
@@ -371,3 +376,37 @@ def classifier_intention(question: str, contexte: dict | None = None) -> str:
 
     meilleur = max(_INTENTIONS_ORDONNEES, key=lambda i: scores.get(i, 0))
     return meilleur
+
+
+# --- Questions sans intention reconnue : hors sujet, question métier mal comprise, ou donnée indisponible ---
+
+# Sujets réels du produit pour lesquels l'agent N'A PAS de données (il lit feedbacks, analyses, agences,
+# organisations, comptes, demandes de contact — pas le suivi des problèmes/actions, les KPI, la facturation).
+_SUJETS_DONNEE_INDISPONIBLE = (
+    "probleme a traiter", "problemes a traiter", "taux de resolution", "resolution des problemes",
+    "action a mener", "actions a mener", "kpi", "indicateur", "nps", "csat", "facturation", "forfait",
+    "abonnement", "utilisateur", "utilisateurs", "salaire", "chiffre d'affaires", "chiffre d affaires",
+)
+
+# Vocabulaire du domaine : une question qui en contient est une question métier, même si aucune intention
+# précise n'a été reconnue.
+_MOTS_DOMAINE = (
+    "client", "clients", "avis", "feedback", "feedbacks", "retour", "retours", "satisfaction", "agence",
+    "agences", "reseau", "accueil", "service", "equipe", "personnel", "conseiller", "attente", "qualite",
+    "reclamation", "plainte", "experience", "note", "notes", "magasin", "boutique", "restaurant", "banque",
+)
+
+
+def categoriser_question_sans_intention(question: str) -> str:
+    """
+    Pour une question classée « autre » : "donnee_indisponible" (sujet réel mais hors des données de YAM),
+    "metier_non_compris" (vocabulaire du domaine, formulation non reconnue) ou "hors_sujet".
+    La réponse à l'utilisateur diffère : on ne lui dit pas « hors périmètre » pour une question légitime.
+    """
+    texte = _strip_accents((question or "").lower())
+    if any(sujet in texte for sujet in _SUJETS_DONNEE_INDISPONIBLE):
+        return "donnee_indisponible"
+    mots = set(texte.replace("'", " ").replace("-", " ").translate(str.maketrans("", "", "?!.,;:")).split())
+    if any(mot in mots for mot in _MOTS_DOMAINE):
+        return "metier_non_compris"
+    return "hors_sujet"

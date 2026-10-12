@@ -1,64 +1,68 @@
 import React from 'react';
 import type { DashboardAgence } from '../../types';
 import KpiCard from '../ui/KpiCard';
-import { AlertTriangleIcon, CheckCircleIcon, MessageSquareIcon, SmileIcon } from '../common/Icons';
+import { BentoItem } from '../ui/BentoGrid';
+import { AlertTriangleIcon, ClockIcon, MessageSquareIcon, SmileIcon } from '../common/Icons';
 
 type Props = {
   data: DashboardAgence;
   jours: number;
 };
 
+const pluriel = (n: number, mot: string) => `${n} ${mot}${n !== 1 ? 's' : ''}`;
+
+/**
+ * Situation de l'agence : quatre indicateurs, chacun avec sa valeur réelle et sa période.
+ * Aucune comparaison avec la période précédente : l'API de l'agence ne la fournit pas.
+ * Rendus comme cases de la grille « bento » (même composition que la vue réseau du CX Manager).
+ */
 export default function AgencyDecisionKpis({ data, jours }: Props) {
-  const noFeedbacks = data.nombre_feedbacks === 0 || data.taux_satisfaction == null;
+  const sansAvis = data.nombre_feedbacks === 0 || data.taux_satisfaction == null;
+  const priseEnCharge = data.taux_prise_en_charge === null ? 'prise en charge : aucune donnée' : `${data.taux_prise_en_charge} % pris en charge`;
 
   return (
-    <div
-      aria-label="Indicateurs clés de mon agence"
-      style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 210px), 1fr))', gap: '12px' }}
-    >
-      <KpiCard
-        compact
-        showSparkline={false}
-        icon={<SmileIcon size={16} />}
-        label="Satisfaction"
-        hint="Part des avis notés 4 ou 5 sur 5 sur la période."
-        value={noFeedbacks ? 'Aucune donnée' : `${data.taux_satisfaction}%`}
-        subtitle={noFeedbacks ? 'sur cette période' : `sur ${data.nombre_feedbacks} avis`}
-      />
-      <KpiCard
-        compact
-        showSparkline={false}
-        icon={<MessageSquareIcon size={16} />}
-        label="Avis clients"
-        value={data.nombre_feedbacks}
-        subtitle={`${jours} derniers jours · ${data.nombre_negatifs} négatif${data.nombre_negatifs !== 1 ? 's' : ''}`}
-      />
-      <KpiCard
-        compact
-        showSparkline={false}
-        icon={<AlertTriangleIcon size={16} />}
-        label="Avis critiques"
-        value={data.nombre_critiques}
-        subtitle={`sur les ${jours} derniers jours`}
-        tone={data.nombre_critiques > 0 ? 'critical' : 'neutral'}
-      />
-      <KpiCard
-        compact
-        showSparkline={false}
-        icon={<AlertTriangleIcon size={16} />}
-        label="Avis à traiter"
-        value={data.feedbacks_a_traiter}
-        subtitle={`${data.actions_ouvertes} action${data.actions_ouvertes !== 1 ? 's' : ''} à mener en cours`}
-        badgeColor={data.feedbacks_a_traiter > 0 ? 'red' : 'green'}
-      />
-      <KpiCard
-        compact
-        showSparkline={false}
-        icon={<CheckCircleIcon size={16} />}
-        label="Prise en charge"
-        value={data.taux_prise_en_charge === null ? 'Aucune donnée' : `${data.taux_prise_en_charge}%`}
-        subtitle="avis ayant quitté le statut Nouveau"
-      />
-    </div>
+    <>
+      <BentoItem size="kpi" as="div">
+        <KpiCard
+          icon={<SmileIcon />}
+          label="Satisfaction"
+          hint="Part des avis notés 4 ou 5 sur 5 sur la période."
+          value={sansAvis ? 'Aucune donnée' : `${data.taux_satisfaction} %`}
+          tone={sansAvis ? 'neutral' : 'positive'}
+          highlight={!sansAvis}
+          subtitle={sansAvis ? `aucun avis sur les ${jours} derniers jours` : `sur ${pluriel(data.nombre_feedbacks, 'avis')} · ${jours} derniers jours`}
+        />
+      </BentoItem>
+      <BentoItem size="kpi" as="div">
+        <KpiCard
+          icon={<MessageSquareIcon />}
+          label="Avis reçus"
+          hint="Nombre d’avis reçus par l’agence sur la période."
+          value={data.nombre_feedbacks.toLocaleString('fr-FR')}
+          tone="neutral"
+          subtitle={`${jours} derniers jours · ${pluriel(data.nombre_negatifs, 'négatif')}`}
+        />
+      </BentoItem>
+      <BentoItem size="kpi" as="div">
+        <KpiCard
+          icon={<AlertTriangleIcon />}
+          label="Avis critiques"
+          hint="Avis dont la gravité, calculée automatiquement, est « critique » sur la période."
+          value={data.nombre_critiques.toLocaleString('fr-FR')}
+          tone={data.nombre_critiques > 0 ? 'critical' : 'neutral'}
+          subtitle={`${jours} derniers jours`}
+        />
+      </BentoItem>
+      <BentoItem size="kpi" as="div">
+        <KpiCard
+          icon={<ClockIcon />}
+          label="Avis à traiter"
+          hint="Avis reçus sur la période qui ne sont pas résolus, ou dont la demande de rappel n’est pas encore traitée. La prise en charge est la part des avis de la période qui ont quitté le statut Nouveau."
+          value={data.feedbacks_a_traiter.toLocaleString('fr-FR')}
+          tone={data.feedbacks_a_traiter > 0 ? 'warning' : 'positive'}
+          subtitle={`${jours} derniers jours · ${priseEnCharge}`}
+        />
+      </BentoItem>
+    </>
   );
 }

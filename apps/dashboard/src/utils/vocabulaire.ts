@@ -14,7 +14,7 @@
  *  - Alerte               : signal calculé (seuil, avis à risque) ; n'est pas un problème.
  *  - Recommandation       : suggestion ; n'est pas une décision exécutée.
  */
-import type { CriticiteType, IssueStatut, SentimentType, StatutTraitement, UserRole } from '../types';
+import type { CriticiteType, EscaladeMotif, IssueStatut, SentimentType, StatutTraitement, UserRole } from '../types';
 
 export const LIBELLES = {
   avis: 'Avis client',
@@ -61,8 +61,8 @@ export const SENTIMENT_LABELS: Record<SentimentType, string> = {
 };
 
 /** Statut de traitement d'un avis client (champ `statut_traitement`). « Pris en charge » :
-    l'avis a été ouvert par le responsable d'agence ; « Action en cours » : une action à
-    mener a été définie. */
+    le responsable d'agence a pris l'avis en charge par une action explicite (consulter un avis ne suffit pas,
+    et une analyse IA n'est jamais une prise en charge) ; « Action en cours » : une action à mener a été définie. */
 export const AVIS_STATUT_LABELS: Record<StatutTraitement, string> = {
   nouveau: 'Nouveau',
   en_traitement: 'Pris en charge',
@@ -79,6 +79,52 @@ export const PROBLEME_STATUT_LABELS: Record<IssueStatut, string> = {
   verifiee: 'Résolution vérifiée',
   reouverte: 'Rouvert',
 };
+
+/** Motif d'une escalade (champ `motif` du journal d'escalade). */
+export const ESCALADE_MOTIF_LABELS: Record<EscaladeMotif, string> = {
+  sla: 'Délai de traitement dépassé',
+  criticite: 'Gravité élevée',
+  risque_client: 'Risque de perte du client',
+  decision_manageriale: 'Décision de la direction',
+  autre: 'Autre motif',
+};
+
+export function libelleMotifEscalade(motif: string | null | undefined): string {
+  return (motif && (ESCALADE_MOTIF_LABELS as Record<string, string>)[motif]) || 'Motif non précisé';
+}
+
+/** Type d'événement du fil d'activité d'une agence (champ `type_evenement`, historique des
+    avis). Un type inconnu n'est jamais affiché tel quel. */
+const EVENEMENT_AGENCE_LABELS: Record<string, string> = {
+  soumission: 'Avis reçu',
+  ouverture: 'Avis pris en charge',
+  prise_en_charge: 'Avis pris en charge',
+  note_interne: 'Note interne ajoutée',
+  suggestion_envoyee: 'Suggestion envoyée au siège',
+  suggestion_nouveau: 'Suggestion : nouvelle',
+  suggestion_en_cours: 'Suggestion : en cours d’examen',
+  suggestion_traite: 'Suggestion : traitée',
+  suggestion_rejete: 'Suggestion : rejetée',
+  action_definie: 'Action à mener définie',
+  action_realisee: 'Action réalisée',
+  reponse_client: 'Réponse envoyée au client',
+  reouverture: 'Avis rouvert',
+};
+
+export function libelleEvenementAgence(code: string | null | undefined): string {
+  return (code && EVENEMENT_AGENCE_LABELS[code]) || 'Autre événement';
+}
+
+/** Motif pour lequel un avis est signalé « à examiner » (GET /alertes, champ `raison`). */
+const ALERTE_RAISON_LABELS: Record<string, string> = {
+  note_basse: 'note basse',
+  sentiment_negatif: 'ton négatif',
+  note_basse_et_sentiment_negatif: 'note basse et ton négatif',
+};
+
+export function libelleRaisonAlerte(code: string | null | undefined): string {
+  return (code && ALERTE_RAISON_LABELS[code]) || 'à examiner';
+}
 
 /**
  * Libellés et aides des indicateurs (KPI Engine). Le libellé envoyé par l'API reste la

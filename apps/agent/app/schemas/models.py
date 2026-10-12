@@ -33,6 +33,13 @@ class AskResponse(BaseModel):
     # le client le renvoie tel quel dans AskRequest.conversation_id pour
     # poursuivre la même conversation au tour suivant.
     conversation_id: UUID
+    # Champs additifs (ignorés sans dommage par les clients existants).
+    # `tronquee` : la génération a été coupée par la limite de sortie ; le texte porte alors un marqueur explicite.
+    tronquee: bool = False
+    # Remarques de fiabilité (ex. valeurs absentes des données, réponse tronquée).
+    avertissements: list[str] = []
+    # Périmètre de données réellement appliqué à la réponse (agence unique ou toute l'organisation).
+    perimetre: Optional[str] = None
 
 
 class ProactiveSummaryResponse(BaseModel):

@@ -1,0 +1,72 @@
+/* ════════════════════════════════════════════════════════════════════
+   Vue d'ensemble du Responsable d'agence (pages/agency/DashboardAgencePage.tsx)
+   Tokens uniquement, mêmes conventions que siege.css (Decision Workspace).
+   ════════════════════════════════════════════════════════════════════ */
+
+.agence { display: flex; flex-direction: column; gap: var(--space-5); width: 100%; min-width: 0; }
+
+/* ── Priorités : alertes, problèmes, avis à examiner ── */
+.agence-prio { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.agence-prio__item {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border); border-left-width: 4px; border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+.agence-prio__item--critical { border-left-color: var(--color-critical-solid); }
+.agence-prio__item--warning { border-left-color: var(--color-warning-solid); }
+.agence-prio__main { flex: 1 1 240px; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.agence-prio__head { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.agence-prio__title { margin: 0; font-size: var(--text-md); font-weight: var(--weight-black); color: var(--color-text-main); overflow-wrap: anywhere; }
+.agence-prio__detail { margin: 0; font-size: var(--text-sm); color: var(--color-text-body); overflow-wrap: anywhere; }
+.agence-more { align-self: flex-start; max-width: 100%; height: auto; min-height: var(--control-sm); white-space: normal; text-align: left; }
+
+/* ── Jauge horizontale (ton des avis, thèmes) : le texte porte l'information, la barre l'illustre ── */
+.agence-meters { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.agence-meter { display: flex; flex-direction: column; gap: var(--space-1); }
+.agence-meter__row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.agence-meter__label { font-size: var(--text-sm); font-weight: var(--weight-bold); color: var(--color-text-main); overflow-wrap: anywhere; }
+.agence-meter__value { font-size: var(--text-sm); font-weight: var(--weight-black); color: var(--color-text-main); white-space: nowrap; }
+.agence-meter__sub { font-size: var(--text-xs); color: var(--color-text-muted); font-weight: var(--weight-medium); }
+.agence-meter__track { height: 8px; border-radius: var(--radius-pill); background: var(--color-bg-subtle); overflow: hidden; }
+.agence-meter__fill { height: 100%; border-radius: var(--radius-pill); background: var(--dataviz-neutral); min-width: 2px; }
+.agence-meter__fill--positive { background: var(--dataviz-positive); }
+.agence-meter__fill--attention { background: var(--dataviz-attention); }
+.agence-meter__fill--critical { background: var(--dataviz-critical); }
+.agence-meter__fill--info { background: var(--dataviz-info); }
+a.agence-meter { text-decoration: none; color: inherit; border-radius: var(--radius-md); padding: var(--space-1) var(--space-2); margin: 0 calc(-1 * var(--space-2)); min-height: var(--touch-target); justify-content: center; }
+a.agence-meter:hover { background: var(--color-bg-hover); }
+
+/* ── Recommandations ── */
+.agence-reco-group { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.agence-reco {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface);
+}
+.agence-reco__main { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.agence-reco__meta { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; font-size: var(--text-xs); color: var(--color-text-muted); }
+.agence-reco__text { margin: 0; font-size: var(--text-md); color: var(--color-text-main); font-weight: var(--weight-medium); line-height: var(--leading-normal); overflow-wrap: anywhere; }
+.agence-group-title { margin: var(--space-2) 0 0; font-size: var(--text-xs); font-weight: var(--weight-black); text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); }
+.agence-group-title:first-child { margin-top: 0; }
+
+/* ── Suivi des problèmes ── */
+.agence-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: var(--space-3); margin: 0; }
+.agence-stat { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-bg-subtle); }
+.agence-stat dt { font-size: var(--text-xs); font-weight: var(--weight-bold); color: var(--color-text-muted); }
+.agence-stat dd { margin: 0; font-size: var(--text-2xl); font-weight: var(--weight-black); color: var(--color-text-main); }
+
+.agence-actions-line { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; }
+
+/* Petits écrans et écrans tactiles : cibles d'au moins 44 × 44 px pour les liens et boutons de la page. */
+@media (max-width: 640px), (pointer: coarse) {
+  .agence .siege-link, .agence .agence-more, .agence .ui-btn--sm { min-height: var(--touch-target); }
+  .ui-page-title .ui-icon-btn, .alerte-toolbar .ui-icon-btn { min-width: var(--touch-target); min-height: var(--touch-target); }
+}
+
+/* ── Page /alertes : mêmes lignes que les priorités de /agence ── */
+.alerte-toolbar { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.alerte-toolbar select { min-height: var(--control-lg); }
+.agence-prio__detail--clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.agence-prio__item.ui-alert-item { scroll-margin: var(--space-7); }
+.agence-prio__item.ui-alert-item:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }

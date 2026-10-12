@@ -537,3 +537,13 @@
 }
 .ui-info-btn::after { content: ''; position: absolute; inset: -10px; }
 .ui-info-btn:hover { color: var(--color-primary); border-color: var(--color-primary); }
+
+/* ── Cibles tactiles : sur écran tactile, les boutons courants atteignent 44 px (--touch-target) ── */
+@media (pointer: coarse) {
+  .ui-btn,
+  .btn-primary,
+  .btn-secondary,
+  .ui-segmented__item {
+    min-height: var(--touch-target);
+  }
+}

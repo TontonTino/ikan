@@ -1,5 +1,6 @@
 from pathlib import Path
 import logging
+import re
 import threading
 import unicodedata
 from typing import TypedDict, Optional
@@ -318,13 +319,34 @@ SIGNAUX_PREJUDICE = [
 ]
 
 
+# Formes acceptées pour les signaux très courts : mot entier uniquement (« vol » ne doit pas matcher
+# « volume », « évolution », « volonté »…), avec ses flexions usuelles (vol, vols, volé, voleur…).
+_FORMES_MOT_ENTIER = {
+    "vol": r"vol(?:s|e|es|ee|ees|er|ent|eur|eurs|erie|eries)?",
+}
+
+
+def _motif_signal(signal: str) -> "re.Pattern[str]":
+    """Un signal doit COMMENCER un mot (jamais en milieu de mot) ; les signaux longs acceptent un suffixe
+    (« danger » → « dangereux », « urgent » → « urgente »), les signaux courts sont des mots entiers."""
+    debut = r"(?<![a-z0-9])"
+    if signal in _FORMES_MOT_ENTIER:
+        return re.compile(debut + _FORMES_MOT_ENTIER[signal] + r"(?![a-z0-9])")
+    return re.compile(debut + re.escape(signal))
+
+
+_MOTIFS_URGENCE = [(m, _motif_signal(m)) for m in SIGNAUX_URGENCE]
+_MOTIFS_PREJUDICE = [(m, _motif_signal(m)) for m in SIGNAUX_PREJUDICE]
+
+
 def detecter_signaux(texte: str) -> tuple[list[str], list[str]]:
-    """Détecte les mots-clés d'urgence et de préjudice présents dans le texte (comparaison sans accents)."""
+    """Détecte les mots-clés d'urgence et de préjudice présents dans le texte (comparaison sans accents,
+    en début de mot : pas de faux positif sur « volume » ou « évolution »)."""
     if not texte:
         return [], []
     texte_clean = _strip_accents(texte.lower())
-    urgence = [m for m in SIGNAUX_URGENCE if m in texte_clean]
-    prejudice = [m for m in SIGNAUX_PREJUDICE if m in texte_clean]
+    urgence = [m for m, motif in _MOTIFS_URGENCE if motif.search(texte_clean)]
+    prejudice = [m for m, motif in _MOTIFS_PREJUDICE if motif.search(texte_clean)]
     return urgence, prejudice
 
 
