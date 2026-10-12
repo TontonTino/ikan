@@ -5,6 +5,8 @@ export function userFacingError(
   error: unknown,
   fallback = 'Impossible de charger ces informations. Veuillez réessayer.',
   validationMessage = 'Vérifiez les informations saisies puis réessayez.',
+  // Messages propres à l'écran pour un statut HTTP précis (ex. 409 : doublon). Jamais le texte brut de l'API.
+  byStatus: Partial<Record<number, string>> = {},
 ): string {
   if (!axios.isAxiosError(error)) return fallback;
 
@@ -15,6 +17,9 @@ export function userFacingError(
   if (!error.response) {
     return 'Impossible de joindre le service. Vérifiez votre connexion puis réessayez.';
   }
+
+  const specifique = byStatus[error.response.status];
+  if (specifique) return specifique;
 
   switch (error.response.status) {
     case 401:

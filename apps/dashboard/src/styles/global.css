@@ -4,6 +4,7 @@
 @import './ui.css';
 @import './layout.css';
 @import './siege.css';
+@import './agence.css';
 
 /* Les variables (couleurs, espacements, rayons, motion, z-index…) vivent
    dans ./tokens.css — source unique de vérité du design system. */
@@ -196,7 +197,7 @@ body {
 
 .badge-success { background: var(--color-success-bg); color: var(--color-success); }
 .badge-warning { background: var(--color-warning-bg); color: var(--color-warning); }
-.badge-error { background: var(--color-error-bg); color: var(--color-error); }
+.badge-error { background: var(--color-error-bg); color: var(--color-critical-text); }
 .badge-info { background: var(--color-info-bg); color: var(--color-info); }
 .badge-neutral { background: #F1F5F9; color: #475569; }
 
@@ -293,6 +294,10 @@ body {
 .yam-table th { background: #E2F2E5; color: #022D2A; text-align: left; font-weight: 700; }
 .yam-table th, .yam-table td { padding: 6px 9px; border-bottom: 1px solid #E8F0EA; vertical-align: top; }
 .yam-table tr:last-child td { border-bottom: none; }
+/* Pas de coupure au milieu d'un mot : le tableau défile horizontalement dans son cadre. */
+.yam-table th, .yam-table td { overflow-wrap: normal; word-break: normal; hyphens: none; }
+.yam-table th { white-space: nowrap; }
+.yam-table td { min-width: 4.5em; }
 .yam-suggestions { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
 .yam-chip {
   text-align: left; padding: 8px 12px; border-radius: 12px; border: 1px solid #C9DFCC; background: #FFFFFF;
@@ -545,4 +550,24 @@ body {
   .ikan-yam-button {
     transition: none;
   }
+}
+
+
+/* ── YAM : rubriques de réponse, périmètre, mentions ── */
+.yam-section { margin: 0 0 10px; padding: 8px 10px; border-radius: 10px; border-left: 3px solid #B6D4B9; background: rgba(255,255,255,0.55); }
+.yam-section:last-child { margin-bottom: 0; }
+.yam-section-title { margin: 0 0 4px; font-size: 0.78rem; font-weight: 800; color: #3C7730; }
+.yam-section--hypothese { border-left-color: #D9A441; background: #FFFAEB; }
+.yam-section--hypothese .yam-section-title { color: #92400E; }
+.yam-section--reco { border-left-color: #3C7730; background: #F0F8F1; }
+.yam-section--donnees { border-left-color: #CBD5E1; }
+.yam-section--donnees .yam-section-title { color: #64748B; }
+.yam-section .yam-paragraph:last-child, .yam-section .yam-list:last-child { margin-bottom: 0; }
+.yam-scope { margin: 0; padding: 6px 16px; font-size: 0.74rem; color: #475569; background: #F8FAFB; border-bottom: 1px solid #E8ECE6; }
+.yam-suggestions-title { font-size: 0.76rem; font-weight: 700; color: #475569; }
+.yam-footnote { margin: 0; padding: 6px 16px 10px; font-size: 0.7rem; line-height: 1.4; color: #64748B; text-align: center; }
+
+@media (pointer: coarse) {
+  .yam-icon-btn, .yam-send, .yam-chip, .yam-retry { min-width: var(--touch-target); min-height: var(--touch-target); }
+  .yam-input { min-height: var(--touch-target); }
 }

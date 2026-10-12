@@ -237,8 +237,8 @@ export default function SidebarWorkspaceCard({ user, collapsed = false }: Sideba
             {!contextLoading && !contextError && contextAgences.length > 0 && contextAgences.filter((agence) => `${agence.nom} ${agence.ville ?? ''}`.toLocaleLowerCase().includes(contextSearch.trim().toLocaleLowerCase())).length === 0 && <div className="cx-context-message">Aucune agence ne correspond.</div>}
             <style>{`
               .cx-context-menu { position:absolute; top:0; left:calc(100% + 10px); z-index:60; width:min(300px, calc(100vw - 100px)); max-height:min(420px, 70vh); overflow:auto; padding:10px; box-sizing:border-box; background:#fff; color:#0f172a; border:1px solid #e2e8f0; border-radius:14px; box-shadow:0 16px 40px rgba(2,48,45,.22); }
-              .cx-context-search { display:flex; align-items:center; gap:8px; padding:9px 10px; margin-bottom:7px; border:1px solid #dbe3df; border-radius:9px; color:#64748b; }
-              .cx-context-search input { min-width:0; width:100%; border:0; outline:0; font:inherit; font-size:.82rem; }
+              .cx-context-search { display:flex; align-items:center; gap:8px; min-height:44px; box-sizing:border-box; padding:9px 10px; margin-bottom:7px; border:1px solid #dbe3df; border-radius:9px; color:#64748b; }
+              .cx-context-search input { min-width:0; width:100%; min-height:24px; border:0; outline:0; font:inherit; font-size:.875rem; }
               .cx-context-option { display:flex; flex-direction:column; align-items:flex-start; gap:2px; width:100%; padding:9px 10px; border:0; border-radius:8px; background:transparent; color:#0f172a; text-align:left; font:inherit; font-size:.82rem; cursor:pointer; }
               .cx-context-option:hover,.cx-context-option:focus-visible,.cx-context-option.is-selected { background:#eef5e8; outline:none; }
               .cx-context-option small { color:#64748b; font-size:.72rem; }

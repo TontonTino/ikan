@@ -139,9 +139,11 @@ def test_tendances_journalieres_inchangees():
 # ── Prise en charge : définition unique ──────────────────────────────────────────
 
 def test_est_traite_meme_definition():
+    # Lot 5 : la prise en charge est HUMAINE (statut sorti de « nouveau »). Une analyse IA, même terminée,
+    # n'en est jamais une : un avis « nouveau » analysé reste non pris en charge.
     analyses = {"f-analyse"}
     assert _est_traite(SimpleNamespace(id="x", statut_traitement="en_cours"), analyses)
-    assert _est_traite(SimpleNamespace(id="f-analyse", statut_traitement="nouveau"), analyses)
+    assert not _est_traite(SimpleNamespace(id="f-analyse", statut_traitement="nouveau"), analyses)
     assert not _est_traite(SimpleNamespace(id="y", statut_traitement="nouveau"), analyses)
 
 
@@ -323,16 +325,16 @@ def test_csat_sans_avis_coherent_avec_le_moteur_kpi(ctx):
 def test_prise_en_charge_meme_definition_deux_periodes(ctx):
     db = ctx.Session()
     for jours_avant in (40, 1):   # même composition sur les deux périodes
-        _feedback(db, ctx.qr[ctx.a1], 4, jours_avant, statut="en_cours")                      # traité (statut)
-        _feedback(db, ctx.qr[ctx.a1], 2, jours_avant, analyse=CriticiteType.FAIBLE)            # traité (analyse)
-        _feedback(db, ctx.qr[ctx.a1], 3, jours_avant)                                          # non traité
+        _feedback(db, ctx.qr[ctx.a1], 4, jours_avant, statut="en_cours")                      # pris en charge (statut humain)
+        _feedback(db, ctx.qr[ctx.a1], 2, jours_avant, analyse=CriticiteType.FAIBLE)            # analysé par l'IA mais « nouveau » : NON pris en charge
+        _feedback(db, ctx.qr[ctx.a1], 3, jours_avant)                                          # nouveau, non analysé
     db.commit(); db.close()
     for url in ("/dashboard/statistics/cx", f"/dashboard/statistics/agency?agence_id={ctx.a1}"):
         kpis = _get(ctx, ctx.cx, url)["kpis"]
-        assert kpis["feedbacks_traites"]["valeur"] == 2
-        assert kpis["feedbacks_traites"]["valeur_precedente"] == 2
-        assert kpis["taux_traitement"]["valeur_num"] == 66.7
-        assert kpis["taux_traitement"]["valeur_precedente"] == 66.7
+        assert kpis["feedbacks_traites"]["valeur"] == 1
+        assert kpis["feedbacks_traites"]["valeur_precedente"] == 1
+        assert kpis["taux_traitement"]["valeur_num"] == 33.3
+        assert kpis["taux_traitement"]["valeur_precedente"] == 33.3
         assert kpis["taux_traitement"]["evolution"] == "+0.0 pts"
 
 

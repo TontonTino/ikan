@@ -3,6 +3,9 @@ import { Navigate } from 'react-router-dom';
 import { systemApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import PageHeader from '../../components/ui/PageHeader';
+import Alert from '../../components/ui/Alert';
+import Button from '../../components/ui/Button';
+import { userFacingError } from '../../utils/userFacingError';
 import {
   TagIcon,
   BarChartIcon,
@@ -21,27 +24,39 @@ interface Settings {
   date_modification: string;
 }
 
+// Contrôle d'accès séparé du contenu : les hooks du contenu ne sont jamais appelés après un retour anticipé.
 export default function AdminSettingsPage() {
   const user = useAuthStore((s) => s.user);
-
   if (user?.role !== 'admin') {
     return <Navigate to="/siege" replace />;
   }
+  return <AdminSettingsPageContenu />;
+}
+
+function AdminSettingsPageContenu() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [form, setForm] = useState<Partial<Settings>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
+  const [erreurChargement, setErreurChargement] = useState('');
+  const [rechargement, setRechargement] = useState(0);
 
   useEffect(() => {
+    setLoading(true);
+    setErreurChargement('');
     systemApi
       .getSettings()
       .then((r) => {
         setSettings(r.data);
         setForm(r.data);
       })
+      .catch((err) => {
+        console.error('Erreur chargement des paramètres système:', err);
+        setErreurChargement(userFacingError(err, 'Impossible de charger les paramètres. Veuillez réessayer.'));
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [rechargement]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -61,8 +76,9 @@ export default function AdminSettingsPage() {
       setSettings(r.data);
       setForm(r.data);
       showToast('Paramètres enregistrés avec succès');
-    } catch {
-      showToast('Erreur lors de la sauvegarde');
+    } catch (err) {
+      console.error('Erreur enregistrement des paramètres système:', err);
+      showToast(userFacingError(err, 'Impossible d’enregistrer les paramètres. Veuillez réessayer.'));
     } finally {
       setSaving(false);
     }
@@ -70,11 +86,26 @@ export default function AdminSettingsPage() {
 
   if (loading) return <div style={{ color: '#64748B', padding: '32px', fontWeight: 600 }}>Chargement des paramètres...</div>;
 
+  // Sans paramètres chargés, le formulaire serait vide : l'enregistrer enverrait des valeurs absentes.
+  if (erreurChargement || !settings) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '800px' }}>
+        <PageHeader title="Paramètres système" subtitle="Configuration générale de la plateforme IKAN AI." />
+        <Alert
+          tone="critical"
+          title={erreurChargement || 'Les paramètres ne sont pas disponibles.'}
+          action={<Button size="sm" variant="secondary" onClick={() => setRechargement((n) => n + 1)}>Réessayer</Button>}
+        />
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '800px' }}>
       {/* Toast */}
       {toast && (
         <div
+          role="status"
           style={{
             position: 'fixed',
             top: '24px',
@@ -182,10 +213,11 @@ export default function AdminSettingsPage() {
         </h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div>
-            <label style={{ display: 'block', fontWeight: 700, marginBottom: '6px', fontSize: '0.84rem', color: '#1E293B' }}>
+            <label htmlFor="param-seuil-alerte" style={{ display: 'block', fontWeight: 700, marginBottom: '6px', fontSize: '0.84rem', color: '#1E293B' }}>
               Seuil d'alerte par défaut pour les nouvelles agences : <strong style={{ color: '#3C7730' }}>{form.seuil_alerte_defaut}%</strong>
             </label>
             <input
+              id="param-seuil-alerte"
               type="range"
               min={0}
               max={100}
@@ -198,10 +230,11 @@ export default function AdminSettingsPage() {
             </p>
           </div>
           <div>
-            <label style={{ display: 'block', fontWeight: 700, marginBottom: '6px', fontSize: '0.84rem', color: '#1E293B' }}>
+            <label htmlFor="param-retention" style={{ display: 'block', fontWeight: 700, marginBottom: '6px', fontSize: '0.84rem', color: '#1E293B' }}>
               Durée de conservation des avis clients (mois)
             </label>
             <input
+              id="param-retention"
               type="number"
               min={1}
               max={120}
@@ -244,10 +277,11 @@ export default function AdminSettingsPage() {
           <span>Analyse automatique des avis</span>
         </h2>
         <div>
-          <label style={{ display: 'block', fontWeight: 700, marginBottom: '6px', fontSize: '0.84rem', color: '#1E293B' }}>
+          <label htmlFor="param-mode-ia" style={{ display: 'block', fontWeight: 700, marginBottom: '6px', fontSize: '0.84rem', color: '#1E293B' }}>
             Mode d’analyse
           </label>
           <select
+            id="param-mode-ia"
             className="saas-input"
             value={form.mode_ia || 'deterministique'}
             onChange={(e) => setForm({ ...form, mode_ia: e.target.value })}
@@ -287,12 +321,12 @@ export default function AdminSettingsPage() {
           <AlertTriangleIcon size={18} color="#3C7730" />
           <span>Notifications</span>
         </h2>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '12px', minHeight: '44px', cursor: 'pointer' }}>
           <input
             type="checkbox"
             checked={form.notifications_email_actives || false}
             onChange={(e) => setForm({ ...form, notifications_email_actives: e.target.checked })}
-            style={{ width: '18px', height: '18px', accentColor: '#3C7730', cursor: 'pointer' }}
+            style={{ width: '24px', height: '24px', flex: '0 0 24px', accentColor: '#3C7730', cursor: 'pointer' }}
           />
           <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#1E293B' }}>Activer les notifications par e-mail</span>
         </label>

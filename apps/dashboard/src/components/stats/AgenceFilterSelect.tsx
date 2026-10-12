@@ -11,12 +11,15 @@ interface AgenceFilterSelectProps {
   agences: AgenceOption[];
   selectedId: string | null;
   onChange: (agenceId: string | null) => void;
+  /** Nom accessible du sélecteur (défaut : « Filtrer par agence »). */
+  label?: string;
 }
 
 export default function AgenceFilterSelect({
   agences,
   selectedId,
   onChange,
+  label = 'Filtrer par agence',
 }: AgenceFilterSelectProps) {
   return (
     <div
@@ -40,6 +43,7 @@ export default function AgenceFilterSelect({
       </div>
 
       <select
+        aria-label={label}
         value={selectedId || ''}
         onChange={(e) => onChange(e.target.value ? e.target.value : null)}
         style={{

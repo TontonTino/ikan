@@ -5,7 +5,7 @@ Le feedback est anonyme et accessible uniquement après le scan du QR Code.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, String, Text, Integer, DateTime, ForeignKey, func
+from sqlalchemy import CheckConstraint, Index, String, Text, Integer, DateTime, ForeignKey, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,6 +19,8 @@ class Feedback(Base):
             "nps_note IS NULL OR (nps_note >= 0 AND nps_note <= 10)",
             name="ck_feedbacks_nps_note_range",
         ),
+        # Une même clé d'idempotence ne crée qu'UN feedback par QR Code (les NULL restent distincts).
+        Index("uq_feedbacks_qr_cle_idempotence", "qr_code_id", "cle_idempotence", unique=True),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -37,6 +39,9 @@ class Feedback(Base):
     nps_note: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # Commentaire libre (max 1000 caractères — BF-03)
     commentaire: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    # Clé générée par le formulaire client pour UN envoi : un renvoi (double clic, nouvelle tentative réseau)
+    # rejoue la même clé et ne crée pas de doublon. NULL pour les feedbacks créés sans clé.
+    cle_idempotence: Mapped[str | None] = mapped_column(String(64), nullable=True)
     date_soumission: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

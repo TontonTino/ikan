@@ -5,7 +5,7 @@ export interface Props {
   alt?: string;
   class?: string;
   size?: number;
-  variant?: string;
+  variant?: 'dark' | 'green' | 'lime' | 'white';
 }
 
 const {
@@ -14,14 +14,22 @@ const {
   size = 140,
   alt = 'IKAN AI',
   class: className = '',
+  variant = 'dark',
 } = Astro.props;
 
 const targetWidth = width || size || 140;
+const logoSrc = variant === 'green'
+  ? '/ikanai-logo-horizontal-green.png'
+  : variant === 'lime'
+    ? '/ikanai-logo-horizontal-lime.png'
+    : variant === 'white'
+      ? '/ikanai-mark-white.png'
+      : '/ikanai-logo-stacked.png';
 ---
 
 <div class={`ikan-logo-official-container ${className}`} style={`width: ${targetWidth}px;`}>
   <img
-    src="/ikanai-logo-stacked.png"
+    src={logoSrc}
     alt={alt}
     class="ikan-logo-official-img"
     loading="eager"

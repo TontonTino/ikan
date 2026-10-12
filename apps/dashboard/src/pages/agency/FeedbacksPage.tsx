@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { feedbacksApi, agencesApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
@@ -27,12 +27,13 @@ import {
 } from '../../components/common/Icons';
 import { themeLabel } from '../../utils/themeLabels';
 import { AVIS_STATUT_LABELS, GRAVITE_LABELS } from '../../utils/vocabulaire';
+import { aSurveiller, aTraiter, normalizeCriticite, normalizeSentiment } from '../../utils/triageAvis';
 import './FeedbacksPage.css';
 
 const STATUT_BADGES: Record<StatutTraitement, { label: string; bg: string; text: string; icon: React.ReactNode }> = {
-  nouveau: { label: AVIS_STATUT_LABELS.nouveau, bg: '#FEE2E2', text: '#DC2626', icon: <AlertTriangleIcon size={12} color="#DC2626" /> },
+  nouveau: { label: AVIS_STATUT_LABELS.nouveau, bg: '#FEE2E2', text: '#B91C1C', icon: <AlertTriangleIcon size={12} color="#DC2626" /> },
   en_traitement: { label: AVIS_STATUT_LABELS.en_traitement, bg: '#E0F2FE', text: '#0369A1', icon: <ClockIcon size={12} color="#0369A1" /> },
-  en_cours: { label: AVIS_STATUT_LABELS.en_cours, bg: '#FEF3C7', text: '#D97706', icon: <ClockIcon size={12} color="#D97706" /> },
+  en_cours: { label: AVIS_STATUT_LABELS.en_cours, bg: '#FEF3C7', text: '#92400E', icon: <ClockIcon size={12} color="#D97706" /> },
   resolu: { label: AVIS_STATUT_LABELS.resolu, bg: '#EBF5E9', text: '#3C7730', icon: <CheckCircleIcon size={12} color="#3C7730" /> },
 };
 
@@ -46,10 +47,10 @@ const CRITICITE_STYLE: Record<string, { bg: string; text: string }> = {
   faible: { bg: '#F1F5F9', text: '#475569' },
   moyenne: { bg: '#E0F2FE', text: '#0369A1' },
   elevee: { bg: '#FFEDD5', text: '#C2410C' },
-  critique: { bg: '#FEE2E2', text: '#DC2626' },
+  critique: { bg: '#FEE2E2', text: '#B91C1C' },
 };
 
-// Les filtres sentiment/thème restent côté client, sur les pages chargées progressivement.
+// Les filtres non pris en charge par l'API restent côté client, sur les avis chargés progressivement.
 const FETCH_LIMIT = 50;
 const PAGE_SIZE = 25;
 
@@ -67,28 +68,21 @@ const formatDate = (dateStr?: string) => {
   }
 };
 
-const normalizeSentiment = (sentiment?: string): string => {
-  if (!sentiment) return '';
-  const s = sentiment.toLowerCase().trim();
-  if (s === 'positive') return 'positif';
-  if (s === 'negative') return 'negatif';
-  if (s === 'neutral') return 'neutre';
-  return s;
-};
-
-const normalizeCriticite = (criticite?: string): string => {
-  if (!criticite) return '';
-  return criticite.toLowerCase().trim();
-};
-
 const dateDebutPeriode = (periode: string) => {
   if (periode === 'all') return null;
   const date = new Date();
   date.setHours(0, 0, 0, 0);
   if (periode === 'today') return date;
-  date.setDate(date.getDate() - (periode === '7' ? 6 : 29));
+  const jours = Number(periode);
+  date.setDate(date.getDate() - (Number.isFinite(jours) && jours > 0 ? jours - 1 : 29));
   return date;
 };
+
+// Contexte de navigation (liens depuis les tableaux de bord) : valeurs reconnues, tout le reste est ignoré.
+const PERIODES_URL = ['7', '30', '90', '365'] as const;
+const periodeDepuisUrl = (valeur: string | null) => (valeur && (PERIODES_URL as readonly string[]).includes(valeur) ? valeur : 'all');
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const identifiantDepuisUrl = (valeur: string | null) => (valeur && UUID_RE.test(valeur) ? valeur : null);
 
 const sentimentDominant = (positifs: number, negatifs: number, neutres: number) => {
   const sentiments = [['positif', positifs], ['négatif', negatifs], ['neutre', neutres]] as const;
@@ -98,16 +92,10 @@ const sentimentDominant = (positifs: number, negatifs: number, neutres: number) 
   return dominants.length > 1 ? `à égalité (${dominants.join(', ')})` : dominants[0];
 };
 
-const hasAttentionSignal = (feedback: Feedback) => {
-  const criticite = normalizeCriticite(feedback.analyse_ia?.criticite);
-  const sentiment = normalizeSentiment(feedback.analyse_ia?.sentiment);
-  return criticite === 'critique' || criticite === 'elevee' || sentiment === 'negatif' || Boolean(feedback.analyse_ia?.discordance_detectee);
-};
-
-const needsTreatment = (feedback: Feedback) => {
-  const statut = feedback.statut_traitement || 'nouveau';
-  return statut !== 'resolu' || Boolean(feedback.demande_contact && !feedback.demande_contact.traitee);
-};
+// Définitions de triage : utils/triageAvis.ts (« à surveiller » = note faible, ton négatif, criticité élevée/critique
+// ou discordance ; chaque avis compte une seule fois).
+const hasAttentionSignal = aSurveiller;
+const needsTreatment = aTraiter;
 
 interface FeedbacksPageProps {
   /**
@@ -128,11 +116,13 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
   const showAgenceSelector = isCXOrAdmin && !agenceId;
 
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [themesDisponibles, setThemesDisponibles] = useState<string[]>([]);
   const [feedbackTotal, setFeedbackTotal] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [agences, setAgences] = useState<Agence[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [themeCatalogError, setThemeCatalogError] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
   const [toast, setToast] = useState('');
   const [selectedFeedbackForTreatment, setSelectedFeedbackForTreatment] = useState<Feedback | null>(null);
@@ -146,12 +136,12 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
   });
 
   // Filtres
-  const [selectedAgenceId, setSelectedAgenceId] = useState<string>(agenceId || 'all');
+  const [selectedAgenceId, setSelectedAgenceId] = useState<string>(() => agenceId || (isCXOrAdmin ? identifiantDepuisUrl(searchParams.get('agence')) : null) || 'all');
   const [filterSentiment, setFilterSentiment] = useState<string>('all');
   const [filterTheme, setFilterTheme] = useState<string>(() => searchParams.get('theme') || 'all');
   const [filterNote, setFilterNote] = useState<string>('all');
   const [filterCriticite, setFilterCriticite] = useState<string>('all');
-  const [filterPeriode, setFilterPeriode] = useState<string>('all');
+  const [filterPeriode, setFilterPeriode] = useState<string>(() => periodeDepuisUrl(searchParams.get('jours')));
   const [search, setSearch] = useState<string>('');
   const [page, setPage] = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(() => typeof window === 'undefined' || !window.matchMedia('(max-width: 700px)').matches);
@@ -167,6 +157,9 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
     const requestedTab = searchParams.get('tab');
     setActiveTab(tabsValides.includes(requestedTab as FeedbackTab) ? (requestedTab as FeedbackTab) : 'tous');
     setFilterTheme(searchParams.get('theme') || 'all');
+    setFilterPeriode(periodeDepuisUrl(searchParams.get('jours')));
+    const agenceUrl = identifiantDepuisUrl(searchParams.get('agence'));
+    if (isCXOrAdmin && !agenceId && agenceUrl) setSelectedAgenceId(agenceUrl);
     setPage(0);
   }, [searchParams]);
 
@@ -175,10 +168,12 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
     async function loadData() {
       setLoading(true);
       setLoadError(false);
+      setThemeCatalogError(false);
       try {
         try {
           const agenceFiltre = agenceId || (selectedAgenceId !== 'all' ? selectedAgenceId : undefined);
-          const fRes = await feedbacksApi.list({ limit: FETCH_LIMIT, offset: 0, ...(agenceFiltre ? { agence_id: agenceFiltre } : {}) });
+          const debut = dateDebutPeriode(filterPeriode);
+          const fRes = await feedbacksApi.list({ limit: FETCH_LIMIT, offset: 0, ...(agenceFiltre ? { agence_id: agenceFiltre } : {}), ...(debut ? { date_debut: debut.toISOString() } : {}), ...(filterTheme !== 'all' ? { theme: filterTheme } : {}) });
           if (!cancelled) {
             setFeedbacks(fRes?.data || []);
             const totalHeader = Number(fRes?.headers?.['x-total-count']);
@@ -190,6 +185,17 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
             setFeedbacks([]);
             setFeedbackTotal(0);
             setLoadError(true);
+          }
+        }
+        try {
+          const agenceFiltre = agenceId || (selectedAgenceId !== 'all' ? selectedAgenceId : undefined);
+          const tRes = await feedbacksApi.themes(agenceFiltre ? { agence_id: agenceFiltre } : undefined);
+          if (!cancelled) setThemesDisponibles((tRes?.data || []) as string[]);
+        } catch (err) {
+          console.error('Erreur chargement des thèmes:', err);
+          if (!cancelled) {
+            setThemesDisponibles([]);
+            setThemeCatalogError(true);
           }
         }
         if (showAgenceSelector) {
@@ -207,15 +213,31 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
     }
     loadData();
     return () => { cancelled = true; };
-  }, [showAgenceSelector, agenceId, selectedAgenceId, reloadToken]);
+  }, [showAgenceSelector, agenceId, selectedAgenceId, filterPeriode, filterTheme, reloadToken]);
+
+  // Avis ciblé (?avis=<id>) : ouvert une seule fois par identifiant, d'abord depuis la liste chargée, sinon directement
+  // auprès du serveur (qui impose le rôle et le périmètre). Identifiant invalide ou hors périmètre : message, jamais d'erreur bloquante.
+  const avisCible = identifiantDepuisUrl(searchParams.get('avis'));
+  const avisOuvert = useRef<string | null>(null);
+  useEffect(() => {
+    if (!avisCible || loading || avisOuvert.current === avisCible) return;
+    avisOuvert.current = avisCible;
+    const dansListe = feedbacks.find((f) => f.id === avisCible);
+    if (dansListe) { setSelectedFeedbackForTreatment(dansListe); return; }
+    feedbacksApi.get(avisCible)
+      .then((r) => setSelectedFeedbackForTreatment(r.data as Feedback))
+      .catch(() => showToast('Avis introuvable ou hors de votre périmètre'));
+  }, [avisCible, loading, feedbacks]);
 
   const loadMoreFeedbacks = async () => {
     if (loadingMore || feedbacks.length >= feedbackTotal) return;
     setLoadingMore(true);
     try {
       const agenceFiltre = agenceId || (selectedAgenceId !== 'all' ? selectedAgenceId : undefined);
-      const response = await feedbacksApi.list({ limit: FETCH_LIMIT, offset: feedbacks.length, ...(agenceFiltre ? { agence_id: agenceFiltre } : {}) });
-      setFeedbacks((current) => [...current, ...(response?.data || [])]);
+      const debut = dateDebutPeriode(filterPeriode);
+      const response = await feedbacksApi.list({ limit: FETCH_LIMIT, offset: feedbacks.length, ...(agenceFiltre ? { agence_id: agenceFiltre } : {}), ...(debut ? { date_debut: debut.toISOString() } : {}), ...(filterTheme !== 'all' ? { theme: filterTheme } : {}) });
+      // Un avis arrivé entre-temps décale les positions : on écarte les doublons.
+      setFeedbacks((current) => { const connus = new Set(current.map((f) => f.id)); return [...current, ...((response?.data || []) as Feedback[]).filter((f) => !connus.has(f.id))]; });
     } catch (err) {
       console.error('Erreur chargement des feedbacks suivants:', err);
       showToast('Impossible de charger les avis suivants');
@@ -279,16 +301,6 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
 
   // Thèmes réellement présents dans les feedbacks : catégories libres définies par le
   // CX Manager par agence (plus les anciennes clés IA à 15 thèmes pour les feedbacks legacy).
-  const themesDisponibles = useMemo(() => {
-    const set = new Set<string>();
-    feedbacks.forEach((f) => {
-      if (f.analyse_ia?.theme_principal) set.add(f.analyse_ia.theme_principal);
-      else set.add('non_categorise');
-    });
-    if (filterTheme !== 'all') set.add(filterTheme);
-    return Array.from(set).sort((a, b) => themeLabel(a).localeCompare(themeLabel(b)));
-  }, [feedbacks, filterTheme]);
-
   // Agrégation dynamique par catégorie/thème (plus de liste figée à 15 entrées)
   const themesAggregated = useMemo(() => {
     const map: Record<string, { theme: string; label: string; count: number; positifs: number; negatifs: number; neutres: number; criticites: Record<string, number>; agences: Set<string>; verbatims: string[] }> = {};
@@ -335,7 +347,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
     activeFilters.push({ key: 'theme', label: `Thème : ${filterTheme === 'non_categorise' ? 'Non catégorisé' : themeLabel(filterTheme)}`, clear: () => setFilterTheme('all') });
   }
   if (filterPeriode !== 'all') {
-    const labels: Record<string, string> = { today: "Aujourd'hui", '7': '7 derniers jours', '30': '30 derniers jours' };
+    const labels: Record<string, string> = { today: "Aujourd'hui", '7': '7 derniers jours', '30': '30 derniers jours', '90': '90 derniers jours', '365': '12 derniers mois' };
     activeFilters.push({ key: 'periode', label: `Période : ${labels[filterPeriode] || filterPeriode}`, clear: () => setFilterPeriode('all') });
   }
   if (filterNote !== 'all') activeFilters.push({ key: 'note', label: `Note : ${filterNote}/5`, clear: () => setFilterNote('all') });
@@ -414,7 +426,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
       </div>
       {!loading && !loadError && (
         <p role="status" style={{ margin: '-12px 0 0', fontSize: '0.76rem', color: 'var(--color-text-muted)' }}>
-          Les compteurs « À traiter » et « À surveiller » (gravité élevée ou critique, ton négatif ou avis contradictoire) portent sur {feedbacks.length} avis chargés sur {feedbackTotal} au total{feedbacks.length < feedbackTotal ? ' (* couverture partielle)' : ''}. Recherche et filtres s’appliquent à ces éléments chargés.
+          « À traiter » : avis non résolus ou avec une demande de rappel en attente. « À surveiller » : avis avec au moins un signal (note de 2 ou moins, ton négatif, gravité élevée ou critique, ou avis contradictoire), chacun compté une seule fois. Ces compteurs portent sur {feedbacks.length} avis chargés sur {feedbackTotal} au total{feedbacks.length < feedbackTotal ? ' (* couverture partielle)' : ''}. Recherche et filtres s’appliquent à ces éléments chargés.
         </p>
       )}
 
@@ -452,7 +464,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
               <div className="feedbacks-filter-controls">
               <label className="feedbacks-select-label">Période
                 <select value={filterPeriode} onChange={(e) => setFilterPeriode(e.target.value)} aria-label="Filtrer par période">
-                  <option value="all">Toutes les dates</option><option value="today">Aujourd'hui</option><option value="7">7 derniers jours</option><option value="30">30 derniers jours</option>
+                  <option value="all">Toutes les dates</option><option value="today">Aujourd'hui</option><option value="7">7 derniers jours</option><option value="30">30 derniers jours</option><option value="90">90 derniers jours</option><option value="365">12 derniers mois</option>
                 </select>
               </label>
               <label className="feedbacks-select-label">Note
@@ -479,13 +491,36 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                 aria-label="Filtrer par thème"
               >
                 <option value="all">Tous thèmes</option>
+                {filterTheme !== 'all' && !themesDisponibles.includes(filterTheme) && (
+                  <option value={filterTheme}>{filterTheme === 'non_categorise' ? 'Non catégorisé' : themeLabel(filterTheme)}</option>
+                )}
                 {themesDisponibles.map((t) => (
                   <option key={t} value={t}>{t === 'non_categorise' ? 'Non catégorisé' : themeLabel(t)}</option>
                 ))}
               </select>
               </div>
+              {themeCatalogError && (
+                <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '8px', color: 'var(--color-text-body)', fontSize: '0.82rem' }}>
+                  <span>Impossible de charger la liste complète des thèmes.</span>
+                  <button type="button" className="btn-secondary" disabled={loading} onClick={() => setReloadToken((token) => token + 1)}>
+                    Réessayer
+                  </button>
+                </div>
+              )}
             </details>
           </div>
+
+          {/* Filtres et recherche s'appliquent aux avis chargés : un résultat partiel ne doit pas passer pour exhaustif. */}
+          {!loading && !loadError && tabFeedbacks.length > 0 && feedbacks.length < feedbackTotal && (activeFilters.length > 0 || search.trim() !== '' || activeTab !== 'tous') && (
+            <div role="status" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                Résultats partiels : {tabFeedbacks.length} avis trouvé{tabFeedbacks.length > 1 ? 's' : ''} parmi les {feedbacks.length} chargés ({feedbackTotal - feedbacks.length} autres avis ne sont pas encore chargés et peuvent correspondre).
+              </span>
+              <button type="button" onClick={loadMoreFeedbacks} disabled={loadingMore} className="btn-secondary">
+                {loadingMore ? 'Chargement…' : 'Charger plus d’avis'}
+              </button>
+            </div>
+          )}
 
           {/* Récapitulatif des filtres actifs */}
           {activeFilters.length > 0 && (
@@ -792,6 +827,17 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
               )}
             </nav>
           )}
+          {/* Zéro résultat sur les avis chargés alors que d'autres existent côté serveur : on ne bloque pas l'utilisateur. */}
+          {!loading && !loadError && tabFeedbacks.length === 0 && feedbacks.length < feedbackTotal && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                {feedbackTotal - feedbacks.length} avis ne sont pas encore chargés : ils peuvent correspondre à ces critères.
+              </span>
+              <button type="button" onClick={loadMoreFeedbacks} disabled={loadingMore} className="btn-secondary">
+                {loadingMore ? 'Chargement…' : 'Charger plus d’avis'}
+              </button>
+            </div>
+          )}
         </section>
       )}
 
@@ -850,7 +896,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                   <span style={{ background: '#EBF6ED', color: '#3C7730', padding: '2px 6px', borderRadius: '6px', fontSize: '0.70rem', fontWeight: 700 }}>
                     {thm.positifs} positifs
                   </span>
-                  <span style={{ background: '#FEE2E2', color: '#DC2626', padding: '2px 6px', borderRadius: '6px', fontSize: '0.70rem', fontWeight: 700 }}>
+                  <span style={{ background: '#FEE2E2', color: '#B91C1C', padding: '2px 6px', borderRadius: '6px', fontSize: '0.70rem', fontWeight: 700 }}>
                     {thm.negatifs} négatifs
                   </span>
                   <span style={{ color: '#64748B', fontSize: '0.70rem', marginLeft: 'auto', alignSelf: 'center' }}>

@@ -28,6 +28,7 @@ from app.models.suggestion import Suggestion
 from app.models.enums import UserRole, SentimentType, IdeaStatus
 from app.utils.stats import wilson_lower_bound
 from app.services.secteurs import libelle_secteur
+from app.services.dashboard_helpers import compter_negatifs, est_negatif, est_pris_en_charge, repartition_cycle
 from app.services.dashboard_helpers import (
     _calc_kpi_trend,
     _cle_semaine_iso,
@@ -96,7 +97,7 @@ def dashboard_agence(
         if feedback.statut_traitement != "resolu"
         or (feedback.demande_contact is not None and not feedback.demande_contact.traitee)
     )
-    feedbacks_pris_en_charge = sum(1 for feedback in feedbacks if feedback.statut_traitement != "nouveau")
+    feedbacks_pris_en_charge = sum(1 for feedback in feedbacks if est_pris_en_charge(feedback))
     taux_prise_en_charge = round(feedbacks_pris_en_charge / total * 100, 1) if total else None
     actions_ouvertes = sum(
         1 for feedback in feedbacks if feedback.action_a_prendre and not feedback.action_realisee
@@ -107,6 +108,8 @@ def dashboard_agence(
     # Analyses IA
     analyses_ids = [f.id for f in feedbacks]
     analyses = db.query(AnalyseIA).filter(AnalyseIA.feedback_id.in_(analyses_ids)).all()
+
+    cycle = repartition_cycle(feedbacks, {a.feedback_id for a in analyses})
 
     sentiments_count = {"positif": 0, "neutre": 0, "negatif": 0}
     for analyse in analyses:
@@ -125,7 +128,8 @@ def dashboard_agence(
         if total_analyses
     ]
 
-    negatifs = sum(1 for a in analyses if a.sentiment == SentimentType.NEGATIF)
+    # Avis négatifs : note faible OU sentiment négatif, chaque avis une seule fois (dashboard_helpers.est_negatif).
+    negatifs = compter_negatifs(feedbacks, {a.feedback_id: a for a in analyses})
     from app.models.enums import CriticiteType
     critiques = sum(1 for a in analyses if a.criticite == CriticiteType.CRITIQUE)
     discordances = sum(1 for a in analyses if a.discordance_detectee)
@@ -159,6 +163,10 @@ def dashboard_agence(
         nombre_suggestions=nb_suggestions,
         feedbacks_a_traiter=feedbacks_a_traiter,
         taux_prise_en_charge=taux_prise_en_charge,
+        feedbacks_nouveaux=cycle["nouveaux"],
+        feedbacks_pris_en_charge=cycle["pris_en_charge"],
+        feedbacks_resolus=cycle["resolus"],
+        feedbacks_analyses_ia=cycle["analyses_ia"],
         actions_ouvertes=actions_ouvertes,
         tendances=tendances,
         themes=themes,
@@ -204,10 +212,11 @@ def dashboard_siege(
         db.query(AnalyseIA).filter(AnalyseIA.feedback_id.in_(feedback_ids)).all()
         if feedback_ids else []
     )
+    analyses_par_feedback = {a.feedback_id: a for a in all_analyses}
     negative_count_by_agence: dict[UUID, int] = {}
-    for analyse in all_analyses:
-        if analyse.sentiment == SentimentType.NEGATIF:
-            agence_id = feedback_agence.get(analyse.feedback_id)
+    for feedback in all_feedbacks:
+        if est_negatif(feedback, analyses_par_feedback.get(feedback.id)):
+            agence_id = feedback_agence.get(feedback.id)
             if agence_id:
                 negative_count_by_agence[agence_id] = negative_count_by_agence.get(agence_id, 0) + 1
 

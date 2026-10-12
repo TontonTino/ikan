@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import { ROLE_HOME, ROUTE_ROLES } from './navigation';
+import { ROUTE_ROLES, redirectionRole } from './navigation';
 
 /**
  * Garde de route par rôle, alimentée par ROUTE_ROLES (navigation.tsx).
@@ -11,6 +11,7 @@ import { ROLE_HOME, ROUTE_ROLES } from './navigation';
 export default function RoleRoute({ pattern, children }: { pattern: keyof typeof ROUTE_ROLES; children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
   if (!user) return <Navigate to="/login" replace />;
-  if (!ROUTE_ROLES[pattern]?.includes(user.role)) return <Navigate to={ROLE_HOME[user.role]} replace />;
+  const destination = redirectionRole(user.role, pattern);
+  if (destination) return <Navigate to={destination} replace />;
   return <>{children}</>;
 }

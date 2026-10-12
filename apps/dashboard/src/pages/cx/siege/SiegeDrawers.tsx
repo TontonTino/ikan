@@ -22,6 +22,7 @@ import {
   type StatutSeuil,
 } from './siegeData';
 import { fetchActionsTotaux, fetchIssuesOuvertes, type ActionsTotaux, type IssuesOuvertes } from './useSiegeData';
+import { lienAvisReseau } from '../../../utils/liensAgence';
 import { AskYam, BlockLink, YAM_PERIODE, type KpiKind } from './SiegeBlocks';
 
 const STATUT_TONE: Record<StatutSeuil, 'success' | 'critical' | 'neutral' | 'outline'> = {
@@ -139,7 +140,7 @@ export function KpiDetail({
         {kind === 'satisfaction' ? (
           <Button variant="secondary" onClick={() => navigate('/statistiques')}>Analyse détaillée</Button>
         ) : (
-          <Button variant="secondary" onClick={() => navigate('/feedbacks')}>Voir les avis</Button>
+          <Button variant="secondary" onClick={() => navigate(lienAvisReseau({ jours, onglet: kind === 'critiques' ? 'critiques' : undefined }))}>Voir les avis</Button>
         )}
       </div>
     </>

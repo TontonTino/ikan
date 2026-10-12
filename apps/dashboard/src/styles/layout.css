@@ -140,9 +140,11 @@
     height: 100dvh;
     border-radius: 0;
     transform: translateX(-100%);
-    transition: transform var(--duration-slow) var(--ease-enter);
+    /* Fermé : retiré de l'ordre de tabulation et des lecteurs d'écran (sinon Tab atterrit hors écran). */
+    visibility: hidden;
+    transition: transform var(--duration-slow) var(--ease-enter), visibility 0s linear var(--duration-slow);
   }
-  .dashboard-sidebar--open { transform: translateX(0); }
+  .dashboard-sidebar--open { transform: translateX(0); visibility: visible; transition-delay: 0s; }
 
   .dashboard-sidebar-overlay.is-open {
     display: block;

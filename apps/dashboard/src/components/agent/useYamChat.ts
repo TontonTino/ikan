@@ -7,7 +7,13 @@ export interface YamMessage {
   text: string;
   /** Pour un message d'erreur : la question à renvoyer via « Réessayer ». */
   retryQuestion?: string;
+  /** Intention reconnue par l'agent pour une réponse (ex. « autre » = question non comprise). */
+  intention?: string;
 }
+
+/** L'agent a répondu sans texte exploitable : on ne montre jamais une bulle vide. */
+export const MESSAGE_REPONSE_VIDE =
+  'YAM n’a pas pu formuler de réponse à cette question. Réessayez ou reformulez-la.';
 
 export const MAX_QUESTION_LENGTH = 1000;
 
@@ -47,7 +53,11 @@ export function useYamChat() {
         const answer = await agentApi.ask(question, conversationId.current);
         if (gen !== generation.current) return;
         conversationId.current = answer.conversation_id;
-        push({ role: 'assistant', text: answer.reponse });
+        if (typeof answer.reponse !== 'string' || !answer.reponse.trim()) {
+          push({ role: 'error', text: MESSAGE_REPONSE_VIDE, retryQuestion: question });
+          return;
+        }
+        push({ role: 'assistant', text: answer.reponse, intention: answer.intention });
       } catch (err) {
         if (gen !== generation.current) return;
         push({

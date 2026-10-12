@@ -2,7 +2,7 @@
 Endpoints Suggestions/Idées — gestion du statut (BF-11).
 """
 from uuid import UUID
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session, joinedload
@@ -36,6 +36,7 @@ def list_suggestions(
     response: Response,
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+    agence_id: Optional[UUID] = Query(None, description="Restreint à une agence. Ne s'ajoute qu'au périmètre du rôle : jamais une autorisation."),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ):
@@ -63,6 +64,10 @@ def list_suggestions(
             .join(Agence, QRCode.agence_id == Agence.id)
             .filter(Agence.organisation_id == current_user.organisation_id)
         )
+
+    # Le filtre agence s'ajoute (ET) au périmètre du rôle : une agence étrangère donne une liste vide.
+    if agence_id is not None:
+        query = query.filter(QRCode.agence_id == agence_id)
 
     response.headers["X-Total-Count"] = str(query.order_by(None).count())
     return query.order_by(Suggestion.date_soumission.desc()).offset(offset).limit(limit).all()

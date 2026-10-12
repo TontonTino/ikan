@@ -12,30 +12,38 @@ const SSR_API_URL = import.meta.env.PUBLIC_API_URL || DEFAULT_API_URL;
 let agenceInfo: { agence_nom?: string; code?: string; actif?: boolean } | null = null;
 let erreur: string | null = null;
 
-try {
-  const cleanCode = (code || '').trim();
-  const res = await fetch(`${SSR_API_URL}/qr-codes/${encodeURIComponent(cleanCode)}/validate`, {
-    signal: AbortSignal.timeout(2000),
-  });
-  if (res.ok) {
-    agenceInfo = await res.json();
+const cleanCode = (code || '').trim();
+if (!cleanCode) {
+  erreur = "Aucun code QR n'a été détecté dans ce lien.";
+} else {
+  try {
+    const res = await fetch(`${SSR_API_URL}/qr-codes/${encodeURIComponent(cleanCode)}/validate`, {
+      signal: AbortSignal.timeout(2000),
+    });
+    if (res.ok) {
+      agenceInfo = await res.json();
+    } else if (res.status === 404) {
+      erreur = "Ce QR code n'est pas reconnu ou n'est plus actif.";
+    }
+  } catch (e) {
+    // Service lent ou injoignable : le navigateur revalide (états « chargement » / « indisponible »).
   }
-} catch (e) {
-  // L'hydratation côté client prendra le relais
 }
+if (erreur) Astro.response.status = 404;
 ---
 
 <FeedbackLayout
   title={agenceInfo?.agence_nom ? `Votre avis — ${agenceInfo.agence_nom}` : 'IKAN AI — Votre avis en agence'}
   agenceNom={agenceInfo?.agence_nom}
 >
-  <div class="page-outer" data-api-url={SSR_API_URL}>
+  <div class="page-outer" data-api-url={SSR_API_URL} data-qr-valide={agenceInfo ? '1' : '0'}>
     <div class="card-shell">
       {erreur ? (
         <div class="error-screen">
           <div class="error-icon">⚠️</div>
           <h2>QR Code non reconnu</h2>
           <p>{erreur}</p>
+          <p>Scannez de nouveau le QR code affiché en agence, ou signalez-le à un conseiller.</p>
         </div>
       ) : (
         <>
@@ -46,7 +54,7 @@ try {
             <div class="hero-top">
               <div class="hero-logo-box">
                 <img
-                  src="/ikan-ai-logo.png"
+                  src="/ikanai-logo-horizontal.png"
                   alt="IKAN AI"
                   class="hero-brand-logo"
                   loading="eager"
@@ -67,6 +75,18 @@ try {
           <!-- ================= FORMULAIRE PRINCIPAL ================= -->
           <main class="form-flow">
 
+            <!-- États de la page : vérification du QR code, QR invalide ou service indisponible -->
+            <section id="screen-chargement" class="screen-view state-view" style="display:none;" role="status" aria-live="polite">
+              <div class="state-spinner" aria-hidden="true"></div>
+              <p class="state-text">Vérification du QR code…</p>
+            </section>
+            <section id="screen-erreur" class="screen-view state-view" style="display:none;" role="alert">
+              <div class="error-icon" aria-hidden="true">⚠️</div>
+              <h2 id="erreurTitre" class="state-title"></h2>
+              <p id="erreurMessage" class="state-text"></p>
+              <button type="button" class="btn-secondary" id="btnReessayerQr" hidden>Réessayer</button>
+            </section>
+
             <!-- ÉCRAN 1 : FORMULAIRE -->
             <section id="screen-sentiment" class="screen-view">
 
@@ -75,14 +95,17 @@ try {
                 <div class="section-head">
                   <label class="field-label" for="categorieSelect">Quelle catégorie concerne votre avis ?</label>
                 </div>
-                <select id="categorieSelect" class="styled-select" disabled>
+                <select id="categorieSelect" class="styled-select" disabled aria-describedby="categorieError">
                   <option value="" disabled selected>Chargement des catégories...</option>
                 </select>
+                <p class="field-error" id="categorieError" role="alert" hidden></p>
+                <button type="button" class="btn-secondary" id="btnRecharger" hidden>Réessayer</button>
               </div>
 
               <!-- SECTION 1 : ÉVALUATION (5 EMOJIS) -->
               <div class="form-section sentiment-section">
-                <div class="sentiment-grid" id="sentimentsGrid" role="radiogroup" aria-label="Niveau de satisfaction">
+                <p class="field-label" id="ratingLabel">Comment s'est passée votre visite ?</p>
+                <div class="sentiment-grid" id="sentimentsGrid" role="radiogroup" aria-labelledby="ratingLabel" aria-describedby="ratingError">
                   <!-- 1. Mauvais -->
                   <button type="button" class="sentiment-tile tone-mauvais" data-sentiment="mauvais" role="radio" aria-checked="false" aria-label="Mauvais">
                     <div class="sentiment-icon">
@@ -125,7 +148,7 @@ try {
                   </button>
 
                   <!-- 4. Bien -->
-                  <button type="button" class="sentiment-tile tone-bien selected" data-sentiment="bien" role="radio" aria-checked="true" aria-label="Bien">
+                  <button type="button" class="sentiment-tile tone-bien" data-sentiment="bien" role="radio" aria-checked="false" aria-label="Bien">
                     <div class="sentiment-icon">
                       <svg viewBox="0 0 40 40" width="38" height="38" fill="none">
                         <circle cx="20" cy="20" r="18" fill="#4CAF50"/>
@@ -152,18 +175,19 @@ try {
                     <span class="tile-label">Excellente</span>
                   </button>
                 </div>
+                <p class="field-error" id="ratingError" role="alert" hidden></p>
 
               </div>
 
               <!-- SECTION 3 : COMMENTAIRE & DICTÉE VOCALE -->
               <div class="form-section comment-section">
+                <label class="field-label" for="inputCommentaire">Un commentaire ? <span class="optional">(facultatif)</span></label>
                 <div class="textarea-box">
                   <textarea
                     id="inputCommentaire"
-                    aria-label="Commentaire"
                     class="styled-textarea"
                     rows="3"
-                    maxlength="500"
+                    maxlength="1000"
                     placeholder="Partagez votre ressenti ou une remarque..."
                   ></textarea>
 
@@ -185,7 +209,7 @@ try {
                       <span class="mic-text">Parler</span>
                     </button>
 
-                    <span class="char-count" id="charCount">0 / 500</span>
+                    <span class="char-count" id="charCount">0 / 1000</span>
                   </div>
                 </div>
 
@@ -219,7 +243,7 @@ try {
                         autocomplete="tel"
                         id="contactTelInput"
                         aria-label="Numéro de téléphone pour être recontacté"
-                        placeholder="Votre numéro de téléphone"
+                        placeholder="+ indicatif et numéro"
                         class="styled-input"
                         aria-describedby="contactTelError"
                       />
@@ -437,7 +461,7 @@ try {
     pointer-events: none;
     z-index: 0;
     user-select: none;
-    background-image: url('/ikan-ai-logo.png');
+    background-image: url('/ikanai-logo-horizontal.png');
     background-size: 1000px auto;
     background-position: left center;
     background-repeat: no-repeat;
@@ -1021,14 +1045,14 @@ try {
     color: #DC2626;
   }
 
-  .voice-wave {
+  :global(.voice-wave) {
     display: inline-flex;
     align-items: center;
     gap: 2px;
     height: 12px;
   }
 
-  .voice-wave span {
+  :global(.voice-wave span) {
     width: 2.5px;
     height: 100%;
     background: #DC2626;
@@ -1036,8 +1060,8 @@ try {
     animation: voice-bar 0.7s ease-in-out infinite alternate;
   }
 
-  .voice-wave span:nth-child(2) { animation-delay: 0.2s; }
-  .voice-wave span:nth-child(3) { animation-delay: 0.4s; }
+  :global(.voice-wave span:nth-child(2)) { animation-delay: 0.2s; }
+  :global(.voice-wave span:nth-child(3)) { animation-delay: 0.4s; }
 
   @keyframes voice-bar {
     0% { height: 3px; }
@@ -1241,7 +1265,7 @@ try {
     }
   }
 
-  .btn-spinner {
+  :global(.btn-spinner) {
     width: 16px;
     height: 16px;
     border: 2px solid rgba(255, 255, 255, 0.3);
@@ -1384,7 +1408,7 @@ try {
     width: 100%;
   }
 
-  .nps-btn {
+  .nps-scale :global(.nps-btn) {
     min-width: 44px;
     min-height: 44px;
     flex: 1 1 44px;
@@ -1402,19 +1426,19 @@ try {
     transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
   }
 
-  .nps-btn:hover,
-  .nps-btn:focus-visible {
+  .nps-scale :global(.nps-btn):hover,
+  .nps-scale :global(.nps-btn):focus-visible {
     background: #3C7730;
     color: #FFFFFF;
     outline: 2px solid #3C7730;
     outline-offset: 2px;
   }
 
-  .nps-btn:active {
+  .nps-scale :global(.nps-btn):active {
     transform: scale(0.94);
   }
 
-  .nps-btn:disabled {
+  .nps-scale :global(.nps-btn):disabled {
     opacity: 0.5;
     cursor: default;
     transform: none;
@@ -1519,43 +1543,145 @@ try {
       padding: 8px 2px;
     }
   }
+
+  /* =========================================================
+     Accessibilité : contraste ≥ 4,5:1 et zones tactiles ≥ 44 px
+     ========================================================= */
+  /* Le dégradé partait d'un vert clair (2,4:1 sous du texte blanc) : il reste dans la charte, en plus foncé. */
+  .hero,
+  .btn-submit {
+    background: linear-gradient(90deg, #2F6A2B 0%, #2A6428 50%, #1F5A25 100%);
+  }
+  .optional,
+  .char-count {
+    color: #64748B;
+  }
+  .styled-textarea::placeholder,
+  .styled-input::placeholder {
+    color: #64748B;
+  }
+  .segment {
+    min-height: 44px;
+    padding: 0;
+    color: #475569;
+  }
+  .mic-btn {
+    min-height: 44px;
+    padding: 0 16px;
+  }
+  .styled-input,
+  .styled-select {
+    min-height: 44px;
+  }
+  /* Libellés des niveaux sélectionnés : variantes plus foncées (≥ 4,5:1 sur le fond de la tuile). */
+  .sentiment-tile.selected.tone-mauvais .tile-label { color: #B91C1C; }
+  .sentiment-tile.selected.tone-passable .tile-label { color: #C2410C; }
+  .sentiment-tile.selected.tone-bien .tile-label { color: #15803D; }
+  .btn-secondary {
+    min-height: 44px;
+  }
+  /* Focus clavier visible sur tous les contrôles du formulaire */
+  .sentiment-tile:focus-visible,
+  .segment:focus-visible,
+  .mic-btn:focus-visible,
+  .btn-submit:focus-visible,
+  .btn-secondary:focus-visible,
+  .styled-select:focus-visible,
+  .styled-textarea:focus-visible,
+  .styled-input:focus-visible {
+    outline: 3px solid #1F5A25;
+    outline-offset: 2px;
+  }
+  /* L'attribut hidden doit l'emporter sur display:inline-flex des boutons (le bouton « Réessayer » restait visible). */
+  .btn-secondary[hidden] {
+    display: none;
+  }
+
+  /* États de la page (chargement, QR invalide, service indisponible) */
+  .state-view {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .state-spinner {
+    width: 38px;
+    height: 38px;
+    border: 3px solid #E2E8F0;
+    border-top-color: #3C7730;
+    border-radius: 50%;
+    animation: etat-spin 0.8s linear infinite;
+  }
+  @keyframes etat-spin { to { transform: rotate(360deg); } }
+  .state-title { font-size: 1.1rem; font-weight: 700; color: #02302D; }
+  .state-text { font-size: 0.92rem; line-height: 1.5; color: #475569; max-width: 32ch; }
+  @media (prefers-reduced-motion: reduce) {
+    .state-spinner { animation: none; }
+  }
 </style>
 
 <script>
   import { normaliserTelephone, MESSAGE_TELEPHONE_INVALIDE } from '../../utils/telephone';
+  import {
+    DELAI_ENVOI_MS,
+    DELAI_VALIDATION_MS,
+    MAX_COMMENTAIRE,
+    NIVEAUX,
+    causeEchecHttp,
+    construirePayload,
+    etatQrDepuisStatut,
+    extraireCodeQr,
+    messageEchecEnvoi,
+    nouvelleCleEnvoi,
+    verifierSaisie,
+  } from '../../utils/parcours';
 
   // Navigation & Paramètres
   const DEFAULT_API_URL = 'https://ikan-772d.onrender.com/api/v1';
   const pageOuter = document.querySelector('.page-outer') as HTMLElement | null;
-  let API_URL = pageOuter?.dataset.apiUrl || DEFAULT_API_URL;
+  const API_URL = pageOuter?.dataset.apiUrl || DEFAULT_API_URL;
+  const qrDejaValideParServeur = pageOuter?.dataset.qrValide === '1';
 
-  // Requête API résiliente avec bascule automatique vers Render en cas d'échec local
-  async function fetchAPI(endpoint: string, options: RequestInit = {}) {
+  // Requête API avec délai maximal. AUCUN repli vers un autre serveur : un avis ne part que vers l'API configurée
+  // (avant : bascule silencieuse vers l'API de production, y compris pour un POST).
+  async function fetchAPI(endpoint: string, options: RequestInit = {}, delaiMs: number = DELAI_VALIDATION_MS) {
+    const controleur = new AbortController();
+    const minuteur = window.setTimeout(() => controleur.abort(), delaiMs);
     try {
-      const res = await fetch(`${API_URL}${endpoint}`, options);
-      return res;
-    } catch (err) {
-      if (API_URL !== DEFAULT_API_URL) {
-        console.warn(`API locale injoignable, bascule vers ${DEFAULT_API_URL}`);
-        API_URL = DEFAULT_API_URL;
-        return await fetch(`${DEFAULT_API_URL}${endpoint}`, options);
-      }
-      throw err;
+      return await fetch(`${API_URL}${endpoint}`, { ...options, signal: controleur.signal });
+    } finally {
+      window.clearTimeout(minuteur);
     }
   }
 
-  const pathParts = window.location.pathname.split('/').filter(Boolean);
-  const urlParams = new URLSearchParams(window.location.search);
-  let QR_CODE = urlParams.get('qr') || urlParams.get('code') || '';
+  // Code du QR : aucun repli sur une agence par défaut (voir extraireCodeQr).
+  const QR_CODE = extraireCodeQr(window.location.pathname, window.location.search) || '';
 
-  if (!QR_CODE && pathParts.length >= 2 && pathParts[0] === 'feedback') {
-    QR_CODE = decodeURIComponent(pathParts[1]);
-  } else if (!QR_CODE && pathParts.length === 1 && pathParts[0] !== 'feedback') {
-    QR_CODE = decodeURIComponent(pathParts[0]);
+  // ================= ÉCRANS : formulaire / chargement / erreur / succès =================
+  type NomEcran = 'formulaire' | 'chargement' | 'erreur' | 'succes';
+  function montrerEcran(nom: NomEcran) {
+    const ecrans: Record<NomEcran, string> = {
+      formulaire: 'screen-sentiment',
+      chargement: 'screen-chargement',
+      erreur: 'screen-erreur',
+      succes: 'screen-success',
+    };
+    (Object.keys(ecrans) as NomEcran[]).forEach((cle) => {
+      const el = document.getElementById(ecrans[cle]);
+      if (el) el.style.display = cle === nom ? 'flex' : 'none';
+    });
   }
 
-  if (!QR_CODE) {
-    QR_CODE = 'QR-ORANGE-TUNIS-01';
+  function afficherEcranErreur(titre: string, message: string, peutReessayer: boolean) {
+    const t = document.getElementById('erreurTitre');
+    const m = document.getElementById('erreurMessage');
+    const b = document.getElementById('btnReessayerQr') as HTMLButtonElement | null;
+    if (t) t.textContent = titre;
+    if (m) m.textContent = message;
+    if (b) b.hidden = !peutReessayer;
+    montrerEcran('erreur');
   }
 
   // ================= THÈMES SECTORIELS PAR ENTREPRISE CIBLE =================
@@ -1653,24 +1779,52 @@ try {
     });
   }
 
+  const categorieErrorEl = document.getElementById('categorieError');
+  const btnRecharger = document.getElementById('btnRecharger') as HTMLButtonElement | null;
+
+  function afficherErreurCategorie(message: string | null) {
+    if (categorieErrorEl) {
+      categorieErrorEl.textContent = message || '';
+      categorieErrorEl.hidden = !message;
+    }
+    if (btnRecharger) btnRecharger.hidden = !message || !message.startsWith('Impossible');
+  }
+
   categorieSelect?.addEventListener('change', () => {
     selectedCategorieId = categorieSelect.value || null;
+    afficherErreurCategorie(null);
   });
 
   async function loadCategories() {
     if (!categorieSelect) return;
+    afficherErreurCategorie(null);
+    categorieSelect.disabled = true;
+    categorieSelect.innerHTML = '<option value="" disabled selected>Chargement des catégories...</option>';
     try {
       const res = await fetchAPI(`/qr-codes/${encodeURIComponent(QR_CODE)}/categories`);
-      if (res.ok) {
-        categoriesDisponibles = await res.json();
-        renderCategorieOptions();
-      } else {
-        categorieSelect.innerHTML = '<option value="" disabled selected>Impossible de charger les catégories. Réessayez plus tard.</option>';
+      if (res.status === 404) {
+        afficherEcranErreur(
+          'QR Code non reconnu',
+          "Ce QR code n'est pas reconnu ou n'est plus actif. Scannez de nouveau le QR code affiché en agence, ou signalez-le à un conseiller.",
+          false,
+        );
+        return;
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      categoriesDisponibles = await res.json();
+      // Une seule catégorie : inutile de demander au client de la choisir.
+      if (categoriesDisponibles.length === 1) selectedCategorieId = categoriesDisponibles[0].id;
+      renderCategorieOptions();
+      if (categoriesDisponibles.length === 0) {
+        afficherErreurCategorie("Impossible de charger les catégories de cette agence. Appuyez sur Réessayer.");
       }
     } catch (e) {
-      categorieSelect.innerHTML = '<option value="" disabled selected>Impossible de charger les catégories. Réessayez plus tard.</option>';
+      categorieSelect.innerHTML = '<option value="" disabled selected>Catégories indisponibles</option>';
+      afficherErreurCategorie('Impossible de charger les catégories. Vérifiez votre connexion puis appuyez sur Réessayer.');
     }
   }
+
+  btnRecharger?.addEventListener('click', () => { void loadCategories(); });
 
   function detectSectorFromText(text: string): SectorType {
     const t = text.toLowerCase();
@@ -1689,8 +1843,8 @@ try {
   // Nom de l'agence courante, réutilisé par la question NPS après l'envoi.
   let agenceNomCourant = 'cette agence';
 
-  // Hydratation / Validation QR Code côté client
-  async function hydrateAgency() {
+  // Validation du QR Code côté navigateur (le serveur a déjà tenté une validation rapide au rendu de la page)
+  async function validerQr() {
     try {
       const res = await fetchAPI(`/qr-codes/${encodeURIComponent(QR_CODE)}/validate`);
       if (res.ok) {
@@ -1702,15 +1856,52 @@ try {
           agencyBadge.textContent = agencyName;
         }
         document.title = `Votre avis — ${agencyName}`;
-
-        // Détection automatique du secteur
-        const detected = detectSectorFromText(`${agencyName} ${QR_CODE}`);
-        setSector(detected);
+        setSector(detectSectorFromText(`${agencyName} ${QR_CODE}`));
       }
+      return etatQrDepuisStatut(res.status);
     } catch (e) {
-      console.warn("Validation QR Code côté client non bloquante");
+      return etatQrDepuisStatut(null);
     }
   }
+
+  // Démarrage : QR absent → erreur ; QR invalide → erreur ; service injoignable → erreur récupérable ; sinon formulaire.
+  async function demarrer() {
+    if (!document.getElementById('screen-sentiment')) return; // page d'erreur déjà rendue par le serveur
+    if (!QR_CODE) {
+      afficherEcranErreur(
+        'QR Code non détecté',
+        "Aucun code QR n'a été détecté dans ce lien. Scannez le QR code affiché en agence.",
+        false,
+      );
+      return;
+    }
+    if (qrDejaValideParServeur) {
+      agenceNomCourant = document.getElementById('agencyBadgeText')?.textContent?.trim() || agenceNomCourant;
+    } else {
+      montrerEcran('chargement');
+      const etat = await validerQr();
+      if (etat === 'invalide') {
+        afficherEcranErreur(
+          'QR Code non reconnu',
+          "Ce QR code n'est pas reconnu ou n'est plus actif. Scannez de nouveau le QR code affiché en agence, ou signalez-le à un conseiller.",
+          false,
+        );
+        return;
+      }
+      if (etat === 'indisponible') {
+        afficherEcranErreur(
+          'Service momentanément indisponible',
+          'Impossible de joindre le service pour le moment. Vérifiez votre connexion puis réessayez.',
+          true,
+        );
+        return;
+      }
+    }
+    montrerEcran('formulaire');
+    await loadCategories();
+  }
+
+  document.getElementById('btnReessayerQr')?.addEventListener('click', () => { void demarrer(); });
 
   // Rendu dynamique des chips
   const themesChipsContainer = document.getElementById('themesChipsContainer');
@@ -1795,44 +1986,28 @@ try {
   });
 
   // ================= 5 NIVEAUX DE SENTIMENT =================
-  let sentimentSelectionne: string = 'bien';
+  // Aucun niveau n'est présélectionné : le client choisit sa note (voir NIVEAUX dans utils/parcours.ts).
+  let sentimentSelectionne: string | null = null;
 
-  const sentimentDataMap: Record<string, { note: number; apiSentiment: string; label: string; placeholder: string }> = {
-    mauvais: {
-      note: 1,
-      apiSentiment: 'negatif',
-      label: 'Mauvais',
-      placeholder: "Expliquez-nous ce qui n'a pas été pour que nous puissions rectifier le tir...",
-    },
-    passable: {
-      note: 2,
-      apiSentiment: 'negatif',
-      label: 'Passable',
-      placeholder: "Qu'est-ce qui aurait pu rendre votre passage meilleur aujourd'hui ?",
-    },
-    neutre: {
-      note: 3,
-      apiSentiment: 'neutre',
-      label: 'Neutre',
-      placeholder: "Partagez votre ressenti, vos remarques ou suggestions...",
-    },
-    bien: {
-      note: 4,
-      apiSentiment: 'positif',
-      label: 'Bien',
-      placeholder: "Partagez ce qui vous a plu ou vos suggestions d'amélioration...",
-    },
-    excellente: {
-      note: 5,
-      apiSentiment: 'positif',
-      label: 'Excellente',
-      placeholder: "Qu'avez-vous particulièrement apprécié ? Un collaborateur à féliciter ?",
-    },
+  const PLACEHOLDER_DEFAUT = 'Partagez votre ressenti ou une remarque...';
+  const PLACEHOLDERS: Record<string, string> = {
+    mauvais: "Expliquez-nous ce qui n'a pas été pour que nous puissions rectifier le tir...",
+    passable: "Qu'est-ce qui aurait pu rendre votre passage meilleur aujourd'hui ?",
+    neutre: 'Partagez votre ressenti, vos remarques ou suggestions...',
+    bien: "Partagez ce qui vous a plu ou vos suggestions d'amélioration...",
+    excellente: "Qu'avez-vous particulièrement apprécié ? Un collaborateur à féliciter ?",
   };
 
   const sentimentBtns = document.querySelectorAll('.sentiment-tile');
-  const selectedLabelEl = document.getElementById('selectedSentimentLabel');
   const commentInput = document.getElementById('inputCommentaire') as HTMLTextAreaElement | null;
+  const ratingErrorEl = document.getElementById('ratingError');
+
+  function afficherErreurNote(message: string | null) {
+    if (ratingErrorEl) {
+      ratingErrorEl.textContent = message || '';
+      ratingErrorEl.hidden = !message;
+    }
+  }
 
   sentimentBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1844,14 +2019,11 @@ try {
       btn.classList.add('selected');
       btn.setAttribute('aria-checked', 'true');
 
-      sentimentSelectionne = (btn as HTMLElement).dataset.sentiment || 'bien';
-      const meta = sentimentDataMap[sentimentSelectionne];
-
-      if (selectedLabelEl && meta) {
-        selectedLabelEl.textContent = meta.label;
-      }
-      if (commentInput && meta && !commentInput.value.trim()) {
-        commentInput.placeholder = meta.placeholder;
+      const choix = (btn as HTMLElement).dataset.sentiment || '';
+      sentimentSelectionne = NIVEAUX[choix] ? choix : null;
+      afficherErreurNote(null);
+      if (commentInput && sentimentSelectionne && !commentInput.value.trim()) {
+        commentInput.placeholder = PLACEHOLDERS[sentimentSelectionne] || PLACEHOLDER_DEFAUT;
       }
     });
   });
@@ -1880,7 +2052,7 @@ try {
   const charCountEl = document.getElementById('charCount');
   commentInput?.addEventListener('input', () => {
     if (charCountEl && commentInput) {
-      charCountEl.textContent = `${commentInput.value.length} / 500`;
+      charCountEl.textContent = `${commentInput.value.length} / ${MAX_COMMENTAIRE}`;
     }
   });
 
@@ -1944,14 +2116,14 @@ try {
 
         const glue = baseText ? ' ' : '';
         if (finalTranscript) {
-          baseText = `${baseText}${glue}${finalTranscript}`.trim().slice(0, 500);
+          baseText = `${baseText}${glue}${finalTranscript}`.trim().slice(0, MAX_COMMENTAIRE);
           commentInput.value = baseText;
         } else if (interimTranscript) {
-          commentInput.value = `${baseText}${glue}${interimTranscript}`.trim().slice(0, 500);
+          commentInput.value = `${baseText}${glue}${interimTranscript}`.trim().slice(0, MAX_COMMENTAIRE);
         }
 
         if (charCountEl) {
-          charCountEl.textContent = `${commentInput.value.length} / 500`;
+          charCountEl.textContent = `${commentInput.value.length} / ${MAX_COMMENTAIRE}`;
         }
       };
 
@@ -2025,92 +2197,95 @@ try {
 
   contactTelInputEl?.addEventListener('input', () => afficherErreurTelephone(null));
 
+  // Un envoi = une clé. Elle est rejouée à l'identique si le client réessaie (coupure réseau, délai dépassé) :
+  // l'API ne crée alors qu'UN feedback. Elle change seulement après un envoi confirmé.
+  let cleEnvoi = nouvelleCleEnvoi();
+  let envoiEnCours = false;
+
   btnSubmit?.addEventListener('click', async () => {
-    const commentaireTexte = commentInput?.value.trim() || '';
-    const contactTel = (document.getElementById('contactTelInput') as HTMLInputElement)?.value.trim() || null;
+    if (envoiEnCours) return; // double clic / double appui : un seul envoi à la fois
 
-    if (!selectedCategorieId) {
-      alert("Merci de sélectionner une catégorie avant d'envoyer votre avis.");
-      return;
-    }
-
-    if (wantsRecontact && !contactTel) {
-      afficherErreurTelephone("Veuillez renseigner un numéro de téléphone pour être recontacté.");
-      return;
-    }
-    if (wantsRecontact && contactTel && !normaliserTelephone(contactTel)) {
-      afficherErreurTelephone(MESSAGE_TELEPHONE_INVALIDE);
-      return;
-    }
+    afficherErreurNote(null);
+    afficherErreurCategorie(null);
     afficherErreurTelephone(null);
     afficherErreurEnvoi(null);
 
-    const libelleBoutonInitial = btnSubmit.innerHTML;
-    btnSubmit.disabled = true;
-    btnSubmit.innerHTML = '<span class="btn-spinner"></span><span>Envoi de votre avis...</span>';
-
-    const sentimentMeta = sentimentDataMap[sentimentSelectionne] || sentimentDataMap.bien;
-    const themesArray = Array.from(selectedThemes);
-
-    let finalCommentaire = commentaireTexte;
-    if (themesArray.length > 0) {
-      const themesTag = `[Thèmes : ${themesArray.join(', ')}]`;
-      finalCommentaire = finalCommentaire ? `${themesTag}\n${finalCommentaire}` : themesTag;
+    const probleme = verifierSaisie({
+      niveau: sentimentSelectionne,
+      categorieId: selectedCategorieId,
+      souhaiteEtreRappele: wantsRecontact,
+      telephone: contactTelInputEl?.value ?? '',
+    });
+    if (probleme) {
+      if (probleme.champ === 'telephone') {
+        afficherErreurTelephone(probleme.message);
+      } else if (probleme.champ === 'categorie') {
+        afficherErreurCategorie(probleme.message);
+        categorieSelect?.focus();
+      } else {
+        afficherErreurNote(probleme.message);
+        (sentimentBtns[0] as HTMLElement | undefined)?.focus();
+      }
+      return;
     }
 
-    const payload = {
-      categorie_id: selectedCategorieId,
-      sentiment: sentimentMeta.apiSentiment,
-      note: sentimentMeta.note,
-      commentaire: finalCommentaire || null,
-      suggestion: null,
-      souhaite_etre_rappele: wantsRecontact,
-      contact_nom: null,
-      contact_telephone: wantsRecontact ? contactTel : null,
-      contact_email: null,
-    };
+    envoiEnCours = true;
+    const libelleBoutonInitial = btnSubmit.innerHTML;
+    btnSubmit.disabled = true;
+    btnSubmit.setAttribute('aria-busy', 'true');
+    btnSubmit.innerHTML = '<span class="btn-spinner"></span><span>Envoi de votre avis...</span>';
 
+    const payload = construirePayload({
+      niveau: sentimentSelectionne,
+      categorieId: selectedCategorieId,
+      souhaiteEtreRappele: wantsRecontact,
+      telephone: contactTelInputEl?.value ?? '',
+      commentaire: commentInput?.value ?? '',
+      cleEnvoi,
+    });
+
+    let confirme = false;
     try {
-      const res = await fetchAPI(`/feedbacks/?qr_code=${encodeURIComponent(QR_CODE)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      const res = await fetchAPI(
+        `/feedbacks/?qr_code=${encodeURIComponent(QR_CODE)}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) },
+        DELAI_ENVOI_MS,
+      );
 
       if (res.ok) {
-        if (screenSentiment) screenSentiment.style.display = 'none';
-        if (screenSuccess) screenSuccess.style.display = 'flex';
+        // Seule une réponse 2xx confirme l'enregistrement : jamais de confirmation sur une erreur ou un délai.
+        confirme = true;
+        montrerEcran('succes');
         window.scrollTo({ top: 0, behavior: 'smooth' });
-
-        // Question NPS facultative : uniquement si l'envoi a réellement créé un feedback
-        // (jamais dans les branches d'échec/hors-ligne ci-dessous, où il n'y a rien à noter).
         const created = await res.json().catch(() => null);
         if (created?.id && created?.nps_token) {
           afficherQuestionNPS(created.id, created.nps_token);
         }
       } else {
-        // Échec : on NE montre PAS l'écran de succès (l'avis n'a pas été enregistré) et on
-        // conserve toutes les données du formulaire pour que le client puisse corriger.
         const err = await res.json().catch(() => ({}));
         const erreurTelephone = res.status === 422 && Array.isArray(err.detail) &&
           err.detail.some((d: any) => Array.isArray(d?.loc) && d.loc.includes('contact_telephone'));
         if (erreurTelephone) {
           afficherErreurTelephone(MESSAGE_TELEPHONE_INVALIDE);
         } else {
-          afficherErreurEnvoi("Votre avis n'a pas pu être envoyé. Vérifiez les informations saisies puis réessayez.");
+          afficherErreurEnvoi(messageEchecEnvoi(causeEchecHttp(res.status)));
         }
+      }
+    } catch (e: any) {
+      console.error("Erreur d'envoi feedback:", e);
+      afficherErreurEnvoi(messageEchecEnvoi(e?.name === 'AbortError' ? 'delai' : 'reseau'));
+    } finally {
+      envoiEnCours = false;
+      btnSubmit.removeAttribute('aria-busy');
+      if (confirme) {
+        cleEnvoi = nouvelleCleEnvoi(); // l'envoi suivant sera un nouvel avis
+      } else {
         btnSubmit.disabled = false;
         btnSubmit.innerHTML = libelleBoutonInitial;
       }
-    } catch (e) {
-      console.error("Erreur d'envoi feedback:", e);
-      afficherErreurEnvoi("Votre avis n'a pas pu être envoyé. Vérifiez votre connexion internet puis réessayez.");
-      btnSubmit.disabled = false;
-      btnSubmit.innerHTML = libelleBoutonInitial;
     }
   });
 
-  // ================= QUESTION NPS FACULTATIVE (après succès) =================
   function afficherQuestionNPS(feedbackId: string, token: string) {
     const block = document.getElementById('npsBlock');
     const nomSpan = document.getElementById('npsAgenceNom');
@@ -2165,35 +2340,32 @@ try {
 
   // Nouveau retour
   document.getElementById('btnNewFeedback')?.addEventListener('click', () => {
-    // Reset sentiment to 'bien'
     sentimentBtns.forEach(b => {
       b.classList.remove('selected');
       b.setAttribute('aria-checked', 'false');
-      if ((b as HTMLElement).dataset.sentiment === 'bien') {
-        b.classList.add('selected');
-        b.setAttribute('aria-checked', 'true');
-      }
     });
-    sentimentSelectionne = 'bien';
-    if (selectedLabelEl) selectedLabelEl.textContent = 'Bien';
+    sentimentSelectionne = null;
+    afficherErreurNote(null);
 
     selectedThemes.clear();
     renderThemesChips();
 
-    selectedCategorieId = null;
+    selectedCategorieId = categoriesDisponibles.length === 1 ? categoriesDisponibles[0].id : null;
     renderCategorieOptions();
 
     if (commentInput) {
       commentInput.value = '';
-      commentInput.placeholder = sentimentDataMap.bien.placeholder;
+      commentInput.placeholder = PLACEHOLDER_DEFAUT;
     }
-    if (charCountEl) charCountEl.textContent = '0 / 500';
+    if (charCountEl) charCountEl.textContent = `0 / ${MAX_COMMENTAIRE}`;
 
     recontactNo?.click();
     const tel = document.getElementById('contactTelInput') as HTMLInputElement;
     if (tel) tel.value = '';
     afficherErreurTelephone(null);
     afficherErreurEnvoi(null);
+    afficherErreurCategorie(null);
+    document.getElementById('npsBlock')!.style.display = 'none';
 
     if (btnSubmit) {
       btnSubmit.disabled = false;
@@ -2206,13 +2378,10 @@ try {
       `;
     }
 
-    if (screenSuccess) screenSuccess.style.display = 'none';
-    if (screenSentiment) screenSentiment.style.display = 'flex';
+    montrerEcran('formulaire');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
-  // Initialisation
   setSector('telecom');
-  hydrateAgency();
-  loadCategories();
+  void demarrer();
 </script>

@@ -119,16 +119,6 @@ def list_public_agences(
     return result
 
 
-@router.get("/validate-test/{code}")
-def validate_test_qr(code: str, db: Session = Depends(get_db)):
-    try:
-        from app.models.qr_code import QRCode
-        count = db.query(QRCode).count()
-        return {"code_param": code, "db_qr_count": count}
-    except Exception as e:
-        import traceback
-        return {"error": str(e), "trace": traceback.format_exc()}
-
 
 class QRCodeResponse(BaseModel):
     id: uuid.UUID
@@ -212,7 +202,7 @@ def validate_qr_code(
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Erreur validation QR code: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erreur serveur lors de la validation du QR code.")
 
 
 @router.get("/{code}/categories", response_model=List[CategoriePublicResponse])

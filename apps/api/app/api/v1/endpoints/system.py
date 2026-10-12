@@ -64,12 +64,13 @@ def get_roles_permissions(
             "nom_affichage": "Administrateur",
             "description": "Accès global et configuration complète de la plateforme.",
             "droits": [
-                "Créer, modifier et supprimer des organisations",
-                "Créer, modifier, désactiver et supprimer des agences",
-                "Créer, modifier et désactiver des comptes utilisateurs",
-                "Configurer les seuils d'alerte de satisfaction par agence",
-                "Enregistrer les paramètres généraux de la plateforme",
-                "Consulter la vue structurelle de la plateforme (organisations, agences, comptes, forfaits) — aucun accès aux données clients ni aux statistiques de satisfaction"
+                "Créer des organisations, puis modifier ou supprimer celles qu'il a créées (la suppression retire aussi leurs agences, comptes et avis clients)",
+                "Créer, modifier et suspendre les comptes CX Manager (création et modification des responsables d'agence : réservées au CX Manager)",
+                "Consulter la facturation et changer manuellement le forfait d'une organisation (changement tracé, avec motif)",
+                "Configurer le seuil d'alerte de satisfaction d'une agence (droit prévu par l'API, sans écran dédié dans l'interface actuelle)",
+                "Enregistrer les paramètres généraux de la plateforme (valeurs enregistrées, pas encore appliquées)",
+                "Consulter la vue structurelle de la plateforme (organisations, agences, comptes, forfaits) — aucun accès aux données clients ni aux statistiques de satisfaction",
+                "Ne gère pas directement les agences : création, modification, désactivation et suppression sont réservées au CX Manager"
             ]
         },
         {

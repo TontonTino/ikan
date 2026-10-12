@@ -10,7 +10,11 @@ import type {
 } from '../../types';
 import PageHeader from '../../components/ui/PageHeader';
 import EmptyState from '../../components/ui/EmptyState';
-import { AlertTriangleIcon, ClockIcon, XCloseIcon } from '../../components/common/Icons';
+import Alert from '../../components/ui/Alert';
+import Button from '../../components/ui/Button';
+import Modal from '../../components/ui/Modal';
+import { AlertTriangleIcon, ClockIcon } from '../../components/common/Icons';
+import { userFacingError } from '../../utils/userFacingError';
 
 const SOURCE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   stripe: { label: 'Stripe', color: '#3C7730', bg: '#EAF5EC' },
@@ -45,14 +49,21 @@ function ModaleChangerForfait({
   const [erreur, setErreur] = useState('');
   const [envoi, setEnvoi] = useState(false);
 
+  const planChoisi = forfaits.find((f) => f.id === planId);
+  const memePlan = !!planChoisi && planChoisi.code === org.plan?.code;
+
   const soumettre = async () => {
     setErreur('');
-    if (raison.trim().length < 10) {
-      setErreur('La raison doit contenir au moins 10 caractères.');
-      return;
-    }
     if (!planId) {
       setErreur('Choisissez un forfait.');
+      return;
+    }
+    if (memePlan) {
+      setErreur('Cette organisation a déjà ce forfait : rien ne serait modifié.');
+      return;
+    }
+    if (raison.trim().length < 10) {
+      setErreur('La raison doit contenir au moins 10 caractères.');
       return;
     }
     setEnvoi(true);
@@ -60,170 +71,156 @@ function ModaleChangerForfait({
       await organisationsApi.changerPlan(org.id, planId, raison.trim());
       onSuccess();
     } catch (err: any) {
-      setErreur(err?.response?.data?.detail || 'Impossible de changer le forfait. Réessayez.');
+      console.error('Erreur changement de forfait:', err);
+      setErreur(userFacingError(err, 'Impossible de changer le forfait. Veuillez réessayer.', undefined, {
+        404: 'Cette organisation est introuvable, ou vous n’avez pas le droit de la modifier.',
+      }));
     } finally {
       setEnvoi(false);
     }
   };
 
   return (
-    <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
-        padding: '16px', boxSizing: 'border-box',
-      }}
-      onClick={onClose}
+    <Modal
+      open
+      onClose={envoi ? () => undefined : onClose}
+      dismissOnScrim={false}
+      size="sm"
+      title="Changer le forfait"
+      subtitle={`${org.nom} — forfait actuel : ${org.plan?.nom || 'non renseigné'}`}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={envoi}>Annuler</Button>
+          <Button onClick={soumettre} loading={envoi}>
+            {planChoisi ? `Passer au forfait ${planChoisi.nom}` : 'Confirmer le changement'}
+          </Button>
+        </>
+      }
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: '440px', maxWidth: '100%', background: '#FFFFFF', borderRadius: '20px',
-          padding: '24px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
-          <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#02302D' }}>Changer le forfait</h3>
-          <button onClick={onClose} aria-label="Fermer" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}>
-            <XCloseIcon size={18} color="#94A3B8" />
-          </button>
-        </div>
-        <p style={{ margin: '4px 0 18px', fontSize: '0.84rem', color: '#64748B' }}>
-          {org.nom} — forfait actuel : <strong>{org.plan?.nom || '—'}</strong>
-        </p>
-
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <div
           style={{
             background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '10px', padding: '10px 12px',
-            fontSize: '0.78rem', color: '#92400E', marginBottom: '16px', display: 'flex', gap: '8px',
+            fontSize: '0.8rem', color: '#92400E', display: 'flex', gap: '8px', lineHeight: 1.5,
           }}
         >
           <AlertTriangleIcon size={16} color="#B45309" />
-          <span>Réservé aux cas exceptionnels (ex. partenariat négocié). Ce changement contourne Stripe et est tracé de façon permanente.</span>
+          <span>Réservé aux cas exceptionnels (ex. partenariat négocié). Ce changement contourne Stripe et est tracé de façon permanente, avec votre nom et la raison saisie.</span>
         </div>
 
-        <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B' }}>
           Nouveau forfait
+          <select value={planId} onChange={(e) => setPlanId(e.target.value)} className="saas-input" style={{ width: '100%', minHeight: 44 }}>
+            <option value="">— Choisir —</option>
+            {forfaits.map((f) => (
+              <option key={f.id} value={f.id} disabled={f.code === org.plan?.code}>
+                {f.nom}{f.code === org.plan?.code ? ' (forfait actuel)' : ''}
+              </option>
+            ))}
+          </select>
         </label>
-        <select value={planId} onChange={(e) => setPlanId(e.target.value)} className="saas-input" style={{ marginBottom: '14px', width: '100%' }}>
-          <option value="">— Choisir —</option>
-          {forfaits.map((f) => (
-            <option key={f.id} value={f.id}>{f.nom}</option>
-          ))}
-        </select>
 
-        <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>
-          Raison (obligatoire, min. 10 caractères)
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B' }}>
+          Raison (obligatoire, 10 caractères minimum)
+          <textarea
+            value={raison}
+            onChange={(e) => setRaison(e.target.value)}
+            rows={3}
+            placeholder="ex : Partenariat négocié directement avec le client, forfait Pro offert pour 6 mois."
+            className="saas-input"
+            style={{ width: '100%', resize: 'vertical', fontFamily: 'inherit' }}
+          />
         </label>
-        <textarea
-          value={raison}
-          onChange={(e) => setRaison(e.target.value)}
-          rows={3}
-          placeholder="ex : Partenariat négocié directement avec le client, forfait Pro offert pour 6 mois."
-          className="saas-input"
-          style={{ width: '100%', resize: 'vertical', fontFamily: 'inherit' }}
-        />
 
         {erreur && (
-          <div style={{ marginTop: '10px', color: '#B91C1C', fontSize: '0.8rem', fontWeight: 600 }}>{erreur}</div>
+          <div role="alert" style={{ color: '#B91C1C', fontSize: '0.82rem', fontWeight: 700 }}>{erreur}</div>
         )}
-
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
-          <button type="button" onClick={onClose} className="btn-secondary">Annuler</button>
-          <button type="button" onClick={soumettre} disabled={envoi} className="btn-primary">
-            {envoi ? 'Enregistrement…' : 'Confirmer le changement'}
-          </button>
-        </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 
 // ── Modale : historique des changements de forfait ───────────────────
 function ModaleHistorique({ org, onClose }: { org: Organisation; onClose: () => void }) {
   const [historique, setHistorique] = useState<ChangementPlanHistoriqueItem[] | null>(null);
+  const [erreur, setErreur] = useState('');
+  const [rechargement, setRechargement] = useState(0);
 
   useEffect(() => {
     let annule = false;
-    adminFacturationApi.historique(org.id).then((res) => {
-      if (!annule) setHistorique(res.data);
-    });
+    setHistorique(null);
+    setErreur('');
+    adminFacturationApi
+      .historique(org.id)
+      .then((res) => { if (!annule) setHistorique(Array.isArray(res.data) ? res.data : []); })
+      .catch((err) => {
+        console.error('Erreur chargement de l’historique de forfait:', err);
+        if (!annule) setErreur(userFacingError(err, 'Impossible de charger l’historique. Veuillez réessayer.'));
+      });
     return () => { annule = true; };
-  }, [org.id]);
+  }, [org.id, rechargement]);
 
   return (
-    <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
-        padding: '16px', boxSizing: 'border-box',
-      }}
-      onClick={onClose}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: '520px', maxWidth: '100%', maxHeight: '80vh', overflowY: 'auto', background: '#FFFFFF',
-          borderRadius: '20px', padding: '24px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-          <div>
-            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#02302D' }}>Historique du forfait</h3>
-            <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#64748B' }}>{org.nom}</p>
-          </div>
-          <button onClick={onClose} aria-label="Fermer" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}>
-            <XCloseIcon size={18} color="#94A3B8" />
-          </button>
+    <Modal open onClose={onClose} size="md" title="Historique du forfait" subtitle={org.nom}>
+      {erreur ? (
+        <div role="alert" style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'flex-start' }}>
+          <span style={{ color: '#B91C1C', fontWeight: 700, fontSize: '0.86rem' }}>{erreur}</span>
+          <span style={{ color: '#64748B', fontSize: '0.8rem' }}>Cela ne signifie pas qu’aucun changement n’a eu lieu.</span>
+          <Button size="sm" variant="secondary" onClick={() => setRechargement((n) => n + 1)}>Réessayer</Button>
         </div>
-
-        {historique === null ? (
-          <div style={{ color: '#94A3B8', fontSize: '0.84rem' }}>Chargement…</div>
-        ) : historique.length === 0 ? (
-          <EmptyState title="Aucun changement de forfait" message="Aucun changement de forfait enregistré." />
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {historique.map((h) => {
-              const src = SOURCE_LABELS[h.source] || { label: h.source, color: '#475569', bg: '#F1F5F9' };
-              return (
-                <div key={h.id} style={{ border: '1px solid #E8ECE6', borderRadius: '12px', padding: '10px 12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.84rem', color: '#02302D' }}>
-                      {h.ancien_plan_nom || '—'} → {h.nouveau_plan_nom}
-                    </span>
-                    <span style={{ background: src.bg, color: src.color, fontWeight: 700, fontSize: '0.68rem', padding: '2px 8px', borderRadius: '9999px' }}>
-                      {src.label}
-                    </span>
-                  </div>
-                  {h.raison && <div style={{ fontSize: '0.8rem', color: '#475569', marginBottom: '4px' }}>{h.raison}</div>}
-                  <div style={{ fontSize: '0.72rem', color: '#94A3B8' }}>
-                    {new Date(h.created_at).toLocaleString('fr-FR')}
-                    {h.modifie_par_nom && ` · ${h.modifie_par_nom}`}
-                  </div>
+      ) : historique === null ? (
+        <div aria-busy="true" style={{ color: '#94A3B8', fontSize: '0.84rem' }}>Chargement…</div>
+      ) : historique.length === 0 ? (
+        <EmptyState title="Aucun changement de forfait" message="Aucun changement de forfait enregistré." />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {historique.map((h) => {
+            const src = SOURCE_LABELS[h.source] || { label: 'Autre origine', color: '#475569', bg: '#F1F5F9' };
+            return (
+              <div key={h.id} style={{ border: '1px solid #E8ECE6', borderRadius: '12px', padding: '10px 12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 700, fontSize: '0.84rem', color: '#02302D' }}>
+                    {h.ancien_plan_nom || '—'} → {h.nouveau_plan_nom}
+                  </span>
+                  <span style={{ background: src.bg, color: src.color, fontWeight: 700, fontSize: '0.7rem', padding: '2px 8px', borderRadius: '9999px' }}>
+                    {src.label}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
+                {h.raison && <div style={{ fontSize: '0.8rem', color: '#475569', marginBottom: '4px' }}>{h.raison}</div>}
+                <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
+                  {new Date(h.created_at).toLocaleString('fr-FR')}
+                  {h.modifie_par_nom && ` · ${h.modifie_par_nom}`}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Modal>
   );
 }
 
+// Contrôle d'accès séparé du contenu : les hooks du contenu ne sont jamais appelés après un retour anticipé.
 export default function AdminFacturationPage() {
   const user = useAuthStore((s) => s.user);
   if (user?.role !== 'admin') {
     return <Navigate to="/siege" replace />;
   }
+  return <AdminFacturationPageContenu />;
+}
 
+function AdminFacturationPageContenu() {
   const [vueEnsemble, setVueEnsemble] = useState<VueEnsembleFacturation | null>(null);
   const [paiementsEchoues, setPaiementsEchoues] = useState<OrganisationPaiementEchoue[] | null>(null);
   const [organisations, setOrganisations] = useState<Organisation[]>([]);
   const [loading, setLoading] = useState(true);
   const [orgPourChangement, setOrgPourChangement] = useState<Organisation | null>(null);
   const [orgPourHistorique, setOrgPourHistorique] = useState<Organisation | null>(null);
+  const [erreurChargement, setErreurChargement] = useState('');
+  const [succes, setSucces] = useState('');
 
   const chargerTout = () => {
+    setErreurChargement('');
     Promise.all([
       adminFacturationApi.vueEnsemble(),
       adminFacturationApi.paiementsEchoues(),
@@ -233,6 +230,10 @@ export default function AdminFacturationPage() {
         setVueEnsemble(ve.data);
         setPaiementsEchoues(pe.data);
         setOrganisations(orgs.data);
+      })
+      .catch((err) => {
+        console.error('Erreur chargement de la facturation:', err);
+        setErreurChargement(userFacingError(err, 'Impossible de charger la facturation. Veuillez réessayer.'));
       })
       .finally(() => setLoading(false));
   };
@@ -251,6 +252,18 @@ export default function AdminFacturationPage() {
         title="Facturation"
         subtitle="Vue d'ensemble des forfaits, paiements en échec et changements manuels — organisations que vous avez créées."
       />
+
+      {succes && <Alert tone="success" title={succes} onDismiss={() => setSucces('')} />}
+
+      {erreurChargement && (
+        <Alert
+          tone="critical"
+          title={erreurChargement}
+          action={<Button size="sm" variant="secondary" onClick={() => { setLoading(true); chargerTout(); }}>Réessayer</Button>}
+        >
+          Les chiffres ci-dessous ne sont pas fiables tant que le chargement n’a pas abouti.
+        </Alert>
+      )}
 
       {/* ── KPIs : répartition par forfait + taux de conversion ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '14px' }}>
@@ -287,7 +300,11 @@ export default function AdminFacturationPage() {
           Triés par date du retour automatique au forfait Gratuit (7 jours de délai après l’échec).
         </p>
 
-        {!paiementsEchoues || paiementsEchoues.length === 0 ? (
+        {!paiementsEchoues ? (
+          <p style={{ margin: 0, fontSize: '0.84rem', color: '#64748B' }}>
+            Les paiements en échec n’ont pas pu être chargés : cela ne signifie pas qu’il n’y en a aucun.
+          </p>
+        ) : paiementsEchoues.length === 0 ? (
           <div className="saas-card saas-card--success" style={{ padding: 0 }}>
             <EmptyState
               title="Aucun paiement en échec"
@@ -343,6 +360,13 @@ export default function AdminFacturationPage() {
             </tr>
           </thead>
           <tbody>
+            {organisations.length === 0 && (
+              <tr>
+                <td colSpan={3} style={{ padding: '24px 20px', color: '#64748B' }}>
+                  {erreurChargement ? 'Liste non chargée.' : 'Aucune organisation pour le moment.'}
+                </td>
+              </tr>
+            )}
             {organisations.map((o) => (
               <tr key={o.id} style={{ borderBottom: '1px solid #F1F4EE' }}>
                 <td style={{ padding: '12px 20px', fontWeight: 700, color: '#02302D' }}>{o.nom}</td>
@@ -382,6 +406,7 @@ export default function AdminFacturationPage() {
           forfaits={vueEnsemble.repartition}
           onClose={() => setOrgPourChangement(null)}
           onSuccess={() => {
+            setSucces(`Le forfait de « ${orgPourChangement.nom} » a été modifié. Le changement est enregistré dans l’historique.`);
             setOrgPourChangement(null);
             chargerTout();
           }}

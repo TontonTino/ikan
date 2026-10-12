@@ -67,12 +67,12 @@ export default function AiInsightsSummary({ insights }: AiInsightsSummaryProps) 
         <FileTextIcon size={20} color="#75B72A" />
         <div>
           <div style={{ fontSize: '1rem', fontWeight: 800, color: '#02302D' }}>
-            {ia ? 'Ce que révèle l’analyse (IA)' : 'Ce que révèle l’analyse'}
+            {ia ? 'Ce que suggère l’analyse (IA)' : 'Ce que suggère l’analyse'}
           </div>
           <div style={{ fontSize: '0.76rem', color: '#64748B' }}>
             {ia
-              ? 'Faits marquants et actions suggérées par l’IA — à valider avant de les appliquer'
-              : 'Constats calculés par règles à partir des avis de la période'}
+              ? 'Constats et actions suggérés par l’IA à partir des avis — à vérifier avant de les appliquer'
+              : 'Constats calculés automatiquement par règles à partir des avis de la période — à vérifier avant d’agir'}
           </div>
         </div>
       </div>

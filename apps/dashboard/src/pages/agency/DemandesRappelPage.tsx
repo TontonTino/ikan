@@ -6,6 +6,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { demandesContactApi, agencesApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
+import { parametresDemandes } from './demandesRappelParams';
 import type { DemandeContactListItem, Agence } from '../../types';
 import AgenceFilterSelect from '../../components/stats/AgenceFilterSelect';
 import { StatsErrorState } from '../../components/stats/StatsStates';
@@ -18,7 +19,11 @@ import { PhoneIcon, MailIcon, CheckCircleIcon, AlertTriangleIcon } from '../../c
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
 
-export default function DemandesRappelPage() {
+/**
+ * `agenceId` (aperçu d'agence du CX Manager) fixe l'agence : elle est transmise au serveur, qui l'ajoute à son
+ * propre périmètre (jamais une autorisation) ; le sélecteur d'agence disparaît alors.
+ */
+export default function DemandesRappelPage({ agenceId }: { agenceId?: string } = {}) {
   const user = useAuthStore((s) => s.user);
   const isCXManager = user?.role === 'cx_manager';
   const isAgencyManager = user?.role === 'agency_manager';
@@ -34,6 +39,7 @@ export default function DemandesRappelPage() {
 
   const [agencesList, setAgencesList] = useState<Agence[]>([]);
   const [selectedAgenceId, setSelectedAgenceId] = useState<string | null>(null);
+  const agenceFiltre = agenceId ?? (isCXManager ? selectedAgenceId : null);
 
   const [toast, setToast] = useState('');
   const showToast = (msg: string) => {
@@ -43,14 +49,14 @@ export default function DemandesRappelPage() {
 
   useEffect(() => {
     // Le filtre par agence n'a de sens que pour le CX Manager (réseau multi-agences).
-    if (!isCXManager) return;
+    if (!isCXManager || agenceId) return;
     agencesApi
       .list()
       .then((res) => {
         if (Array.isArray(res.data)) setAgencesList(res.data);
       })
       .catch(() => setAgencesList([]));
-  }, [isCXManager]);
+  }, [isCXManager, agenceId]);
 
   const fetchDemandes = useCallback(async () => {
     const requestId = ++requestIdRef.current;
@@ -58,9 +64,7 @@ export default function DemandesRappelPage() {
     setLoadingMore(false);
     setError(false);
     try {
-      const params: { traitee: boolean; agence_id?: string; limit: number; offset: number } = { traitee: toggle === 'traitees', limit: 50, offset: 0 };
-      if (isCXManager && selectedAgenceId) params.agence_id = selectedAgenceId;
-      const res = await demandesContactApi.list(params);
+      const res = await demandesContactApi.list(parametresDemandes(toggle === 'traitees', agenceFiltre, 0));
       if (requestId === requestIdRef.current) {
         setDemandes(res.data || []);
         setDemandesTotal(Number(res.headers?.['x-total-count'] || 0));
@@ -73,18 +77,14 @@ export default function DemandesRappelPage() {
         setFirstLoadDone(true);
       }
     }
-  }, [toggle, isCXManager, selectedAgenceId]);
+  }, [toggle, agenceFiltre]);
 
   const loadMoreDemandes = async () => {
     if (loadingMore || demandes.length >= demandesTotal) return;
     const requestId = requestIdRef.current;
     setLoadingMore(true);
     try {
-      const params: { traitee: boolean; agence_id?: string; limit: number; offset: number } = {
-        traitee: toggle === 'traitees', limit: 50, offset: demandes.length,
-      };
-      if (isCXManager && selectedAgenceId) params.agence_id = selectedAgenceId;
-      const response = await demandesContactApi.list(params);
+      const response = await demandesContactApi.list(parametresDemandes(toggle === 'traitees', agenceFiltre, demandes.length));
       if (requestId === requestIdRef.current) setDemandes((current) => [...current, ...(response.data || [])]);
     } catch {
       if (requestId === requestIdRef.current) showToast('Impossible de charger les demandes suivantes');
@@ -167,12 +167,12 @@ export default function DemandesRappelPage() {
             Traitées
           </button>
         </div>
-        {isCXManager && (
+        {isCXManager && !agenceId && (
           <AgenceFilterSelect agences={agencesList} selectedId={selectedAgenceId} onChange={setSelectedAgenceId} />
         )}
       </div>
 
-      <SectionHeading>Demandes de rappel ({firstLoadDone ? `${demandes.length}/${demandesTotal}` : '…'})</SectionHeading>
+      <SectionHeading>Demandes de rappel ({firstLoadDone && !error ? `${demandes.length}/${demandesTotal}` : '…'})</SectionHeading>
 
       {error ? (
         <StatsErrorState message="Impossible de charger les demandes de rappel." onRetry={fetchDemandes} />
@@ -225,7 +225,7 @@ export default function DemandesRappelPage() {
                     {d.nom || 'Client anonyme'}
                   </h3>
                 </div>
-                <span style={{ fontSize: '0.78rem', color: '#94A3B8', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600, whiteSpace: 'nowrap' }}>
                   Demandé le {formatDate(d.date_demande)}
                 </span>
               </div>
@@ -234,7 +234,7 @@ export default function DemandesRappelPage() {
                 {d.telephone && (
                   <a
                     href={`tel:${d.telephone}`}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#3C7730', fontWeight: 700, textDecoration: 'none' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', minHeight: 44, color: '#3C7730', fontWeight: 700, textDecoration: 'none' }}
                   >
                     <PhoneIcon size={14} color="#3C7730" />
                     {d.telephone}
@@ -243,7 +243,7 @@ export default function DemandesRappelPage() {
                 {d.email && (
                   <a
                     href={`mailto:${d.email}`}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#3C7730', fontWeight: 700, textDecoration: 'none' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', minHeight: 44, color: '#3C7730', fontWeight: 700, textDecoration: 'none' }}
                   >
                     <MailIcon size={14} color="#3C7730" />
                     {d.email}

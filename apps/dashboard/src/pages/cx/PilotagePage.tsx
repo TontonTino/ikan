@@ -1,14 +1,14 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAuthStore } from '../../stores/authStore';
-import { alertesApi, suggestionsApi, recommandationsApi, agencesApi, feedbacksApi, issuesApi } from '../../services/api';
+import { agencesApi, feedbacksApi, issuesApi } from '../../services/api';
 import PilotageIssuesTab from './PilotageIssuesTab';
-import PilotageIdeasTab from './PilotageIdeasTab';
+import SuggestionsView from './SuggestionsView';
 import PilotageActionsCorrectivesTab from './PilotageActionsCorrectivesTab';
-import PilotageAlertesActionsTab from './PilotageAlertesActionsTab';
-import type { Alerte, AlerteFeedback, Suggestion, IdeaStatus, RecommandationOrg, Agence, Feedback, Issue, IssueDetail } from '../../types';
-import { STATUS_LABELS } from './pilotageConstants';
+import AlertesView from './AlertesView';
+import type { Agence, Feedback, Issue, IssueDetail } from '../../types';
 import PageTitle from '../../components/ui/PageTitle';
 import { useToast } from '../../components/ui/Toast';
+import { userFacingError } from '../../utils/userFacingError';
 
 /** Une section = une page de la navigation (une destination = une fonction). */
 export type PilotageSection = 'alertes' | 'suggestions' | 'actions' | 'issues';
@@ -26,8 +26,8 @@ const SECTION_HEADER: Record<PilotageSection, { title: string; cx: string; agenc
   },
   actions: {
     title: 'Actions à mener',
-    cx: 'Actions décidées dans le réseau pour traiter les problèmes : à faire, en cours et terminées.',
-    agency: 'Vos actions à mener : à faire, en cours et terminées.',
+    cx: 'Actions décidées sur les avis clients du réseau, en cours ou terminées. Celles d’un problème à traiter se suivent dans son détail.',
+    agency: 'Actions décidées sur les avis clients de votre agence, en cours ou terminées. Celles d’un problème à traiter se suivent dans son détail.',
   },
   issues: {
     title: 'Problèmes à traiter',
@@ -49,39 +49,13 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
   const toastApi = useToast();
   const showToast = (msg: string) => toastApi.show({ message: msg, tone: /erreur|impossible/i.test(msg) ? 'critical' : 'success' });
 
-  // ── Alertes ──────────────────────────────────────────
-  const [alertes, setAlertes] = useState<Alerte[]>([]);
-  const [alertesFeedback, setAlertesFeedback] = useState<AlerteFeedback[]>([]);
-  const [alertesLoading, setAlertesLoading] = useState(true);
-
-  useEffect(() => {
-    if (section !== 'alertes') return;
-    alertesApi
-      .list()
-      .then((r) => {
-        setAlertes(r.data?.alertes_seuil || []);
-        setAlertesFeedback(r.data?.alertes_feedback || []);
-      })
-      .catch(() => {
-        setAlertes([]);
-        setAlertesFeedback([]);
-      })
-      .finally(() => setAlertesLoading(false));
-  }, []);
-
-  const totalAlertes = alertes.length + alertesFeedback.length;
-
-  // ── Action (recommandations IA consolidées réseau) ───
-  const [recos, setRecos] = useState<RecommandationOrg[]>([]);
-  const [recosTotal, setRecosTotal] = useState(0);
-  const [recosLoadingMore, setRecosLoadingMore] = useState(false);
-  const [recosLoading, setRecosLoading] = useState(true);
+  // ── Agences (filtre des actions et des problèmes — CX Manager) ──
   const [agencesList, setAgencesList] = useState<Agence[]>([]);
-  const [selectedAgenceId, setSelectedAgenceId] = useState<string | null>(null);
 
   useEffect(() => {
     // Le filtre par agence n'a de sens que pour le CX Manager (réseau multi-agences).
-    if (isAgencyManager || section === 'suggestions') return;
+    // Les alertes et les suggestions chargent leurs propres données (AlertesView, SuggestionsView).
+    if (isAgencyManager || section === 'suggestions' || section === 'alertes') return;
     agencesApi
       .list()
       .then((res) => {
@@ -89,93 +63,6 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
       })
       .catch(() => setAgencesList([]));
   }, []);
-
-  const fetchRecos = useCallback(async () => {
-    setRecosLoading(true);
-    try {
-      const res = await recommandationsApi.listOrganisation(undefined, { limit: 50, offset: 0 });
-      setRecos(res.data || []);
-      setRecosTotal(Number(res.headers?.['x-total-count'] || 0));
-    } catch {
-      setRecos([]);
-    } finally {
-      setRecosLoading(false);
-    }
-  }, []);
-
-  const loadMoreRecos = async () => {
-    if (recosLoadingMore || recos.length >= recosTotal) return;
-    setRecosLoadingMore(true);
-    try {
-      const res = await recommandationsApi.listOrganisation(undefined, { limit: 50, offset: recos.length });
-      setRecos((current) => [...current, ...(res.data || [])]);
-    } catch {
-      showToast('Impossible de charger les recommandations suivantes');
-    } finally {
-      setRecosLoadingMore(false);
-    }
-  };
-
-  useEffect(() => {
-    if (section !== 'alertes') return;
-    fetchRecos();
-  }, [fetchRecos, section]);
-
-  const marquerRecoTraitee = async (id: string) => {
-    try {
-      await recommandationsApi.marquerTraitee(id);
-      setRecos((prev) => prev.filter((r) => r.id !== id));
-      setRecosTotal((total) => Math.max(0, total - 1));
-    } catch {
-      // Silencieux : la recommandation reste visible, l'utilisateur peut réessayer
-    }
-  };
-
-  const recosAffichees = useMemo(() => {
-    return selectedAgenceId ? recos.filter((r) => r.agence_id === selectedAgenceId) : recos;
-  }, [recos, selectedAgenceId]);
-
-  // ── Boîte à idées ─────────────────────────────────────
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [suggestionsTotal, setSuggestionsTotal] = useState(0);
-  const [suggestionsLoadingMore, setSuggestionsLoadingMore] = useState(false);
-  const [suggestionsLoading, setSuggestionsLoading] = useState(true);
-  const [ideesSubTab, setIdeesSubTab] = useState<'toutes' | 'a_etudier' | 'decisions'>('toutes');
-
-  useEffect(() => {
-    if (section !== 'suggestions') return;
-    suggestionsApi
-      .list({ limit: 50, offset: 0 })
-      .then((r) => {
-        setSuggestions(r.data || []);
-        setSuggestionsTotal(Number(r.headers?.['x-total-count'] || 0));
-      })
-      .catch(() => setSuggestions([]))
-      .finally(() => setSuggestionsLoading(false));
-  }, []);
-
-  const loadMoreSuggestions = async () => {
-    if (suggestionsLoadingMore || suggestions.length >= suggestionsTotal) return;
-    setSuggestionsLoadingMore(true);
-    try {
-      const res = await suggestionsApi.list({ limit: 50, offset: suggestions.length });
-      setSuggestions((current) => [...current, ...(res.data || [])]);
-    } catch {
-      showToast('Impossible de charger les suggestions suivantes');
-    } finally {
-      setSuggestionsLoadingMore(false);
-    }
-  };
-
-  const updateStatut = async (id: string, statut: IdeaStatus) => {
-    try {
-      await suggestionsApi.updateStatut(id, statut);
-      setSuggestions((prev) => prev.map((s) => (s.id === id ? { ...s, statut } : s)));
-      showToast(`Statut mis à jour : ${STATUS_LABELS[statut]}`);
-    } catch {
-      showToast('Impossible d’enregistrer la modification. Réessayez.');
-    }
-  };
 
   // ── Actions correctives (suivi + confirmation, pas de création ici) ──
   const [actionsToggle, setActionsToggle] = useState<'en_cours' | 'terminees'>('en_cours');
@@ -186,10 +73,12 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
   const [actionsLoadingMore, setActionsLoadingMore] = useState(false);
   const [actionsLoading, setActionsLoading] = useState(true);
   const [actionsFirstLoadDone, setActionsFirstLoadDone] = useState(false);
+  const [actionsError, setActionsError] = useState(false);
   const [actionsAgenceId, setActionsAgenceId] = useState<string | null>(null);
 
   const fetchActions = useCallback(async () => {
     setActionsLoading(true);
+    setActionsError(false);
     try {
       const agenceParam = actionsAgenceId ? { agence_id: actionsAgenceId } : {};
       const [enCoursRes, termineesRes] = await Promise.all([
@@ -200,9 +89,12 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
       setActionsTerminees(termineesRes?.data || []);
       setActionsEnCoursTotal(Number(enCoursRes?.headers?.['x-total-count'] || 0));
       setActionsTermineesTotal(Number(termineesRes?.headers?.['x-total-count'] || 0));
-    } catch {
+    } catch (err) {
+      // Un échec de chargement n'est jamais présenté comme « aucune action ».
+      console.error('Erreur chargement des actions:', err);
       setActionsEnCours([]);
       setActionsTerminees([]);
+      setActionsError(true);
     } finally {
       setActionsLoading(false);
       setActionsFirstLoadDone(true);
@@ -241,9 +133,13 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
       await feedbacksApi.confirmerActionRealisee(feedbackId);
       setActionsEnCours((prev) => prev.filter((f) => f.id !== feedbackId));
       setActionsEnCoursTotal((total) => Math.max(0, total - 1));
-      showToast('Action marquée comme réalisée');
-    } catch {
-      showToast("Impossible de confirmer l’action. Réessayez.");
+      setActionsTermineesTotal((total) => total + 1);
+      showToast('Action marquée comme réalisée. L’avis est passé à « Résolu ».');
+      // La liste « Terminées » doit refléter la confirmation : rechargement des listes.
+      fetchActions();
+    } catch (err) {
+      console.error('Erreur confirmation de l’action:', err);
+      showToast(userFacingError(err, 'Impossible de confirmer l’action. Veuillez réessayer.'));
     }
   };
 
@@ -402,15 +298,15 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
       <PageTitle title={header.title} description={isAgencyManager ? header.agency : header.cx} />
 
       {/* ── SECTION ALERTES & ACTIONS (fusion : alertes réseau + recommandations IA) ── */}
-      {section === 'alertes' && <PilotageAlertesActionsTab alertes={alertes} alertesFeedback={alertesFeedback} alertesLoading={alertesLoading} totalAlertes={totalAlertes} isAgencyManager={isAgencyManager} recos={recos} recosAffichees={recosAffichees} recosTotal={recosTotal} recosLoading={recosLoading} recosLoadingMore={recosLoadingMore} loadMoreRecos={loadMoreRecos} agencesList={agencesList} selectedAgenceId={selectedAgenceId} setSelectedAgenceId={setSelectedAgenceId} marquerRecoTraitee={marquerRecoTraitee} />}
+      {section === 'alertes' && <AlertesView />}
 
       {/* ── SECTION BOÎTE À IDÉES ── */}
-      {section === 'suggestions' && <PilotageIdeasTab suggestions={suggestions} suggestionsTotal={suggestionsTotal} suggestionsLoading={suggestionsLoading} suggestionsLoadingMore={suggestionsLoadingMore} loadMoreSuggestions={loadMoreSuggestions} updateStatut={updateStatut} activeSubTab={ideesSubTab} setActiveSubTab={setIdeesSubTab} />}
+      {section === 'suggestions' && <SuggestionsView />}
 
 
 
       {/* ── SECTION ACTIONS CORRECTIVES (suivi + confirmation uniquement — la définition d'une action reste dans FeedbackTreatmentModal) ── */}
-      {section === 'actions' && <PilotageActionsCorrectivesTab isAgencyManager={isAgencyManager} agencesList={agencesList} actionsToggle={actionsToggle} setActionsToggle={setActionsToggle} actionsEnCours={actionsEnCours} actionsTerminees={actionsTerminees} actionsEnCoursTotal={actionsEnCoursTotal} actionsTermineesTotal={actionsTermineesTotal} actionsLoading={actionsLoading} actionsFirstLoadDone={actionsFirstLoadDone} actionsLoadingMore={actionsLoadingMore} loadMoreActions={loadMoreActions} actionsAgenceId={actionsAgenceId} setActionsAgenceId={setActionsAgenceId} marquerActionRealisee={marquerActionRealisee} />}
+      {section === 'actions' && <PilotageActionsCorrectivesTab isAgencyManager={isAgencyManager} agencesList={agencesList} actionsToggle={actionsToggle} setActionsToggle={setActionsToggle} actionsEnCours={actionsEnCours} actionsTerminees={actionsTerminees} actionsEnCoursTotal={actionsEnCoursTotal} actionsTermineesTotal={actionsTermineesTotal} actionsLoading={actionsLoading} actionsError={actionsError} refetchActions={fetchActions} actionsFirstLoadDone={actionsFirstLoadDone} actionsLoadingMore={actionsLoadingMore} loadMoreActions={loadMoreActions} actionsAgenceId={actionsAgenceId} setActionsAgenceId={setActionsAgenceId} marquerActionRealisee={marquerActionRealisee} />}
 
 
 

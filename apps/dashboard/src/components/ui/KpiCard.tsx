@@ -131,41 +131,30 @@ export default function KpiCard({
     );
   }
 
-  const interactiveProps = onClick
-    ? {
-        role: 'button' as const,
-        tabIndex: 0,
-        onClick,
-        onKeyDown: (e: React.KeyboardEvent) => {
-          if (e.target !== e.currentTarget) return;
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onClick();
-          }
-        },
-        'aria-label': `${label} : ${value}. Voir le détail`,
-      }
-    : {};
-
   const DirIcon = direction === 'down' ? ArrowDownRightIcon : ArrowUpRightIcon;
 
   return (
-    <div className={classes} {...interactiveProps}>
+    <div className={classes}>
       <div className="ui-kpi__top">
         <div className="ui-kpi__label-wrap">
           <span className="ui-kpi__icon" aria-hidden="true">
             {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<{ size?: number }>, { size: iconSize }) : icon}
           </span>
-          <span className="ui-kpi__label">{label}</span>
+          {onClick ? (
+            // Un seul élément interactif par carte : le libellé est le bouton, étendu à toute la carte (::after).
+            // L'aide (?) reste un élément frère, jamais un descendant du bouton.
+            <button type="button" className="ui-kpi__label ui-kpi__action" onClick={onClick} aria-label={`${label} : ${value}. Voir le détail`}>
+              {label}
+            </button>
+          ) : (
+            <span className="ui-kpi__label">{label}</span>
+          )}
           {hint && (
             <Tooltip content={hint}>
               <button
                 type="button"
                 className="ui-info-btn"
                 aria-label={`À propos : ${label}`}
-                // L'aide ne doit pas déclencher l'ouverture du détail de la carte.
-                onClick={(e) => e.stopPropagation()}
-                onKeyDown={(e) => e.stopPropagation()}
               >
                 ?
               </button>

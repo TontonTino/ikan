@@ -28,6 +28,7 @@ from app.services.alertes_seuil import (
 )
 from app.services.plan_catalog import FEATURE_ALERTES
 from app.services.plan_service import organisation_a_la_fonctionnalite
+from app.services.dashboard_helpers import NOTE_FAIBLE_MAX
 
 router = APIRouter()
 
@@ -55,6 +56,9 @@ class AlerteFeedbackResponse(BaseModel):
 class AlertesResponse(BaseModel):
     alertes_seuil: List[AlerteResponse]
     alertes_feedback: List[AlerteFeedbackResponse]
+    # False quand le forfait de l'organisation n'inclut pas les alertes : les listes sont alors vides
+    # parce que la fonctionnalité est indisponible, PAS parce qu'il n'y a rien à signaler.
+    alertes_incluses: bool = True
 
 
 class SeuilUpdate(BaseModel):
@@ -130,7 +134,7 @@ def _calculer_alertes_seuil(db: Session, current_user: Utilisateur) -> List[Aler
 
 def _raison_alerte_feedback(note: int, sentiment) -> "str | None":
     """Motif d'alerte d'un feedback : note <= 2 et/ou sentiment IA négatif (None = pas d'alerte)."""
-    note_basse = note <= 2
+    note_basse = note <= NOTE_FAIBLE_MAX
     sentiment_negatif = sentiment == SentimentType.NEGATIF
     if note_basse and sentiment_negatif:
         return "note_basse_et_sentiment_negatif"
@@ -159,7 +163,7 @@ def _calculer_alertes_feedback(db: Session, current_user: Utilisateur) -> List[A
         .outerjoin(AnalyseIA, AnalyseIA.feedback_id == Feedback.id)
         .filter(
             Feedback.statut_traitement != "resolu",
-            or_(Feedback.note <= 2, AnalyseIA.sentiment == SentimentType.NEGATIF),
+            or_(Feedback.note <= NOTE_FAIBLE_MAX, AnalyseIA.sentiment == SentimentType.NEGATIF),
         )
     )
     if current_user.role == UserRole.AGENCY_MANAGER:
@@ -206,7 +210,7 @@ def list_alertes(
     # Alertes = fonctionnalité Starter+. Listes vides (et non 403) pour un forfait
     # Gratuit : plusieurs écrans chargent cet endpoint avec d'autres appels.
     if not organisation_a_la_fonctionnalite(current_user.organisation_id, FEATURE_ALERTES, db):
-        return AlertesResponse(alertes_seuil=[], alertes_feedback=[])
+        return AlertesResponse(alertes_seuil=[], alertes_feedback=[], alertes_incluses=False)
 
     return AlertesResponse(
         alertes_seuil=_calculer_alertes_seuil(db, current_user),

@@ -245,6 +245,11 @@ export interface DashboardAgence {
   nombre_suggestions: number;
   feedbacks_a_traiter: number;
   taux_prise_en_charge: number | null;
+  /** Cycle de traitement de la période : nouveaux + pris en charge = total ; « analysés par l'IA » est un indicateur technique distinct. */
+  feedbacks_nouveaux?: number;
+  feedbacks_pris_en_charge?: number;
+  feedbacks_resolus?: number;
+  feedbacks_analyses_ia?: number;
   actions_ouvertes: number;
   tendances: TendanceSatisfaction[];
   themes: { theme: string; count: number; pourcentage: number }[];
@@ -295,6 +300,8 @@ export interface AlerteFeedback {
 export interface AlertesResponse {
   alertes_seuil: Alerte[];
   alertes_feedback: AlerteFeedback[];
+  /** false : le forfait n'inclut pas les alertes (listes vides par indisponibilité, pas par absence d'alerte). */
+  alertes_incluses?: boolean;
 }
 
 export interface AdminUserItem {
@@ -637,8 +644,25 @@ export interface Issue {
   derniere_detection?: string;
   date_resolution?: string;
   date_verification?: string;
+  /** Délai de traitement fixé pour ce problème (GET /issues) ; absent si aucun délai n'a été défini. */
+  date_limite_sla?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** Motif contrôlé d'une escalade (app/models/enums.py::IssueEscalationReason). */
+export type EscaladeMotif = 'sla' | 'criticite' | 'risque_client' | 'decision_manageriale' | 'autre';
+
+/** Entrée du journal d'escalade d'un problème (GET /issues/{id}/escalations). */
+export interface IssueEscalation {
+  id: string;
+  issue_id: string;
+  date_evenement: string;
+  motif: EscaladeMotif;
+  declenchee_par_id: string;
+  declenchee_par_nom: string;
+  declenchee_par_role: UserRole;
+  created_at: string;
 }
 
 export interface ActionCorrective {

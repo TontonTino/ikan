@@ -3,7 +3,10 @@ import type { Feedback, StatutTraitement, HistoriqueFeedback, ReponseClient, Use
 import { feedbacksApi, issuesApi, agencesApi } from '../../services/api';
 import { AVIS_STATUT_LABELS, GRAVITE_LABELS, PROBLEME_STATUT_LABELS, ROLE_LABELS, SENTIMENT_LABELS } from '../../utils/vocabulaire';
 import { themeLabel } from '../../utils/themeLabels';
+import { userFacingError } from '../../utils/userFacingError';
 import EmptyState from '../ui/EmptyState';
+import { useOverlay } from '../ui/useOverlay';
+import PriseEnChargeBanner from './PriseEnChargeBanner';
 import WhatsAppReplyButton from './WhatsAppReplyButton';
 import {
   AlertTriangleIcon,
@@ -59,7 +62,6 @@ export default function FeedbackTreatmentModal({
   currentUserName = 'Utilisateur',
 }: FeedbackTreatmentModalProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
   const [activeTab, setActiveTab] = useState<'traitement' | 'historique' | 'reponses'>('traitement');
   
   // États locaux formulaires
@@ -89,6 +91,7 @@ export default function FeedbackTreatmentModal({
 
   const [issuesExistantes, setIssuesExistantes] = useState<Issue[]>([]);
   const [issuesExistantesLoading, setIssuesExistantesLoading] = useState(false);
+  const [issuesExistantesErreur, setIssuesExistantesErreur] = useState(false);
   const [issueSelectionneeId, setIssueSelectionneeId] = useState<string | null>(null);
 
   const isAgencyManager = currentUserRole === 'agency_manager';
@@ -98,15 +101,6 @@ export default function FeedbackTreatmentModal({
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
   };
-
-  useEffect(() => {
-    if (!isOpen) return;
-    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    closeButtonRef.current?.focus();
-    return () => {
-      previousFocusRef.current?.focus();
-    };
-  }, [isOpen]);
 
   // Chargement de l'historique et des réponses
   const loadHistoriqueAndReponses = useCallback(async (fId: string) => {
@@ -122,33 +116,17 @@ export default function FeedbackTreatmentModal({
     }
   }, []);
 
-  // 1. Déclenchement automatique Nouveau -> En traitement à l'ouverture
+  // 1. Ouverture = CONSULTATION : on charge l'historique et les réponses, sans modifier le statut ni l'attribution.
+  //    La prise en charge est l'action explicite « Prendre en charge » (voir PriseEnChargeBanner).
   useEffect(() => {
     if (!isOpen || !feedback) return;
     // Le rétrécissement de type ne traverse pas la frontière de la fonction imbriquée : on capture la valeur non nulle.
     const fb = feedback;
 
     let isMounted = true;
-    async function handleAutoOpen() {
-      // Prise en charge réservée à l'Agency Manager (voir open_feedback, backend) : pour
-      // le CX Manager, l'appel échouerait (403) — ne pas le déclencher.
-      if (fb.statut_traitement === 'nouveau' && isAgencyManager) {
-        try {
-          const res = await feedbacksApi.open(fb.id);
-          if (isMounted) {
-            onUpdateFeedback(res.data);
-            showToast('Avis pris en charge : il vous est désormais attribué');
-          }
-        } catch (err) {
-          console.error('Erreur ouverture feedback:', err);
-        }
-      }
-      if (isMounted) {
-        loadHistoriqueAndReponses(fb.id);
-      }
+    if (isMounted) {
+      loadHistoriqueAndReponses(fb.id);
     }
-
-    handleAutoOpen();
 
     // Reset des inputs
     setNoteInterneInput('');
@@ -185,14 +163,8 @@ export default function FeedbackTreatmentModal({
     };
   }, [feedback?.id, isOpen]);
 
-  // Raccourci touche Échap pour fermer
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  // Comportement de modale commun : focus piégé dans la fenêtre, Échap, retour du focus au déclencheur.
+  const panelRef = useOverlay<HTMLDivElement>(isOpen && !!feedback, onClose);
 
   if (!isOpen || !feedback) return null;
 
@@ -229,6 +201,22 @@ export default function FeedbackTreatmentModal({
     }
   };
 
+  // 1bis. Responsable d'agence : prise en charge explicite (Nouveau -> Pris en charge, attribution à soi)
+  const handlePrendreEnCharge = async () => {
+    if (!feedback) return;
+    setLoadingAction(true);
+    try {
+      const res = await feedbacksApi.prendreEnCharge(feedback.id);
+      onUpdateFeedback(res.data);
+      await loadHistoriqueAndReponses(feedback.id);
+      showToast('Avis pris en charge : il vous est attribué');
+    } catch {
+      showToast('Erreur lors de la prise en charge de l’avis');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
   // 2. Agency Manager : Envoyer suggestion au CX
   const handleEnvoyerSuggestion = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -247,6 +235,18 @@ export default function FeedbackTreatmentModal({
     }
   };
 
+  // Un 409 signifie que le statut a changé depuis l'ouverture de la fenêtre (autre utilisateur, autre onglet) :
+  // on recharge l'avis pour que les boutons proposés correspondent à son état réel.
+  const MESSAGE_STATUT_CHANGE = 'Le statut de cet avis a changé entre-temps. Les informations ont été actualisées : vérifiez-les puis réessayez.';
+  const resynchroniser = async (err: unknown) => {
+    if (!(err as { response?: { status?: number } })?.response || (err as { response: { status?: number } }).response.status !== 409) return;
+    try {
+      const res = await feedbacksApi.get(feedback.id);
+      onUpdateFeedback(res.data);
+      await loadHistoriqueAndReponses(feedback.id);
+    } catch { /* l'avis reste affiché tel quel ; le message ci-dessus suffit */ }
+  };
+
   // 3. CX Manager : Définir l'action corrective (En traitement -> En cours)
   const handleDefinirActionCX = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -257,8 +257,9 @@ export default function FeedbackTreatmentModal({
       onUpdateFeedback(res.data);
       await loadHistoriqueAndReponses(feedback.id);
       showToast('Action enregistrée : statut passé à « Action en cours »');
-    } catch {
-      showToast('Erreur lors de l’enregistrement de l’action');
+    } catch (err) {
+      showToast(userFacingError(err, 'Erreur lors de l’enregistrement de l’action', undefined, { 409: MESSAGE_STATUT_CHANGE }));
+      await resynchroniser(err);
     } finally {
       setLoadingAction(false);
     }
@@ -272,8 +273,9 @@ export default function FeedbackTreatmentModal({
       onUpdateFeedback(res.data);
       await loadHistoriqueAndReponses(feedback.id);
       showToast('✓ Action confirmée : avis marqué comme résolu');
-    } catch {
-      showToast('Erreur lors de la confirmation de l’action');
+    } catch (err) {
+      showToast(userFacingError(err, 'Erreur lors de la confirmation de l’action', undefined, { 409: MESSAGE_STATUT_CHANGE }));
+      await resynchroniser(err);
     } finally {
       setLoadingAction(false);
     }
@@ -306,8 +308,9 @@ export default function FeedbackTreatmentModal({
       onUpdateFeedback(res.data);
       await loadHistoriqueAndReponses(feedback.id);
       showToast('Avis rouvert : statut repassé à « Pris en charge »');
-    } catch {
-      showToast('Erreur lors de la réouverture');
+    } catch (err) {
+      showToast(userFacingError(err, 'Erreur lors de la réouverture', undefined, { 409: MESSAGE_STATUT_CHANGE }));
+      await resynchroniser(err);
     } finally {
       setLoadingAction(false);
     }
@@ -342,13 +345,16 @@ export default function FeedbackTreatmentModal({
     setIssueMode('rattacher');
     if (!feedback.agence_id) return;
     setIssuesExistantesLoading(true);
+    setIssuesExistantesErreur(false);
     try {
       const res = await issuesApi.list({ agence_id: feedback.agence_id });
       // Les Issues déjà vérifiées ne sont pas proposées ici : y rattacher un feedback les
       // rouvre automatiquement côté backend (comportement voulu, mais pas le premier choix).
       setIssuesExistantes((res.data || []).filter((i) => i.statut !== 'verifiee'));
     } catch {
+      // Une erreur n'est pas une liste vide : on le dit et on propose de réessayer.
       setIssuesExistantes([]);
+      setIssuesExistantesErreur(true);
     } finally {
       setIssuesExistantesLoading(false);
     }
@@ -441,13 +447,14 @@ export default function FeedbackTreatmentModal({
           .feedback-treatment-stepper > div { gap: 5px !important; }
           .feedback-treatment-metadata { padding: 12px 16px !important; gap: 8px !important; }
           .feedback-treatment-tabs { padding: 0 12px !important; overflow-x: auto; }
-          .feedback-treatment-tabs button { padding: 10px 12px !important; white-space: nowrap; }
+          .feedback-treatment-tabs button { padding: 10px 12px !important; white-space: nowrap; min-height: 44px; }
           .feedback-treatment-body { padding: 16px !important; }
         }
       `}</style>
 
       {/* Conteneur Modale SaaS */}
       <div
+        ref={panelRef}
         className="feedback-treatment-dialog"
         role="dialog"
         aria-modal="true"
@@ -504,6 +511,7 @@ export default function FeedbackTreatmentModal({
 
           <button
             ref={closeButtonRef}
+            data-autofocus
             onClick={onClose}
             aria-label="Fermer"
             style={{
@@ -676,13 +684,15 @@ export default function FeedbackTreatmentModal({
                 fontWeight: 800,
                 fontSize: '0.75rem',
                 background: currentStatut === 'resolu' ? '#EBF5E9' : currentStatut === 'en_cours' ? '#FEF3C7' : currentStatut === 'en_traitement' ? '#E0F2FE' : '#FEE2E2',
-                color: currentStatut === 'resolu' ? '#3C7730' : currentStatut === 'en_cours' ? '#D97706' : currentStatut === 'en_traitement' ? '#0369A1' : '#DC2626',
+                color: currentStatut === 'resolu' ? '#3C7730' : currentStatut === 'en_cours' ? '#92400E' : currentStatut === 'en_traitement' ? '#0369A1' : '#B91C1C',
               }}
             >
               {AVIS_STATUT_LABELS[currentStatut] ?? AVIS_STATUT_LABELS.nouveau}
             </span>
           </div>
         </div>
+
+        <PriseEnChargeBanner statut={currentStatut} role={currentUserRole} chargement={loadingAction} onPrendreEnCharge={handlePrendreEnCharge} />
 
         {/* ── Navigation Onglets ────────────────────────────────── */}
         <div className="feedback-treatment-tabs" style={{ display: 'flex', borderBottom: '1px solid #E2E8F0', background: '#FAFAFA', padding: '0 28px' }}>
@@ -1231,6 +1241,13 @@ export default function FeedbackTreatmentModal({
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {issuesExistantesLoading ? (
                       <div style={{ fontSize: '0.84rem', color: '#64748B' }}>Chargement des problèmes…</div>
+                    ) : issuesExistantesErreur ? (
+                      <EmptyState
+                        illustration="no-data"
+                        title="Impossible de charger les problèmes"
+                        message="La liste des problèmes de cette agence n’a pas pu être chargée. Vérifiez votre connexion puis réessayez."
+                        action={{ label: 'Réessayer', onClick: ouvrirRattachement }}
+                      />
                     ) : issuesExistantes.length === 0 ? (
                       <EmptyState
                         illustration="no-data"

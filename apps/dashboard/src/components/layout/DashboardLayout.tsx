@@ -340,7 +340,7 @@ export default function DashboardLayout() {
               <div />
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', minWidth: 0, overflow: 'hidden' }}>
-                <span style={{ color: '#94A3B8', fontWeight: 600, whiteSpace: 'nowrap' }}>IKAN AI</span>
+                <span style={{ color: 'var(--color-text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>IKAN AI</span>
                 <span style={{ color: '#CBD5E1' }}>/</span>
                 <span style={{ color: '#02302D', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getBreadcrumb()}</span>
               </div>

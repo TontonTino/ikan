@@ -56,6 +56,43 @@ const ICONE_PAR_CODE: Record<string, ComponentType<IconProps>> = {
   TEL_RECURRENCE_HORS_PERIMETRE: RefreshCwIcon,
 };
 
+// Libellés de repli, alignés sur app/services/kpi/definitions.py. Le libellé envoyé par l'API
+// reste prioritaire ; ce dictionnaire ne sert que s'il est absent ou s'il ressemble à un code.
+const LIBELLE_PAR_CODE: Record<string, string> = {
+  CSAT: 'Satisfaction client (CSAT)',
+  NPS: 'Recommandation (NPS)',
+  NEGATIVE_SENTIMENT_RATE: 'Part d’avis négatifs',
+  FEEDBACK_VOLUME: 'Avis reçus',
+  ISSUE_VOLUME: 'Problèmes enregistrés',
+  CRITICAL_ISSUE_RATE: 'Part de problèmes critiques',
+  ISSUE_RESOLUTION_RATE: 'Taux de résolution des problèmes',
+  MEDIAN_RESOLUTION_TIME: 'Temps médian de résolution',
+  LOOP_CLOSURE_RATE: 'Résolutions vérifiées',
+  ISSUE_BACKLOG: 'Problèmes en attente',
+  BACKLOG_AGE: 'Ancienneté des problèmes en attente',
+  ACTION_COMPLETION_RATE: 'Taux d’actions terminées',
+  SLA_COMPLIANCE_RATE: 'Respect des délais de traitement',
+  ISSUE_RECURRENCE_RATE: 'Part de problèmes récurrents',
+  ESCALATION_RATE: 'Part de problèmes remontés',
+  TEL_PART_HORS_PERIMETRE: 'Part hors périmètre agence',
+  TEL_RECURRENCE_AGENCE: 'Récurrence (périmètre agence)',
+  TEL_RECURRENCE_HORS_PERIMETRE: 'Récurrence (hors périmètre agence)',
+  TEL_RECLAMATIONS_RESEAU: 'Réclamations réseau (d’après les avis)',
+  TEL_RECLAMATIONS_RECHARGE_FORFAIT: 'Réclamations recharge & forfaits (d’après les avis)',
+  TEL_RECLAMATIONS_FACTURATION: 'Réclamations facturation (d’après les avis)',
+  RESTO_TAUX_TRAITEMENT_RECONTACTS: 'Taux de clients recontactés',
+  RESTO_RISQUE_SILENCIEUX: 'Risque silencieux',
+  RESTO_RECIDIVE_CATEGORIE: 'Récidive par catégorie',
+};
+
+/** Libellé affiché d'un indicateur : celui de l'API s'il est lisible, sinon le dictionnaire,
+    sinon un libellé générique (jamais le code technique). */
+export function kpiLibelle(k: Pick<KPIResult, 'code' | 'label'>): string {
+  const label = k.label?.trim();
+  if (label && !/^[A-Z0-9_]+$/.test(label)) return label;
+  return LIBELLE_PAR_CODE[k.code] ?? 'Indicateur';
+}
+
 export function kpiIconComponent(code: string): ComponentType<IconProps> {
   return ICONE_PAR_CODE[code] ?? ActivityIcon;
 }

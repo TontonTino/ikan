@@ -49,7 +49,8 @@ export const ROUTE_ROLES: Record<string, UserRole[]> = {
   '/parametres': MANAGERS,
   '/statistiques': ALL,
   '/siege': ['cx_manager'],
-  '/agence': MANAGERS,
+  // Vue d'ensemble de SON agence : le CX Manager n'en a pas, il est renvoyé vers /siege (ROLE_HOME).
+  '/agence': ['agency_manager'],
   '/mon-agence': MANAGERS,
   '/agences/:agenceId/apercu': MANAGERS,
   '/feedbacks': MANAGERS,
@@ -76,6 +77,14 @@ export const ROLE_HOME: Record<UserRole, string> = {
   agency_manager: '/agence',
 };
 
+/**
+ * Destination d'un rôle refusé sur une route (null = accès autorisé). Logique de <RoleRoute>,
+ * isolée pour être testable sans rendu.
+ */
+export function redirectionRole(role: UserRole, pattern: string): string | null {
+  return ROUTE_ROLES[pattern]?.includes(role) ? null : ROLE_HOME[role];
+}
+
 export const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
   admin: [
     {
@@ -91,15 +100,16 @@ export const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
       ],
     },
   ],
-  // Sections calquées sur la boucle produit : Comprendre → Agir → Clients → Réseau.
+  // Sections calquées sur la boucle produit : Comprendre → Agir → Réseau.
   // Une entrée = une fonction ; aucune entrée ne mène à la même page qu'une autre.
+  // Avis clients, Suggestions et Demandes de rappel ne sont PAS dans cette sidebar : le CX Manager les
+  // ouvre depuis l'aperçu de chaque agence (/agences/:agenceId/apercu?tab=…), voir MonAgencePage.
   cx_manager: [
     {
       title: 'COMPRENDRE',
       items: [
         { path: '/siege', label: "Vue d'ensemble", icon: <LayoutGridIcon size={18} /> },
         { path: '/statistiques', label: 'Statistiques', icon: <BarChartIcon size={18} /> },
-        { path: '/feedbacks', label: 'Avis clients', icon: <MessageSquareIcon size={18} /> },
       ],
     },
     {
@@ -108,13 +118,6 @@ export const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
         { path: '/alertes', label: 'Alertes', icon: <BellIcon size={18} /> },
         { path: '/issues', label: 'Problèmes à traiter', icon: <ActivityIcon size={18} /> },
         { path: '/actions', label: 'Actions à mener', icon: <TargetIcon size={18} /> },
-      ],
-    },
-    {
-      title: 'CLIENTS',
-      items: [
-        { path: '/suggestions', label: 'Suggestions', icon: <LightbulbIcon size={18} /> },
-        { path: '/demandes-rappel', label: 'Demandes de rappel', icon: <PhoneIcon size={18} /> },
       ],
     },
     {

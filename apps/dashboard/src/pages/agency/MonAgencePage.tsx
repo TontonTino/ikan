@@ -3,9 +3,15 @@ import { Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { agencesApi, statisticsApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import { getFeedbackUrl } from '../../config';
-import type { Agence, Categorie, ActiviteAgenceItem, StatsAgenceResponse } from '../../types';
+import type { Agence, Categorie, StatsAgenceResponse } from '../../types';
 import TabsNavigation, { TabItem } from '../../components/ui/TabsNavigation';
 const FeedbacksPage = lazy(() => import('./FeedbacksPage'));
+import SuggestionsView from '../cx/SuggestionsView';
+import DemandesRappelPage from './DemandesRappelPage';
+import ActiviteAgence from './ActiviteAgence';
+import PerformancesCles from '../../components/agency/PerformancesCles';
+import Alert from '../../components/ui/Alert';
+import Button from '../../components/ui/Button';
 import {
   CopyIcon,
   DownloadIcon,
@@ -19,9 +25,11 @@ import {
   MailIcon,
   UsersIcon,
   MessageSquareIcon,
+  LightbulbIcon,
   ActivityIcon,
   StoreIcon,
 } from '../../components/common/Icons';
+import { userFacingError } from '../../utils/userFacingError';
 
 const cardStyle: React.CSSProperties = {
   background: '#FFFFFF',
@@ -124,8 +132,14 @@ async function genererPdfQrCode(agence: Agence, lien: string) {
   doc.save(`qr-code-${slug(agence.nom)}.pdf`);
 }
 
-type AgenceTab = 'informations' | 'categories' | 'feedbacks' | 'activite';
-const TABS_VALIDES: AgenceTab[] = ['informations', 'categories', 'feedbacks', 'activite'];
+// POST/PATCH catégories : le 403 peut venir du forfait (catégories personnalisées à partir de Starter)
+// OU des droits sur l'agence/la catégorie ; le backend n'a pas de code stable pour les distinguer.
+const ACCES_CATEGORIES_REFUSE = {
+  403: 'Action impossible : elle n’est pas incluse dans votre forfait actuel ou vous n’avez pas les droits nécessaires sur cette catégorie.',
+};
+
+type AgenceTab = 'informations' | 'categories' | 'feedbacks' | 'suggestions' | 'rappels' | 'activite';
+const TABS_VALIDES: AgenceTab[] = ['informations', 'categories', 'feedbacks', 'suggestions', 'rappels', 'activite'];
 
 /**
  * Page agence unifiée : sert à la fois de "Mon agence" (Agency Manager, sur sa
@@ -160,7 +174,10 @@ export default function MonAgencePage() {
   const [agence, setAgence] = useState<Agence | null>(null);
   const [categories, setCategories] = useState<Categorie[]>([]);
   const [stats, setStats] = useState<StatsAgenceResponse | null>(null);
-  const [activite, setActivite] = useState<ActiviteAgenceItem[]>([]);
+  // Un échec de chargement n'est jamais présenté comme « 0 catégorie » ni comme un chargement qui dure.
+  const [statsErreur, setStatsErreur] = useState(false);
+  const [statsRecharge, setStatsRecharge] = useState(0);
+  const [categoriesErreur, setCategoriesErreur] = useState(false);
   const [loading, setLoading] = useState(true);
   const [erreur, setErreur] = useState('');
   const [message, setMessage] = useState('');
@@ -197,9 +214,9 @@ export default function MonAgencePage() {
         if (!annule) setAgence(res.data);
         try {
           const cats = await agencesApi.listCategories(agenceId);
-          if (!annule) setCategories(Array.isArray(cats.data) ? cats.data : []);
+          if (!annule) { setCategories(Array.isArray(cats.data) ? cats.data : []); setCategoriesErreur(false); }
         } catch {
-          if (!annule) setCategories([]);
+          if (!annule) { setCategories([]); setCategoriesErreur(true); }
         }
       } catch {
         if (!annule) setErreur("Impossible de charger les informations de cette agence.");
@@ -215,34 +232,19 @@ export default function MonAgencePage() {
   useEffect(() => {
     if (nonAutorise || !agenceId) return;
     let annule = false;
+    setStatsErreur(false);
     statisticsApi
       .agency({ agence_id: agenceId, jours: 30 })
       .then((r) => {
         if (!annule) setStats(r.data);
       })
       .catch(() => {
-        if (!annule) setStats(null);
+        if (!annule) { setStats(null); setStatsErreur(true); }
       });
     return () => {
       annule = true;
     };
-  }, [agenceId, nonAutorise]);
-
-  useEffect(() => {
-    if (nonAutorise || user?.role !== 'cx_manager' || !agenceId) return;
-    let annule = false;
-    agencesApi
-      .activite(agenceId)
-      .then((r) => {
-        if (!annule) setActivite(Array.isArray(r.data) ? r.data : []);
-      })
-      .catch(() => {
-        if (!annule) setActivite([]);
-      });
-    return () => {
-      annule = true;
-    };
-  }, [agenceId, nonAutorise, user?.role]);
+  }, [agenceId, nonAutorise, statsRecharge]);
 
   useEffect(() => {
     if (!ongletsDisponibles.includes(activeTab)) {
@@ -267,6 +269,10 @@ export default function MonAgencePage() {
     return <Navigate to="/" replace />;
   }
 
+  if (!agenceId && user?.role === 'cx_manager') {
+    // Le CX Manager n'a pas d'agence propre : ses agences s'ouvrent via /agences/:agenceId/apercu.
+    return <Navigate to="/siege" replace />;
+  }
   if (!agenceId) {
     return <div style={{ color: '#B91C1C', padding: '32px', fontWeight: 600 }}>Aucune agence n'est rattachée à votre compte.</div>;
   }
@@ -400,7 +406,7 @@ export default function MonAgencePage() {
       setFormulaireOuvert(false);
       afficherMessage('Catégorie ajoutée.');
     } catch (err: any) {
-      setErreurCategorie(err?.response?.data?.detail || "Impossible d'ajouter cette catégorie.");
+      setErreurCategorie(userFacingError(err, 'Impossible d’ajouter cette catégorie.', undefined, ACCES_CATEGORIES_REFUSE));
     } finally {
       setAjoutEnCours(false);
     }
@@ -423,7 +429,7 @@ export default function MonAgencePage() {
       setCategorieEnEdition(null);
       afficherMessage('Catégorie modifiée.');
     } catch (err: any) {
-      afficherMessage(err?.response?.data?.detail || 'Impossible de modifier cette catégorie.');
+      afficherMessage(userFacingError(err, 'Impossible de modifier cette catégorie.', undefined, ACCES_CATEGORIES_REFUSE));
     } finally {
       setActionEnCours(null);
     }
@@ -435,7 +441,7 @@ export default function MonAgencePage() {
       const r = await agencesApi.updateCategorie(agence.id, c.id, { est_categorie_suggestion: !c.est_categorie_suggestion });
       setCategories((prev) => prev.map((x) => (x.id === c.id ? r.data : x)));
     } catch (err: any) {
-      afficherMessage(err?.response?.data?.detail || 'Impossible de modifier cette catégorie.');
+      afficherMessage(userFacingError(err, 'Impossible de modifier cette catégorie.', undefined, ACCES_CATEGORIES_REFUSE));
     } finally {
       setActionEnCours(null);
     }
@@ -448,7 +454,7 @@ export default function MonAgencePage() {
       setCategories((prev) => prev.filter((x) => x.id !== c.id));
       afficherMessage('Catégorie désactivée.');
     } catch (err: any) {
-      afficherMessage(err?.response?.data?.detail || 'Impossible de désactiver cette catégorie.');
+      afficherMessage(userFacingError(err, 'Impossible de désactiver cette catégorie.'));
     } finally {
       setActionEnCours(null);
     }
@@ -459,12 +465,12 @@ export default function MonAgencePage() {
     { id: 'categories', label: 'Catégories', icon: <TagIcon size={16} />, badge: categories.length },
     ...(ongletsEtendusAutorises ? [
       { id: 'feedbacks', label: 'Avis clients', icon: <MessageSquareIcon size={16} /> },
+      { id: 'suggestions', label: 'Suggestions', icon: <LightbulbIcon size={16} /> },
+      { id: 'rappels', label: 'Demandes de rappel', icon: <PhoneIcon size={16} /> },
       { id: 'activite', label: 'Activité', icon: <ActivityIcon size={16} /> },
     ] : []),
   ];
 
-  const positifs = stats?.sentiments.find((s) => s.sentiment === 'positif')?.count ?? 0;
-  const negatifs = stats?.sentiments.find((s) => s.sentiment === 'negatif')?.count ?? 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
@@ -595,7 +601,7 @@ export default function MonAgencePage() {
 
       {/* ── Onglet Informations ── */}
       {activeTab === 'informations' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) minmax(280px, 1fr)', gap: '18px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '18px' }}>
           <div style={cardStyle}>
             <h3 style={{ margin: '0 0 14px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D' }}>Coordonnées</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.86rem', color: '#334155' }}>
@@ -616,24 +622,7 @@ export default function MonAgencePage() {
 
           <div style={cardStyle}>
             <h3 style={{ margin: '0 0 14px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D' }}>Performances clés (30 derniers jours)</h3>
-            {!stats ? (
-              <div style={{ color: '#64748B', fontSize: '0.84rem' }}>Chargement…</div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                <div style={{ background: '#F8FAF8', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#02302D' }}>{stats.kpis.satisfaction?.valeur ?? '—'}</div>
-                  <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600, marginTop: '4px' }}>Satisfaction</div>
-                </div>
-                <div style={{ background: '#EBF6ED', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#3C7730' }}>{positifs}</div>
-                  <div style={{ fontSize: '0.72rem', color: '#3C7730', fontWeight: 600, marginTop: '4px' }}>Avis positifs</div>
-                </div>
-                <div style={{ background: '#FEF2F2', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#DC2626' }}>{negatifs}</div>
-                  <div style={{ fontSize: '0.72rem', color: '#DC2626', fontWeight: 600, marginTop: '4px' }}>Avis négatifs</div>
-                </div>
-              </div>
-            )}
+            <PerformancesCles stats={stats} erreur={statsErreur} onRetry={() => setStatsRecharge((n) => n + 1)} />
           </div>
         </div>
       )}
@@ -699,7 +688,29 @@ export default function MonAgencePage() {
             <div style={{ color: '#B91C1C', fontSize: '0.78rem', fontWeight: 600, marginBottom: '12px' }}>{erreurCategorie}</div>
           )}
 
-          {categories.length === 0 ? (
+          {categoriesErreur ? (
+            <Alert
+              tone="warning"
+              title="Impossible de charger les catégories de cette agence. Cela ne signifie pas qu’il n’y en a pas."
+              action={
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={async () => {
+                    try {
+                      const cats = await agencesApi.listCategories(agence.id);
+                      setCategories(Array.isArray(cats.data) ? cats.data : []);
+                      setCategoriesErreur(false);
+                    } catch {
+                      setCategoriesErreur(true);
+                    }
+                  }}
+                >
+                  Réessayer
+                </Button>
+              }
+            />
+          ) : categories.length === 0 ? (
             <div style={{ color: '#64748B', fontSize: '0.86rem', fontWeight: 600 }}>
               Aucune catégorie personnalisée : le formulaire utilise la catégorie « Général » par défaut.
             </div>
@@ -733,7 +744,7 @@ export default function MonAgencePage() {
                           style={{
                             fontSize: '0.66rem', fontWeight: 700, padding: '2px 8px', borderRadius: '9999px', whiteSpace: 'nowrap',
                             background: c.cree_par_role === 'agency_manager' ? '#EFF6FF' : '#F1F5F9',
-                            color: c.cree_par_role === 'agency_manager' ? '#2563EB' : '#64748B',
+                            color: c.cree_par_role === 'agency_manager' ? '#2563EB' : '#475569',
                           }}
                         >
                           {c.cree_par_role === 'agency_manager' ? 'Ajoutée par le responsable d’agence' : 'Ajoutée par le CX Manager'}
@@ -772,7 +783,7 @@ export default function MonAgencePage() {
                           onClick={() => toggleEstSuggestion(c)}
                           disabled={actionEnCours === c.id}
                           title="Basculer le type suggestion"
-                          style={{ background: c.est_categorie_suggestion ? '#FEF3E2' : '#F1F5F9', color: c.est_categorie_suggestion ? '#B45309' : '#64748B', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                          style={{ background: c.est_categorie_suggestion ? '#FEF3E2' : '#F1F5F9', color: c.est_categorie_suggestion ? '#B45309' : '#475569', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
                         >
                           {c.est_categorie_suggestion ? 'Suggestion ✓' : 'Marquer suggestion'}
                         </button>
@@ -780,7 +791,7 @@ export default function MonAgencePage() {
                           type="button"
                           onClick={() => desactiverCategorie(c)}
                           disabled={actionEnCours === c.id}
-                          style={{ background: '#FEE2E2', color: '#DC2626', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                          style={{ background: '#FEE2E2', color: '#B91C1C', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
                         >
                           Désactiver
                         </button>
@@ -798,28 +809,13 @@ export default function MonAgencePage() {
           sélecteur d'agence masqué puisqu'elle est déjà fixée par cette page) ── */}
       {ongletsEtendusAutorises && activeTab === 'feedbacks' && <FeedbacksPage agenceId={agence.id} />}
 
-      {/* ── Onglet Activité (HistoriqueFeedback + HistoriqueSuggestion fusionnés) ── */}
-      {ongletsEtendusAutorises && activeTab === 'activite' && (
-        <div style={cardStyle}>
-          <h3 style={{ margin: '0 0 14px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D' }}>Fil d'activité</h3>
-          {activite.length === 0 ? (
-            <div style={{ color: '#64748B', fontSize: '0.86rem', fontWeight: 600 }}>Aucun événement récent.</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {activite.map((ev) => (
-                <div key={ev.id} style={{ display: 'flex', flexDirection: 'column', gap: '2px', padding: '10px 14px', background: '#F8FAFC', borderRadius: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>{ev.auteur_nom}</span>
-                    <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}>{new Date(ev.date).toLocaleString('fr-FR')}</span>
-                  </div>
-                  <span style={{ fontSize: '0.78rem', color: '#3C7730', fontWeight: 700, textTransform: 'capitalize' }}>{ev.type_evenement.replace(/_/g, ' ')}</span>
-                  {ev.details && <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: '#64748B' }}>{ev.details}</p>}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {/* ── Suggestions et Demandes de rappel de CETTE agence : l'identifiant d'agence est transmis au serveur
+          (qui l'ajoute à son périmètre), jamais filtré dans le navigateur. `key` : état neuf si l'agence change. ── */}
+      {ongletsEtendusAutorises && activeTab === 'suggestions' && <SuggestionsView key={agence.id} agenceId={agence.id} />}
+      {ongletsEtendusAutorises && activeTab === 'rappels' && <DemandesRappelPage key={agence.id} agenceId={agence.id} />}
+
+      {/* ── Onglet Activité : chargement, erreur avec réessai, vide et résultats sont des états distincts ── */}
+      {ongletsEtendusAutorises && activeTab === 'activite' && <ActiviteAgence key={agence.id} agenceId={agence.id} />}
     </div>
   );
 }

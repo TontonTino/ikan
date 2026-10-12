@@ -44,7 +44,7 @@ export default function WhatsAppReplyButton({ telephone, telephoneWhatsapp, clas
         <AlertTriangleIcon size={15} color="#B45309" />
         <span>
           Le numéro laissé par le client (« {telephone} ») n’est pas valide : WhatsApp ne peut pas être ouvert.
-          Un numéro burkinabè compte 8 chiffres (ex. 70 12 34 56).
+          Le numéro doit inclure un indicatif international, par exemple +226 70 12 34 56.
         </span>
       </div>
     );

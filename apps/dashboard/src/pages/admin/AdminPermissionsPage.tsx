@@ -3,6 +3,9 @@ import { Navigate } from 'react-router-dom';
 import { systemApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import PageHeader from '../../components/ui/PageHeader';
+import Alert from '../../components/ui/Alert';
+import Button from '../../components/ui/Button';
+import { userFacingError } from '../../utils/userFacingError';
 import { ShieldCheckIcon, BarChartIcon, StoreIcon, UsersIcon, CheckIcon } from '../../components/common/Icons';
 
 interface Permission {
@@ -31,23 +34,35 @@ const getRoleIcon = (role: string, size = 22) => {
   }
 };
 
+// Contrôle d'accès séparé du contenu : les hooks du contenu ne sont jamais appelés après un retour anticipé.
 export default function AdminPermissionsPage() {
   const currentUser = useAuthStore((s) => s.user);
   if (currentUser?.role !== 'admin') {
     return <Navigate to="/siege" replace />;
   }
+  return <AdminPermissionsPageContenu />;
+}
 
+function AdminPermissionsPageContenu() {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erreur, setErreur] = useState('');
+  const [rechargement, setRechargement] = useState(0);
 
   useEffect(() => {
+    setLoading(true);
+    setErreur('');
     systemApi
       .getPermissions()
       .then((r) => {
-        setPermissions(r.data);
+        setPermissions(Array.isArray(r.data) ? r.data : []);
+      })
+      .catch((err) => {
+        console.error('Erreur chargement des permissions:', err);
+        setErreur(userFacingError(err, 'Impossible de charger les rôles et les droits. Veuillez réessayer.'));
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [rechargement]);
 
   if (loading) return <div style={{ color: '#64748B', padding: '32px', fontWeight: 600 }}>Chargement des permissions…</div>;
 
@@ -58,6 +73,25 @@ export default function AdminPermissionsPage() {
         title="Rôles et permissions"
         subtitle="Ce que chaque rôle peut voir et faire sur la plateforme IKAN AI."
       />
+
+      {erreur && (
+        <Alert
+          tone="critical"
+          title={erreur}
+          action={<Button size="sm" variant="secondary" onClick={() => setRechargement((n) => n + 1)}>Réessayer</Button>}
+        >
+          Cela ne signifie pas que les rôles sont vides.
+        </Alert>
+      )}
+
+      <Alert tone="warning" title="Liste indicative">
+        Ces descriptions sont rédigées à la main côté serveur : elles résument les droits mais ne sont pas ce qui les applique.
+        Le contrôle réel est fait fonction par fonction par l’API, et certains droits n’ont pas d’écran dédié dans l’interface.
+      </Alert>
+
+      {!erreur && permissions.length === 0 && (
+        <Alert tone="info" title="Aucun rôle à afficher" />
+      )}
 
       {/* ── Bandeaux de Rôles SaaS ── */}
       <div
@@ -102,21 +136,6 @@ export default function AdminPermissionsPage() {
                 <div>
                   <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#02302D' }}>
                     {p.nom_affichage}
-                  </div>
-                  <div
-                    style={{
-                      display: 'inline-block',
-                      fontSize: '0.7rem',
-                      fontWeight: 800,
-                      background: colors.bg,
-                      color: colors.text,
-                      border: `1px solid ${colors.border}`,
-                      borderRadius: '9999px',
-                      padding: '2px 8px',
-                      marginTop: '3px',
-                    }}
-                  >
-                    {p.role.toUpperCase()}
                   </div>
                 </div>
               </div>
@@ -176,19 +195,6 @@ export default function AdminPermissionsPage() {
                 </div>
                 <span style={{ fontWeight: 800, color: '#02302D', fontSize: '0.95rem' }}>
                   {p.nom_affichage}
-                </span>
-                <span
-                  style={{
-                    fontSize: '0.68rem',
-                    fontWeight: 800,
-                    background: colors.bg,
-                    color: colors.text,
-                    border: `1px solid ${colors.border}`,
-                    borderRadius: '9999px',
-                    padding: '2px 7px',
-                  }}
-                >
-                  {p.role.toUpperCase()}
                 </span>
               </div>
               <div style={{ padding: '16px 24px 20px' }}>

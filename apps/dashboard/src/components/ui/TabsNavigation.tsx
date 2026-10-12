@@ -101,7 +101,7 @@ export default function TabsNavigation({
                   color: isActive
                     ? '#FFFFFF'
                     : tab.badgeColor === 'red'
-                      ? '#DC2626'
+                      ? '#B91C1C' // 5.3:1 sur #FEE2E2 (#DC2626 : 3.95:1, insuffisant)
                       : tab.badgeColor === 'green'
                         ? '#3C7730'
                         : '#64748B',

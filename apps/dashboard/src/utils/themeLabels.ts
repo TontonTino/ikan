@@ -19,5 +19,7 @@ export const THEME_LABELS: Record<string, string> = {
 export const themeLabel = (theme: string | null | undefined): string => {
   if (!theme) return 'Non classé';
   if (THEME_LABELS[theme]) return THEME_LABELS[theme];
+  // Libellé personnalisé (espaces, majuscules, accents…) : conservé tel quel, sans retraduction.
+  if (!/^[a-z0-9_]+$/.test(theme)) return theme;
   return theme.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toLocaleUpperCase('fr-FR'));
 };

@@ -72,10 +72,19 @@ import IkanLogo from '../components/IkanLogo.astro';
       if (code) {
         window.location.href = `/feedback/${code}`;
       } else {
-        window.location.href = '/feedback/QR-ORANGE-TUNIS-01';
+        montrerSansCode();
       }
     } else {
-      window.location.href = '/feedback/QR-ORANGE-TUNIS-01';
+      montrerSansCode();
+    }
+
+    // Aucune agence par défaut : sans code QR, on n'ouvre aucun formulaire.
+    function montrerSansCode() {
+      const titre = document.querySelector('.redirect-title');
+      const sous = document.querySelector('.redirect-sub');
+      document.querySelector('.spinner-ring')?.remove();
+      if (titre) titre.textContent = 'Page introuvable';
+      if (sous) sous.textContent = "Scannez le QR code affiché en agence pour donner votre avis.";
     }
   </script>
 </FeedbackLayout>
