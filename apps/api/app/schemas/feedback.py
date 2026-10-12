@@ -2,12 +2,20 @@
 Schémas Pydantic pour les feedbacks (soumission client et workflow de traitement Closed-Loop).
 """
 from __future__ import annotations
+import re
 import uuid
 from datetime import datetime
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional, List
 
 from app.utils.phone import MESSAGE_TELEPHONE_INVALIDE, normaliser_telephone
+
+
+MESSAGE_CONSENTEMENT_REQUIS = (
+    "Pour être recontacté, vous devez accepter que l'agence utilise votre numéro pour vous répondre."
+)
+MESSAGE_EMAIL_INVALIDE = "Adresse e-mail invalide."
+_FORMAT_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$")
 
 
 class FeedbackCreate(BaseModel):
@@ -15,17 +23,22 @@ class FeedbackCreate(BaseModel):
     categorie_id: uuid.UUID = Field(..., description="Catégorie choisie par le client parmi celles définies pour cette agence")
     note: Optional[int] = Field(None, ge=1, le=5, description="Note de satisfaction (1=Négatif, 3=Neutre, 5=Positif)")
     nps_note: Optional[int] = Field(None, ge=0, le=10, description="Réponse NPS facultative (0 à 10)")
-    sentiment: Optional[str] = Field(None, description="Sentiment sélectionné (negatif, neutre, positif)")
+    sentiment: Optional[str] = Field(None, max_length=20, description="Sentiment sélectionné (negatif, neutre, positif)")
     commentaire: Optional[str] = Field(None, max_length=1000)
     # Clé d'idempotence d'UN envoi (générée par le formulaire, rejouée à l'identique lors d'une nouvelle tentative).
     idempotency_key: Optional[str] = Field(None, min_length=8, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
     # Suggestion optionnelle (BF-04)
-    suggestion: Optional[str] = None
+    suggestion: Optional[str] = Field(None, max_length=1000)
     # Demande de contact optionnelle (numéro ou email)
-    contact_nom: Optional[str] = None
-    contact_telephone: Optional[str] = None
-    contact_email: Optional[str] = None
+    contact_nom: Optional[str] = Field(None, max_length=100)
+    contact_telephone: Optional[str] = Field(None, max_length=30)
+    contact_email: Optional[str] = Field(None, max_length=254)
     souhaite_etre_rappele: bool = False
+    # Consentement à être recontacté : obligatoire dès qu'un numéro est transmis (voir _exiger_consentement).
+    consentement_contact: bool = False
+    # Champ piège : invisible pour une personne, rempli par les robots. Un envoi qui le remplit répond comme un succès
+    # mais n'enregistre rien (voir submit_feedback).
+    website: Optional[str] = Field(None, max_length=200)
 
     @field_validator("contact_telephone")
     @classmethod
@@ -37,6 +50,29 @@ class FeedbackCreate(BaseModel):
         if normaliser_telephone(valeur) is None:
             raise ValueError(MESSAGE_TELEPHONE_INVALIDE)
         return valeur.strip()
+
+    @field_validator("contact_email")
+    @classmethod
+    def _valider_contact_email(cls, valeur: Optional[str]) -> Optional[str]:
+        if valeur is None or not valeur.strip():
+            return None
+        valeur = valeur.strip()
+        if not _FORMAT_EMAIL.match(valeur):
+            raise ValueError(MESSAGE_EMAIL_INVALIDE)
+        return valeur
+
+    @model_validator(mode="after")
+    def _exiger_consentement(self):
+        if self.contact_telephone and not self.consentement_contact:
+            raise ValueError(MESSAGE_CONSENTEMENT_REQUIS)
+        return self
+
+
+class FeedbackSoumisResponse(BaseModel):
+    """Réponse PUBLIQUE de POST /feedbacks : le strict nécessaire (aucune donnée de l'agence, de l'analyse ni du dossier)."""
+    id: uuid.UUID
+    nps_token: Optional[str] = None
+    message: str = "Merci, votre avis a bien été enregistré."
 
 
 class AnalyseIAInfo(BaseModel):

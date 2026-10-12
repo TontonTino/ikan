@@ -67,6 +67,14 @@ services:
         value: "true"
       - key: MAIL_SSL_TLS
         value: "false"
+      # Limitation de débit du formulaire public (compteurs EN MÉMOIRE : une seule instance, voir app/core/rate_limit.py).
+      # TRUSTED_PROXY_HOPS=1 : l'API est derrière le proxy Render, dont l'entrée X-Forwarded-For (la dernière) fait foi.
+      # Sans cela tous les visiteurs partageraient l'adresse du proxy. À VÉRIFIER au premier déploiement.
+      - key: TRUSTED_PROXY_HOPS
+        value: "1"
+      # Secret partagé avec ikanai-client (MÊME valeur des deux côtés, à saisir dans le dashboard Render).
+      - key: SSR_FORWARD_SECRET
+        sync: false
 
   # Agent IA « YAM » (FastAPI, apps/agent). Se connecte à la MÊME base PostgreSQL
   # qu'ikanai-api et vérifie les JWT émis par ikanai-api (même SECRET_KEY).
@@ -130,6 +138,11 @@ services:
         value: "20"
       - key: PUBLIC_API_URL
         value: https://ikan-772d.onrender.com/api/v1
+      - key: TRUSTED_PROXY_HOPS
+        value: "1"
+      # IDENTIQUE à SSR_FORWARD_SECRET d'ikanai-api (dashboard Render, jamais dans git).
+      - key: SSR_FORWARD_SECRET
+        sync: false
 
   - type: web
     name: ikanai-dashboard

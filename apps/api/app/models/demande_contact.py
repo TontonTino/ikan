@@ -4,7 +4,7 @@ Modèle DemandeContact — demande de rappel ou de contact liée à un feedback.
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, Boolean, DateTime, ForeignKey, func
+from sqlalchemy import String, Boolean, DateTime, ForeignKey, Integer, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -29,6 +29,11 @@ class DemandeContact(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     traitee: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Consentement à être recontacté (nullable : demandes antérieures à la migration 030, sans consentement enregistré).
+    consentement_contact: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    consentement_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Durée de conservation (mois) affichée au client au moment où il a consenti : preuve de ce qui a été accepté.
+    consentement_retention_mois: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # Relations
     feedback: Mapped["Feedback"] = relationship("Feedback", back_populates="demande_contact")

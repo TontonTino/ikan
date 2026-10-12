@@ -3,11 +3,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   MAX_COMMENTAIRE,
+  MESSAGE_CONSENTEMENT_REQUIS,
+  MESSAGE_NOTE_REQUISE,
   NIVEAUX,
   causeEchecHttp,
   construirePayload,
   etatQrDepuisStatut,
   extraireCodeQr,
+  indexNiveauSuivant,
+  libelleCompteur,
+  libelleConsentement,
   messageEchecEnvoi,
   nouvelleCleEnvoi,
   verifierSaisie,
@@ -41,13 +46,14 @@ test('cinq niveaux explicites, notes 1 à 5 croissantes', () => {
   const cles = Object.keys(NIVEAUX);
   assert.deepEqual(cles, ['mauvais', 'passable', 'neutre', 'bien', 'excellente']);
   assert.deepEqual(cles.map((c) => NIVEAUX[c].note), [1, 2, 3, 4, 5]);
-  assert.deepEqual(cles.map((c) => NIVEAUX[c].label), ['Mauvais', 'Passable', 'Neutre', 'Bien', 'Excellente']);
+  assert.deepEqual(cles.map((c) => NIVEAUX[c].label), ['Mauvais', 'Passable', 'Neutre', 'Bien', 'Excellent']);
 });
 
 test('sans note choisie, l\'envoi est refusé avec un message explicite', () => {
   const p = verifierSaisie({ niveau: null, categorieId: 'cat-1', souhaiteEtreRappele: false, telephone: '' });
   assert.equal(p.champ, 'note');
-  assert.match(p.message, /note/i);
+  assert.equal(p.message, MESSAGE_NOTE_REQUISE);
+  assert.match(p.message, /Choisissez une note pour envoyer votre avis/);
   assert.equal(verifierSaisie({ niveau: 'nimporte', categorieId: 'cat-1', souhaiteEtreRappele: false, telephone: '' }).champ, 'note');
 });
 
@@ -62,11 +68,70 @@ test('commentaire facultatif : une saisie complète sans commentaire est valide'
 });
 
 test('rappel demandé : téléphone obligatoire et format international explicite', () => {
-  const base = { niveau: 'bien', categorieId: 'cat-1', souhaiteEtreRappele: true };
+  const base = { niveau: 'bien', categorieId: 'cat-1', souhaiteEtreRappele: true, consentement: true };
   assert.equal(verifierSaisie({ ...base, telephone: '  ' }).champ, 'telephone');
   assert.equal(verifierSaisie({ ...base, telephone: '123' }).champ, 'telephone');
   assert.equal(verifierSaisie({ ...base, telephone: '+33 6 12 34 56 78' }), null);
   assert.equal(verifierSaisie({ ...base, telephone: '70 12 34 56' }).champ, 'telephone');
+});
+
+test('téléphone saisi sans consentement : envoi refusé avec le message de consentement', () => {
+  const base = { niveau: 'bien', categorieId: 'cat-1', souhaiteEtreRappele: true, telephone: '+226 70 12 34 56' };
+  for (const consentement of [undefined, false]) {
+    const p = verifierSaisie({ ...base, consentement });
+    assert.equal(p.champ, 'consentement');
+    assert.equal(p.message, MESSAGE_CONSENTEMENT_REQUIS);
+  }
+  assert.equal(verifierSaisie({ ...base, consentement: true }), null);
+});
+
+test('sans demande de rappel, aucun consentement n\'est exigé', () => {
+  assert.equal(verifierSaisie({ niveau: 'bien', categorieId: 'c', souhaiteEtreRappele: false, telephone: '', consentement: false }), null);
+});
+
+test('texte de consentement : durée lue dans la configuration, jamais en dur', () => {
+  const t = libelleConsentement(12);
+  assert.equal(t, "J'accepte que l'agence utilise mon numéro uniquement pour me recontacter au sujet de cet avis. Il sera conservé 12 mois.");
+  assert.match(libelleConsentement('36'), /conservé 36 mois\.$/);
+  assert.match(libelleConsentement(24), /conservé 24 mois\.$/);
+  for (const inconnue of [undefined, null, '', 0, -3, 1.5, 'abc', NaN]) {
+    assert.equal(libelleConsentement(inconnue), null, String(inconnue));
+  }
+});
+
+test('le payload transmet le consentement (jamais la durée) et le champ piège', () => {
+  const base = { niveau: 'bien', categorieId: 'c', telephone: '+226 70 12 34 56', commentaire: '', cleEnvoi: 'cle-0000009' };
+  const avec = construirePayload({ ...base, souhaiteEtreRappele: true, consentement: true });
+  assert.equal(avec.consentement_contact, true);
+  assert.equal(avec.website, '');
+  assert.equal('retention_mois' in avec || 'consentement_retention_mois' in avec, false);
+  assert.equal(construirePayload({ ...base, souhaiteEtreRappele: false, consentement: true }).consentement_contact, false);
+  assert.equal(construirePayload({ ...base, souhaiteEtreRappele: true, consentement: true, piege: 'http://spam' }).website, 'http://spam');
+});
+
+test('le formulaire ne demande ni nom ni e-mail : le payload n\'en contient pas', () => {
+  const p = construirePayload({ niveau: 'bien', categorieId: 'c', souhaiteEtreRappele: true, consentement: true, telephone: '+226 70 12 34 56', commentaire: '', cleEnvoi: 'cle-0000010' });
+  assert.equal('contact_nom' in p || 'contact_email' in p, false);
+});
+
+test('compteur : « caractères restants sur 1000 », singulier à 0 et 1', () => {
+  assert.equal(libelleCompteur(0), '1000 caractères restants sur 1000');
+  assert.equal(libelleCompteur(250), '750 caractères restants sur 1000');
+  assert.equal(libelleCompteur(999), '1 caractère restant sur 1000');
+  assert.equal(libelleCompteur(1000), '0 caractère restant sur 1000');
+  assert.equal(libelleCompteur(1500), '0 caractère restant sur 1000');
+});
+
+test('flèches : parcours circulaire des 5 niveaux, Début/Fin, touches inconnues ignorées', () => {
+  assert.equal(indexNiveauSuivant(0, 'ArrowRight', 5), 1);
+  assert.equal(indexNiveauSuivant(4, 'ArrowRight', 5), 0);
+  assert.equal(indexNiveauSuivant(0, 'ArrowLeft', 5), 4);
+  assert.equal(indexNiveauSuivant(2, 'ArrowDown', 5), 3);
+  assert.equal(indexNiveauSuivant(2, 'ArrowUp', 5), 1);
+  assert.equal(indexNiveauSuivant(3, 'Home', 5), 0);
+  assert.equal(indexNiveauSuivant(1, 'End', 5), 4);
+  for (const touche of ['Tab', 'Enter', ' ', 'a', 'Escape']) assert.equal(indexNiveauSuivant(2, touche, 5), null, touche);
+  assert.equal(indexNiveauSuivant(0, 'ArrowRight', 0), null);
 });
 
 test('le téléphone saisi mais le rappel refusé n\'est jamais envoyé', () => {
@@ -111,6 +176,7 @@ test('causes d\'échec selon le statut HTTP', () => {
   assert.equal(causeEchecHttp(404), 'qr_invalide');
   assert.equal(causeEchecHttp(429), 'trop_de_demandes');
   assert.equal(causeEchecHttp(422), 'saisie');
+  assert.equal(causeEchecHttp(413), 'saisie');
   assert.equal(causeEchecHttp(400), 'saisie');
   assert.equal(causeEchecHttp(500), 'serveur');
   assert.equal(causeEchecHttp(503), 'serveur');
@@ -128,6 +194,7 @@ test('chaque message d\'échec dit que l\'avis n\'a pas été envoyé (ou peut n
 test('validation du QR : 2xx valide, 404 invalide, le reste est « indisponible » (jamais « invalide » à tort)', () => {
   assert.equal(etatQrDepuisStatut(200), 'valide');
   assert.equal(etatQrDepuisStatut(404), 'invalide');
+  assert.equal(etatQrDepuisStatut(429), 'trop_de_demandes');
   assert.equal(etatQrDepuisStatut(500), 'indisponible');
   assert.equal(etatQrDepuisStatut(502), 'indisponible');
   assert.equal(etatQrDepuisStatut(null), 'indisponible');

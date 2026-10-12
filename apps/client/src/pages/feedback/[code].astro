@@ -4,12 +4,13 @@
  * URL : /feedback/{code}
  */
 import FeedbackLayout from '../../layouts/FeedbackLayout.astro';
+import { ipVisiteur } from '../../utils/securite';
 
 const { code } = Astro.params;
 const DEFAULT_API_URL = 'https://ikan-772d.onrender.com/api/v1';
 const SSR_API_URL = import.meta.env.PUBLIC_API_URL || DEFAULT_API_URL;
 
-let agenceInfo: { agence_nom?: string; code?: string; actif?: boolean } | null = null;
+let agenceInfo: { agence_nom?: string; code?: string; actif?: boolean; retention_mois?: number } | null = null;
 let erreur: string | null = null;
 
 const cleanCode = (code || '').trim();
@@ -17,12 +18,28 @@ if (!cleanCode) {
   erreur = "Aucun code QR n'a été détecté dans ce lien.";
 } else {
   try {
+    // Le serveur du client appelle l'API pour le compte du visiteur : sans l'adresse de celui-ci, toutes les
+    // validations compteraient pour l'IP de ce serveur dans la limitation de débit de l'API. L'API ne la prend en
+    // compte que si le secret partagé SSR_FORWARD_SECRET est exact (voir app/core/rate_limit.py côté API).
+    const entetesApi: Record<string, string> = {};
+    const secretSsr = process.env.SSR_FORWARD_SECRET;
+    const ip = ipVisiteur(
+      Astro.request.headers.get('x-forwarded-for'),
+      Astro.clientAddress,
+      Number(process.env.TRUSTED_PROXY_HOPS || 0),
+    );
+    if (secretSsr && ip) {
+      entetesApi['X-Ikan-Ssr-Secret'] = secretSsr;
+      entetesApi['X-Ikan-Client-Ip'] = ip;
+    }
     const res = await fetch(`${SSR_API_URL}/qr-codes/${encodeURIComponent(cleanCode)}/validate`, {
       signal: AbortSignal.timeout(2000),
+      headers: entetesApi,
     });
     if (res.ok) {
       agenceInfo = await res.json();
     } else if (res.status === 404) {
+      // Inconnu, désactivé, ou agence désactivée : l'API répond 404 dans tous les cas (rien n'est révélé).
       erreur = "Ce QR code n'est pas reconnu ou n'est plus actif.";
     }
   } catch (e) {
@@ -36,14 +53,14 @@ if (erreur) Astro.response.status = 404;
   title={agenceInfo?.agence_nom ? `Votre avis — ${agenceInfo.agence_nom}` : 'IKAN AI — Votre avis en agence'}
   agenceNom={agenceInfo?.agence_nom}
 >
-  <div class="page-outer" data-api-url={SSR_API_URL} data-qr-valide={agenceInfo ? '1' : '0'}>
+  <div class="page-outer" data-api-url={SSR_API_URL} data-qr-valide={agenceInfo ? '1' : '0'} data-retention-mois={agenceInfo?.retention_mois ?? ''}>
     <div class="card-shell">
       {erreur ? (
         <div class="error-screen">
           <div class="error-icon">⚠️</div>
           <h2>QR Code non reconnu</h2>
           <p>{erreur}</p>
-          <p>Scannez de nouveau le QR code affiché en agence, ou signalez-le à un conseiller.</p>
+          <p>Merci de prévenir l'agence afin qu'elle vous indique le bon QR code. Vous pouvez aussi scanner de nouveau le QR code affiché en agence.</p>
         </div>
       ) : (
         <>
@@ -105,9 +122,9 @@ if (erreur) Astro.response.status = 404;
               <!-- SECTION 1 : ÉVALUATION (5 EMOJIS) -->
               <div class="form-section sentiment-section">
                 <p class="field-label" id="ratingLabel">Comment s'est passée votre visite ?</p>
-                <div class="sentiment-grid" id="sentimentsGrid" role="radiogroup" aria-labelledby="ratingLabel" aria-describedby="ratingError">
+                <div class="sentiment-grid" id="sentimentsGrid" role="radiogroup" aria-labelledby="ratingLabel" aria-describedby="ratingHint ratingError">
                   <!-- 1. Mauvais -->
-                  <button type="button" class="sentiment-tile tone-mauvais" data-sentiment="mauvais" role="radio" aria-checked="false" aria-label="Mauvais">
+                  <button type="button" class="sentiment-tile tone-mauvais" data-sentiment="mauvais" role="radio" aria-checked="false" aria-label="Mauvais" tabindex="0">
                     <div class="sentiment-icon">
                       <svg viewBox="0 0 40 40" width="38" height="38" fill="none">
                         <circle cx="20" cy="20" r="18" fill="#EF4444"/>
@@ -122,7 +139,7 @@ if (erreur) Astro.response.status = 404;
                   </button>
 
                   <!-- 2. Passable -->
-                  <button type="button" class="sentiment-tile tone-passable" data-sentiment="passable" role="radio" aria-checked="false" aria-label="Passable">
+                  <button type="button" class="sentiment-tile tone-passable" data-sentiment="passable" role="radio" aria-checked="false" aria-label="Passable" tabindex="-1">
                     <div class="sentiment-icon">
                       <svg viewBox="0 0 40 40" width="38" height="38" fill="none">
                         <circle cx="20" cy="20" r="18" fill="#F97316"/>
@@ -135,7 +152,7 @@ if (erreur) Astro.response.status = 404;
                   </button>
 
                   <!-- 3. Neutre -->
-                  <button type="button" class="sentiment-tile tone-neutre" data-sentiment="neutre" role="radio" aria-checked="false" aria-label="Neutre">
+                  <button type="button" class="sentiment-tile tone-neutre" data-sentiment="neutre" role="radio" aria-checked="false" aria-label="Neutre" tabindex="-1">
                     <div class="sentiment-icon">
                       <svg viewBox="0 0 40 40" width="38" height="38" fill="none">
                         <circle cx="20" cy="20" r="18" fill="#FACC15"/>
@@ -148,7 +165,7 @@ if (erreur) Astro.response.status = 404;
                   </button>
 
                   <!-- 4. Bien -->
-                  <button type="button" class="sentiment-tile tone-bien" data-sentiment="bien" role="radio" aria-checked="false" aria-label="Bien">
+                  <button type="button" class="sentiment-tile tone-bien" data-sentiment="bien" role="radio" aria-checked="false" aria-label="Bien" tabindex="-1">
                     <div class="sentiment-icon">
                       <svg viewBox="0 0 40 40" width="38" height="38" fill="none">
                         <circle cx="20" cy="20" r="18" fill="#4CAF50"/>
@@ -160,8 +177,8 @@ if (erreur) Astro.response.status = 404;
                     <span class="tile-label">Bien</span>
                   </button>
 
-                  <!-- 5. Excellente (avec étoile dorée) -->
-                  <button type="button" class="sentiment-tile tone-excellente" data-sentiment="excellente" role="radio" aria-checked="false" aria-label="Excellente">
+                  <!-- 5. Excellent (avec étoile dorée) -->
+                  <button type="button" class="sentiment-tile tone-excellente" data-sentiment="excellente" role="radio" aria-checked="false" aria-label="Excellent" tabindex="-1">
                     <div class="sentiment-icon">
                       <svg viewBox="0 0 40 40" width="38" height="38" fill="none">
                         <circle cx="20" cy="20" r="18" fill="#147A43"/>
@@ -172,9 +189,10 @@ if (erreur) Astro.response.status = 404;
                         <path d="M 32 6 L 33.3 9.8 L 37 10.1 L 34.2 12.5 L 35 16.2 L 32 14.2 L 29 16.2 L 29.8 12.5 L 27 10.1 L 30.7 9.8 Z" fill="#FACC15" stroke="#CA8A04" stroke-width="0.6"/>
                       </svg>
                     </div>
-                    <span class="tile-label">Excellente</span>
+                    <span class="tile-label">Excellent</span>
                   </button>
                 </div>
+                <p class="sr-only" id="ratingHint">Utilisez les flèches pour parcourir les cinq niveaux, Espace ou Entrée pour choisir.</p>
                 <p class="field-error" id="ratingError" role="alert" hidden></p>
 
               </div>
@@ -188,6 +206,7 @@ if (erreur) Astro.response.status = 404;
                     class="styled-textarea"
                     rows="3"
                     maxlength="1000"
+                    aria-describedby="charCount"
                     placeholder="Partagez votre ressenti ou une remarque..."
                   ></textarea>
 
@@ -209,15 +228,21 @@ if (erreur) Astro.response.status = 404;
                       <span class="mic-text">Parler</span>
                     </button>
 
-                    <span class="char-count" id="charCount">0 / 1000</span>
+                    <span class="char-count" id="charCount">1000 caractères restants sur 1000</span>
                   </div>
                 </div>
 
                 <div class="voice-status-bar" id="voiceStatusCommentaire" style="display:none;"></div>
               </div>
 
-              <!-- SECTION 4 : RECONTACT -->
-              <div class="form-section recontact-section">
+              <!-- CHAMP PIÈGE : invisible et hors parcours clavier. Une personne ne le remplit jamais ; un robot oui. -->
+              <div class="champ-piege" aria-hidden="true">
+                <label for="champSiteWeb">Ne pas remplir ce champ</label>
+                <input type="text" id="champSiteWeb" name="website" tabindex="-1" autocomplete="off" />
+              </div>
+
+              <!-- SECTION 4 : RECONTACT (proposé seulement si la durée de conservation est connue : voir demarrer()) -->
+              <div class="form-section recontact-section" id="recontactSection">
                 <div class="recontact-row">
                   <div class="section-head">
                     <label class="field-label-inline">
@@ -250,6 +275,12 @@ if (erreur) Astro.response.status = 404;
                     </div>
                   </div>
                   <p class="field-error" id="contactTelError" role="alert" hidden></p>
+                  <label class="consent-row" for="consentCheckbox">
+                    <input type="checkbox" id="consentCheckbox" class="consent-box" aria-describedby="consentError" />
+                    <span class="consent-case" aria-hidden="true"></span>
+                    <span id="consentText"></span>
+                  </label>
+                  <p class="field-error" id="consentError" role="alert" hidden></p>
                 </div>
               </div>
 
@@ -1560,6 +1591,10 @@ if (erreur) Astro.response.status = 404;
   .styled-input::placeholder {
     color: #64748B;
   }
+  /* Icône du champ téléphone : 3:1 minimum pour un élément graphique porteur de sens (#94A3B8 ne faisait que 2,6:1). */
+  .field-icon {
+    color: #64748B;
+  }
   .segment {
     min-height: 44px;
     padding: 0;
@@ -1580,6 +1615,114 @@ if (erreur) Astro.response.status = 404;
   .btn-secondary {
     min-height: 44px;
   }
+  /* Zones tactiles : 44 x 44 px au minimum sur TOUS les contrôles (largeur ET hauteur), test : src/utils/accessibilite.test.mjs */
+  .sentiment-tile,
+  .segment,
+  .mic-btn,
+  .btn-secondary,
+  .btn-submit,
+  .nps-skip-link {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .nps-scale :global(.nps-btn) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .styled-input,
+  .styled-select {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .styled-textarea {
+    min-width: 44px;
+    min-height: 78px;
+  }
+  .segmented-control {
+    min-width: 120px;
+  }
+
+  /* Texte réservé aux lecteurs d'écran */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  /* Champ piège : hors écran (et non display:none, que certains robots détectent), hors parcours clavier. */
+  .champ-piege {
+    position: absolute;
+    left: -10000px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  /* Case de consentement : la vraie case (44 x 44 px, invisible) couvre la zone tactile ; la case dessinée (24 px) est
+     centrée dessus. Toute la ligne reste cliquable (<label for>). */
+  .consent-row {
+    position: relative;
+    display: block;
+    min-height: 44px;
+    margin-top: 10px;
+    padding: 4px 0 4px 56px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: #1E293B;
+  }
+  .consent-box {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 1;
+  }
+  .consent-case {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    width: 24px;
+    height: 24px;
+    border: 2px solid #1F5A25;
+    border-radius: 6px;
+    background: #FFFFFF;
+  }
+  .consent-box:checked + .consent-case {
+    background: #1F5A25;
+  }
+  .consent-box:checked + .consent-case::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 1px;
+    width: 6px;
+    height: 12px;
+    border: solid #FFFFFF;
+    border-width: 0 3px 3px 0;
+    transform: rotate(45deg);
+  }
+  /* Sans durée de conservation connue, le recontact n'est pas proposé (l'attribut hidden doit l'emporter). */
+  .recontact-section[hidden] {
+    display: none;
+  }
+  .consent-box:focus-visible + .consent-case {
+    outline: 3px solid #1F5A25;
+    outline-offset: 2px;
+  }
+
   /* Focus clavier visible sur tous les contrôles du formulaire */
   .sentiment-tile:focus-visible,
   .segment:focus-visible,
@@ -1633,6 +1776,9 @@ if (erreur) Astro.response.status = 404;
     construirePayload,
     etatQrDepuisStatut,
     extraireCodeQr,
+    indexNiveauSuivant,
+    libelleCompteur,
+    libelleConsentement,
     messageEchecEnvoi,
     nouvelleCleEnvoi,
     verifierSaisie,
@@ -1805,9 +1951,14 @@ if (erreur) Astro.response.status = 404;
       if (res.status === 404) {
         afficherEcranErreur(
           'QR Code non reconnu',
-          "Ce QR code n'est pas reconnu ou n'est plus actif. Scannez de nouveau le QR code affiché en agence, ou signalez-le à un conseiller.",
+          "Ce QR code n'est pas reconnu ou n'est plus actif. Merci de prévenir l'agence, ou scannez de nouveau le QR code affiché en agence.",
           false,
         );
+        return;
+      }
+      if (res.status === 429) {
+        categorieSelect.innerHTML = '<option value="" disabled selected>Catégories indisponibles</option>';
+        afficherErreurCategorie(`Impossible de charger les catégories : ${messageEchecEnvoi('trop_de_demandes')}`);
         return;
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -1843,6 +1994,17 @@ if (erreur) Astro.response.status = 404;
   // Nom de l'agence courante, réutilisé par la question NPS après l'envoi.
   let agenceNomCourant = 'cette agence';
 
+  // Durée de conservation (mois) lue dans la configuration de la plateforme via /validate : texte de la case de
+  // consentement. Inconnue => le recontact n'est pas proposé (jamais de durée écrite en dur).
+  const consentTextEl = document.getElementById('consentText');
+  const recontactSection = document.getElementById('recontactSection');
+  function appliquerRetention(valeur: unknown) {
+    const texte = libelleConsentement(valeur);
+    if (consentTextEl) consentTextEl.textContent = texte || '';
+    if (recontactSection) recontactSection.hidden = !texte;
+  }
+  appliquerRetention(pageOuter?.dataset.retentionMois);
+
   // Validation du QR Code côté navigateur (le serveur a déjà tenté une validation rapide au rendu de la page)
   async function validerQr() {
     try {
@@ -1856,6 +2018,7 @@ if (erreur) Astro.response.status = 404;
           agencyBadge.textContent = agencyName;
         }
         document.title = `Votre avis — ${agencyName}`;
+        appliquerRetention(data.retention_mois);
         setSector(detectSectorFromText(`${agencyName} ${QR_CODE}`));
       }
       return etatQrDepuisStatut(res.status);
@@ -1883,9 +2046,13 @@ if (erreur) Astro.response.status = 404;
       if (etat === 'invalide') {
         afficherEcranErreur(
           'QR Code non reconnu',
-          "Ce QR code n'est pas reconnu ou n'est plus actif. Scannez de nouveau le QR code affiché en agence, ou signalez-le à un conseiller.",
+          "Ce QR code n'est pas reconnu ou n'est plus actif. Merci de prévenir l'agence, ou scannez de nouveau le QR code affiché en agence.",
           false,
         );
+        return;
+      }
+      if (etat === 'trop_de_demandes') {
+        afficherEcranErreur('Un instant', messageEchecEnvoi('trop_de_demandes'), true);
         return;
       }
       if (etat === 'indisponible') {
@@ -2009,6 +2176,22 @@ if (erreur) Astro.response.status = 404;
     }
   }
 
+  // Groupe radio à tabindex itinérant : UNE seule tabulation pour entrer (le niveau choisi, sinon le premier), puis
+  // flèches / Début / Fin pour se déplacer, Espace ou Entrée pour choisir (clic natif d'un <button>).
+  const niveauxListe = Array.from(sentimentBtns) as HTMLElement[];
+  function pointEntreeNiveaux(cible: HTMLElement) {
+    niveauxListe.forEach((b) => b.setAttribute('tabindex', b === cible ? '0' : '-1'));
+  }
+  niveauxListe.forEach((btn, index) => {
+    btn.addEventListener('keydown', (e) => {
+      const suivant = indexNiveauSuivant(index, (e as KeyboardEvent).key, niveauxListe.length);
+      if (suivant === null) return;
+      e.preventDefault();
+      pointEntreeNiveaux(niveauxListe[suivant]);
+      niveauxListe[suivant].focus();
+    });
+  });
+
   sentimentBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       sentimentBtns.forEach(b => {
@@ -2018,6 +2201,7 @@ if (erreur) Astro.response.status = 404;
 
       btn.classList.add('selected');
       btn.setAttribute('aria-checked', 'true');
+      pointEntreeNiveaux(btn as HTMLElement);
 
       const choix = (btn as HTMLElement).dataset.sentiment || '';
       sentimentSelectionne = NIVEAUX[choix] ? choix : null;
@@ -2052,7 +2236,7 @@ if (erreur) Astro.response.status = 404;
   const charCountEl = document.getElementById('charCount');
   commentInput?.addEventListener('input', () => {
     if (charCountEl && commentInput) {
-      charCountEl.textContent = `${commentInput.value.length} / ${MAX_COMMENTAIRE}`;
+      charCountEl.textContent = libelleCompteur(commentInput.value.length);
     }
   });
 
@@ -2123,7 +2307,7 @@ if (erreur) Astro.response.status = 404;
         }
 
         if (charCountEl) {
-          charCountEl.textContent = `${commentInput.value.length} / ${MAX_COMMENTAIRE}`;
+          charCountEl.textContent = libelleCompteur(commentInput.value.length);
         }
       };
 
@@ -2197,6 +2381,19 @@ if (erreur) Astro.response.status = 404;
 
   contactTelInputEl?.addEventListener('input', () => afficherErreurTelephone(null));
 
+  const consentCheckbox = document.getElementById('consentCheckbox') as HTMLInputElement | null;
+  const consentErrorEl = document.getElementById('consentError');
+  const champPiegeEl = document.getElementById('champSiteWeb') as HTMLInputElement | null;
+
+  function afficherErreurConsentement(message: string | null) {
+    if (consentErrorEl) {
+      consentErrorEl.textContent = message || '';
+      consentErrorEl.hidden = !message;
+    }
+    if (message) consentCheckbox?.focus();
+  }
+  consentCheckbox?.addEventListener('change', () => afficherErreurConsentement(null));
+
   // Un envoi = une clé. Elle est rejouée à l'identique si le client réessaie (coupure réseau, délai dépassé) :
   // l'API ne crée alors qu'UN feedback. Elle change seulement après un envoi confirmé.
   let cleEnvoi = nouvelleCleEnvoi();
@@ -2208,6 +2405,7 @@ if (erreur) Astro.response.status = 404;
     afficherErreurNote(null);
     afficherErreurCategorie(null);
     afficherErreurTelephone(null);
+    afficherErreurConsentement(null);
     afficherErreurEnvoi(null);
 
     const probleme = verifierSaisie({
@@ -2215,9 +2413,12 @@ if (erreur) Astro.response.status = 404;
       categorieId: selectedCategorieId,
       souhaiteEtreRappele: wantsRecontact,
       telephone: contactTelInputEl?.value ?? '',
+      consentement: consentCheckbox?.checked ?? false,
     });
     if (probleme) {
-      if (probleme.champ === 'telephone') {
+      if (probleme.champ === 'consentement') {
+        afficherErreurConsentement(probleme.message);
+      } else if (probleme.champ === 'telephone') {
         afficherErreurTelephone(probleme.message);
       } else if (probleme.champ === 'categorie') {
         afficherErreurCategorie(probleme.message);
@@ -2242,6 +2443,8 @@ if (erreur) Astro.response.status = 404;
       telephone: contactTelInputEl?.value ?? '',
       commentaire: commentInput?.value ?? '',
       cleEnvoi,
+      consentement: consentCheckbox?.checked ?? false,
+      piege: champPiegeEl?.value ?? '',
     });
 
     let confirme = false;
@@ -2267,6 +2470,8 @@ if (erreur) Astro.response.status = 404;
           err.detail.some((d: any) => Array.isArray(d?.loc) && d.loc.includes('contact_telephone'));
         if (erreurTelephone) {
           afficherErreurTelephone(MESSAGE_TELEPHONE_INVALIDE);
+        } else if (res.status === 429) {
+          afficherErreurEnvoi(`${messageEchecEnvoi('trop_de_demandes')} Votre avis n'a pas été envoyé.`);
         } else {
           afficherErreurEnvoi(messageEchecEnvoi(causeEchecHttp(res.status)));
         }
@@ -2357,12 +2562,16 @@ if (erreur) Astro.response.status = 404;
       commentInput.value = '';
       commentInput.placeholder = PLACEHOLDER_DEFAUT;
     }
-    if (charCountEl) charCountEl.textContent = `0 / ${MAX_COMMENTAIRE}`;
+    if (charCountEl) charCountEl.textContent = libelleCompteur(0);
 
     recontactNo?.click();
     const tel = document.getElementById('contactTelInput') as HTMLInputElement;
     if (tel) tel.value = '';
     afficherErreurTelephone(null);
+    afficherErreurConsentement(null);
+    if (consentCheckbox) consentCheckbox.checked = false;
+    if (champPiegeEl) champPiegeEl.value = '';
+    pointEntreeNiveaux(niveauxListe[0]);
     afficherErreurEnvoi(null);
     afficherErreurCategorie(null);
     document.getElementById('npsBlock')!.style.display = 'none';
