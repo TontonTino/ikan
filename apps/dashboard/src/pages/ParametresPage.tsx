@@ -3,6 +3,7 @@ import { authApi } from '../services/api';
 import { useAuthStore } from '../stores/authStore';
 import PageHeader from '../components/ui/PageHeader';
 import { CheckCircleIcon, AlertTriangleIcon, KeyIcon, UsersIcon, BellIcon } from '../components/common/Icons';
+import { userFacingError } from '../utils/userFacingError';
 
 function cardStyle(): React.CSSProperties {
   return {
@@ -52,7 +53,7 @@ export default function ParametresPage() {
       setUser(res.data);
       setMessageInfos({ type: 'succes', texte: 'Informations mises à jour.' });
     } catch (err: any) {
-      setMessageInfos({ type: 'erreur', texte: err?.response?.data?.detail || 'Impossible d’enregistrer les modifications. Réessayez.' });
+      setMessageInfos({ type: 'erreur', texte: userFacingError(err, 'Impossible d’enregistrer les modifications. Réessayez.', undefined, { 400: 'Cette adresse e-mail est déjà utilisée par un autre compte.' }) });
     } finally {
       setEnregistrementEnCours(false);
     }
@@ -82,11 +83,9 @@ export default function ParametresPage() {
       setUser(res.data);
       setMessageDelai({ type: 'succes', texte: 'Délai mis à jour.' });
     } catch (err: any) {
-      // FastAPI renvoie un tableau pour les erreurs de validation (422) : on n'affiche jamais un objet brut.
-      const detail = err?.response?.data?.detail;
       setMessageDelai({
         type: 'erreur',
-        texte: typeof detail === 'string' ? detail : `Saisissez un nombre entier d'heures entre ${DELAI_MIN} et ${DELAI_MAX}.`,
+        texte: userFacingError(err, 'Impossible de mettre à jour le délai. Réessayez.', `Saisissez un nombre entier d'heures entre ${DELAI_MIN} et ${DELAI_MAX}.`),
       });
     } finally {
       setDelaiEnCours(false);
@@ -121,7 +120,7 @@ export default function ParametresPage() {
       setNouveauMdp('');
       setConfirmationMdp('');
     } catch (err: any) {
-      setMessageMdp({ type: 'erreur', texte: err?.response?.data?.detail || 'Ancien mot de passe incorrect.' });
+      setMessageMdp({ type: 'erreur', texte: userFacingError(err, 'Impossible de changer le mot de passe. Réessayez.', undefined, { 400: 'Ancien mot de passe incorrect.' }) });
     } finally {
       setChangementEnCours(false);
     }
@@ -145,17 +144,17 @@ export default function ParametresPage() {
         <form onSubmit={enregistrerInfos}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
             <div>
-              <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>Prénom</label>
-              <input value={prenom} onChange={(e) => setPrenom(e.target.value)} required className="saas-input" style={{ width: '100%' }} />
+              <label htmlFor="parametres-prenom" style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>Prénom</label>
+              <input id="parametres-prenom" value={prenom} onChange={(e) => setPrenom(e.target.value)} required className="saas-input" style={{ width: '100%' }} />
             </div>
             <div>
-              <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>Nom</label>
-              <input value={nom} onChange={(e) => setNom(e.target.value)} required className="saas-input" style={{ width: '100%' }} />
+              <label htmlFor="parametres-nom" style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>Nom</label>
+              <input id="parametres-nom" value={nom} onChange={(e) => setNom(e.target.value)} required className="saas-input" style={{ width: '100%' }} />
             </div>
           </div>
           <div style={{ marginBottom: '4px' }}>
-            <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>E-mail</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="saas-input" style={{ width: '100%' }} />
+            <label htmlFor="parametres-email" style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>E-mail</label>
+            <input id="parametres-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="saas-input" style={{ width: '100%' }} />
           </div>
 
           {messageInfos && <Bandeau type={messageInfos.type} texte={messageInfos.texte} />}
@@ -181,8 +180,8 @@ export default function ParametresPage() {
 
           <form onSubmit={enregistrerDelai}>
             <div style={{ marginBottom: '4px' }}>
-              <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>Délai (en heures, de 1 à 168)</label>
-              <input
+              <label htmlFor="parametres-delai" style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>Délai (en heures, de 1 à 168)</label>
+              <input id="parametres-delai"
                 type="number"
                 min={DELAI_MIN}
                 max={DELAI_MAX}
@@ -218,17 +217,17 @@ export default function ParametresPage() {
 
         <form onSubmit={changerMotDePasse}>
           <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>Ancien mot de passe</label>
-            <input type="password" value={ancienMdp} onChange={(e) => setAncienMdp(e.target.value)} required className="saas-input" style={{ width: '100%' }} />
+            <label htmlFor="parametres-ancien-mdp" style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>Ancien mot de passe</label>
+            <input id="parametres-ancien-mdp" type="password" value={ancienMdp} onChange={(e) => setAncienMdp(e.target.value)} required className="saas-input" style={{ width: '100%' }} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
             <div>
-              <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>Nouveau mot de passe</label>
-              <input type="password" value={nouveauMdp} onChange={(e) => setNouveauMdp(e.target.value)} required minLength={8} className="saas-input" style={{ width: '100%' }} />
+              <label htmlFor="parametres-nouveau-mdp" style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>Nouveau mot de passe</label>
+              <input id="parametres-nouveau-mdp" type="password" value={nouveauMdp} onChange={(e) => setNouveauMdp(e.target.value)} required minLength={8} className="saas-input" style={{ width: '100%' }} />
             </div>
             <div>
-              <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>Confirmation</label>
-              <input type="password" value={confirmationMdp} onChange={(e) => setConfirmationMdp(e.target.value)} required minLength={8} className="saas-input" style={{ width: '100%' }} />
+              <label htmlFor="parametres-confirmation-mdp" style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>Confirmation</label>
+              <input id="parametres-confirmation-mdp" type="password" value={confirmationMdp} onChange={(e) => setConfirmationMdp(e.target.value)} required minLength={8} className="saas-input" style={{ width: '100%' }} />
             </div>
           </div>
 
