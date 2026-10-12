@@ -14,19 +14,7 @@ from app.models.suggestion import Suggestion, HistoriqueSuggestion
 from app.models.enums import UserRole, IdeaStatus
 from app.schemas.suggestion import SuggestionResponse, SuggestionStatusUpdate
 from app.services.acces_agence import verifier_acces_agence
-
-
-def _agence_de_la_suggestion(db: Session, suggestion: Suggestion):
-    """Agence d'origine d'une suggestion (suggestion -> feedback -> QR code -> agence)."""
-    from app.models.feedback import Feedback
-    from app.models.qr_code import QRCode
-
-    return (
-        db.query(QRCode.agence_id)
-        .join(Feedback, Feedback.qr_code_id == QRCode.id)
-        .filter(Feedback.id == suggestion.feedback_id)
-        .scalar()
-    )
+from app.services.suggestions_scope import agence_effective, agence_id_de_la_suggestion, filtrer_par_perimetre
 
 router = APIRouter()
 
@@ -40,34 +28,13 @@ def list_suggestions(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ):
-    """Liste les suggestions (CX Manager / Agency Manager uniquement, Admin exclu)."""
-    from app.models.feedback import Feedback
-    from app.models.qr_code import QRCode
-
-    query = db.query(Suggestion).options(
-        joinedload(Suggestion.feedback).joinedload(Feedback.qr_code).joinedload(QRCode.agence)
-    )
-
-    if current_user.role == UserRole.AGENCY_MANAGER:
-        query = (
-            query
-            .join(Feedback, Suggestion.feedback_id == Feedback.id)
-            .join(QRCode, Feedback.qr_code_id == QRCode.id)
-            .filter(QRCode.agence_id == current_user.agence_id)
-        )
-    elif current_user.role == UserRole.CX_MANAGER:
-        from app.models.agence import Agence
-        query = (
-            query
-            .join(Feedback, Suggestion.feedback_id == Feedback.id)
-            .join(QRCode, Feedback.qr_code_id == QRCode.id)
-            .join(Agence, QRCode.agence_id == Agence.id)
-            .filter(Agence.organisation_id == current_user.organisation_id)
-        )
+    """Liste les suggestions (CX Manager / Agency Manager uniquement, Admin exclu), y compris celles envoyées sans
+    feedback (« Partager une idée »). Périmètre : voir app/services/suggestions_scope.py."""
+    query = filtrer_par_perimetre(db.query(Suggestion), current_user)
 
     # Le filtre agence s'ajoute (ET) au périmètre du rôle : une agence étrangère donne une liste vide.
     if agence_id is not None:
-        query = query.filter(QRCode.agence_id == agence_id)
+        query = query.filter(agence_effective() == agence_id)
 
     response.headers["X-Total-Count"] = str(query.order_by(None).count())
     return query.order_by(Suggestion.date_soumission.desc()).offset(offset).limit(limit).all()
@@ -82,7 +49,7 @@ def get_suggestion(
     suggestion = db.query(Suggestion).filter(Suggestion.id == suggestion_id).first()
     if not suggestion:
         raise HTTPException(status_code=404, detail="Suggestion introuvable")
-    verifier_acces_agence(db, current_user, _agence_de_la_suggestion(db, suggestion))
+    verifier_acces_agence(db, current_user, agence_id_de_la_suggestion(db, suggestion))
     return suggestion
 
 
@@ -99,7 +66,7 @@ def update_suggestion_statut(
     suggestion = db.query(Suggestion).filter(Suggestion.id == suggestion_id).first()
     if not suggestion:
         raise HTTPException(status_code=404, detail="Suggestion introuvable")
-    verifier_acces_agence(db, current_user, _agence_de_la_suggestion(db, suggestion))
+    verifier_acces_agence(db, current_user, agence_id_de_la_suggestion(db, suggestion))
 
     ancien_statut = suggestion.statut
 

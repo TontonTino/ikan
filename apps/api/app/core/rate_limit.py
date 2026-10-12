@@ -13,7 +13,7 @@ import time
 from collections import deque
 from typing import Callable, Optional
 
-from fastapi import HTTPException, Query, Request, status
+from fastapi import HTTPException, Path, Query, Request, status
 
 from app.core.config import settings
 
@@ -119,12 +119,22 @@ def limiter_ip_public(request: Request) -> None:
         raise _refuser(attente)
 
 
-def limiter_soumission(request: Request, qr_code: str = Query(..., max_length=200)) -> None:
-    """Dépendance de POST /feedbacks : limite par IP, puis par code QR. Exécutée AVANT toute lecture en base : un envoi
-    refusé ne crée ni feedback, ni analyse IA, ni consommation de quota. Tout envoi compte, valide ou non."""
+def _limiter_ip_puis_qr(request: Request, code_qr: str) -> None:
     ok, attente = limiteur.tenter(f"fb-ip:{adresse_ip_client(request)}", settings.RATE_LIMIT_FEEDBACK_PAR_IP)
     if not ok:
         raise _refuser(attente)
-    ok, attente = limiteur.tenter(f"fb-qr:{qr_code.strip().lower()}", settings.RATE_LIMIT_FEEDBACK_PAR_QR)
+    ok, attente = limiteur.tenter(f"fb-qr:{code_qr.strip().lower()}", settings.RATE_LIMIT_FEEDBACK_PAR_QR)
     if not ok:
         raise _refuser(attente)
+
+
+def limiter_soumission(request: Request, qr_code: str = Query(..., max_length=200)) -> None:
+    """Dépendance de POST /feedbacks : limite par IP, puis par code QR. Exécutée AVANT toute lecture en base : un envoi
+    refusé ne crée ni feedback, ni analyse IA, ni consommation de quota. Tout envoi compte, valide ou non."""
+    _limiter_ip_puis_qr(request, qr_code)
+
+
+def limiter_suggestion(request: Request, code: str = Path(..., max_length=200)) -> None:
+    """Dépendance de POST /qr-codes/{code}/suggestions : MÊMES seuils et MÊMES compteurs que l'envoi d'un avis (c'est le
+    même formulaire public : une IP ou un QR ne peut pas doubler son budget en alternant les deux)."""
+    _limiter_ip_puis_qr(request, code)

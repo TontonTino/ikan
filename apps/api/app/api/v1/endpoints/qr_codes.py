@@ -20,7 +20,10 @@ from app.core.config import settings
 from app.schemas.categorie import CategoriePublicResponse
 from app.models.categorie import Categorie
 from app.models.system_settings import SystemSettings, RETENTION_MOIS_DEFAUT
-from app.core.rate_limit import limiter_ip_public
+from app.core.rate_limit import limiter_ip_public, limiter_suggestion
+from app.models.enums import IdeaStatus
+from app.models.suggestion import Suggestion
+from app.schemas.suggestion import SuggestionCreate, SuggestionSoumiseResponse
 
 logger = logging.getLogger(__name__)
 
@@ -241,6 +244,48 @@ def get_categories_for_qr(
         .order_by(Categorie.created_at.asc())
         .all()
     )
+
+
+@router.post(
+    "/{code}/suggestions",
+    response_model=SuggestionSoumiseResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(limiter_suggestion)],
+)
+def soumettre_suggestion(
+    code: str,
+    data: SuggestionCreate,
+    db: Session = Depends(get_db),
+):
+    """
+    « Partager une idée » — endpoint PUBLIC (aucune authentification, aucun contact demandé).
+
+    La suggestion est rattachée DIRECTEMENT à l'agence du QR scanné (statut « Nouveau ») et ne crée AUCUN feedback :
+    ni note fictive, ni analyse IA, ni ligne dans le CSAT, FEEDBACK_VOLUME ou le quota mensuel du forfait.
+    Mêmes protections que l'envoi d'un avis : limitation de débit par IP et par QR (avant toute lecture en base),
+    champ piège, plafond du corps, 404 si le QR est inconnu/inactif ou si l'agence est désactivée.
+    Pas de clé d'idempotence : le bouton du formulaire est verrouillé pendant l'envoi.
+    """
+    # Champ piège : réponse de succès identique, rien n'est enregistré.
+    if data.website and data.website.strip():
+        return SuggestionSoumiseResponse()
+
+    qr = _resolve_qr(code.strip(), db)
+    if not qr:
+        raise HTTPException(status_code=404, detail="QR Code ou agence introuvable ou inactif")
+
+    try:
+        db.add(Suggestion(agence_id=qr.agence_id, feedback_id=None, contenu=data.contenu, statut=IdeaStatus.NOUVEAU))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        # Ni l'objet exception ni le texte de l'idée dans les journaux.
+        logger.error("Erreur soumettre_suggestion (qr=%s, %s)", qr.id, type(e).__name__)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Votre idée n'a pas pu être enregistrée. Veuillez réessayer.",
+        )
+    return SuggestionSoumiseResponse()
 
 
 @router.delete("/{qr_id}", status_code=status.HTTP_204_NO_CONTENT)

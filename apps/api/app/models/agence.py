@@ -50,6 +50,11 @@ class Agence(Base):
     categories: Mapped[list["Categorie"]] = relationship(
         "Categorie", back_populates="agence", cascade="all, delete-orphan", passive_deletes=True
     )
+    # Suggestions envoyées seules (sans feedback), rattachées directement à l'agence : supprimées avec elle, comme
+    # celles qui passent par un feedback (agence -> QR -> feedback -> suggestion).
+    suggestions: Mapped[list["Suggestion"]] = relationship(
+        "Suggestion", back_populates="agence", cascade="all, delete-orphan", passive_deletes=True
+    )
 
     def __repr__(self) -> str:
         return f"<Agence {self.nom} ({self.ville})>"

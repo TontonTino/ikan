@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import case, func
+from sqlalchemy import and_, case, func, or_
 
 from app.services.acces_agence import verifier_acces_agence
 from app.api.deps import (
@@ -25,6 +25,7 @@ from app.models.organisation import Organisation
 from app.models.demande_contact import DemandeContact
 from app.models.analyse_ia import AnalyseIA
 from app.models.suggestion import Suggestion
+from app.services.suggestions_scope import filtrer_par_perimetre
 from app.models.enums import UserRole, SentimentType, IdeaStatus
 from app.utils.stats import wilson_lower_bound
 from app.services.secteurs import libelle_secteur
@@ -136,7 +137,13 @@ def dashboard_agence(
 
     # Suggestions
     fb_ids = [f.id for f in feedbacks]
-    nb_suggestions = db.query(Suggestion).filter(Suggestion.feedback_id.in_(fb_ids)).count()
+    # Avis de la période portant une suggestion + suggestions envoyées seules (sans feedback) de l'agence sur la période.
+    nb_suggestions = db.query(Suggestion).filter(
+        or_(
+            Suggestion.feedback_id.in_(fb_ids),
+            and_(Suggestion.feedback_id.is_(None), Suggestion.agence_id == agence_id, Suggestion.date_soumission >= date_debut),
+        )
+    ).count()
 
     # Thèmes
     themes_count: dict[str, int] = {}
@@ -228,6 +235,19 @@ def dashboard_siege(
         .group_by(QRCode.agence_id)
         .all()
     ) if agence_ids else {}
+    # Suggestions envoyées seules (sans feedback) : rattachées directement à l'agence, période sur leur propre date.
+    if agence_ids:
+        for ag_id, nombre in (
+            db.query(Suggestion.agence_id, func.count(Suggestion.id))
+            .filter(
+                Suggestion.feedback_id.is_(None),
+                Suggestion.agence_id.in_(agence_ids),
+                Suggestion.date_soumission >= date_debut,
+            )
+            .group_by(Suggestion.agence_id)
+            .all()
+        ):
+            suggestion_count_by_agence[ag_id] = suggestion_count_by_agence.get(ag_id, 0) + nombre
 
     kpis = []
     for agence in agences:
@@ -251,14 +271,8 @@ def dashboard_siege(
     taux_global = _taux(sum(1 for f in all_feedbacks if f.note >= 4), total_global)
 
     from app.models.enums import IdeaStatus
-    idees_attente = db.query(Suggestion).filter(
-        Suggestion.statut == IdeaStatus.NOUVEAU,
-        Suggestion.feedback_id.in_(
-            db.query(Feedback.id)
-            .join(QRCode, Feedback.qr_code_id == QRCode.id)
-            .join(Agence, QRCode.agence_id == Agence.id)
-            .filter(Agence.organisation_id == current_user.organisation_id)
-        ),
+    idees_attente = filtrer_par_perimetre(
+        db.query(Suggestion).filter(Suggestion.statut == IdeaStatus.NOUVEAU), current_user
     ).count()
 
     tendances = _compute_tendances(all_feedbacks, jours)

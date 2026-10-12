@@ -26,6 +26,7 @@ ROUTES_PUBLIQUES = {
     ("GET", "/api/v1/qr-codes/ping"),
     ("GET", "/api/v1/qr-codes/{code}/validate"),
     ("GET", "/api/v1/qr-codes/{code}/categories"),
+    ("POST", "/api/v1/qr-codes/{code}/suggestions"),
 }
 
 METHODES = ("get", "post", "put", "patch", "delete")

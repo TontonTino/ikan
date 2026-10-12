@@ -52,6 +52,8 @@ const CONTROLES = {
   '.styled-textarea': 'commentaire',
   '.consent-row': 'ligne de la case de consentement',
   '.consent-box': 'case de consentement',
+  '.choix-carte': 'accueil : Noter l\'expérience / Partager une idée',
+  '.lien-retour': 'lien « Retour » du formulaire d\'idée',
 };
 
 test('toutes les zones tactiles font au moins 44 × 44 px (largeur ET hauteur déclarées)', () => {
@@ -74,7 +76,7 @@ test('Oui/Non et le micro en particulier : 44 px, et aucune règle ultérieure n
 
 test('chaque bouton / champ du balisage est couvert par une règle ≥ 44 px (aucun contrôle oublié)', () => {
   const couvertes = new Set(Object.keys(CONTROLES).filter((c) => c.startsWith('.') && !c.includes(' ')).map((c) => c.slice(1)));
-  const EXEMPTES = new Set(['champSiteWeb']); // piège hors écran, hors parcours clavier
+  const EXEMPTES = new Set(['champSiteWeb', 'champIdeeSiteWeb']); // piège hors écran, hors parcours clavier
   const manques = [];
   for (const m of balisage.matchAll(/<(button|input|select|textarea)\b([^>]*)>/g)) {
     const attrs = m[2];
@@ -146,6 +148,11 @@ const PAIRES = [
   ['« Réessayer » / « Donner un autre avis »', couleur('.btn-secondary'), '#F8FAFC'],
   ['texte de consentement', couleur('.consent-row'), '#F8FAFC'],
   ['texte de consentement (fond blanc)', couleur('.consent-row'), '#FFFFFF'],
+  ['accueil : nom de l\'agence', couleur('.accueil-agence'), '#FFFFFF'],
+  ['accueil : question', couleur('.accueil-titre'), '#FFFFFF'],
+  ['accueil : titre d\'un choix', couleur('.choix-titre'), '#FFFFFF'],
+  ['accueil : sous-titre d\'un choix', couleur('.choix-sous'), '#FFFFFF'],
+  ['lien « Retour »', couleur('.lien-retour'), '#FFFFFF'],
 ];
 
 test('rapport de contraste ≥ 4,5:1 pour tout le texte du formulaire', () => {
@@ -221,4 +228,49 @@ test('focus clavier visible sur tous les contrôles, et l’attribut hidden l’
   }
   assert.equal(effective('.btn-secondary[hidden]', 'display'), 'none');
   assert.equal(effective('.recontact-section[hidden]', 'display'), 'none');
+});
+
+// ── parcours « Partager une idée » ───────────────────────────────────────────────────
+
+const section = (id) => {
+  const debut = balisage.indexOf(`<section id="${id}"`);
+  assert.ok(debut >= 0, `section ${id}`);
+  return balisage.slice(debut, balisage.indexOf('</section>', debut));
+};
+
+test('l\'accueil montre le nom de l\'agence et exactement deux choix', () => {
+  const accueil = section('screen-accueil');
+  assert.match(accueil, /id="accueilAgenceNom"/);
+  assert.equal([...accueil.matchAll(/<button\b/g)].length, 2);
+  assert.match(accueil, /id="btnChoixNote"[\s\S]*Noter l'expérience/);
+  assert.match(accueil, /id="btnChoixIdee"[\s\S]*Partager une idée/);
+  assert.doesNotMatch(accueil, /style="display:\s*none/); // l'accueil est l'écran affiché d'entrée
+  assert.match(section('screen-sentiment'), /style="display:none;"/); // le formulaire noté attend le choix
+});
+
+test('le formulaire d\'idée : un seul champ texte, 1000 caractères, compteur, retour, aucun contact', () => {
+  const idee = section('screen-idee');
+  assert.equal([...idee.matchAll(/<textarea\b/g)].length, 1);
+  assert.match(idee, /id="inputIdee"[\s\S]*maxlength="1000"/);
+  assert.match(idee, /id="ideeCharCount">1000 caractères restants sur 1000</);
+  assert.match(idee, /id="btnRetourIdee"/);
+  assert.match(idee, /id="btnSubmitIdee"/);
+  // aucun champ de contact ni consentement : seuls le texte et le champ piège (caché) existent
+  const champs = [...idee.matchAll(/<input\b[^>]*>/g)].map((m) => m[0]);
+  assert.equal(champs.length, 1);
+  assert.match(champs[0], /id="champIdeeSiteWeb"[^>]*tabindex="-1"/);
+  assert.doesNotMatch(idee, /type="tel"|type="email"|checkbox|consent|téléphone|e-mail/i);
+});
+
+test('le parcours complet tient en 5 écrans au plus (3 par chemin) et la confirmation rassure', () => {
+  const ecrans = [...balisage.matchAll(/<section id="(screen-(?:accueil|idee|idee-merci|sentiment|success))"/g)].map((m) => m[1]);
+  assert.deepEqual(ecrans.sort(), ['screen-accueil', 'screen-idee', 'screen-idee-merci', 'screen-sentiment', 'screen-success']);
+  assert.ok(ecrans.length <= 5);
+  assert.match(section('screen-idee-merci'), /Merci pour votre idée !/);
+  assert.match(section('screen-idee-merci'), /a bien été transmise à l'agence/);
+});
+
+test('« Votre avis est confidentiel. » remplace « Avis strictement anonyme et sécurisé » partout dans le client', () => {
+  assert.match(balisage, /<span>Votre avis est confidentiel\.<\/span>/);
+  assert.doesNotMatch(page + layout, /anonyme/i);
 });

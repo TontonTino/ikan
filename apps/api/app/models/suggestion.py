@@ -5,7 +5,7 @@ Tracée avec statut et historique d'audit (BNF-09).
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Text, DateTime, ForeignKey, Enum, String, func
+from sqlalchemy import CheckConstraint, Text, DateTime, ForeignKey, Enum, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -15,12 +15,22 @@ from app.models.enums import IdeaStatus
 
 class Suggestion(Base):
     __tablename__ = "suggestions"
+    __table_args__ = (
+        CheckConstraint("feedback_id IS NOT NULL OR agence_id IS NOT NULL", name="ck_suggestions_feedback_ou_agence"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    feedback_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("feedbacks.id", ondelete="CASCADE"), nullable=False
+    # Feedback d'origine : NULL pour une suggestion envoyée SEULE (« Partager une idée », sans note, migration 031).
+    feedback_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("feedbacks.id", ondelete="CASCADE"), nullable=True
+    )
+    # Agence rattachée directement (suggestion sans feedback). NULL pour les suggestions antérieures à la migration 031 :
+    # leur agence se déduit de leur feedback (voir app/services/suggestions_scope.py, COALESCE).
+    agence_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("agences.id", ondelete="CASCADE", name="fk_suggestions_agence_id"),
+        nullable=True, index=True,
     )
     contenu: Mapped[str] = mapped_column(Text, nullable=False)
     statut: Mapped[IdeaStatus] = mapped_column(
@@ -35,7 +45,8 @@ class Suggestion(Base):
     notes_internes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
 
     # Relations
-    feedback: Mapped["Feedback"] = relationship("Feedback", back_populates="suggestion")
+    feedback: Mapped["Feedback | None"] = relationship("Feedback", back_populates="suggestion")
+    agence: Mapped["Agence | None"] = relationship("Agence", back_populates="suggestions")
     historique: Mapped[list["HistoriqueSuggestion"]] = relationship(
         "HistoriqueSuggestion", back_populates="suggestion", cascade="all, delete-orphan", passive_deletes=True,
         order_by="HistoriqueSuggestion.date_action"
