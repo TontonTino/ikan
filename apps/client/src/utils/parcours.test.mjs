@@ -3,7 +3,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   MAX_COMMENTAIRE,
+  MAX_IDEE,
   MESSAGE_CONSENTEMENT_REQUIS,
+  MESSAGE_IDEE_VIDE,
   MESSAGE_NOTE_REQUISE,
   NIVEAUX,
   causeEchecHttp,
@@ -14,7 +16,10 @@ import {
   libelleCompteur,
   libelleConsentement,
   messageEchecEnvoi,
+  messageEchecIdee,
+  construirePayloadIdee,
   nouvelleCleEnvoi,
+  verifierIdee,
   verifierSaisie,
 } from './parcours.ts';
 
@@ -198,4 +203,29 @@ test('validation du QR : 2xx valide, 404 invalide, le reste est « indisponible 
   assert.equal(etatQrDepuisStatut(500), 'indisponible');
   assert.equal(etatQrDepuisStatut(502), 'indisponible');
   assert.equal(etatQrDepuisStatut(null), 'indisponible');
+});
+
+// ── « Partager une idée » ────────────────────────────────────────────────────────────
+
+test('idée vide ou trop courte : envoi refusé avec un message clair', () => {
+  for (const texte of ['', '   ', 'ab', '  a  ']) assert.equal(verifierIdee(texte), MESSAGE_IDEE_VIDE, JSON.stringify(texte));
+  assert.equal(verifierIdee('Une rampe'), null);
+});
+
+test('payload d\'une idée : le texte et le champ piège, jamais de contact ni de note', () => {
+  const p = construirePayloadIdee('  Ajouter une rampe  ');
+  assert.deepEqual(p, { contenu: 'Ajouter une rampe', website: '' });
+  assert.equal(MAX_IDEE, 1000);
+  assert.equal(construirePayloadIdee('x'.repeat(1500)).contenu.length, 1000);
+  assert.deepEqual(Object.keys(p).sort(), ['contenu', 'website']);
+});
+
+test('échec d\'envoi d\'une idée : jamais technique, l\'idée n\'est pas partie et le texte est conservé', () => {
+  for (const cause of ['reseau', 'delai', 'serveur', 'trop_de_demandes']) {
+    const m = messageEchecIdee(cause);
+    assert.match(m, /n'a pas été envoyée|n'est peut-être pas partie/, cause);
+    assert.match(m, /texte est conservé/, cause);
+    assert.doesNotMatch(m, /merci|bien été transmise|HTTP|\b[45]\d\d\b|erreur serveur|exception/i, cause);
+  }
+  assert.match(messageEchecIdee('qr_invalide'), /prévenir l'agence/);
 });

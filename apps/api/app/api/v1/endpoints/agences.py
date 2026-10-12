@@ -18,6 +18,7 @@ from app.models.qr_code import QRCode
 from app.models.categorie import Categorie
 from app.models.feedback import Feedback
 from app.models.suggestion import Suggestion, HistoriqueSuggestion
+from app.services.suggestions_scope import agence_effective
 from app.models.historique_feedback import HistoriqueFeedback
 from app.models.enums import UserRole
 from app.schemas.agence import AgenceCreate, AgenceUpdate, AgenceResponse, AgencePhotoUpdate, ActiviteAgenceItem, AgenceContexteItem
@@ -467,8 +468,8 @@ def get_activite_agence(
     """
     Fil d'activité chronologique d'une agence : transitions de feedback
     (HistoriqueFeedback, filtré par agence_id dénormalisé) fusionnées avec les
-    changements de statut de suggestions (HistoriqueSuggestion, atteint via
-    Suggestion.feedback_id -> Feedback -> QRCode.agence_id).
+    changements de statut de suggestions (HistoriqueSuggestion, agence effective de la
+    suggestion : colonne agence_id, sinon feedback -> QRCode.agence_id).
     """
     agence = db.query(Agence).filter(Agence.id == agence_id).first()
     if not agence:
@@ -497,9 +498,7 @@ def get_activite_agence(
     historiques_suggestions = (
         db.query(HistoriqueSuggestion)
         .join(Suggestion, HistoriqueSuggestion.suggestion_id == Suggestion.id)
-        .join(Feedback, Suggestion.feedback_id == Feedback.id)
-        .join(QRCode, Feedback.qr_code_id == QRCode.id)
-        .filter(QRCode.agence_id == agence_id)
+        .filter(agence_effective() == agence_id)
         .order_by(HistoriqueSuggestion.date_action.desc())
         .limit(limit)
         .all()

@@ -1,5 +1,6 @@
 """
-Plafond de taille du corps des requêtes sur les endpoints publics d'envoi (POST /feedbacks, POST /feedbacks/{id}/nps).
+Plafond de taille du corps des requêtes sur les endpoints publics d'envoi (POST /feedbacks, POST /feedbacks/{id}/nps,
+POST /qr-codes/{code}/suggestions).
 Le corps est lu en entier (borné) AVANT d'atteindre FastAPI : Content-Length menteur ou transfert fragmenté compris.
 """
 import json
@@ -14,6 +15,9 @@ def _chemin_public_en_ecriture(methode: str, chemin: str) -> bool:
         return False
     base = f"{settings.API_V1_STR}/feedbacks"
     chemin = chemin.rstrip("/")
+    qr = f"{settings.API_V1_STR}/qr-codes"
+    if chemin.startswith(f"{qr}/") and chemin.endswith("/suggestions") and chemin.count("/") == qr.count("/") + 2:
+        return True
     if chemin == base:
         return True
     return chemin.startswith(f"{base}/") and chemin.endswith("/nps") and chemin.count("/") == base.count("/") + 2

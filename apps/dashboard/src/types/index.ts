@@ -186,7 +186,9 @@ export interface AnalyseIA {
 
 export interface Suggestion {
   id: string;
-  feedback_id: string;
+  /** null : idée envoyée seule (« Partager une idée »), sans avis ni note. */
+  feedback_id: string | null;
+  agence_id?: string | null;
   contenu: string;
   statut: IdeaStatus;
   date_soumission: string;

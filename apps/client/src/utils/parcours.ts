@@ -189,3 +189,38 @@ export function etatQrDepuisStatut(status: number | null): EtatQr {
   if (status === 429) return 'trop_de_demandes';
   return 'indisponible';
 }
+
+// ── « Partager une idée » : un texte, aucun contact ──────────────────────────────────
+
+/** Taille maximale d'une idée, alignée sur l'API (SuggestionCreate.contenu, 1000 caractères). */
+export const MAX_IDEE = 1000;
+export const MIN_IDEE = 3;
+export const MESSAGE_IDEE_VIDE = "Écrivez votre idée avant de l'envoyer.";
+
+/** Message bloquant l'envoi d'une idée, ou null. */
+export function verifierIdee(texte: string): string | null {
+  return texte.trim().length < MIN_IDEE ? MESSAGE_IDEE_VIDE : null;
+}
+
+/** Corps de POST /qr-codes/{code}/suggestions : le texte (borné) et le champ piège, RIEN d'autre (aucun contact). */
+export function construirePayloadIdee(texte: string, piege: string = '') {
+  return { contenu: texte.trim().slice(0, MAX_IDEE), website: piege };
+}
+
+/** Message d'échec d'envoi d'une idée : jamais technique, dit que l'idée n'est pas partie ET que le texte est conservé. */
+export function messageEchecIdee(cause: CauseEchecEnvoi): string {
+  switch (cause) {
+    case 'qr_invalide':
+      return "Ce QR code n'est plus valide, votre idée n'a pas été envoyée. Merci de prévenir l'agence.";
+    case 'trop_de_demandes':
+      return "Trop de demandes en peu de temps : votre idée n'a pas été envoyée. Patientez une minute puis réessayez, votre texte est conservé.";
+    case 'saisie':
+      return "Votre idée n'a pas pu être envoyée : vérifiez le texte puis réessayez.";
+    case 'reseau':
+      return "Pas de connexion : votre idée n'a pas été envoyée. Votre texte est conservé, réessayez quand le réseau revient.";
+    case 'delai':
+      return "L'envoi prend trop de temps : votre idée n'est peut-être pas partie. Votre texte est conservé, réessayez.";
+    default:
+      return "Le service est momentanément indisponible, votre idée n'a pas été envoyée. Votre texte est conservé, réessayez dans un instant.";
+  }
+}

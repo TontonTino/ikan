@@ -217,6 +217,7 @@ def submit_feedback(
         if data.suggestion:
             suggestion = Suggestion(
                 feedback_id=feedback.id,
+                agence_id=qr.agence_id,
                 contenu=data.suggestion,
             )
             db.add(suggestion)

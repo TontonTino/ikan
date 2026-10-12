@@ -104,8 +104,96 @@ if (erreur) Astro.response.status = 404;
               <button type="button" class="btn-secondary" id="btnReessayerQr" hidden>Réessayer</button>
             </section>
 
+            <!-- ÉCRAN D'ACCUEIL : nom de l'agence et deux choix -->
+            <section id="screen-accueil" class="screen-view accueil-view">
+              <p class="accueil-agence" id="accueilAgenceNom">{agenceInfo?.agence_nom || 'Votre agence'}</p>
+              <h2 class="accueil-titre">Que souhaitez-vous faire ?</h2>
+              <button type="button" class="choix-carte" id="btnChoixNote">
+                <svg class="choix-icone" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+                <span class="choix-texte">
+                  <span class="choix-titre">Noter l'expérience</span>
+                  <span class="choix-sous">Dites-nous comment s'est passée votre visite</span>
+                </span>
+              </button>
+              <button type="button" class="choix-carte" id="btnChoixIdee">
+                <svg class="choix-icone" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M9 18h6"/><path d="M10 22h4"/>
+                  <path d="M12 2a7 7 0 0 0-4 12.75c.64.46 1 1.2 1 2V17h6v-.25c0-.8.36-1.54 1-2A7 7 0 0 0 12 2z"/>
+                </svg>
+                <span class="choix-texte">
+                  <span class="choix-titre">Partager une idée</span>
+                  <span class="choix-sous">Une suggestion pour améliorer l'agence</span>
+                </span>
+              </button>
+            </section>
+
+            <!-- ÉCRAN IDÉE : un seul champ texte, aucun contact -->
+            <section id="screen-idee" class="screen-view idee-view" style="display:none;">
+              <button type="button" class="lien-retour" id="btnRetourIdee">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                <span>Retour</span>
+              </button>
+              <div class="form-section">
+                <label class="field-label" for="inputIdee">Quelle est votre idée pour améliorer l'agence&nbsp;?</label>
+                <div class="textarea-box">
+                  <textarea
+                    id="inputIdee"
+                    class="styled-textarea"
+                    rows="5"
+                    maxlength="1000"
+                    aria-describedby="ideeCharCount ideeError"
+                    placeholder="Décrivez votre idée en quelques mots..."
+                  ></textarea>
+                  <div class="textarea-footer">
+                    <span class="char-count" id="ideeCharCount">1000 caractères restants sur 1000</span>
+                  </div>
+                </div>
+                <p class="field-error" id="ideeError" role="alert" hidden></p>
+              </div>
+
+              <!-- CHAMP PIÈGE (voir plus bas) -->
+              <div class="champ-piege" aria-hidden="true">
+                <label for="champIdeeSiteWeb">Ne pas remplir ce champ</label>
+                <input type="text" id="champIdeeSiteWeb" name="website" tabindex="-1" autocomplete="off" />
+              </div>
+
+              <div class="submit-wrap">
+                <button type="button" id="btnSubmitIdee" class="btn-submit">
+                  <span class="btn-text">Envoyer mon idée</span>
+                  <svg class="btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                    <polyline points="12 5 19 12 12 19"/>
+                  </svg>
+                </button>
+              </div>
+            </section>
+
+            <!-- CONFIRMATION D'UNE IDÉE -->
+            <section id="screen-idee-merci" class="screen-view success-view" style="display:none;" role="status">
+              <div class="success-card">
+                <div class="success-animation-wrap">
+                  <div class="success-icon-badge">
+                    <svg viewBox="0 0 64 64" width="64" height="64" fill="none" aria-hidden="true">
+                      <circle cx="32" cy="32" r="30" fill="#EBF7EE" stroke="#3C7730" stroke-width="2"/>
+                      <circle cx="32" cy="32" r="23" fill="#3C7730"/>
+                      <path d="M22 32.5 L28.5 39 L42 25.5" stroke="#FFFFFF" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                </div>
+                <h2 class="success-title">Merci pour votre idée !</h2>
+                <p class="success-message">Votre idée a bien été transmise à l'agence. Toute l'équipe vous remercie de contribuer à l'améliorer.</p>
+                <div class="success-actions">
+                  <button type="button" class="btn-secondary" id="btnIdeeAccueil">
+                    <span>Retour à l'accueil</span>
+                  </button>
+                </div>
+              </div>
+            </section>
+
             <!-- ÉCRAN 1 : FORMULAIRE -->
-            <section id="screen-sentiment" class="screen-view">
+            <section id="screen-sentiment" class="screen-view" style="display:none;">
 
               <!-- SECTION 0 : CATÉGORIE DE L'AVIS (obligatoire, définie par l'agence) -->
               <div class="form-section categorie-section">
@@ -302,7 +390,7 @@ if (erreur) Astro.response.status = 404;
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                   <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
-                <span>Avis strictement anonyme et sécurisé</span>
+                <span>Votre avis est confidentiel.</span>
               </p>
             </section>
 
@@ -1740,6 +1828,95 @@ if (erreur) Astro.response.status = 404;
     display: none;
   }
 
+  /* Écran d'accueil : nom de l'agence et deux grands choix (zones tactiles très supérieures à 44 px) */
+  .accueil-view,
+  .idee-view {
+    flex-direction: column;
+    gap: 14px;
+    padding: 22px 20px 26px;
+  }
+  .accueil-agence {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1F5A25;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0;
+  }
+  .accueil-titre {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #02302D;
+    margin: 0 0 4px;
+  }
+  .choix-carte {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    min-width: 44px;
+    min-height: 88px;
+    padding: 16px 18px;
+    text-align: left;
+    background: #FFFFFF;
+    border: 2px solid #CBD5E1;
+    border-radius: 18px;
+    color: #02302D;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  }
+  .choix-carte:hover {
+    border-color: #1F5A25;
+    box-shadow: 0 6px 18px -8px rgba(2, 48, 45, 0.25);
+  }
+  .choix-carte:active {
+    transform: scale(0.99);
+  }
+  .choix-carte:focus-visible {
+    outline: 3px solid #1F5A25;
+    outline-offset: 2px;
+  }
+  .choix-icone {
+    flex: 0 0 28px;
+    color: #1F5A25;
+  }
+  .choix-texte {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .choix-titre {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #02302D;
+  }
+  .choix-sous {
+    font-size: 0.85rem;
+    line-height: 1.35;
+    color: #475569;
+  }
+  .lien-retour {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 12px 0 4px;
+    background: none;
+    border: none;
+    color: #1F5A25;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .lien-retour:focus-visible {
+    outline: 3px solid #1F5A25;
+    outline-offset: 2px;
+  }
+
   /* États de la page (chargement, QR invalide, service indisponible) */
   .state-view {
     flex-direction: column;
@@ -1780,7 +1957,10 @@ if (erreur) Astro.response.status = 404;
     libelleCompteur,
     libelleConsentement,
     messageEchecEnvoi,
+    messageEchecIdee,
+    construirePayloadIdee,
     nouvelleCleEnvoi,
+    verifierIdee,
     verifierSaisie,
   } from '../../utils/parcours';
 
@@ -1806,9 +1986,12 @@ if (erreur) Astro.response.status = 404;
   const QR_CODE = extraireCodeQr(window.location.pathname, window.location.search) || '';
 
   // ================= ÉCRANS : formulaire / chargement / erreur / succès =================
-  type NomEcran = 'formulaire' | 'chargement' | 'erreur' | 'succes';
+  type NomEcran = 'accueil' | 'idee' | 'idee_merci' | 'formulaire' | 'chargement' | 'erreur' | 'succes';
   function montrerEcran(nom: NomEcran) {
     const ecrans: Record<NomEcran, string> = {
+      accueil: 'screen-accueil',
+      idee: 'screen-idee',
+      idee_merci: 'screen-idee-merci',
       formulaire: 'screen-sentiment',
       chargement: 'screen-chargement',
       erreur: 'screen-erreur',
@@ -2017,6 +2200,8 @@ if (erreur) Astro.response.status = 404;
         if (agencyBadge) {
           agencyBadge.textContent = agencyName;
         }
+        const accueilAgence = document.getElementById('accueilAgenceNom');
+        if (accueilAgence) accueilAgence.textContent = agencyName;
         document.title = `Votre avis — ${agencyName}`;
         appliquerRetention(data.retention_mois);
         setSector(detectSectorFromText(`${agencyName} ${QR_CODE}`));
@@ -2064,7 +2249,7 @@ if (erreur) Astro.response.status = 404;
         return;
       }
     }
-    montrerEcran('formulaire');
+    montrerEcran('accueil');
     await loadCategories();
   }
 
@@ -2542,6 +2727,91 @@ if (erreur) Astro.response.status = 404;
       if (thanks) thanks.style.display = 'block';
     }
   }
+
+  // ================= ACCUEIL ET « PARTAGER UNE IDÉE » =================
+  const inputIdee = document.getElementById('inputIdee') as HTMLTextAreaElement | null;
+  const ideeCharCount = document.getElementById('ideeCharCount');
+  const ideeErrorEl = document.getElementById('ideeError');
+  const btnSubmitIdee = document.getElementById('btnSubmitIdee') as HTMLButtonElement | null;
+  const champIdeePiege = document.getElementById('champIdeeSiteWeb') as HTMLInputElement | null;
+
+  function afficherErreurIdee(message: string | null) {
+    if (ideeErrorEl) {
+      ideeErrorEl.textContent = message || '';
+      ideeErrorEl.hidden = !message;
+    }
+  }
+
+  document.getElementById('btnChoixNote')?.addEventListener('click', () => {
+    montrerEcran('formulaire');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  document.getElementById('btnChoixIdee')?.addEventListener('click', () => {
+    montrerEcran('idee');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    inputIdee?.focus({ preventScroll: true });
+  });
+  document.getElementById('btnRetourIdee')?.addEventListener('click', () => {
+    afficherErreurIdee(null);
+    montrerEcran('accueil');
+  });
+  document.getElementById('btnIdeeAccueil')?.addEventListener('click', () => {
+    montrerEcran('accueil');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  inputIdee?.addEventListener('input', () => {
+    afficherErreurIdee(null);
+    if (ideeCharCount) ideeCharCount.textContent = libelleCompteur(inputIdee.value.length);
+  });
+
+  // Un seul envoi à la fois (le verrou du bouton tient lieu de clé d'idempotence : l'API n'en a pas pour les idées).
+  // En cas d'échec, le texte saisi reste en place et le client peut réessayer.
+  let envoiIdeeEnCours = false;
+  btnSubmitIdee?.addEventListener('click', async () => {
+    if (envoiIdeeEnCours || !inputIdee) return;
+    afficherErreurIdee(null);
+    const probleme = verifierIdee(inputIdee.value);
+    if (probleme) {
+      afficherErreurIdee(probleme);
+      inputIdee.focus();
+      return;
+    }
+
+    envoiIdeeEnCours = true;
+    const libelleInitial = btnSubmitIdee.innerHTML;
+    btnSubmitIdee.disabled = true;
+    btnSubmitIdee.setAttribute('aria-busy', 'true');
+    btnSubmitIdee.innerHTML = '<span class="btn-spinner"></span><span>Envoi de votre idée...</span>';
+
+    let confirme = false;
+    try {
+      const res = await fetchAPI(
+        `/qr-codes/${encodeURIComponent(QR_CODE)}/suggestions`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(construirePayloadIdee(inputIdee.value, champIdeePiege?.value ?? '')),
+        },
+        DELAI_ENVOI_MS,
+      );
+      if (res.ok) {
+        confirme = true;
+        inputIdee.value = '';
+        if (ideeCharCount) ideeCharCount.textContent = libelleCompteur(0);
+        montrerEcran('idee_merci');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        afficherErreurIdee(messageEchecIdee(causeEchecHttp(res.status)));
+      }
+    } catch (e: any) {
+      afficherErreurIdee(messageEchecIdee(e?.name === 'AbortError' ? 'delai' : 'reseau'));
+    } finally {
+      envoiIdeeEnCours = false;
+      btnSubmitIdee.removeAttribute('aria-busy');
+      btnSubmitIdee.disabled = false;
+      btnSubmitIdee.innerHTML = libelleInitial;
+    }
+  });
 
   // Nouveau retour
   document.getElementById('btnNewFeedback')?.addEventListener('click', () => {
