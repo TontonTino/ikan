@@ -137,6 +137,15 @@ export interface DemandeContact {
   email?: string;
   souhaite_etre_rappele: boolean;
   traitee: boolean;
+  /** Traitement (migration 032) : null/absent pour une demande non traitée ou traitée avant la migration. */
+  date_traitement?: string | null;
+  traitee_par_nom?: string | null;
+  /** Vrai quand la demande est traitée : l'API ne renvoie plus téléphone ni e-mail. */
+  coordonnees_masquees?: boolean;
+  /** null/absent = « Consentement non enregistré » (demande antérieure à la migration 030). */
+  consentement_contact?: boolean | null;
+  consentement_date?: string | null;
+  consentement_retention_mois?: number | null;
 }
 
 export interface Feedback {
@@ -725,6 +734,15 @@ export interface DemandeContactListItem {
   email?: string;
   souhaite_etre_rappele: boolean;
   traitee: boolean;
+  /** Traitement (migration 032) : null/absent pour une demande non traitée ou traitée avant la migration. */
+  date_traitement?: string | null;
+  traitee_par_nom?: string | null;
+  /** Vrai quand la demande est traitée : l'API ne renvoie plus téléphone ni e-mail. */
+  coordonnees_masquees?: boolean;
+  /** null/absent = « Consentement non enregistré » (demande antérieure à la migration 030). */
+  consentement_contact?: boolean | null;
+  consentement_date?: string | null;
+  consentement_retention_mois?: number | null;
   feedback_id: string;
   date_demande: string;
   feedback_commentaire?: string;

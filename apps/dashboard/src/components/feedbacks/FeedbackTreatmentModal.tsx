@@ -8,6 +8,7 @@ import EmptyState from '../ui/EmptyState';
 import { useOverlay } from '../ui/useOverlay';
 import PriseEnChargeBanner from './PriseEnChargeBanner';
 import WhatsAppReplyButton from './WhatsAppReplyButton';
+import { AvertissementReponse, CoordonneesMasquees, ConsentementContact, InfoTraitement } from './DemandeContactBlocs';
 import {
   AlertTriangleIcon,
   ClockIcon,
@@ -781,7 +782,7 @@ export default function FeedbackTreatmentModal({
               )}
 
               {/* 3. Informations Client & Module Répondre */}
-              {feedback.demande_contact && (feedback.demande_contact.telephone || feedback.demande_contact.email || feedback.demande_contact.souhaite_etre_rappele) && (
+              {feedback.demande_contact && (feedback.demande_contact.telephone || feedback.demande_contact.email || feedback.demande_contact.souhaite_etre_rappele || feedback.demande_contact.coordonnees_masquees) && (
                 <div
                   style={{
                     background: '#FFF7ED',
@@ -822,8 +823,14 @@ export default function FeedbackTreatmentModal({
                     )}
                   </div>
 
+                  {feedback.demande_contact.coordonnees_masquees && <div style={{ marginBottom: '8px' }}><CoordonneesMasquees /></div>}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '12px' }}>
+                    <InfoTraitement demande={feedback.demande_contact} />
+                    <ConsentementContact demande={feedback.demande_contact} />
+                  </div>
+
                   {/* Réponse WhatsApp (Agency Manager uniquement) : ouvre wa.me, aucun envoi ni marquage « traitée ». */}
-                  {isAgencyManager && (
+                  {isAgencyManager && !feedback.demande_contact.coordonnees_masquees && (
                     <div style={{ marginBottom: '12px' }}>
                       <WhatsAppReplyButton
                         telephone={feedback.demande_contact.telephone}
@@ -832,6 +839,8 @@ export default function FeedbackTreatmentModal({
                     </div>
                   )}
 
+                  {/* Enregistrer une réponse TRAITE la demande (masquage définitif) : avertissement visible avant et dans le formulaire. */}
+                  {!feedback.demande_contact.traitee && <AvertissementReponse />}
                   {/* Bouton pour afficher le formulaire de réponse */}
                   {!showReponseForm ? (
                     <button

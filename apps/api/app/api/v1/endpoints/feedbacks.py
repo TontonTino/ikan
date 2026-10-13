@@ -53,6 +53,7 @@ from app.core.rate_limit import limiter_ip_public, limiter_soumission
 from app.services.ai.analyse_service import analyser_feedback
 from app.core.config import settings
 from app.services.dashboard_helpers import NOTE_FAIBLE_MAX
+from app.services.demandes_contact import marquer_recontactee
 from app.utils.phone import normaliser_telephone
 from app.utils.recherche_texte import LONGUEUR_MAX_RECHERCHE, condition_recherche, valider_recherche
 
@@ -103,6 +104,11 @@ def _format_demande_contact(dc: DemandeContact, user: Optional[Utilisateur] = No
         email=dc.email,
         souhaite_etre_rappele=dc.souhaite_etre_rappele,
         traitee=dc.traitee,
+        date_traitement=dc.date_traitement,
+        traitee_par_nom=dc.traitee_par_nom,
+        consentement_contact=dc.consentement_contact,
+        consentement_date=dc.consentement_date,
+        consentement_retention_mois=dc.consentement_retention_mois,
         feedback_id=dc.feedback_id,
         date_demande=dc.date_demande,
         feedback_commentaire=_tronquer(feedback.commentaire) if feedback else None,
@@ -479,7 +485,10 @@ def lister_demandes_contact(
         db.query(DemandeContact)
         .join(Feedback, DemandeContact.feedback_id == Feedback.id)
         .join(QRCode, Feedback.qr_code_id == QRCode.id)
-        .options(joinedload(DemandeContact.feedback).joinedload(Feedback.qr_code).joinedload(QRCode.agence))
+        .options(
+            joinedload(DemandeContact.feedback).joinedload(Feedback.qr_code).joinedload(QRCode.agence),
+            joinedload(DemandeContact.traitee_par),
+        )
     )
 
     if current_user.role == UserRole.AGENCY_MANAGER:
@@ -863,9 +872,10 @@ def envoyer_reponse_client(
     )
     db.add(reponse)
 
-    # Si c'était une demande de rappel, marquer comme traitée
+    # Enregistrer une réponse = avoir recontacté le client : la demande de rappel est traitée (date, auteur et événement
+    # d'historique via le point de traitement unique) et ses coordonnées sont masquées ensuite.
     if feedback.demande_contact:
-        feedback.demande_contact.traitee = True
+        marquer_recontactee(db, feedback.demande_contact, current_user, origine="reponse", canal=data.canal)
 
     # Ajouter à l'historique d'audit
     hist = HistoriqueFeedback(
@@ -976,10 +986,14 @@ def marquer_demande_contact_traitee(
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ):
-    """Marque une demande de contact client comme traitée."""
+    """« Marquer comme recontacté » : traite la demande (date, auteur, événement d'historique) et masque définitivement le
+    téléphone et l'e-mail du client dans les réponses de l'API. Sans effet (200, `deja_traitee`) si elle l'est déjà."""
     dc = (
         db.query(DemandeContact)
-        .options(joinedload(DemandeContact.feedback).joinedload(Feedback.qr_code).joinedload(QRCode.agence))
+        .options(
+            joinedload(DemandeContact.feedback).joinedload(Feedback.qr_code).joinedload(QRCode.agence),
+            joinedload(DemandeContact.traitee_par),
+        )
         .filter(DemandeContact.id == contact_id)
         .first()
     )
@@ -988,6 +1002,11 @@ def marquer_demande_contact_traitee(
 
     _check_feedback_access(dc.feedback, current_user)
 
-    dc.traitee = True
+    traitee_maintenant = marquer_recontactee(db, dc, current_user, origine="bouton")
     db.commit()
-    return {"message": "Demande de contact marquée comme traitée"}
+    db.refresh(dc)
+    return {
+        "message": "Demande de contact marquée comme recontactée",
+        "deja_traitee": not traitee_maintenant,
+        "demande": _format_demande_contact(dc, current_user),
+    }

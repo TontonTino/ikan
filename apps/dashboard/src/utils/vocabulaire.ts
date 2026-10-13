@@ -108,6 +108,7 @@ const EVENEMENT_AGENCE_LABELS: Record<string, string> = {
   action_definie: 'Action à mener définie',
   action_realisee: 'Action réalisée',
   reponse_client: 'Réponse envoyée au client',
+  demande_recontactee: 'Client recontacté',
   reouverture: 'Avis rouvert',
 };
 

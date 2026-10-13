@@ -96,8 +96,30 @@ class DemandeContactInfo(BaseModel):
     email: Optional[str] = None
     souhaite_etre_rappele: bool = False
     traitee: bool = False
+    # Traitement (migration 032) : None pour une demande non traitée ou traitée avant la migration.
+    date_traitement: Optional[datetime] = None
+    traitee_par_nom: Optional[str] = None
+    # Vrai quand la demande est traitée : téléphone et e-mail ne sont alors JAMAIS renvoyés (voir _masquer_si_traitee).
+    coordonnees_masquees: bool = False
+    # Consentement à être recontacté (migration 030). consentement_contact None = « Consentement non enregistré »
+    # (demande antérieure à 030, ou e-mail seul). consentement_retention_mois : durée annoncée au client, pas une date de purge.
+    consentement_contact: Optional[bool] = None
+    consentement_date: Optional[datetime] = None
+    consentement_retention_mois: Optional[int] = None
 
     model_config = {"from_attributes": True}
+
+    @model_validator(mode="after")
+    def _masquer_si_traitee(self):
+        """Règle de masquage, au niveau du SCHÉMA : toute route qui sérialise une demande (liste des avis, détail, demandes de
+        rappel, détail d'un problème…) est couverte, y compris les futures. Valable pour tous les rôles. Ne modifie jamais
+        l'objet de la base : seule la copie sérialisée est vidée."""
+        if self.traitee:
+            self.telephone = None
+            self.telephone_whatsapp = None
+            self.email = None
+            self.coordonnees_masquees = True
+        return self
 
 
 class DemandeContactListItem(DemandeContactInfo):
