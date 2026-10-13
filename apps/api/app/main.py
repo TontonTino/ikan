@@ -13,6 +13,7 @@ from app.core.config import settings
 from app.core.body_limit import LimiteCorpsPublic
 from app.core.cors import appliquer_cors
 from app.core.journal_acces import installer_journal_acces
+from app.core.masquage_acces_http import installer_masquage_acces_http
 from app.utils.masquage import masquer_contacts
 from app.api.v1.router import api_router
 from app.db.session import engine, Base, SessionLocal
@@ -42,6 +43,8 @@ scheduler = BackgroundScheduler()
 
 # Journal des 401/403 (SD-10) : un seul point, voir app/core/journal_acces.py.
 installer_journal_acces(app)
+# Le journal d'accès d'uvicorn ne doit pas contenir les termes recherchés (?q=…).
+installer_masquage_acces_http()
 
 
 @app.exception_handler(Exception)

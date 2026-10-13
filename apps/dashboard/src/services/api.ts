@@ -84,6 +84,12 @@ export const feedbacksApi = {
     action_realisee?: boolean;
     date_debut?: string;
     theme?: string;
+    sentiment?: string;
+    criticite?: string;
+    note?: number;
+    q?: string;
+    a_traiter?: boolean;
+    a_surveiller?: boolean;
     limit?: number;
     offset?: number;
   }) => api.get('/feedbacks/', { params }),
