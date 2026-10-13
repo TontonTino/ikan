@@ -39,7 +39,7 @@ export function construirePriorites(entrees: { alertes: Alerte[]; avis: AlerteFe
     id: `seuil-${a.agence_id}`,
     kind: 'seuil',
     ton: 'critical',
-    type: 'Alerte de seuil',
+    type: a.gravite ? `Alerte de seuil · ${a.gravite === 'critique' ? 'Critique' : 'Important'}` : 'Alerte de seuil',
     titre: 'Satisfaction sous le seuil de l’agence',
     detail: `Taux actuel ${a.taux_actuel} % pour un seuil de ${a.seuil} %.`,
     lien: { to: '/statistiques', label: 'Analyser la tendance' },

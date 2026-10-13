@@ -14,6 +14,7 @@ import Skeleton from '../../components/ui/Skeleton';
 import { fullDate, relativeTime } from '../../components/ui/format';
 import { ArrowUpRightIcon, RefreshIcon } from '../../components/common/Icons';
 import { raisonLabel, alerteFeedbackAnchor, alerteSeuilAnchor } from '../../components/alerts/alerteLabels';
+import BadgeGraviteAlerte from '../../components/alerts/BadgeGraviteAlerte';
 import { libelleRecommandations } from '../../utils/sourceAnalyse';
 import {
   AVIS_VISIBLES,
@@ -75,11 +76,13 @@ export function LigneSeuil({ alerte, isAgencyManager, cible }: { alerte: Alerte;
     <li id={id} tabIndex={-1} className={`agence-prio__item agence-prio__item--critical ui-alert-item${cible ? ' is-target' : ''}`}>
       <div className="agence-prio__main">
         <div className="agence-prio__head">
-          <Badge variant="critical" label="Satisfaction sous le seuil" />
+          <BadgeGraviteAlerte gravite={alerte.gravite} />
+          <Badge variant={alerte.gravite ? 'outline' : 'critical'} label="Satisfaction sous le seuil" />
           <strong className="agence-prio__title">{alerte.agence_nom}</strong>
         </div>
         <p className="agence-prio__detail">
           <strong>{alerte.taux_actuel} %</strong> sur les 7 derniers jours, pour un seuil de {alerte.seuil} %
+          {alerte.ecart_seuil != null && alerte.ecart_seuil > 0 ? ` (${alerte.ecart_seuil.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} points sous le seuil)` : ''}
         </p>
         <p className="siege-note">
           {isAgencyManager

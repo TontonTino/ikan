@@ -88,6 +88,41 @@ def _calc_kpi_trend(
     return (f"{sign}{diff_pct}%", pos)
 
 
+def kpis_satisfaction_et_volume(
+    total_curr: int, positifs_curr: int, total_prev: int, positifs_prev: int
+) -> tuple[StatKPI, StatKPI]:
+    """KPI « satisfaction » (taux, en points) et « avis reçus » (volume, en %) d'une agence avec leur évolution par rapport à la
+    période précédente. UNE seule définition, partagée par /dashboard/statistics/agency et /dashboard/agence/{id} : une période
+    sans avis vaut None (jamais 0), l'évolution n'existe que si les deux périodes ont des observations."""
+    satisfaction = _kpi_taux(_taux(positifs_curr, total_curr), _taux(positifs_prev, total_prev), "Part des avis notés 4 ou 5 sur 5")
+    evolution, positif = _calc_kpi_trend(total_curr, total_prev)
+    volume = StatKPI(
+        valeur=total_curr,
+        valeur_num=float(total_curr),
+        valeur_precedente=total_prev,
+        evolution=evolution,
+        is_positive=positif,
+        sous_titre="Avis déposés dans votre agence",
+    )
+    return satisfaction, volume
+
+
+def compter_avis_agence(db: Session, agence_id, debut: datetime, fin: datetime) -> tuple[int, int]:
+    """(avis, avis notés 4 ou 5) de l'agence sur [debut, fin[. Le périmètre d'agence s'applique à CETTE requête : la période
+    précédente est filtrée exactement comme la période courante (jamais les avis d'une autre agence)."""
+    from sqlalchemy import case
+    from app.models.feedback import Feedback
+    from app.models.qr_code import QRCode
+
+    total, positifs = (
+        db.query(func.count(Feedback.id), func.coalesce(func.sum(case((Feedback.note >= 4, 1), else_=0)), 0))
+        .join(QRCode, Feedback.qr_code_id == QRCode.id)
+        .filter(QRCode.agence_id == agence_id, Feedback.date_soumission >= debut, Feedback.date_soumission < fin)
+        .one()
+    )
+    return int(total or 0), int(positifs or 0)
+
+
 def _kpi_taux(
     taux: Optional[float],
     taux_precedent: Optional[float],

@@ -70,6 +70,8 @@ class DashboardAgence(BaseModel):
     themes: List[ThemeStats]
     sentiments: List[SentimentStats] = []
     discordances: int
+    # Comparaison avec la période précédente (même durée, même agence). Champ additif : absent des anciens clients.
+    comparaison: "ComparaisonPeriode | None" = None
 
 
 class DashboardSiege(BaseModel):
@@ -176,6 +178,18 @@ class StatKPI(BaseModel):
     is_positive: bool = True
     periode_comparaison: str = "vs. période précédente"
     sous_titre: str | None = None
+
+
+class ComparaisonPeriode(BaseModel):
+    """Comparaison avec la période précédente de MÊME durée (AM-02), pour DashboardAgence.comparaison."""
+    jours: int
+    # Nombre d'avis de la période précédente : 0 = « pas de données avant » (aucune évolution n'est alors calculée).
+    nombre_feedbacks_precedent: int
+    satisfaction: StatKPI
+    total_feedbacks: StatKPI
+
+
+DashboardAgence.model_rebuild()
 
 
 class EvolutionPoint(BaseModel):

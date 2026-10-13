@@ -55,7 +55,7 @@ from app.schemas.dashboard import (
 
 from app.services.dashboard_helpers import (
     _calc_kpi_trend, _cle_semaine_iso, _compter_utilisateurs_actifs, _kpi_taux, compter_negatifs, est_negatif,
-    est_pris_en_charge,
+    est_pris_en_charge, kpis_satisfaction_et_volume,
     _libelles_semaines, _period_label, _repartition_forfaits, _taux,
 )
 from app.services.ai.recommandations import SOURCE_RECOMMANDATIONS
@@ -160,20 +160,13 @@ def get_statistics_agency(
     critiques_curr = sum(1 for a in analyses_current if a.criticite == CriticiteType.CRITIQUE)
     critiques_prev = sum(1 for a in analyses_prev if a.criticite == CriticiteType.CRITIQUE)
 
-    tot_ev, tot_pos = _calc_kpi_trend(total_curr, total_prev)
+    kpi_satisfaction, kpi_volume = kpis_satisfaction_et_volume(total_curr, pos_curr, total_prev, pos_prev)
     trt_ev, trt_pos = _calc_kpi_trend(traites_curr, traites_prev)
     crit_ev, crit_p_pos = _calc_kpi_trend(critiques_curr, critiques_prev, invert_positive=True)
 
     kpis = {
-        "satisfaction": _kpi_taux(sat_curr, sat_prev, "Part des avis notés 4 ou 5 sur 5"),
-        "total_feedbacks": StatKPI(
-            valeur=total_curr,
-            valeur_num=float(total_curr),
-            valeur_precedente=total_prev,
-            evolution=tot_ev,
-            is_positive=tot_pos,
-            sous_titre="Avis déposés dans votre agence",
-        ),
+        "satisfaction": kpi_satisfaction,
+        "total_feedbacks": kpi_volume,
         "feedbacks_traites": StatKPI(
             valeur=traites_curr,
             valeur_num=float(traites_curr),

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import type { AlertesResponse } from '../../types';
 import { AlertTriangleIcon, BellIcon, MessageSquareIcon } from '../common/Icons';
 import { raisonLabel, alerteFeedbackAnchor, alerteSeuilAnchor } from '../alerts/alerteLabels';
+import BadgeGraviteAlerte, { LIBELLE_GRAVITE, type GraviteAlerte } from '../alerts/BadgeGraviteAlerte';
 import { fullDate, relativeTime } from '../ui/format';
 
 /*
@@ -19,6 +20,8 @@ const MAX_ITEMS = 8;
 interface NotifItem {
   key: string;
   kind: 'seuil' | 'feedback';
+  /** Gravité d'une alerte de seuil (libellé + icône) ; absente pour un avis ou un ancien serveur. */
+  gravite?: GraviteAlerte;
   title: string;
   agence: string;
   date?: string;
@@ -82,6 +85,7 @@ export default function NotificationCenter({ userId, data, loading, showAgency, 
       key: `s-${a.agence_id}`,
       kind: 'seuil',
       title: `Satisfaction ${a.taux_actuel} % (seuil ${a.seuil} %)`,
+      gravite: a.gravite,
       agence: a.agence_nom,
       href: `/alertes#${alerteSeuilAnchor(a.agence_id)}`,
       unread: !seen.seuils.includes(seuilKey(a.agence_id, a.taux_actuel, a.seuil)),
@@ -190,6 +194,7 @@ export default function NotificationCenter({ userId, data, loading, showAgency, 
                   <div className="notif__body">
                     <p className="notif__item-title">
                       {n.unread && <span className="ui-sr-only">Nouveau : </span>}
+                      {n.gravite && <span className="notif__gravite"><BadgeGraviteAlerte gravite={n.gravite} />{' '}</span>}
                       {n.title}
                     </p>
                     <p className="notif__meta">
@@ -202,7 +207,7 @@ export default function NotificationCenter({ userId, data, loading, showAgency, 
                       )}
                     </p>
                     <Link to={n.href} className="notif__link" onClick={() => close(false)}>
-                      Voir l'alerte<span className="ui-sr-only"> : {n.title}{showAgency ? `, ${n.agence}` : ''}</span>
+                      Voir l'alerte<span className="ui-sr-only"> : {n.gravite ? `${LIBELLE_GRAVITE[n.gravite]}, ` : ''}{n.title}{showAgency ? `, ${n.agence}` : ''}</span>
                     </Link>
                   </div>
                   {n.unread && <span className="notif__dot" aria-hidden="true" />}
