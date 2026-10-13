@@ -8,6 +8,7 @@ from typing import List, Optional
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Response, BackgroundTasks
+from sqlalchemy import and_, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
@@ -31,7 +32,7 @@ from app.models.suggestion import Suggestion
 from app.models.demande_contact import DemandeContact
 from app.models.historique_feedback import HistoriqueFeedback
 from app.models.reponse_client import ReponseClient
-from app.models.enums import UserRole
+from app.models.enums import CriticiteType, SentimentType, UserRole
 from app.models.system_settings import SystemSettings, RETENTION_MOIS_DEFAUT
 from app.schemas.feedback import (
     FeedbackCreate,
@@ -51,7 +52,9 @@ from app.core.security import create_nps_token, decode_token
 from app.core.rate_limit import limiter_ip_public, limiter_soumission
 from app.services.ai.analyse_service import analyser_feedback
 from app.core.config import settings
+from app.services.dashboard_helpers import NOTE_FAIBLE_MAX
 from app.utils.phone import normaliser_telephone
+from app.utils.recherche_texte import LONGUEUR_MAX_RECHERCHE, condition_recherche, valider_recherche
 
 router = APIRouter()
 
@@ -329,13 +332,23 @@ def list_feedbacks(
     avec_action: Optional[bool] = Query(None),
     action_realisee: Optional[bool] = Query(None),
     theme: Optional[str] = Query(None, min_length=1, max_length=100),
+    sentiment: Optional[SentimentType] = Query(None, description="Ton de l'analyse IA : positif, neutre ou negatif."),
+    criticite: Optional[str] = Query(None, description="faible, moyenne, elevee, critique, ou non_evaluee (avis sans analyse)."),
+    note: Optional[int] = Query(None, ge=1, le=5, description="Note exacte (1 à 5)."),
+    a_traiter: Optional[bool] = Query(None, description="true : avis non résolus ou avec une demande de rappel en attente."),
+    a_surveiller: Optional[bool] = Query(None, description="true : note de 2 ou moins, ton négatif, gravité élevée/critique ou avis contradictoire."),
+    q: Optional[str] = Query(None, max_length=LONGUEUR_MAX_RECHERCHE, description="Recherche dans le texte de l'avis uniquement (casse et accents ignorés)."),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ):
     """
     Liste les feedbacks pour CX Manager et Agency Manager.
-    Périmètre filtré strictement côté backend selon le RBAC.
+    Périmètre filtré strictement côté backend selon le RBAC ; tous les filtres s'y ajoutent en ET, jamais en OU.
+    `X-Total-Count` = nombre d'avis correspondant à TOUS les filtres (avant limit/offset). Ordre stable : date décroissante puis id.
     """
+    recherche = valider_recherche(q)
+    if criticite is not None and criticite != "non_evaluee" and criticite not in {c.value for c in CriticiteType}:
+        raise HTTPException(status_code=422, detail="Gravité inconnue.")
     query = (
         db.query(Feedback)
         .options(
@@ -371,15 +384,41 @@ def list_feedbacks(
         query = query.filter(Feedback.action_a_prendre.is_(None))
     if action_realisee is not None:
         query = query.filter(Feedback.action_realisee == action_realisee)
+    if theme or sentiment or criticite or a_surveiller:
+        query = query.outerjoin(AnalyseIA, AnalyseIA.feedback_id == Feedback.id)  # une seule jointure d'analyse pour ces filtres
+    if a_traiter:
+        query = query.outerjoin(DemandeContact, DemandeContact.feedback_id == Feedback.id)
+        query = query.filter(or_(
+            Feedback.statut_traitement != "resolu",
+            and_(DemandeContact.id.isnot(None), or_(DemandeContact.traitee.is_(None), DemandeContact.traitee.is_(False))),
+        ))
+    if a_surveiller:
+        query = query.filter(or_(
+            Feedback.note <= NOTE_FAIBLE_MAX,
+            AnalyseIA.sentiment == SentimentType.NEGATIF,
+            AnalyseIA.criticite.in_([CriticiteType.ELEVEE, CriticiteType.CRITIQUE]),
+            AnalyseIA.discordance_detectee.is_(True),
+        ))
+    if note is not None:
+        query = query.filter(Feedback.note == note)
     if theme:
-        query = query.outerjoin(AnalyseIA, AnalyseIA.feedback_id == Feedback.id)
         if theme == "non_categorise":
             query = query.filter((AnalyseIA.id.is_(None)) | (AnalyseIA.theme_principal.is_(None)) | (AnalyseIA.theme_principal == ""))
         else:
             query = query.filter(AnalyseIA.theme_principal == theme)
+    if sentiment:
+        query = query.filter(AnalyseIA.sentiment == sentiment)
+    if criticite == "non_evaluee":
+        query = query.filter(AnalyseIA.id.is_(None))
+    elif criticite:
+        query = query.filter(AnalyseIA.criticite == CriticiteType(criticite))
+    if recherche:
+        # Texte de l'avis UNIQUEMENT (jamais nom, téléphone ni e-mail de la demande de contact). Valeur liée en paramètre,
+        # jokers et caractères spéciaux neutralisés, casse et accents ignorés (voir app/utils/recherche_texte.py).
+        query = query.filter(condition_recherche(db.get_bind().dialect.name, Feedback.commentaire, recherche))
 
     response.headers["X-Total-Count"] = str(query.order_by(None).count())
-    feedbacks = query.order_by(Feedback.date_soumission.desc()).offset(offset).limit(limit).all()
+    feedbacks = query.order_by(Feedback.date_soumission.desc(), Feedback.id.desc()).offset(offset).limit(limit).all()
 
     return [_format_feedback_response(f, current_user) for f in feedbacks]
 
