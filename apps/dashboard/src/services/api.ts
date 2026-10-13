@@ -251,8 +251,9 @@ export const issuesApi = {
 export const demandesContactApi = {
   list: (params?: { traitee?: boolean; agence_id?: string; limit?: number; offset?: number }) =>
     api.get<import('../types').DemandeContactListItem[]>('/feedbacks/demandes-contact', { params }),
+  /** « Marquer comme recontacté » : date, auteur et historique côté serveur ; renvoie la demande, coordonnées masquées. */
   traiter: (id: string) =>
-    api.patch(`/feedbacks/demandes-contact/${id}/traiter`),
+    api.patch<{ message: string; deja_traitee: boolean; demande: import('../types').DemandeContactListItem }>(`/feedbacks/demandes-contact/${id}/traiter`),
 };
 
 // ── KPI ───────────────────────────────────────────────

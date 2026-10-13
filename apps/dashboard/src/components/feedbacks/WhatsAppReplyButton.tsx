@@ -8,6 +8,8 @@ interface Props {
   telephone?: string | null;
   /** Numéro normalisé par l'API (`telephone_whatsapp`) ; null/absent si le numéro stocké est invalide. */
   telephoneWhatsapp?: string | null;
+  /** Demande traitée : l'API ne renvoie plus le numéro. Aucun bouton (et pas le faux message « numéro non laissé »). */
+  masque?: boolean;
   className?: string;
 }
 
@@ -18,11 +20,13 @@ const noteStyle: React.CSSProperties = { margin: 0, fontSize: '0.78rem', color: 
  * dans un nouvel onglet. Aucun envoi automatique (l'Agency Manager appuie lui-même sur
  * « Envoyer » dans WhatsApp), aucun appel API, la demande de rappel n'est PAS marquée traitée.
  */
-export default function WhatsAppReplyButton({ telephone, telephoneWhatsapp, className }: Props) {
+export default function WhatsAppReplyButton({ telephone, telephoneWhatsapp, masque = false, className }: Props) {
   const [ouvert, setOuvert] = useState(false);
   const [message, setMessage] = useState('');
   const [erreur, setErreur] = useState('');
   const champId = useId();
+
+  if (masque) return null;
 
   if (!telephone) {
     return (

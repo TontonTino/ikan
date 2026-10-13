@@ -12,6 +12,7 @@ import AgenceFilterSelect from '../../components/stats/AgenceFilterSelect';
 import { StatsErrorState } from '../../components/stats/StatsStates';
 import EmptyState from '../../components/ui/EmptyState';
 import WhatsAppReplyButton from '../../components/feedbacks/WhatsAppReplyButton';
+import { ConfirmationRecontact, CoordonneesMasquees, ConsentementContact, InfoTraitement } from '../../components/feedbacks/DemandeContactBlocs';
 import SkeletonBlock from '../../components/ui/SkeletonBlock';
 import SectionHeading from '../../components/ui/SectionHeading';
 import { PhoneIcon, MailIcon, CheckCircleIcon, AlertTriangleIcon } from '../../components/common/Icons';
@@ -41,6 +42,9 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
   const [selectedAgenceId, setSelectedAgenceId] = useState<string | null>(null);
   const agenceFiltre = agenceId ?? (isCXManager ? selectedAgenceId : null);
 
+  // Demande dont la confirmation « Marquer comme recontacté » est ouverte (le masquage est définitif), et celle en cours d'envoi.
+  const [aConfirmer, setAConfirmer] = useState<string | null>(null);
+  const [enregistrement, setEnregistrement] = useState<string | null>(null);
   const [toast, setToast] = useState('');
   const showToast = (msg: string) => {
     setToast(msg);
@@ -99,6 +103,7 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
   }, [fetchDemandes]);
 
   const marquerTraitee = async (id: string) => {
+    setEnregistrement(id);
     try {
       await demandesContactApi.traiter(id);
       // La liste courante ne contient que le sous-ensemble du toggle actif (le serveur
@@ -107,9 +112,12 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
       // en parallèle pour un bénéfice minime.
       setDemandes((prev) => prev.filter((d) => d.id !== id));
       setDemandesTotal((total) => Math.max(0, total - 1));
-      showToast('Demande marquée comme traitée');
+      showToast('Client recontacté : ses coordonnées sont masquées.');
     } catch {
       showToast('Impossible d’enregistrer. Réessayez.');
+    } finally {
+      setEnregistrement(null);
+      setAConfirmer(null);
     }
   };
 
@@ -249,7 +257,8 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
                     {d.email}
                   </a>
                 )}
-                {!d.telephone && !d.email && (
+                {d.coordonnees_masquees && <CoordonneesMasquees />}
+                {!d.coordonnees_masquees && !d.telephone && !d.email && (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#B45309', fontWeight: 700 }}>
                     <AlertTriangleIcon size={14} color="#B45309" />
                     Aucune coordonnée laissée par le client
@@ -266,21 +275,30 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
                 </p>
               </div>
 
-              {isAgencyManager && (
-                <WhatsAppReplyButton telephone={d.telephone} telephoneWhatsapp={d.telephone_whatsapp} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <InfoTraitement demande={d} />
+                <ConsentementContact demande={d} />
+              </div>
+
+              {isAgencyManager && !d.coordonnees_masquees && (
+                <WhatsAppReplyButton telephone={d.telephone} telephoneWhatsapp={d.telephone_whatsapp} masque={d.coordonnees_masquees} />
               )}
 
-              {toggle === 'attente' && (
+              {toggle === 'attente' && aConfirmer === d.id && (
+                <ConfirmationRecontact chargement={enregistrement === d.id} onAnnuler={() => setAConfirmer(null)} onConfirmer={() => marquerTraitee(d.id)} />
+              )}
+
+              {toggle === 'attente' && aConfirmer !== d.id && (
                 <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #F1F4EE', paddingTop: '12px' }}>
                   <button
                     type="button"
-                    onClick={() => marquerTraitee(d.id)}
+                    onClick={() => setAConfirmer(d.id)}
                     className="btn-primary"
-                    style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '10px', fontWeight: 800 }}
-                    title="À utiliser une fois le client recontacté : ce marquage est déclaratif et ne modifie pas le statut de l’avis."
+                    style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '10px', fontWeight: 800, minHeight: 44 }}
+                    title="À utiliser une fois le client recontacté : ses coordonnées seront masquées. Ce marquage ne modifie pas le statut de l’avis."
                   >
                     <CheckCircleIcon size={15} />
-                    Marquer traitée
+                    Marquer comme recontacté
                   </button>
                 </div>
               )}

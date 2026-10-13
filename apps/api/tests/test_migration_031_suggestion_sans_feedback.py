@@ -24,6 +24,9 @@ import sqlalchemy as sa
 
 API_DIR = Path(__file__).resolve().parents[1]
 FICHIER_031 = API_DIR / "alembic" / "versions" / "031_suggestion_sans_feedback.py"
+# La 031 n'est plus la tête (032 la suit) : on descend explicitement jusqu'à sa révision parente, pas d'un cran.
+REV_030 = "030_demande_contact_consentement"
+REV_TETE = "032_demande_contact_traitement"
 
 
 def alembic(*args):
@@ -89,18 +92,20 @@ def test_check_refuse_une_suggestion_sans_feedback_ni_agence_et_la_cascade_suppr
 def test_le_downgrade_refuse_de_detruire_des_suggestions_sans_feedback(pg):
     with pg.begin() as c:
         sid = _suggestion_sans_feedback(c, _agence(c))
-    r = alembic("downgrade", "-1")
+    r = alembic("downgrade", REV_030)
     assert r.returncode != 0
     assert "Downgrade 031 refusé" in (r.stdout + r.stderr) and "1 suggestion(s) sans feedback" in (r.stdout + r.stderr)
-    # rien n'a changé : colonne et ligne toujours là, révision inchangée
+    # rien n'a changé (la descente est une seule transaction : le downgrade 032, exécuté avant, est annulé avec le refus) :
+    # colonne et ligne toujours là, révision inchangée
     with pg.connect() as c:
         assert c.execute(sa.text("SELECT count(*) FROM suggestions WHERE id = :i"), {"i": sid}).scalar() == 1
-        assert c.execute(sa.text("SELECT version_num FROM alembic_version")).scalar() == "031_suggestion_sans_feedback"
+        assert c.execute(sa.text("SELECT version_num FROM alembic_version")).scalar() == REV_TETE
     assert "agence_id" in {col["name"] for col in sa.inspect(pg).get_columns("suggestions")}
+    assert "date_traitement" in {col["name"] for col in sa.inspect(pg).get_columns("demandes_contact")}
 
 
 def test_downgrade_puis_upgrade_sans_suggestion_orpheline(pg):
-    r = alembic("downgrade", "-1")
+    r = alembic("downgrade", REV_030)
     assert r.returncode == 0, r.stdout + r.stderr
     insp = sa.inspect(pg)
     colonnes = {c["name"]: c for c in insp.get_columns("suggestions")}
