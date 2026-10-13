@@ -12,6 +12,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from app.core.config import settings
 from app.core.body_limit import LimiteCorpsPublic
 from app.core.cors import appliquer_cors
+from app.core.journal_acces import installer_journal_acces
 from app.utils.masquage import masquer_contacts
 from app.api.v1.router import api_router
 from app.db.session import engine, Base, SessionLocal
@@ -38,6 +39,9 @@ app = FastAPI(
 )
 
 scheduler = BackgroundScheduler()
+
+# Journal des 401/403 (SD-10) : un seul point, voir app/core/journal_acces.py.
+installer_journal_acces(app)
 
 
 @app.exception_handler(Exception)

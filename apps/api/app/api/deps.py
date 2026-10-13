@@ -4,7 +4,7 @@ Dépendances FastAPI — authentification, RBAC, session DB.
 from typing import Optional
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, status, Cookie
+from fastapi import Depends, HTTPException, Request, status, Cookie
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
@@ -22,6 +22,7 @@ def get_current_user(
     auth_header: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
     access_token: Optional[str] = Cookie(default=None),
     db: Session = Depends(get_db),
+    request: Request = None,  # injecté par FastAPI ; None quand la fonction est appelée directement (tests unitaires)
 ) -> Utilisateur:
     """
     Extrait l'utilisateur courant depuis l'en-tête Authorization Bearer ou depuis le cookie JWT.
@@ -53,6 +54,10 @@ def get_current_user(
     if not user:
         raise credentials_exception
 
+    # Mémorisés pour le journal des accès refusés (app/core/journal_acces.py) : identifiant et rôle seulement.
+    if request is not None:
+        request.state.acteur_id = str(user.id)
+        request.state.acteur_role = user.role.value if hasattr(user.role, "value") else str(user.role)
     return user
 
 
