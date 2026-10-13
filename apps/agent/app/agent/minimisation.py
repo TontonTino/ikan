@@ -11,7 +11,8 @@ Ajouter ici tout futur champ personnel qui ne doit pas quitter le périmètre se
 """
 from typing import Any
 
-CHAMPS_EXCLUS_DU_LLM: frozenset[str] = frozenset({"contact_telephone"})
+# `demande_traitee` n'est pas personnel : il est exclu pour que les prompts restent identiques à ceux d'avant.
+CHAMPS_EXCLUS_DU_LLM: frozenset[str] = frozenset({"contact_telephone", "demande_traitee"})
 
 
 def pour_llm(donnees: Any) -> Any:
