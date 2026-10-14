@@ -131,6 +131,7 @@ def _mk_feedbacks(db, agence, tag, theme, specs):
         db.add(DemandeContact(
             id=uuid.uuid4(), feedback_id=fb.id, nom=f"Client {tag}", telephone=f"+22670{i:06d}",
             souhaite_etre_rappele=True, traitee=False,
+            consentement_contact=True, consentement_date=now, consentement_retention_mois=24,
         ))
         feedbacks.append(fb)
     db.flush()

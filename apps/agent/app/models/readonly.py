@@ -164,6 +164,11 @@ class DemandeContact(ReadOnlyBase):
     souhaite_etre_rappele: Mapped[bool] = mapped_column(Boolean)
     date_demande: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     traitee: Mapped[bool] = mapped_column(Boolean)
+    # Consentement à être recontacté (apps/api, migration 030) : LECTURE SEULE, nullables. NULL = « non enregistré » (demandes
+    # antérieures à 030, ou e-mail seul). YAM n'envoie un WhatsApp que si consentement_contact est vrai.
+    consentement_contact: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    consentement_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    consentement_retention_mois: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     feedback: Mapped["Feedback"] = relationship("Feedback", back_populates="demande_contact", viewonly=True)
 
