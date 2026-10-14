@@ -10,7 +10,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import app.models  # noqa: F401
-from app.api.v1.endpoints import agences, alertes, dashboard, feedbacks, issues, recommandations
+from app.api.v1.endpoints import agences, alertes, dashboard, feedbacks, issues, recommandations, suggestions
 from app.core.journal_acces import installer_journal_acces
 from app.core.security import create_access_token, get_password_hash
 from app.db.session import Base, get_db
@@ -49,7 +49,7 @@ def construire_contexte():
     app = FastAPI()
     installer_journal_acces(app)
     for prefixe, module in [("/feedbacks", feedbacks), ("/dashboard", dashboard), ("/recommandations", recommandations),
-                            ("/agences", agences), ("/issues", issues), ("/alertes", alertes)]:
+                            ("/agences", agences), ("/issues", issues), ("/alertes", alertes), ("/suggestions", suggestions)]:
         app.include_router(module.router, prefix=prefixe)
     app.dependency_overrides[get_db] = override_db
 
