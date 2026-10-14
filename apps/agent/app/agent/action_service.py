@@ -216,6 +216,9 @@ def rejeter_action(
     return action
 
 
+MESSAGE_DEMANDE_TRAITEE = "demande déjà traitée, coordonnées masquées"
+
+
 def envoyer_whatsapp_si_applicable(
     action_id: uuid.UUID,
     organisation_id: uuid.UUID,
@@ -250,7 +253,11 @@ def envoyer_whatsapp_si_applicable(
         numero = feedback_dict.get("contact_telephone") if feedback_dict else None
         if not numero:
             action.statut_envoi_whatsapp = "ignore"
-            action.whatsapp_erreur = "Aucun numéro de contact laissé par le client."
+            action.whatsapp_erreur = (
+                MESSAGE_DEMANDE_TRAITEE
+                if feedback_dict and feedback_dict.get("demande_traitee")
+                else "Aucun numéro de contact laissé par le client."
+            )
             db.commit()
             return
 

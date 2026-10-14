@@ -117,8 +117,10 @@ def _ligne_vers_dict(
         "date_soumission": feedback.date_soumission.isoformat(),
         "agence_id": str(agence.id),
         "agence_nom": agence.nom,
-        # présumé = numéro WhatsApp (voir GUIDE_INTEGRATION.md)
-        "contact_telephone": demande.telephone if demande else None,
+        # présumé = numéro WhatsApp (voir GUIDE_INTEGRATION.md). JAMAIS pour une demande déjà traitée : l'API en masque les
+        # coordonnées (AM-07), cette lecture directe en base ne doit pas les rouvrir pour envoyer un message.
+        "contact_telephone": demande.telephone if (demande and not demande.traitee) else None,
+        "demande_traitee": bool(demande and demande.traitee),
         "sentiment": analyse.sentiment.value,
         "sentiment_score": analyse.score_sentiment if analyse.score_sentiment is not None else 0.5,
         "theme_principal": analyse.theme_principal or "autre",
