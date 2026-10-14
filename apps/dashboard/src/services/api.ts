@@ -126,7 +126,9 @@ export const feedbacksApi = {
 export const suggestionsApi = {
   list: (params?: { limit?: number; offset?: number; agence_id?: string }) => api.get('/suggestions/', { params }),
   updateStatut: (id: string, statut: string, commentaire?: string) =>
-    api.patch(`/suggestions/${id}/statut`, { statut, commentaire }),
+    api.patch<import('../types').Suggestion>(`/suggestions/${id}/statut`, { statut, commentaire }),
+  /** Historique complet des changements de statut, du plus ancien au plus récent. */
+  historique: (id: string) => api.get<import('../types').HistoriqueSuggestion[]>(`/suggestions/${id}/historique`),
 };
 
 // ── Recommandations ───────────────────────────────────

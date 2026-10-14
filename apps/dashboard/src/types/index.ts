@@ -193,6 +193,19 @@ export interface AnalyseIA {
   date_analyse: string;
 }
 
+/** Un changement de statut d'une suggestion (GET /suggestions/{id}/historique). Jamais de coordonnées du client. */
+export interface HistoriqueSuggestion {
+  id: string;
+  ancien_statut: IdeaStatus | null;
+  nouveau_statut: IdeaStatus;
+  date: string;
+  /** null : compte supprimé depuis. */
+  auteur_nom: string | null;
+  /** Valeur technique (agency_manager, cx_manager). */
+  auteur_role: string | null;
+  commentaire: string | null;
+}
+
 export interface Suggestion {
   id: string;
   /** null : idée envoyée seule (« Partager une idée »), sans avis ni note. */
@@ -203,6 +216,8 @@ export interface Suggestion {
   date_soumission: string;
   date_traitement?: string;
   notes_internes?: string;
+  /** Dernier changement de statut ; null/absent tant que la suggestion n'a jamais changé de statut. */
+  dernier_changement?: HistoriqueSuggestion | null;
 }
 
 /** Origine d'un insight / d'une recommandation : règles déterministes, LLM, ou les deux. */

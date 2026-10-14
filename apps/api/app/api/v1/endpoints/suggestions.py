@@ -12,11 +12,29 @@ from app.api.deps import get_cx_or_agency_manager, get_db
 from app.models.utilisateur import Utilisateur
 from app.models.suggestion import Suggestion, HistoriqueSuggestion
 from app.models.enums import UserRole, IdeaStatus
-from app.schemas.suggestion import SuggestionResponse, SuggestionStatusUpdate
+from app.schemas.suggestion import HistoriqueSuggestionResponse, SuggestionResponse, SuggestionStatusUpdate
 from app.services.acces_agence import verifier_acces_agence
+from app.services.historique_suggestions import (
+    MESSAGE_RETOUR_A_NOUVEAU, dernier_changement_par_suggestion, historiques_par_suggestion, transition_interdite,
+)
 from app.services.suggestions_scope import agence_effective, agence_id_de_la_suggestion, filtrer_par_perimetre
 
 router = APIRouter()
+
+
+def _avec_dernier_changement(suggestion: Suggestion, dernier) -> SuggestionResponse:
+    return SuggestionResponse.model_validate(suggestion).model_copy(update={"dernier_changement": dernier})
+
+
+def _suggestion_autorisee(db: Session, current_user: Utilisateur, suggestion_id: UUID, *, verrou: bool = False) -> Suggestion:
+    """La suggestion, ou 404 si elle n'existe pas, ou 403 hors du périmètre du rôle (agence effective : suggestions sans feedback
+    comprises, voir suggestions_scope.py). UNE seule porte d'entrée pour le détail, l'historique et le changement de statut."""
+    requete = db.query(Suggestion).filter(Suggestion.id == suggestion_id)
+    suggestion = (requete.with_for_update() if verrou else requete).first()
+    if not suggestion:
+        raise HTTPException(status_code=404, detail="Suggestion introuvable")
+    verifier_acces_agence(db, current_user, agence_id_de_la_suggestion(db, suggestion))
+    return suggestion
 
 
 @router.get("/", response_model=List[SuggestionResponse])
@@ -37,7 +55,9 @@ def list_suggestions(
         query = query.filter(agence_effective() == agence_id)
 
     response.headers["X-Total-Count"] = str(query.order_by(None).count())
-    return query.order_by(Suggestion.date_soumission.desc()).offset(offset).limit(limit).all()
+    suggestions = query.order_by(Suggestion.date_soumission.desc()).offset(offset).limit(limit).all()
+    derniers = dernier_changement_par_suggestion(db, [s.id for s in suggestions])      # une requête pour toute la page
+    return [_avec_dernier_changement(s, derniers.get(s.id)) for s in suggestions]
 
 
 @router.get("/{suggestion_id}", response_model=SuggestionResponse)
@@ -46,11 +66,20 @@ def get_suggestion(
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ):
-    suggestion = db.query(Suggestion).filter(Suggestion.id == suggestion_id).first()
-    if not suggestion:
-        raise HTTPException(status_code=404, detail="Suggestion introuvable")
-    verifier_acces_agence(db, current_user, agence_id_de_la_suggestion(db, suggestion))
-    return suggestion
+    suggestion = _suggestion_autorisee(db, current_user, suggestion_id)
+    return _avec_dernier_changement(suggestion, dernier_changement_par_suggestion(db, [suggestion.id]).get(suggestion.id))
+
+
+@router.get("/{suggestion_id}/historique", response_model=List[HistoriqueSuggestionResponse])
+def historique_suggestion(
+    suggestion_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+):
+    """Historique complet des changements de statut, du plus ancien au plus récent. Même périmètre que la suggestion (403 hors
+    périmètre, 404 si elle n'existe pas). Aucune donnée de contact du client."""
+    suggestion = _suggestion_autorisee(db, current_user, suggestion_id)
+    return historiques_par_suggestion(db, [suggestion.id]).get(suggestion.id, [])
 
 
 @router.patch("/{suggestion_id}/statut", response_model=SuggestionResponse)
@@ -61,14 +90,25 @@ def update_suggestion_statut(
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ):
     """
-    Met à jour le statut d'une suggestion — tracé dans l'historique d'audit (BNF-09).
+    Met à jour le statut d'une suggestion — tracé dans l'historique d'audit (BNF-09), avec l'auteur, la date et un commentaire facultatif.
+    - Retour à « Nouveau » depuis un autre statut : 409. Tout le reste est permis (rouvrir une suggestion traitée ou rejetée : « En cours »).
+    - Même statut : aucun changement, aucune entrée d'historique.
+    La ligne est verrouillée (PostgreSQL) : deux changements simultanés ne s'écrasent pas et n'écrivent pas deux entrées identiques.
     """
-    suggestion = db.query(Suggestion).filter(Suggestion.id == suggestion_id).first()
-    if not suggestion:
-        raise HTTPException(status_code=404, detail="Suggestion introuvable")
-    verifier_acces_agence(db, current_user, agence_id_de_la_suggestion(db, suggestion))
+    suggestion = _suggestion_autorisee(db, current_user, suggestion_id, verrou=True)
 
     ancien_statut = suggestion.statut
+
+    if data.statut == ancien_statut:
+        # Pas une transition : ni entrée d'historique, ni date modifiée. Les notes internes, si fournies, restent enregistrées.
+        if data.notes_internes:
+            suggestion.notes_internes = data.notes_internes
+            db.commit()
+            db.refresh(suggestion)
+        return _avec_dernier_changement(suggestion, dernier_changement_par_suggestion(db, [suggestion.id]).get(suggestion.id))
+
+    if transition_interdite(ancien_statut, data.statut):
+        raise HTTPException(status_code=409, detail=MESSAGE_RETOUR_A_NOUVEAU)
 
     # Créer l'entrée d'historique
     historique = HistoriqueSuggestion(
@@ -77,6 +117,7 @@ def update_suggestion_statut(
         nouveau_statut=data.statut,
         commentaire=data.commentaire,
         utilisateur_id=current_user.id,
+        date_action=datetime.now(timezone.utc),   # explicite (microsecondes) : l'ordre chronologique de l'historique reste déterministe
     )
     db.add(historique)
 
@@ -86,7 +127,9 @@ def update_suggestion_statut(
         suggestion.notes_internes = data.notes_internes
     if data.statut in (IdeaStatus.TRAITE, IdeaStatus.REJETE):
         suggestion.date_traitement = datetime.now(timezone.utc)
+    elif data.statut == IdeaStatus.EN_COURS:
+        suggestion.date_traitement = None      # rouverte : plus « traitée » ; la date reste dans l'historique
 
     db.commit()
     db.refresh(suggestion)
-    return suggestion
+    return _avec_dernier_changement(suggestion, dernier_changement_par_suggestion(db, [suggestion.id]).get(suggestion.id))

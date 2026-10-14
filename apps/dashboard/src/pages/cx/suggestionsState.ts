@@ -15,7 +15,9 @@ export type SuggestionsAction =
   | { type: 'succes'; donnees: Suggestion[]; total: number }
   | { type: 'echec' }
   | { type: 'plus'; donnees: Suggestion[] }
-  | { type: 'statut'; id: string; statut: IdeaStatus };
+  | { type: 'statut'; id: string; statut: IdeaStatus }
+  /** Remplace une suggestion par la version renvoyée par le serveur (statut, dernier changement, date de traitement). */
+  | { type: 'maj'; suggestion: Suggestion };
 
 export const SUGGESTIONS_INITIAL: SuggestionsState = { statut: 'chargement', donnees: [], total: 0 };
 
@@ -35,6 +37,8 @@ export function suggestionsReducer(state: SuggestionsState, action: SuggestionsA
     }
     case 'statut':
       return { ...state, donnees: state.donnees.map((s) => (s.id === action.id ? { ...s, statut: action.statut } : s)) };
+    case 'maj':
+      return { ...state, donnees: state.donnees.map((s) => (s.id === action.suggestion.id ? { ...s, ...action.suggestion } : s)) };
     default:
       return state;
   }

@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { suggestionsApi } from '../../services/api';
-import type { IdeaStatus } from '../../types';
+import type { IdeaStatus, HistoriqueSuggestion, Suggestion } from '../../types';
 import { useToast } from '../../components/ui/Toast';
 import PilotageIdeasTab from './PilotageIdeasTab';
 import { STATUS_LABELS } from './pilotageConstants';
+import { messageErreurChangement, type ResultatChangement } from './suggestionsHistorique';
 import { SUGGESTIONS_INITIAL, parametresSuggestions, suggestionsReducer, totalAnnonce } from './suggestionsState';
 
 
@@ -54,15 +55,21 @@ export default function SuggestionsView({ agenceId }: { agenceId?: string }) {
     }
   };
 
-  const changerStatut = async (id: string, statut: IdeaStatus) => {
+  // Un refus (409 : retour à « Nouveau » impossible, 422…) est renvoyé à la carte, qui l'affiche à côté du formulaire et garde la saisie.
+  const changerStatut = async (id: string, statut: IdeaStatus, commentaire?: string): Promise<ResultatChangement> => {
     try {
-      await suggestionsApi.updateStatut(id, statut);
-      dispatch({ type: 'statut', id, statut });
+      const res = await suggestionsApi.updateStatut(id, statut, commentaire);
+      const maj = res?.data as Suggestion | undefined;
+      if (maj && maj.id === id) dispatch({ type: 'maj', suggestion: maj });
+      else dispatch({ type: 'statut', id, statut });
       toast.show({ message: `Statut mis à jour : ${STATUS_LABELS[statut]}`, tone: 'success' });
-    } catch {
-      toast.show({ message: 'Impossible d’enregistrer la modification. Réessayez.', tone: 'critical' });
+      return { ok: true };
+    } catch (erreur) {
+      return { ok: false, message: messageErreurChangement(erreur) };
     }
   };
+
+  const chargerHistorique = async (id: string): Promise<HistoriqueSuggestion[]> => (await suggestionsApi.historique(id)).data;
 
   return (
     <PilotageIdeasTab
@@ -74,6 +81,7 @@ export default function SuggestionsView({ agenceId }: { agenceId?: string }) {
       suggestionsLoadingMore={chargementPlus}
       loadMoreSuggestions={chargerPlus}
       updateStatut={changerStatut}
+      chargerHistorique={chargerHistorique}
       activeSubTab={sousOnglet}
       setActiveSubTab={setSousOnglet}
     />
