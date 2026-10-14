@@ -217,6 +217,7 @@ def rejeter_action(
 
 
 MESSAGE_DEMANDE_TRAITEE = "demande déjà traitée, coordonnées masquées"
+MESSAGE_CONSENTEMENT_NON_ENREGISTRE = "consentement du client non enregistré"
 
 
 def envoyer_whatsapp_si_applicable(
@@ -258,6 +259,13 @@ def envoyer_whatsapp_si_applicable(
                 if feedback_dict and feedback_dict.get("demande_traitee")
                 else "Aucun numéro de contact laissé par le client."
             )
+            db.commit()
+            return
+
+        # Consentement : seul « oui » enregistré autorise l'envoi. NULL (demandes d'avant la migration 030), « non » : aucun message.
+        if feedback_dict.get("consentement_contact") is not True:
+            action.statut_envoi_whatsapp = "ignore"
+            action.whatsapp_erreur = MESSAGE_CONSENTEMENT_NON_ENREGISTRE
             db.commit()
             return
 

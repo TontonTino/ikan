@@ -121,6 +121,9 @@ def _ligne_vers_dict(
         # coordonnées (AM-07), cette lecture directe en base ne doit pas les rouvrir pour envoyer un message.
         "contact_telephone": demande.telephone if (demande and not demande.traitee) else None,
         "demande_traitee": bool(demande and demande.traitee),
+        # Consentement à être recontacté : None (non enregistré ou demande absente), False ou True. Interprété dans UN seul endroit,
+        # action_service.envoyer_whatsapp_si_applicable : seul « True » autorise un envoi.
+        "consentement_contact": demande.consentement_contact if demande else None,
         "sentiment": analyse.sentiment.value,
         "sentiment_score": analyse.score_sentiment if analyse.score_sentiment is not None else 0.5,
         "theme_principal": analyse.theme_principal or "autre",
