@@ -37,8 +37,11 @@ from app.services.dashboard_helpers import (
     _libelles_semaines,
     _repartition_forfaits,
     _taux,
+    compter_avis_agence,
+    kpis_satisfaction_et_volume,
 )
 from app.schemas.dashboard import (
+    ComparaisonPeriode,
     DashboardAgence,
     DashboardSiege,
     KPIAgence,
@@ -159,6 +162,11 @@ def dashboard_agence(
     # Tendances (par semaine)
     tendances = _compute_tendances(feedbacks, jours)
 
+    # Comparaison avec la période précédente de même durée (AM-02) : même agence, même définition que /statistics/agency.
+    positifs = sum(1 for f in feedbacks if f.note >= 4)
+    total_precedent, positifs_precedent = compter_avis_agence(db, agence_id, date_debut - timedelta(days=jours), date_debut)
+    kpi_satisfaction, kpi_volume = kpis_satisfaction_et_volume(total, positifs, total_precedent, positifs_precedent)
+
     return DashboardAgence(
         agence_id=agence_id,
         agence_nom=agence.nom if agence else str(agence_id),
@@ -179,6 +187,12 @@ def dashboard_agence(
         themes=themes,
         sentiments=sentiments,
         discordances=discordances,
+        comparaison=ComparaisonPeriode(
+            jours=jours,
+            nombre_feedbacks_precedent=total_precedent,
+            satisfaction=kpi_satisfaction,
+            total_feedbacks=kpi_volume,
+        ),
     )
 
 

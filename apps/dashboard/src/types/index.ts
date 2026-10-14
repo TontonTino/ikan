@@ -266,6 +266,16 @@ export interface DashboardAgence {
   themes: { theme: string; count: number; pourcentage: number }[];
   sentiments: { sentiment: SentimentType; count: number; pourcentage: number }[];
   discordances: number;
+  /** Comparaison avec la période précédente de même durée (même agence). Absente d'un ancien serveur. */
+  comparaison?: ComparaisonPeriode | null;
+}
+
+export interface ComparaisonPeriode {
+  jours: number;
+  /** 0 = aucun avis avant : « Pas de données avant », aucune évolution calculée. */
+  nombre_feedbacks_precedent: number;
+  satisfaction: StatKPI;
+  total_feedbacks: StatKPI;
 }
 
 export interface DashboardSiege {
@@ -294,6 +304,10 @@ export interface Alerte {
   taux_actuel: number;
   seuil: number;
   message: string;
+  /** Gravité (AM-04) : « critique » à 15 points ou plus sous le seuil, sinon « important ». Absente d'un ancien serveur. */
+  gravite?: 'critique' | 'important';
+  /** Points de pourcentage sous le seuil. */
+  ecart_seuil?: number;
 }
 
 export interface AlerteFeedback {

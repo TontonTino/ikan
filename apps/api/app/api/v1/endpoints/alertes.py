@@ -22,7 +22,10 @@ from app.services.acces_agence import verifier_acces_agence
 from app.services.alertes_seuil import (
     DUREE_PERSISTANCE_SEUIL_CX,
     FENETRE_SATISFACTION,
+    GraviteAlerte,
+    ecart_sous_le_seuil,
     en_utc,
+    gravite_alerte_seuil,
     satisfaction_a,
     sous_seuil_en_continu,
 )
@@ -39,6 +42,10 @@ class AlerteResponse(BaseModel):
     taux_actuel: float
     seuil: float
     message: str
+    # Gravité (AM-04), champs additifs : « critique » à 15 points ou plus sous le seuil, sinon « important »
+    # (constante ECART_SEUIL_CRITIQUE_POINTS, services/alertes_seuil.py). ecart_seuil = points sous le seuil.
+    gravite: GraviteAlerte = "important"
+    ecart_seuil: float = 0.0
 
 
 class AlerteFeedbackResponse(BaseModel):
@@ -127,6 +134,8 @@ def _calculer_alertes_seuil(db: Session, current_user: Utilisateur) -> List[Aler
             taux_actuel=taux,
             seuil=agence.seuil_alerte,
             message=message,
+            gravite=gravite_alerte_seuil(taux, agence.seuil_alerte),
+            ecart_seuil=float(ecart_sous_le_seuil(taux, agence.seuil_alerte)),
         ))
 
     return alertes

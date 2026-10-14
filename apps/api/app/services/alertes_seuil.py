@@ -14,7 +14,8 @@ la fenêtre, ou en sort) ; il suffit de l'évaluer à ces instants pour connaît
 période. Le seuil utilisé est le seuil ACTUEL de l'agence (appliqué rétroactivement).
 """
 from datetime import datetime, timedelta, timezone
-from typing import Sequence
+from decimal import Decimal
+from typing import Literal, Sequence
 
 # Fenêtre glissante de la satisfaction (identique au système d'alertes de seuil historique).
 FENETRE_SATISFACTION = timedelta(days=7)
@@ -22,6 +23,14 @@ FENETRE_SATISFACTION = timedelta(days=7)
 MIN_AVIS_FENETRE = 3
 # Durée pendant laquelle l'agence doit rester sous le seuil avant d'alerter le CX Manager (constante fixe).
 DUREE_PERSISTANCE_SEUIL_CX = timedelta(hours=48)
+
+# Gravité d'une alerte de seuil (AM-04). « Critique » : la satisfaction est à AU MOINS ECART_SEUIL_CRITIQUE_POINTS points de
+# pourcentage sous le seuil de l'agence ; « Important » : elle est sous le seuil, de moins que cela. Une seule constante, à
+# changer ici si la MOA révise la règle (exemple : seuil 70 %, satisfaction 55 % ou moins => Critique, 55,1 % => Important).
+ECART_SEUIL_CRITIQUE_POINTS = Decimal("15")
+GRAVITE_CRITIQUE = "critique"
+GRAVITE_IMPORTANTE = "important"
+GraviteAlerte = Literal["critique", "important"]
 
 _MICROSECONDE = timedelta(microseconds=1)
 
@@ -82,3 +91,14 @@ def sous_seuil_en_continu(
     """
     points = historique_satisfaction(avis, fin - duree, fin)
     return all(taux is not None and taux < seuil for _, _, taux in points), points
+
+def ecart_sous_le_seuil(taux: float, seuil: float) -> Decimal:
+    """Points de pourcentage dont `taux` est sous `seuil` (négatif si au-dessus). Arithmétique DÉCIMALE exacte : en flottant,
+    72,3 - 57,3 donne 14,999999999999993 et classerait à tort une alerte pile à la frontière en « Important »."""
+    return Decimal(str(seuil)) - Decimal(str(taux))
+
+
+def gravite_alerte_seuil(taux: float, seuil: float) -> GraviteAlerte:
+    """« critique » si la satisfaction est à ECART_SEUIL_CRITIQUE_POINTS points ou plus sous le seuil (frontière incluse), sinon
+    « important ». À n'appeler que pour une alerte active (taux sous le seuil)."""
+    return GRAVITE_CRITIQUE if ecart_sous_le_seuil(taux, seuil) >= ECART_SEUIL_CRITIQUE_POINTS else GRAVITE_IMPORTANTE
