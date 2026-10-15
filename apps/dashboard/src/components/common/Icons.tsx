@@ -28,6 +28,7 @@ import {
   Smiley,
   Phone,
   DownloadSimple,
+  Printer,
   Bell,
   Trash,
   ShieldCheck,
@@ -100,6 +101,7 @@ export const ArrowUpRightIcon = wrap(ArrowUpRight, 14);
 export const ArrowDownRightIcon = wrap(ArrowDownRight, 14);
 export const ClockIcon = wrap(Clock, 16);
 export const DownloadIcon = wrap(DownloadSimple, 16);
+export const PrinterIcon = wrap(Printer, 16);
 export const LightningIcon = wrap(Lightning, 16);
 export const AlertTriangleIcon = wrap(Warning, 20);
 export const CheckCircleIcon = wrap(CheckCircle, 20);
