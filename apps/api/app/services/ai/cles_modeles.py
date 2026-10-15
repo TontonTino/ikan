@@ -21,7 +21,8 @@ from typing import Any, Collection, Optional
 MODELE_PAR_DEFAUT = "autre"
 
 # Clés de départ des secteurs (app/services/categorie_templates.py) -> famille de modèle. Aucune ne retombe sur « autre » sauf
-# « suggestion_compliment » (un compliment ou une idée n'a pas de modèle de recommandation correctif).
+# « suggestion_compliment » (un compliment ou une idée n'a pas de modèle de recommandation correctif) et « mobile_money »
+# (le texte « facturation » parle d'un duplicata de facture : hors sujet pour une transaction mobile money).
 CLE_VERS_FAMILLE: dict[str, str] = {
     # télécom
     "accueil": "accueil",
@@ -31,7 +32,7 @@ CLE_VERS_FAMILLE: dict[str, str] = {
     "internet_reseau_mobile": "reseau",
     "facturation_paiement": "facturation",
     "equipements_boutique": "qualite_produit",
-    "mobile_money": "facturation",
+    "mobile_money": MODELE_PAR_DEFAUT,  # le texte « facturation » (duplicata de facture) serait hors sujet
     # restauration
     "accueil_service_salle": "accueil",
     "qualite_plats": "qualite_produit",

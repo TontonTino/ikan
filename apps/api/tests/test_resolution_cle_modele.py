@@ -38,7 +38,7 @@ ATTENDU_DEPART = {
     ("telecom", "internet_reseau_mobile"): "reseau",
     ("telecom", "facturation_paiement"): "facturation",
     ("telecom", "equipements_boutique"): "qualite_produit",
-    ("telecom", "mobile_money"): "facturation",
+    ("telecom", "mobile_money"): "autre",
     ("restauration", "accueil_service_salle"): "accueil",
     ("restauration", "qualite_plats"): "qualite_produit",
     ("restauration", "rapidite_attente"): "attente",
@@ -105,7 +105,7 @@ def test_categorie_absente_ou_vide():
     assert resoudre(cle="", nom="  ") == "autre"
     assert cle_modele_de_categorie(None, DISPONIBLES) == "autre"
     assert cle_modele_de_categorie(SimpleNamespace(cle=None, nom="Accueil"), DISPONIBLES) == "accueil"
-    assert cle_modele_de_categorie(SimpleNamespace(cle="mobile_money", nom="Mobile Money"), DISPONIBLES) == "facturation"
+    assert cle_modele_de_categorie(SimpleNamespace(cle="mobile_money", nom="Mobile Money"), DISPONIBLES) == "autre"
 
 
 def test_un_modele_indisponible_n_est_jamais_renvoye():
@@ -133,7 +133,7 @@ def test_chaque_cle_de_depart_a_son_modele_attendu():
 
 def test_jamais_autre_quand_un_modele_existe():
     for secteur, c in _cles_de_depart():
-        if c.cle != "suggestion_compliment":
+        if c.cle not in {"suggestion_compliment", "mobile_money"}:   # les deux seuls cas légitimes sur « autre »
             assert resoudre(cle=c.cle) != MODELE_PAR_DEFAUT, (secteur, c.cle)
 
 
