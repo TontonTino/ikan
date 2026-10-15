@@ -174,9 +174,31 @@ class ActionCXCreate(BaseModel):
     action: str = Field(..., min_length=3, max_length=2000)
 
 
+# Canaux de réponse reconnus. « autre » = réponse sans contact (en personne, courrier…). Longueur max : colonne reponses_client.canal.
+CANAUX_REPONSE = ("telephone", "whatsapp", "email", "sms", "autre")
+CANAL_LONGUEUR_MAX = 50
+
+
 class ReponseClientCreate(BaseModel):
     contenu: str = Field(..., min_length=1, max_length=2000)
-    canal: str = Field("telephone", description="Canal utilisé: telephone, email, whatsapp, sms")
+    canal: str = Field("telephone", max_length=CANAL_LONGUEUR_MAX, description="Canal utilisé: telephone, whatsapp, email, sms, autre")
+
+    @field_validator("canal")
+    @classmethod
+    def _canal_connu(cls, valeur: str) -> str:
+        canal = valeur.strip().lower()
+        if canal not in CANAUX_REPONSE:
+            raise ValueError(f"Canal inconnu. Valeurs acceptées : {', '.join(CANAUX_REPONSE)}.")
+        return canal
+
+
+class BrouillonReponseResponse(BaseModel):
+    """Brouillon de réponse proposé (AM-09). `texte` est None quand il n'y a rien à proposer ; `raison` dit pourquoi."""
+    disponible: bool
+    raison: Optional[str] = None
+    registre: Optional[str] = None
+    texte: Optional[str] = None
+    canal_suggere: Optional[str] = None
 
 
 class FeedbackResponse(BaseModel):

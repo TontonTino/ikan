@@ -8,7 +8,9 @@ import EmptyState from '../ui/EmptyState';
 import { useOverlay } from '../ui/useOverlay';
 import PriseEnChargeBanner from './PriseEnChargeBanner';
 import WhatsAppReplyButton from './WhatsAppReplyButton';
-import { AvertissementReponse, CoordonneesMasquees, ConsentementContact, InfoTraitement } from './DemandeContactBlocs';
+import { CoordonneesMasquees, ConsentementContact, InfoTraitement } from './DemandeContactBlocs';
+import ReponseClientSection from './ReponseClientSection';
+import { CANAL_LABELS } from '../../utils/brouillonReponse';
 import {
   AlertTriangleIcon,
   ClockIcon,
@@ -27,14 +29,6 @@ import {
 
 const ISSUE_STATUT_LABELS: Record<IssueStatut, string> = PROBLEME_STATUT_LABELS;
 const ISSUE_SEVERITE_LABELS: Record<CriticiteType, string> = GRAVITE_LABELS;
-
-/** Canaux possibles d'une réponse au client — IKAN AI n'envoie rien lui-même. */
-const CANAL_LABELS: Record<string, string> = {
-  telephone: 'Téléphone',
-  whatsapp: 'WhatsApp',
-  email: 'E-mail',
-  sms: 'SMS',
-};
 
 interface FeedbackTreatmentModalProps {
   feedback: Feedback | null;
@@ -69,9 +63,6 @@ export default function FeedbackTreatmentModal({
   const [noteInterneInput, setNoteInterneInput] = useState('');
   const [suggestionInput, setSuggestionInput] = useState('');
   const [actionInput, setActionInput] = useState('');
-  const [reponseInput, setReponseInput] = useState('');
-  const [reponseCanal, setReponseCanal] = useState<'telephone' | 'whatsapp' | 'email' | 'sms'>('telephone');
-  const [showReponseForm, setShowReponseForm] = useState(false);
 
   // Données associées
   const [historiqueList, setHistoriqueList] = useState<HistoriqueFeedback[]>([]);
@@ -133,8 +124,6 @@ export default function FeedbackTreatmentModal({
     setNoteInterneInput('');
     setSuggestionInput('');
     setActionInput(feedback.action_a_prendre || '');
-    setReponseInput('');
-    setShowReponseForm(false);
     setActiveTab('traitement');
 
     // Reset Issue liée
@@ -277,25 +266,6 @@ export default function FeedbackTreatmentModal({
     } catch (err) {
       showToast(userFacingError(err, 'Erreur lors de la confirmation de l’action', undefined, { 409: MESSAGE_STATUT_CHANGE }));
       await resynchroniser(err);
-    } finally {
-      setLoadingAction(false);
-    }
-  };
-
-  // 5. Répondre au client
-  const handleEnvoyerReponseClient = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!reponseInput.trim()) return;
-    setLoadingAction(true);
-    try {
-      const res = await feedbacksApi.envoyerReponseClient(feedback.id, reponseInput.trim(), reponseCanal);
-      setReponsesList(res.data || []);
-      setReponseInput('');
-      setShowReponseForm(false);
-      await loadHistoriqueAndReponses(feedback.id);
-      showToast('Réponse au client enregistrée');
-    } catch {
-      showToast('Impossible d’enregistrer la réponse. Réessayez.');
     } finally {
       setLoadingAction(false);
     }
@@ -781,7 +751,7 @@ export default function FeedbackTreatmentModal({
                 </div>
               )}
 
-              {/* 3. Informations Client & Module Répondre */}
+              {/* 3. Informations Client */}
               {feedback.demande_contact && (feedback.demande_contact.telephone || feedback.demande_contact.email || feedback.demande_contact.souhaite_etre_rappele || feedback.demande_contact.coordonnees_masquees) && (
                 <div
                   style={{
@@ -838,93 +808,19 @@ export default function FeedbackTreatmentModal({
                       />
                     </div>
                   )}
-
-                  {/* Enregistrer une réponse TRAITE la demande (masquage définitif) : avertissement visible avant et dans le formulaire. */}
-                  {!feedback.demande_contact.traitee && <AvertissementReponse />}
-                  {/* Bouton pour afficher le formulaire de réponse */}
-                  {!showReponseForm ? (
-                    <button
-                      onClick={() => setShowReponseForm(true)}
-                      className="btn-primary"
-                      style={{ padding: '8px 14px', fontSize: '0.8rem', borderRadius: '10px' }}
-                    >
-                      <MessageSquareIcon size={14} />
-                      <span>Enregistrer une réponse au client</span>
-                    </button>
-                  ) : (
-                    <form onSubmit={handleEnvoyerReponseClient} style={{ marginTop: '12px', background: '#FFFFFF', padding: '14px', borderRadius: '12px', border: '1px solid #FFEDD5' }}>
-                      {/* POST /feedbacks/{id}/reponses enregistre la réponse : aucun message n'est envoyé au client. */}
-                      <p style={{ margin: '0 0 10px', fontSize: '0.78rem', color: '#64748B', lineHeight: 1.5 }}>
-                        IKAN AI n’envoie aucun message au client. Contactez-le par le canal choisi, puis notez ici ce que vous lui avez répondu.
-                        L’enregistrement marque aussi la demande de rappel comme traitée.
-                      </p>
-                      <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                        {(['telephone', 'whatsapp', 'email', 'sms'] as const).map((canal) => (
-                          <button
-                            key={canal}
-                            type="button"
-                            onClick={() => setReponseCanal(canal)}
-                            style={{
-                              padding: '4px 10px',
-                              borderRadius: '6px',
-                              fontSize: '0.75rem',
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              border: reponseCanal === canal ? '2px solid #C2410C' : '1px solid #E2E8F0',
-                              background: reponseCanal === canal ? '#FFF7ED' : '#FFFFFF',
-                              color: reponseCanal === canal ? '#C2410C' : '#64748B',
-                              textTransform: 'capitalize',
-                            }}
-                          >
-                            {CANAL_LABELS[canal] ?? canal}
-                          </button>
-                        ))}
-                      </div>
-                      <textarea
-                        rows={3}
-                        value={reponseInput}
-                        onChange={(e) => setReponseInput(e.target.value)}
-                        placeholder="Ce que vous avez répondu au client (ex. : appelé ce jour, problème de facturation expliqué et corrigé)…"
-                        style={{
-                          width: '100%',
-                          padding: '10px',
-                          borderRadius: '8px',
-                          border: '1px solid #E2E8F0',
-                          fontSize: '0.84rem',
-                          fontFamily: 'inherit',
-                          boxSizing: 'border-box',
-                          marginBottom: '8px',
-                        }}
-                      />
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                        <button
-                          type="button"
-                          onClick={() => setShowReponseForm(false)}
-                          className="btn-secondary"
-                          style={{ padding: '6px 12px', fontSize: '0.78rem', borderRadius: '8px' }}
-                        >
-                          Annuler
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={loadingAction || !reponseInput.trim()}
-                          className="btn-primary"
-                          style={{
-                            padding: '6px 14px',
-                            fontSize: '0.78rem',
-                            borderRadius: '8px',
-                            opacity: reponseInput.trim() ? 1 : 0.5,
-                            cursor: reponseInput.trim() ? 'pointer' : 'not-allowed',
-                          }}
-                        >
-                          <SendIcon size={12} />
-                          <span>{loadingAction ? 'Enregistrement…' : 'Enregistrer la réponse'}</span>
-                        </button>
-                      </div>
-                    </form>
-                  )}
                 </div>
               )}
+
+              {/* 3 bis. Répondre au client : toujours visible (avec ou sans demande de contact), brouillon proposé par l'API si l'avis demande un suivi. */}
+              <ReponseClientSection
+                feedbackId={feedback.id}
+                demande={feedback.demande_contact}
+                onEnregistree={async (reponses) => {
+                  setReponsesList(reponses);
+                  await loadHistoriqueAndReponses(feedback.id);
+                }}
+                onNotifier={showToast}
+              />
 
               {/* 4. WORKFLOW AGENCY MANAGER : Suggestion pour le CX */}
               {isAgencyManager && (
@@ -1477,7 +1373,7 @@ export default function FeedbackTreatmentModal({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <strong style={{ fontSize: '0.84rem', color: '#02302D' }}>{rep.auteur_nom}</strong>
                           <span style={{ fontSize: '0.72rem', background: '#FFF7ED', color: '#C2410C', padding: '2px 8px', borderRadius: '6px', fontWeight: 700, textTransform: 'uppercase' }}>
-                            Par {CANAL_LABELS[rep.canal] ?? rep.canal}
+                            Par {(CANAL_LABELS as Record<string, string>)[rep.canal] ?? rep.canal}
                           </span>
                         </div>
                         <span style={{ fontSize: '0.74rem', color: '#64748B' }}>
