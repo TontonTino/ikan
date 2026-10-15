@@ -16,7 +16,7 @@ import {
 } from '../../components/common/Icons';
 import { AgencyLocationPicker, LocationData } from '../../components/agency/AgencyLocationPicker';
 import CreateAgencyManagerModal, { AgencyManagerLite } from '../../components/admin/CreateAgencyManagerModal';
-import { userFacingError } from '../../utils/userFacingError';
+import { messageRefusServeur, userFacingError } from '../../utils/userFacingError';
 import ConfirmActionModal from '../../components/admin/ConfirmActionModal';
 import Alert from '../../components/ui/Alert';
 import Button from '../../components/ui/Button';
@@ -144,8 +144,8 @@ export default function AdminAgencesContent() {
       showToast("Veuillez saisir un nom pour l'agence");
       return;
     }
-    if (!Number.isFinite(form.seuil_alerte) || form.seuil_alerte < 1 || form.seuil_alerte > 100) {
-      showToast('Le seuil d’alerte doit être compris entre 1 et 100 %.');
+    if (!Number.isFinite(form.seuil_alerte) || form.seuil_alerte < 0 || form.seuil_alerte > 100) {
+      showToast('Le seuil d’alerte doit être un nombre compris entre 0 et 100 %.');
       return;
     }
     setSaving(true);
@@ -171,7 +171,7 @@ export default function AdminAgencesContent() {
       }
       setShowModal(false);
     } catch (err: any) {
-      showToast(userFacingError(err, 'Impossible d’enregistrer l’agence. Réessayez.'));
+      showToast(messageRefusServeur(err) ?? userFacingError(err, 'Impossible d’enregistrer l’agence. Réessayez.'));
     } finally {
       setSaving(false);
     }
@@ -665,9 +665,9 @@ export default function AdminAgencesContent() {
                 <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Seuil d’alerte de satisfaction (%)</label>
                 <input
                   type="number"
-                  value={form.seuil_alerte}
-                  onChange={(e) => setForm({ ...form, seuil_alerte: Number(e.target.value) })}
-                  min={1}
+                  value={Number.isFinite(form.seuil_alerte) ? form.seuil_alerte : ''}
+                  onChange={(e) => setForm({ ...form, seuil_alerte: e.target.value === '' ? NaN : Number(e.target.value) })}
+                  min={0}
                   max={100}
                   style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0', boxSizing: 'border-box' }}
                 />

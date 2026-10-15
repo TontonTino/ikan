@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime
 from pydantic import BaseModel, EmailStr, field_validator
 from app.models.enums import UserRole
+from app.schemas.mot_de_passe import verifier_mot_de_passe
 
 
 class UtilisateurCreate(BaseModel):
@@ -24,6 +25,11 @@ class UtilisateurCreate(BaseModel):
             return clean
         return v
 
+    @field_validator("password")
+    @classmethod
+    def _mot_de_passe_valide(cls, valeur: str) -> str:
+        return verifier_mot_de_passe(valeur)
+
 
 class UtilisateurUpdate(BaseModel):
     nom: str | None = None
@@ -32,6 +38,12 @@ class UtilisateurUpdate(BaseModel):
     password: str | None = None
     agence_id: uuid.UUID | None = None
     active: bool | None = None
+
+    @field_validator("password")
+    @classmethod
+    def _mot_de_passe_valide(cls, valeur: str | None) -> str | None:
+        # Absent = inchangé. Un mot de passe vide ou trop court explicite est refusé (il était ignoré en silence).
+        return valeur if valeur is None else verifier_mot_de_passe(valeur)
 
 
 class UtilisateurResponse(BaseModel):

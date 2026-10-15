@@ -3,8 +3,23 @@ Schémas Pydantic pour les agences.
 """
 import uuid
 from datetime import datetime
-from pydantic import BaseModel
-from typing import Optional
+from math import isfinite
+from typing import Annotated, Optional
+
+from pydantic import BaseModel, BeforeValidator
+
+MESSAGE_SEUIL_INVALIDE = "Le seuil d'alerte doit être un nombre compris entre 0 et 100 %."
+
+
+def _seuil_valide(valeur):
+    """Seuil d'alerte en pourcentage : un nombre (jamais un texte ni un booléen), fini, de 0 à 100 inclus."""
+    if isinstance(valeur, bool) or not isinstance(valeur, (int, float)) or not isfinite(valeur) or not 0 <= valeur <= 100:
+        raise ValueError(MESSAGE_SEUIL_INVALIDE)
+    return float(valeur)
+
+
+# Type unique du seuil d'alerte (création, modification d'agence et PATCH /alertes/agences/{id}/seuil).
+SeuilAlerte = Annotated[float, BeforeValidator(_seuil_valide)]
 
 
 class AgenceCreate(BaseModel):
@@ -15,7 +30,7 @@ class AgenceCreate(BaseModel):
     email: str | None = None
     latitude: float | None = None
     longitude: float | None = None
-    seuil_alerte: float = 80.0
+    seuil_alerte: SeuilAlerte = 80.0
 
 
 class AgenceUpdate(BaseModel):
@@ -26,7 +41,8 @@ class AgenceUpdate(BaseModel):
     email: str | None = None
     latitude: float | None = None
     longitude: float | None = None
-    seuil_alerte: float | None = None
+    # Absent = inchangé ; un null explicite serait écrit dans une colonne NOT NULL : refusé comme toute valeur invalide.
+    seuil_alerte: SeuilAlerte = None  # type: ignore[assignment]
     active: bool | None = None
 
 

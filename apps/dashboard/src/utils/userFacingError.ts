@@ -1,5 +1,23 @@
 import axios from 'axios';
 
+/**
+ * Message de refus écrit EN FRANÇAIS par notre API pour un envoi de formulaire (400 ou 422) : seuil hors plage, mot de passe
+ * trop court, e-mail déjà utilisé, agence obligatoire… Seules sont reprises les réponses dont le texte est celui de nos propres
+ * validations (`detail` en texte, ou erreur de type `value_error` / `missing`) ; toute autre réponse donne null et l'écran garde
+ * son message générique (voir userFacingError). Le mot de passe saisi n'est jamais dans ces réponses (voir erreurs_validation.py).
+ */
+export function messageRefusServeur(error: unknown): string | null {
+  if (!axios.isAxiosError(error) || ![400, 422].includes(error.response?.status ?? 0)) return null;
+  const detail = (error.response?.data as { detail?: unknown } | undefined)?.detail;
+  let message: string | null = null;
+  if (typeof detail === 'string') message = detail;
+  else if (Array.isArray(detail)) {
+    const erreur = detail.find((e) => e && (e.type === 'value_error' || e.type === 'missing') && typeof e.msg === 'string');
+    message = erreur ? erreur.msg : null;
+  }
+  return message && message.length <= 200 ? message : null;
+}
+
 /** Convertit une erreur de transport/API en message d’interface sans exposer sa réponse brute. */
 export function userFacingError(
   error: unknown,

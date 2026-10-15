@@ -12,6 +12,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from app.core.config import settings
 from app.core.body_limit import LimiteCorpsPublic
 from app.core.cors import appliquer_cors
+from app.core.erreurs_validation import installer_erreurs_validation
 from app.core.journal_acces import installer_journal_acces
 from app.core.masquage_acces_http import installer_masquage_acces_http
 from app.utils.masquage import masquer_contacts
@@ -45,6 +46,8 @@ scheduler = BackgroundScheduler()
 installer_journal_acces(app)
 # Le journal d'accès d'uvicorn ne doit pas contenir les termes recherchés (?q=…).
 installer_masquage_acces_http()
+# Les 422 ne renvoient jamais les valeurs saisies (mots de passe) : voir app/core/erreurs_validation.py.
+installer_erreurs_validation(app)
 
 
 @app.exception_handler(Exception)
