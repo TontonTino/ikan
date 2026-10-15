@@ -112,6 +112,8 @@ export const feedbacksApi = {
     api.post(`/feedbacks/${feedbackId}/confirmer-action`),
   envoyerReponseClient: (feedbackId: string, contenu: string, canal: string = 'telephone') =>
     api.post(`/feedbacks/${feedbackId}/reponses-client`, { contenu, canal }),
+  getBrouillonReponse: (feedbackId: string) =>
+    api.get<import('../utils/brouillonReponse').BrouillonReponse>(`/feedbacks/${feedbackId}/brouillon-reponse`),
   reouvrir: (feedbackId: string) =>
     api.post(`/feedbacks/${feedbackId}/reouvrir`),
   getHistorique: (feedbackId: string) =>

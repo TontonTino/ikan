@@ -196,8 +196,21 @@ def test_enregistrer_une_reponse_passe_par_le_meme_point_de_traitement(ctx):
     assert len(evenements(ctx)) == 1 and etat_demande(ctx)[1] == date
 
 
-def test_un_canal_inconnu_n_entre_pas_dans_l_historique(ctx):
-    ctx.client.post(f"/feedbacks/{ctx.fb_a1}/reponses-client", headers=ctx.H(ctx.am_a1), json={"contenu": "x", "canal": f"canal {TEL}"})
+def test_un_canal_inconnu_est_refuse_par_l_api_et_n_enregistre_rien(ctx):
+    """AM-09 : le canal est validé (liste connue). Un canal libre contenant un numéro est refusé (422) : ni réponse, ni événement."""
+    r = ctx.client.post(f"/feedbacks/{ctx.fb_a1}/reponses-client", headers=ctx.H(ctx.am_a1), json={"contenu": "x", "canal": f"canal {TEL}"})
+    assert r.status_code == 422
+    assert evenements(ctx) == [] and etat_demande(ctx)[0] is False
+
+
+def test_le_service_n_ecrit_pas_un_canal_inconnu_dans_l_historique(ctx):
+    """Défense en profondeur : même appelé directement avec un canal libre, le service ne le reprend pas."""
+    db = ctx.Session()
+    try:
+        assert marquer_recontactee(db, db.get(DemandeContact, ctx.dc_a1), db.get(Utilisateur, ctx.am_a1), origine="reponse", canal=f"canal {TEL}")
+        db.commit()
+    finally:
+        db.close()
     (evt,) = evenements(ctx)
     assert TEL not in evt[2] and evt[2] == "Client recontacté (réponse enregistrée)"
 

@@ -44,6 +44,7 @@ from app.schemas.feedback import (
     SuggestionAgenceCreate,
     ActionCXCreate,
     ReponseClientCreate,
+    BrouillonReponseResponse,
     DemandeContactListItem,
     NPSSubmit,
     NPSSubmitResponse,
@@ -53,6 +54,12 @@ from app.core.rate_limit import limiter_ip_public, limiter_soumission
 from app.services.ai.analyse_service import analyser_feedback
 from app.core.config import settings
 from app.services.dashboard_helpers import NOTE_FAIBLE_MAX
+from app.services.brouillon_reponse import (
+    RAISON_AUCUN_SUIVI,
+    RAISON_REPONSE_EXISTANTE,
+    choisir_registre,
+    construire_brouillon,
+)
 from app.services.demandes_contact import marquer_recontactee
 from app.utils.phone import normaliser_telephone
 from app.utils.recherche_texte import LONGUEUR_MAX_RECHERCHE, condition_recherche, valider_recherche
@@ -842,6 +849,58 @@ def confirmer_action_realisee(
     db.refresh(feedback)
 
     return _format_feedback_response(feedback, current_user)
+
+
+@router.get("/{feedback_id}/brouillon-reponse", response_model=BrouillonReponseResponse)
+def brouillon_reponse(
+    feedback_id: UUID,
+    response: Response,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+):
+    """
+    Brouillon de réponse au client en français (AM-09), à relire et modifier avant d'enregistrer la réponse. Règles, sans IA.
+    LECTURE SEULE : n'écrit rien, ne déclenche pas l'analyse de l'avis (sans analyse, seuls la note et la demande de rappel comptent),
+    n'envoie rien, ne renvoie ni commentaire ni coordonnées du client. Aucun brouillon si l'avis ne demande pas de suivi ou si une
+    réponse a déjà été enregistrée.
+    """
+    response.headers["Cache-Control"] = "no-store"
+    feedback = db.query(Feedback).filter(Feedback.id == feedback_id).first()
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback introuvable")
+
+    _check_feedback_access(feedback, current_user)
+
+    if db.query(ReponseClient.id).filter(ReponseClient.feedback_id == feedback.id).first() is not None:
+        return BrouillonReponseResponse(disponible=False, raison=RAISON_REPONSE_EXISTANTE)
+
+    analyse = feedback.analyse_ia
+    demande = feedback.demande_contact
+    registre = choisir_registre(
+        note=feedback.note,
+        sentiment=analyse.sentiment if analyse else None,
+        criticite=analyse.criticite if analyse else None,
+        discordance=bool(analyse and analyse.discordance_detectee),
+        souhaite_etre_rappele=bool(demande and demande.souhaite_etre_rappele),
+    )
+    if registre is None:
+        return BrouillonReponseResponse(disponible=False, raison=RAISON_AUCUN_SUIVI)
+
+    agence = feedback.qr_code.agence if feedback.qr_code else None
+    organisation = agence.organisation if agence else None
+    categorie = feedback.categorie
+    brouillon = construire_brouillon(
+        registre=registre,
+        cle_categorie=categorie.cle if categorie else None,
+        nom_categorie=categorie.nom if categorie else None,
+        secteur_code=organisation.secteur_code if organisation else None,
+        entite=(agence.nom if agence else None) or (organisation.nom if organisation else None),
+    )
+    # Canal proposé selon la présence d'une coordonnée (jamais la coordonnée elle-même) ; demande traitée = coordonnées masquées.
+    canal = "autre"
+    if demande and not demande.traitee:
+        canal = "telephone" if demande.telephone else ("email" if demande.email else "autre")
+    return BrouillonReponseResponse(disponible=True, registre=brouillon.registre, texte=brouillon.texte, canal_suggere=canal)
 
 
 @router.post("/{feedback_id}/reponses-client", response_model=List[ReponseClientResponse])

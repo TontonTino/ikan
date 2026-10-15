@@ -8,6 +8,7 @@ import {
 import WhatsAppReplyButton from './WhatsAppReplyButton';
 import sourcePageDemandes from '../../pages/agency/DemandesRappelPage.tsx?raw';
 import sourceFicheAvis from './FeedbackTreatmentModal.tsx?raw';
+import sourceSectionReponse from './ReponseClientSection.tsx?raw';
 
 /** Parcourt l'arbre d'éléments React (sans DOM) et renvoie ceux qui satisfont `test`. */
 function trouver(noeud: React.ReactNode, test: (e: React.ReactElement) => boolean, trouves: React.ReactElement[] = []): React.ReactElement[] {
@@ -103,16 +104,17 @@ describe('câblage dans les écrans (garde au niveau du source : pas d’environ
     expect(page).not.toContain('Marquer traitée');
   });
 
-  it('fiche d’un avis : l’avertissement précède le bouton et le formulaire « Enregistrer une réponse »', () => {
-    const fiche = lire(sourceFicheAvis);
-    const avertissement = fiche.indexOf('<AvertissementReponse />');
-    const bouton = fiche.indexOf('Enregistrer une réponse au client');
-    const formulaire = fiche.indexOf('<form onSubmit={handleEnvoyerReponseClient}');
+  it('section « Répondre au client » : l’avertissement précède le formulaire et ne s’affiche que pour une demande non traitée', () => {
+    const section = lire(sourceSectionReponse);
+    const avertissement = section.indexOf('<AvertissementReponse />');
+    const formulaire = section.indexOf('<form onSubmit={onSubmit}>');
     expect(avertissement).toBeGreaterThan(-1);
-    expect(avertissement).toBeLessThan(bouton);
-    expect(bouton).toBeLessThan(formulaire);
-    // affiché tant que la demande n'est pas traitée, que le formulaire soit replié ou ouvert
-    expect(fiche).toMatch(/!feedback\.demande_contact\.traitee && <AvertissementReponse \/>/);
+    expect(avertissement).toBeLessThan(formulaire);
+    expect(section).toMatch(/enregistrerTraiteLaDemande\(demande\) && <AvertissementReponse \/>/);
+    // la fiche d'un avis utilise cette section (et n'a plus de second formulaire de réponse)
+    const fiche = lire(sourceFicheAvis);
+    expect(fiche).toContain('<ReponseClientSection');
+    expect(fiche).not.toContain('Enregistrer une réponse au client');
   });
 
   it('aucun bouton WhatsApp pour une demande masquée, dans la page comme dans la fiche', () => {
