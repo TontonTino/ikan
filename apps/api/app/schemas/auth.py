@@ -3,6 +3,7 @@ Schémas Pydantic pour l'authentification.
 """
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from app.models.enums import UserRole
+from app.schemas.mot_de_passe import verifier_mot_de_passe
 import uuid
 
 
@@ -65,7 +66,11 @@ class UpdateMeRequest(BaseModel):
 
 class ChangerMotDePasseRequest(BaseModel):
     ancien_mot_de_passe: str
-    # Aucune règle de robustesse n'existe ailleurs dans le projet (même pas à la
-    # création de compte) : min_length=8 introduit ici comme filet minimal, pas
-    # repris d'un pattern existant.
-    nouveau_mot_de_passe: str = Field(..., min_length=8)
+    # Règle commune à la création et à la modification d'un compte : app/schemas/mot_de_passe.py (l'égalité avec l'e-mail est
+    # contrôlée par l'endpoint, qui connaît l'adresse du compte).
+    nouveau_mot_de_passe: str
+
+    @field_validator("nouveau_mot_de_passe")
+    @classmethod
+    def _mot_de_passe_valide(cls, valeur: str) -> str:
+        return verifier_mot_de_passe(valeur)

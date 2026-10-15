@@ -18,6 +18,7 @@ from app.models.qr_code import QRCode
 from app.models.categorie import Categorie
 from app.models.analyse_ia import AnalyseIA
 from app.models.enums import UserRole, SentimentType
+from app.schemas.agence import SeuilAlerte
 from app.services.acces_agence import verifier_acces_agence
 from app.services.alertes_seuil import (
     DUREE_PERSISTANCE_SEUIL_CX,
@@ -69,7 +70,7 @@ class AlertesResponse(BaseModel):
 
 
 class SeuilUpdate(BaseModel):
-    seuil_alerte: float
+    seuil_alerte: SeuilAlerte
 
 
 def _calculer_alertes_seuil(db: Session, current_user: Utilisateur) -> List[AlerteResponse]:

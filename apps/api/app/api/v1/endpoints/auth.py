@@ -4,6 +4,7 @@ Endpoints d'authentification — login, logout, refresh, profil courant.
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user
@@ -18,6 +19,7 @@ from app.core.security import (
 from app.db.session import get_db
 from app.models.enums import UserRole
 from app.models.utilisateur import Utilisateur
+from app.schemas.mot_de_passe import exiger_mot_de_passe_acceptable
 from app.schemas.auth import (
     AgentTokenResponse, ChangerMotDePasseRequest, LoginRequest, TokenResponse,
     UpdateMeRequest, UserPublic,
@@ -55,7 +57,7 @@ def login(
         )
 
     user = db.query(Utilisateur).filter(
-        Utilisateur.email.ilike(email),
+        func.lower(Utilisateur.email) == email,  # égalité sans casse ; `ilike` traitait « _ » et « % » comme des jokers
         Utilisateur.active == True,
     ).first()
 
@@ -211,6 +213,7 @@ def changer_mot_de_passe(
     current_user: Utilisateur = Depends(get_current_active_user),
 ):
     """Change son propre mot de passe — exige l'ancien mot de passe."""
+    exiger_mot_de_passe_acceptable(data.nouveau_mot_de_passe, current_user.email)
     if not verify_password(data.ancien_mot_de_passe, current_user.mot_de_passe_hash):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -5,16 +5,44 @@ from uuid import UUID
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_cx_or_admin, get_current_active_user, get_db
 from app.core.security import get_password_hash
 from app.models.utilisateur import Utilisateur
 from app.models.enums import UserRole
+from app.schemas.mot_de_passe import exiger_mot_de_passe_acceptable
 from app.schemas.utilisateur import UtilisateurCreate, UtilisateurUpdate, UtilisateurResponse
 from app.services.acces_agence import verifier_agence_dans_organisation
 
 router = APIRouter()
+
+MESSAGE_EMAIL_UTILISE = "Email déjà utilisé"
+MESSAGE_AGENCE_OBLIGATOIRE = "Un compte responsable d'agence doit être rattaché à une agence de votre organisation."
+MESSAGE_EMAIL_VIDE = "L'adresse e-mail ne peut pas être vide."
+MESSAGE_DETACHEMENT_REFUSE = (
+    "Un responsable d'agence ne peut pas être détaché de son agence : choisissez une autre agence de votre organisation."
+)
+
+
+def _email_deja_pris(db: Session, email: str, sauf_id=None) -> bool:
+    """`email` déjà normalisé (sans espaces, en minuscules). Comparaison sans différence de casse, toutes organisations
+    confondues (la connexion se fait par e-mail seul, sans casse : deux comptes ne peuvent pas ne différer que par la casse)."""
+    requete = db.query(Utilisateur.id).filter(func.lower(Utilisateur.email) == email)
+    if sauf_id is not None:
+        requete = requete.filter(Utilisateur.id != sauf_id)
+    return requete.first() is not None
+
+
+def _enregistrer_compte(db: Session) -> None:
+    """Commit ; une collision d'e-mail simultanée (contrainte d'unicité) donne la même erreur 400 que le contrôle préalable."""
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=MESSAGE_EMAIL_UTILISE) from None
 
 
 @router.get("/", response_model=List[UtilisateurResponse])
@@ -55,9 +83,10 @@ def create_utilisateur(
     - Admin : peut uniquement créer des CX_MANAGER pour ses organisations.
     - CX Manager : peut uniquement créer des AGENCY_MANAGER pour son organisation.
     """
-    existing = db.query(Utilisateur).filter(Utilisateur.email == data.email).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Email déjà utilisé")
+    email = data.email.strip().lower()
+    exiger_mot_de_passe_acceptable(data.password, email)
+    if _email_deja_pris(db, email):
+        raise HTTPException(status_code=400, detail=MESSAGE_EMAIL_UTILISE)
 
     # Vérification des rôles et organisation
     if current_user.role == UserRole.CX_MANAGER:
@@ -65,10 +94,12 @@ def create_utilisateur(
             raise HTTPException(status_code=403, detail="Un CX Manager ne peut créer que des comptes de responsable d'agence")
         target_org_id = current_user.organisation_id
         target_agence_id = data.agence_id
+        # Un responsable d'agence sans agence n'accède à aucune donnée (403 partout) : rattachement obligatoire dès la création.
+        if target_agence_id is None:
+            raise HTTPException(status_code=422, detail=MESSAGE_AGENCE_OBLIGATOIRE)
         # Isolation : l'agence doit appartenir à l'organisation du CX Manager (jamais un
         # agence_id d'une autre organisation, même valide).
-        if target_agence_id is not None:
-            verifier_agence_dans_organisation(db, target_agence_id, target_org_id)
+        verifier_agence_dans_organisation(db, target_agence_id, target_org_id)
     else:
         # Admin
         if data.role != UserRole.CX_MANAGER:
@@ -95,7 +126,7 @@ def create_utilisateur(
         organisation_id=target_org_id,
         nom=data.nom,
         prenom=data.prenom,
-        email=data.email,
+        email=email,
         mot_de_passe_hash=get_password_hash(data.password),
         role=data.role,
         agence_id=target_agence_id,
@@ -103,7 +134,7 @@ def create_utilisateur(
         active=True
     )
     db.add(user)
-    db.commit()
+    _enregistrer_compte(db)
     db.refresh(user)
     return user
 
@@ -156,6 +187,16 @@ def update_utilisateur(
         raise HTTPException(status_code=404, detail="Utilisateur introuvable")
 
     updates = data.model_dump(exclude_unset=True)
+    if "email" in updates:
+        if updates["email"] is None:
+            raise HTTPException(status_code=422, detail=MESSAGE_EMAIL_VIDE)
+        updates["email"] = updates["email"].strip().lower()
+        if _email_deja_pris(db, updates["email"], sauf_id=user.id):
+            raise HTTPException(status_code=400, detail=MESSAGE_EMAIL_UTILISE)
+    if updates.get("password") is not None:
+        exiger_mot_de_passe_acceptable(updates["password"], updates.get("email") or user.email)
+    if user.role == UserRole.AGENCY_MANAGER and "agence_id" in updates and updates["agence_id"] is None:
+        raise HTTPException(status_code=422, detail=MESSAGE_DETACHEMENT_REFUSE)
     if "role" in updates:
         if current_user.role == UserRole.ADMIN and updates["role"] != UserRole.CX_MANAGER:
             raise HTTPException(status_code=403, detail="Modification de rôle non autorisée")
@@ -171,7 +212,7 @@ def update_utilisateur(
     for field, value in updates.items():
         setattr(user, field, value)
 
-    db.commit()
+    _enregistrer_compte(db)
     db.refresh(user)
     return user
 

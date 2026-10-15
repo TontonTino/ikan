@@ -17,7 +17,7 @@ import {
   MessageSquareIcon,
   AlertTriangleIcon,
 } from '../../components/common/Icons';
-import { userFacingError } from '../../utils/userFacingError';
+import { messageRefusServeur, userFacingError } from '../../utils/userFacingError';
 
 type UserRow = {
   id: string;
@@ -137,6 +137,10 @@ export default function AdminUsersContent() {
     e.preventDefault();
     if (!form.nom || !form.prenom || !form.email) return;
     if (!editingUser && !form.password) return;
+    if (isCXManager && !editingUser && !form.agence_id) {
+      showToast('Choisissez l’agence de ce responsable d’agence.');
+      return;
+    }
     if (isAdmin && !editingUser && !form.organisation_id) {
       showToast('Choisissez l’organisation de ce CX Manager.');
       return;
@@ -168,7 +172,7 @@ export default function AdminUsersContent() {
       setShowForm(false);
       setEditingUser(null);
     } catch (err: any) {
-      showToast(userFacingError(err, "Impossible d’enregistrer. Vérifiez les informations puis réessayez."));
+      showToast(messageRefusServeur(err) ?? userFacingError(err, "Impossible d’enregistrer. Vérifiez les informations puis réessayez."));
     } finally {
       setSaving(false);
     }
@@ -387,10 +391,11 @@ export default function AdminUsersContent() {
                 <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Agence rattachée</label>
                 <select
                   value={form.agence_id}
+                  required={!editingUser}
                   onChange={(e) => setForm({ ...form, agence_id: e.target.value })}
                   style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0', boxSizing: 'border-box', background: '#FFFFFF' }}
                 >
-                  <option value="">Aucune agence</option>
+                  {editingUser ? <option value="">Aucune agence</option> : <option value="" disabled>Choisir une agence</option>}
                   {agences.map((ag) => (
                     <option key={ag.id} value={ag.id}>{ag.nom}</option>
                   ))}
