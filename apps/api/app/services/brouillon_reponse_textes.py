@@ -19,8 +19,8 @@ Règles d'écriture (vérifiées par tests/test_brouillon_reponse.py) :
 # rappel_simple: le client demande à être rappelé, sans signal négatif.
 
 # ── Salutation et signature ─────────────────────────────────────────────────────────────────────────────────────────
-SALUTATION_AVEC_NOM = "Bonjour {nom},"
-SALUTATION_SANS_NOM = "Bonjour,"
+# Jamais le nom du client : le champ « nom » de la demande de rappel est un texte libre, il n'entre dans aucun brouillon.
+SALUTATION = "Bonjour,"
 SIGNATURE_AVEC_ENTITE = "Cordialement,\nL'équipe de {entite}"
 # Même signature quand le nom de l'agence commence par une voyelle ou un « h » (élision : « d'Agence Centre »).
 SIGNATURE_AVEC_ENTITE_ELISION = "Cordialement,\nL'équipe d'{entite}"

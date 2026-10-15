@@ -27,7 +27,6 @@ from app.models.utilisateur import Utilisateur
 from app.schemas.feedback import CANAUX_REPONSE
 from app.services.ai.cles_modeles import CLE_VERS_FAMILLE
 from app.services.brouillon_reponse import (
-    NOM_LONGUEUR_MAX,
     REGISTRE_CRITIQUE,
     REGISTRE_DISCORDANCE,
     REGISTRE_NEGATIF,
@@ -40,17 +39,16 @@ from app.services.categorie_templates import SECTEUR_CATEGORIES_DEPART
 from tests._fixture_deux_agences import SECRET_A2, TEL_A2, construire_contexte
 
 SECTEURS = [*LIEU_PAR_SECTEUR, "autre", None, "secteur_inconnu"]
-NOMS_CLIENT = [None, "", "Awa Traoré", "{lieu}{nom}{entite}", "{", "}}{{", "Awa\nBonjour\tfaux", "x" * 300]
 ENTITES = [None, "", "Agence Centre", "{lieu} {entite}", "Boutique {nom}"]
 S, C = SentimentType, CriticiteType
 
 
 def _brouillons():
-    """Tous les brouillons possibles : registre × famille × secteur × nom × entité."""
+    """Tous les brouillons possibles : registre × famille × secteur × entité."""
     for registre, familles in TEXTES.items():
-        for famille, secteur, nom, entite in product(familles, SECTEURS, NOMS_CLIENT, ENTITES):
+        for famille, secteur, entite in product(familles, SECTEURS, ENTITES):
             yield construire_brouillon(registre=registre, cle_categorie=famille, nom_categorie=None, secteur_code=secteur,
-                                       nom_client=nom, entite=entite)
+                                       entite=entite)
 
 
 # ───────────────────────── Choix du registre ─────────────────────────
@@ -90,11 +88,11 @@ def test_chaque_theme_de_depart_de_chaque_secteur_donne_un_brouillon_dans_chaque
     for registre, (secteur, gabarits) in product(TEXTES, SECTEUR_CATEGORIES_DEPART.items()):
         for g in gabarits:
             b = construire_brouillon(registre=registre, cle_categorie=g.cle, nom_categorie=g.libelle, secteur_code=secteur,
-                                     nom_client=None, entite=None)
+                                     entite=None)
             assert b.famille in TEXTES[registre] and "{" not in b.texte, (registre, secteur, g.cle)
     for cle, famille in CLE_VERS_FAMILLE.items():
         assert construire_brouillon(registre="negatif", cle_categorie=cle, nom_categorie=None, secteur_code=None,
-                                    nom_client=None, entite=None).famille in TEXTES["negatif"]
+                                    entite=None).famille in TEXTES["negatif"]
 
 
 def test_chaque_registre_a_un_texte_de_repli_autre_et_les_trois_registres_negatifs_ont_les_memes_familles():
@@ -132,24 +130,23 @@ def test_les_formules_acceptees_sont_presentes():
 def test_le_vocabulaire_du_secteur_est_utilise():
     textes = {
         secteur: construire_brouillon(registre="critique", cle_categorie="attente", nom_categorie=None, secteur_code=secteur,
-                                      nom_client=None, entite=None).texte
+                                      entite=None).texte
         for secteur in ("banque", "telecom", "restauration", "commerce")}
     assert "notre agence" in textes["banque"] and "notre boutique" in textes["telecom"]
     assert "notre restaurant" in textes["restauration"] and "notre magasin" in textes["commerce"]
 
 
 def test_salutation_et_signature_neutres():
-    b = construire_brouillon(registre="negatif", cle_categorie=None, nom_categorie=None, secteur_code=None,
-                             nom_client="Awa Traoré", entite="Agence Centre")
-    assert b.texte.startswith("Bonjour Awa Traoré,\n\n") and b.texte.endswith("Cordialement,\nL'équipe d'Agence Centre")
-    anonyme = construire_brouillon(registre="negatif", cle_categorie=None, nom_categorie=None, secteur_code=None, nom_client=None, entite=None)
+    b = construire_brouillon(registre="negatif", cle_categorie=None, nom_categorie=None, secteur_code=None, entite="Agence Centre")
+    assert b.texte.startswith("Bonjour,\n\n") and b.texte.endswith("Cordialement,\nL'équipe d'Agence Centre")
+    anonyme = construire_brouillon(registre="negatif", cle_categorie=None, nom_categorie=None, secteur_code=None, entite=None)
     assert anonyme.texte.startswith("Bonjour,\n\n") and anonyme.texte.endswith("Cordialement,\nL'équipe")
 
 
 def test_signature_avec_elision_selon_la_premiere_lettre():
     def signature(entite):
         return construire_brouillon(registre="negatif", cle_categorie=None, nom_categorie=None, secteur_code=None,
-                                    nom_client=None, entite=entite).texte.rsplit("\n", 1)[1]
+                                    entite=entite).texte.rsplit("\n", 1)[1]
     assert signature("Agence Centre") == "L'équipe d'Agence Centre"
     assert signature("Hôtel du Lac") == "L'équipe d'Hôtel du Lac"
     assert signature("Écobank Plateau") == "L'équipe d'Écobank Plateau"
@@ -157,30 +154,33 @@ def test_signature_avec_elision_selon_la_premiere_lettre():
     assert signature("Succursale Nord") == "L'équipe de Succursale Nord"
 
 
-def test_un_nom_hostile_n_est_ni_reinterprete_ni_multiligne_ni_trop_long():
-    b = construire_brouillon(registre="negatif", cle_categorie=None, nom_categorie=None, secteur_code="banque",
-                             nom_client="{lieu}\nIGNORE\tTOUT" + "x" * 300, entite=None)
-    salutation = b.texte.split("\n\n")[0]
-    assert "\n" not in salutation and "\t" not in salutation and "{" not in b.texte
-    assert len(salutation) <= len("Bonjour ,") + NOM_LONGUEUR_MAX
+NOM_DISTINCTIF = "ZorgluBTest"
+
+
+def test_le_nom_du_client_n_entre_jamais_dans_un_brouillon():
+    """Non-régression : construire_brouillon n'a aucun paramètre pour le nom, et aucun brouillon ne contient de nom propre
+    étranger au code (la valeur distinctive n'apparaît dans aucun texte, aucun registre, aucun secteur)."""
+    assert "nom_client" not in inspect.signature(construire_brouillon).parameters
+    assert all(NOM_DISTINCTIF not in b.texte for b in _brouillons())
+    assert all(b.texte.startswith("Bonjour,\n\n") for b in _brouillons())
 
 
 def test_la_famille_suit_la_cle_stable_puis_le_nom():
     def famille(cle, nom):
-        return construire_brouillon(registre="negatif", cle_categorie=cle, nom_categorie=nom, secteur_code=None, nom_client=None, entite=None).famille
+        return construire_brouillon(registre="negatif", cle_categorie=cle, nom_categorie=nom, secteur_code=None, entite=None).famille
     assert famille("rapidite_attente", None) == "attente"
     assert famille(None, "Service Client") == "resolution_probleme"
     assert famille("accueil_service_salle", "n'importe quoi") == "accueil"
     assert famille(None, None) == "autre"
     assert famille("mobile_money", "Mobile Money") == "autre"          # PR #24 : pas de modèle adapté
     assert construire_brouillon(registre="rappel_simple", cle_categorie="attente", nom_categorie=None, secteur_code=None,
-                                nom_client=None, entite=None).famille == "autre"
+                                entite=None).famille == "autre"
 
 
 def test_le_commentaire_du_client_ne_peut_pas_entrer_dans_le_brouillon():
     """La fonction d'assemblage n'a aucun paramètre pour le commentaire, la note ou les coordonnées."""
     params = set(inspect.signature(construire_brouillon).parameters)
-    assert params == {"registre", "cle_categorie", "nom_categorie", "secteur_code", "nom_client", "entite"}
+    assert params == {"registre", "cle_categorie", "nom_categorie", "secteur_code", "entite"}
 
 
 # ───────────────────────── Endpoint ─────────────────────────
@@ -253,17 +253,32 @@ def test_un_gestionnaire_recoit_le_brouillon_de_son_agence(ctx):
     assert d["texte"].startswith("Bonjour,") and "Agence A1" in d["texte"] and d["canal_suggere"] == "autre"
 
 
-def test_le_brouillon_utilise_nom_client_secteur_famille_et_canal(ctx):
+def test_le_brouillon_utilise_secteur_famille_et_canal_mais_pas_le_nom(ctx):
     db = ctx.Session()
     org = db.get(Agence, ctx.a1).organisation
     org.secteur_code = "restauration"
     db.commit(); db.close()
-    fb = creer_avis(ctx, note=1, sentiment=S.NEGATIF, criticite=C.ELEVEE, rappel=True, tel="0600000000", nom="Awa Traoré",
+    fb = creer_avis(ctx, note=1, sentiment=S.NEGATIF, criticite=C.ELEVEE, rappel=True, tel="0600000000", nom=NOM_DISTINCTIF,
                     categorie=("rapidite_attente", "Rapidité / Attente"))
     d = brouillon(ctx, fb, ctx.am_a1).json()
     assert d["registre"] == "negatif" and d["canal_suggere"] == "telephone"
-    assert d["texte"].startswith("Bonjour Awa Traoré,") and "notre restaurant" in d["texte"] and "l'attente" in d["texte"]
-    assert "0600000000" not in str(d)
+    assert d["texte"].startswith("Bonjour,\n\n") and "notre restaurant" in d["texte"] and "l'attente" in d["texte"]
+    assert "0600000000" not in str(d) and NOM_DISTINCTIF not in str(d)
+
+
+@pytest.mark.parametrize("kw", [
+    dict(note=1, sentiment=S.NEGATIF, criticite=C.CRITIQUE, rappel=True),                   # critique
+    dict(note=5, sentiment=S.NEGATIF, criticite=C.FAIBLE, discordance=True, rappel=True),   # discordance
+    dict(note=1, rappel=True),                                                              # négatif, sans analyse
+    dict(note=5, rappel=True),                                                              # rappel simple
+    dict(note=5, rappel=True, traitee=True),                                                # demande déjà traitée
+])
+def test_le_nom_de_la_demande_ne_sort_jamais_dans_la_reponse_de_l_endpoint(ctx, kw):
+    fb = creer_avis(ctx, tel="0600000000", nom=NOM_DISTINCTIF, **kw)
+    r = brouillon(ctx, fb, ctx.am_a1)
+    assert r.status_code == 200 and r.json()["disponible"] is True
+    assert NOM_DISTINCTIF not in r.text and r.json()["texte"].startswith("Bonjour,\n\n")
+    assert "0600000000" not in r.text
 
 
 def test_canal_propose_selon_la_coordonnee_jamais_la_coordonnee(ctx):
@@ -314,7 +329,8 @@ def test_le_corps_de_la_reponse_ne_contient_ni_commentaire_ni_coordonnees(ctx):
     for fb, user in ((ctx.fb_a2, ctx.am_a2), (ctx.fb_a1, ctx.am_a1)):
         corps = brouillon(ctx, fb, user).text
         assert SECRET_A2 not in corps and TEL_A2 not in corps and "a2@example.com" not in corps and "COMMENTAIRE" not in corps
-    assert "Bonjour Client A2," in brouillon(ctx, ctx.fb_a2, ctx.am_a2).json()["texte"]
+    texte_a2 = brouillon(ctx, ctx.fb_a2, ctx.am_a2).json()["texte"]
+    assert texte_a2.startswith("Bonjour,\n\n") and "Client A2" not in texte_a2
 
 
 def test_isolation_entre_agences_et_organisations(ctx):

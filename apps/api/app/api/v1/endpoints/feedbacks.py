@@ -894,7 +894,6 @@ def brouillon_reponse(
         cle_categorie=categorie.cle if categorie else None,
         nom_categorie=categorie.nom if categorie else None,
         secteur_code=organisation.secteur_code if organisation else None,
-        nom_client=demande.nom if demande else None,
         entite=(agence.nom if agence else None) or (organisation.nom if organisation else None),
     )
     # Canal proposé selon la présence d'une coordonnée (jamais la coordonnée elle-même) ; demande traitée = coordonnées masquées.

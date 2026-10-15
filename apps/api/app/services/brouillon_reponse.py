@@ -5,9 +5,9 @@ Le brouillon est un POINT DE DÉPART que le gestionnaire relit et modifie avant 
 Tous les textes sont dans brouillon_reponse_textes.py ; ce module décide quand proposer un brouillon, avec quel registre et quelle
 famille de thème, et assemble le message. Il est PUR (aucun accès base) : l'endpoint lui passe des valeurs simples.
 
-Ce que le brouillon n'utilise JAMAIS : le commentaire du client (aucun extrait n'est repris), son téléphone, son e-mail, la note.
-Seuls entrent dans le texte : le prénom/nom donné par le client pour être rappelé (s'il existe), le nom de l'agence (ou de
-l'organisation) et le vocabulaire du secteur.
+Ce que le brouillon n'utilise JAMAIS : le commentaire du client (aucun extrait n'est repris), son nom (texte libre), son
+téléphone, son e-mail, la note. Seuls entrent dans le texte : le nom de l'agence (ou de l'organisation) et le vocabulaire du
+secteur. La salutation est toujours « Bonjour, ».
 """
 import re
 from dataclasses import dataclass
@@ -18,8 +18,7 @@ from app.services.ai.cles_modeles import MODELE_PAR_DEFAUT, resoudre_cle_modele
 from app.services.brouillon_reponse_textes import (
     LIEU_PAR_DEFAUT,
     LIEU_PAR_SECTEUR,
-    SALUTATION_AVEC_NOM,
-    SALUTATION_SANS_NOM,
+    SALUTATION,
     INITIALES_ELISION,
     SIGNATURE_AVEC_ENTITE,
     SIGNATURE_AVEC_ENTITE_ELISION,
@@ -36,11 +35,8 @@ REGISTRE_RAPPEL_SIMPLE = "rappel_simple"
 RAISON_AUCUN_SUIVI = "aucun_suivi"
 RAISON_REPONSE_EXISTANTE = "reponse_existante"
 
-# Longueur maximale reprise pour un nom saisi par le client (le nom est un texte libre).
-NOM_LONGUEUR_MAX = 60
-
 _VARIABLE = re.compile(r"\{(\w+)\}")
-# Caractères de contrôle et accolades retirés : jamais de « {…} » dans un brouillon, même si le nom du client en contient.
+# Caractères de contrôle et accolades retirés : jamais de « {…} » dans un brouillon, même si le nom de l'agence en contient.
 _CARACTERES_DE_CONTROLE = re.compile(r"[\x00-\x1f\x7f{}]")
 
 
@@ -92,21 +88,18 @@ def construire_brouillon(
     cle_categorie: Optional[str],
     nom_categorie: Optional[str],
     secteur_code: Optional[str],
-    nom_client: Optional[str],
     entite: Optional[str],
 ) -> Brouillon:
     """Assemble salutation + corps + signature. `entite` = nom de l'agence (à défaut de l'organisation)."""
     textes_registre = TEXTES[registre]
     famille = resoudre_cle_modele(cle_categorie, nom_categorie, textes_registre.keys(), defaut=MODELE_PAR_DEFAUT)
-    nom = _nettoyer(nom_client, NOM_LONGUEUR_MAX)
     entite_propre = _nettoyer(entite, 100)
     lieu = LIEU_PAR_SECTEUR.get(secteur_code or "", LIEU_PAR_DEFAUT)
 
-    salutation = _remplir(SALUTATION_AVEC_NOM, {"nom": nom}) if nom else SALUTATION_SANS_NOM
     if not entite_propre:
         signature = SIGNATURE_SANS_ENTITE
     else:
         modele_signature = SIGNATURE_AVEC_ENTITE_ELISION if entite_propre[0].lower() in INITIALES_ELISION else SIGNATURE_AVEC_ENTITE
         signature = _remplir(modele_signature, {"entite": entite_propre})
     corps = _remplir(textes_registre[famille], {"lieu": lieu})
-    return Brouillon(registre=registre, famille=famille, texte=f"{salutation}\n\n{corps}\n\n{signature}")
+    return Brouillon(registre=registre, famille=famille, texte=f"{SALUTATION}\n\n{corps}\n\n{signature}")
