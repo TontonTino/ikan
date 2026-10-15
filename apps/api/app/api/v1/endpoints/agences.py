@@ -30,6 +30,11 @@ from app.services.plan_service import organisation_a_la_fonctionnalite
 
 router = APIRouter()
 
+MESSAGE_AGENCE_AVEC_AVIS = (
+    "Cette agence a déjà reçu des avis : elle ne peut pas être supprimée. "
+    "Désactivez-la pour la retirer des alertes et des statistiques du réseau."
+)
+
 
 def _exiger_categories_personnalisees(agence: Agence, db: Session) -> None:
     """Gestion des catégories = fonctionnalité Starter+ (fail-open : jamais bloquant sur erreur)."""
@@ -294,6 +299,16 @@ def delete_agence(
         raise HTTPException(status_code=404, detail="Agence introuvable")
 
     _check_agence_access(agence, current_user)
+
+    # Après le contrôle d'appartenance (403) : un CX d'une autre organisation ne peut pas deviner si une agence a des avis.
+    # Tous les QR codes de l'agence comptent, actifs ou non. Les avis, leurs analyses, recommandations, demandes de contact et
+    # réponses partiraient avec l'agence (suppression en cascade) : une suppression est refusée dès qu'il y en a un.
+    a_des_avis = (
+        db.query(Feedback.id).join(QRCode, Feedback.qr_code_id == QRCode.id).filter(QRCode.agence_id == agence.id).first()
+        is not None
+    )
+    if a_des_avis:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=MESSAGE_AGENCE_AVEC_AVIS)
 
     db.delete(agence)
     try:
