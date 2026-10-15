@@ -334,6 +334,9 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                 <select value={filtres.criticite} onChange={(e) => dispatch({ type: 'definir', champ: 'criticite', valeur: e.target.value })} aria-label="Filtrer par gravité">
                   <option value="all">Toutes gravités</option><option value="critique">Critique</option><option value="elevee">Élevée</option><option value="moyenne">Moyenne</option><option value="faible">Faible</option><option value="non_evaluee">Non évaluée</option>
                 </select>
+                <select value={filtres.discordance} onChange={(e) => dispatch({ type: 'definir', champ: 'discordance', valeur: e.target.value })} aria-label="Filtrer les avis contradictoires">
+                  <option value="all">Contradictoires ou non</option><option value="oui">Avis contradictoires uniquement</option>
+                </select>
                 <select value={filtres.theme} onChange={(e) => dispatch({ type: 'definir', champ: 'theme', valeur: e.target.value })} aria-label="Filtrer par thème">
                   <option value="all">Tous thèmes</option>
                   {filtres.theme !== 'all' && !themesDisponibles.includes(filtres.theme) && (
@@ -342,6 +345,9 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                   {themesDisponibles.map((t) => <option key={t} value={t}>{t === 'non_categorise' ? 'Non catégorisé' : themeLabel(t)}</option>)}
                 </select>
               </div>
+              <p style={{ margin: '8px 0 0', fontSize: '0.76rem', color: 'var(--color-text-muted)' }}>
+                Avis contradictoires : la note et le ton du texte se contredisent (par exemple 5/5 avec un texte négatif). Cette détection est incluse à partir du forfait Pro ; sans elle, aucun avis n’est signalé.
+              </p>
               {themeCatalogError && (
                 <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '8px', color: 'var(--color-text-body)', fontSize: '0.82rem' }}>
                   <span>Impossible de charger la liste complète des thèmes.</span>

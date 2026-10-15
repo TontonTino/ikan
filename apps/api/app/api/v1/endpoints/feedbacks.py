@@ -348,6 +348,11 @@ def list_feedbacks(
     sentiment: Optional[SentimentType] = Query(None, description="Ton de l'analyse IA : positif, neutre ou negatif."),
     criticite: Optional[str] = Query(None, description="faible, moyenne, elevee, critique, ou non_evaluee (avis sans analyse)."),
     note: Optional[int] = Query(None, ge=1, le=5, description="Note exacte (1 à 5)."),
+    discordance: Optional[bool] = Query(
+        None,
+        description="true : avis contradictoires (la note et le ton de l'analyse se contredisent) ; false : avis sans contradiction "
+                    "détectée (y compris non analysés) ; absent : pas de filtre. Calculée à l'analyse (forfait Pro et plus).",
+    ),
     a_traiter: Optional[bool] = Query(None, description="true : avis non résolus ou avec une demande de rappel en attente."),
     a_surveiller: Optional[bool] = Query(None, description="true : note de 2 ou moins, ton négatif, gravité élevée/critique ou avis contradictoire."),
     q: Optional[str] = Query(None, max_length=LONGUEUR_MAX_RECHERCHE, description="Recherche dans le texte de l'avis uniquement (casse et accents ignorés)."),
@@ -397,7 +402,7 @@ def list_feedbacks(
         query = query.filter(Feedback.action_a_prendre.is_(None))
     if action_realisee is not None:
         query = query.filter(Feedback.action_realisee == action_realisee)
-    if theme or sentiment or criticite or a_surveiller:
+    if theme or sentiment or criticite or a_surveiller or discordance is not None:
         query = query.outerjoin(AnalyseIA, AnalyseIA.feedback_id == Feedback.id)  # une seule jointure d'analyse pour ces filtres
     if a_traiter:
         query = query.outerjoin(DemandeContact, DemandeContact.feedback_id == Feedback.id)
@@ -421,6 +426,10 @@ def list_feedbacks(
             query = query.filter(AnalyseIA.theme_principal == theme)
     if sentiment:
         query = query.filter(AnalyseIA.sentiment == sentiment)
+    if discordance is True:
+        query = query.filter(AnalyseIA.discordance_detectee.is_(True))
+    elif discordance is False:
+        query = query.filter(or_(AnalyseIA.id.is_(None), AnalyseIA.discordance_detectee.is_(False)))
     if criticite == "non_evaluee":
         query = query.filter(AnalyseIA.id.is_(None))
     elif criticite:

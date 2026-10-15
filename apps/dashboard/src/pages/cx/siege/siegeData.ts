@@ -299,6 +299,20 @@ export interface SurveillanceInput {
   jours: number;
 }
 
+/**
+ * Alertes de seuil du siège (GET /alertes) : `incluses` = false quand le forfait de l'organisation n'inclut pas les alertes. L'API
+ * renvoie alors des listes vides, qui NE signifient PAS « aucune agence sous son seuil » : le siège doit le dire, pas afficher 0.
+ */
+export interface AlertesSiege {
+  items: Alerte[];
+  incluses: boolean;
+}
+
+/** Réponse de GET /alertes -> alertes du siège. Absent ou `true` = incluses (valeur par défaut de l'API) ; seul `false` les exclut. */
+export function normaliserAlertes(donnees: { alertes_seuil?: Alerte[]; alertes_incluses?: boolean } | null | undefined): AlertesSiege {
+  return { items: donnees?.alertes_seuil ?? [], incluses: donnees?.alertes_incluses !== false };
+}
+
 export function buildSurveillance({ ranking, alertesSeuil, issuesOuvertes, jours }: SurveillanceInput) {
   const parAgence = new Map<string, AgenceASurveiller>();
   const meta = new Map(ranking.map((a) => [a.agence_id, a]));

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { agencesApi, alertesApi, feedbacksApi, issuesApi, statisticsApi } from '../../../services/api';
-import type { Agence, Alerte, Issue, StatsCXResponse } from '../../../types';
-import { ISSUE_STATUTS_OUVERTS } from './siegeData';
+import type { Agence, Issue, StatsCXResponse } from '../../../types';
+import { ISSUE_STATUTS_OUVERTS, normaliserAlertes, type AlertesSiege } from './siegeData';
 
 /** État d'une source : chaque bloc du dashboard gère son propre chargement / erreur. */
 export type Source<T> = { status: 'loading' } | { status: 'error' } | { status: 'ok'; data: T };
@@ -65,7 +65,7 @@ function useSource<T>(load: () => Promise<T>, deps: unknown[]) {
 
 export function useSiegeData(jours: number) {
   const [stats, reloadStats] = useSource<StatsCXResponse>(async () => (await statisticsApi.cx({ jours })).data, [jours]);
-  const [alertes, reloadAlertes] = useSource<Alerte[]>(async () => (await alertesApi.list()).data?.alertes_seuil ?? [], []);
+  const [alertes, reloadAlertes] = useSource<AlertesSiege>(async () => normaliserAlertes((await alertesApi.list()).data), []);
   const [agences, reloadAgences] = useSource<Agence[]>(async () => {
     const r = await agencesApi.list();
     return Array.isArray(r.data) ? r.data : [];

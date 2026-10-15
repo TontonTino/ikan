@@ -242,7 +242,7 @@ export default function DashboardLayout() {
     if (location.pathname.includes('/admin/dashboard')) return 'Tableau de bord';
     if (location.pathname.includes('/siege')) return 'Vue d\'ensemble';
     if (location.pathname.includes('/agence')) return 'Vue d\'ensemble';
-    if (location.pathname.includes('/feedbacks')) return 'Avis clients';
+    if (location.pathname.includes('/feedbacks')) return user?.role === 'cx_manager' ? 'Avis du réseau' : 'Avis clients';
     if (location.pathname.includes('/alertes')) return 'Alertes';
     if (location.pathname.includes('/actions')) return 'Actions à mener';
     if (location.pathname.includes('/issues')) return 'Problèmes à traiter';

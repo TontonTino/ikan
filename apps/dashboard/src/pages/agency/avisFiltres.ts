@@ -14,13 +14,14 @@ export interface FiltresAvis {
   theme: string;
   note: string; // 'all' | '1'..'5'
   criticite: string; // 'all' | 'faible' | 'moyenne' | 'elevee' | 'critique' | 'non_evaluee'
+  discordance: string; // 'all' | 'oui' : avis contradictoires uniquement (la note et le ton du texte se contredisent)
   recherche: string;
   onglet: OngletAvis;
   page: number; // 0 = première page
 }
 
 export const FILTRES_INITIAUX: FiltresAvis = {
-  agenceId: 'all', periode: 'all', sentiment: 'all', theme: 'all', note: 'all', criticite: 'all', recherche: '', onglet: 'tous', page: 0,
+  agenceId: 'all', periode: 'all', sentiment: 'all', theme: 'all', note: 'all', criticite: 'all', discordance: 'all', recherche: '', onglet: 'tous', page: 0,
 };
 
 export type ActionFiltres =
@@ -63,6 +64,7 @@ export interface ParametresAvis {
   criticite?: string;
   note?: number;
   q?: string;
+  discordance?: true;
   a_traiter?: true;
   a_surveiller?: true;
 }
@@ -88,6 +90,7 @@ export function parametresApi(
     ...(f.sentiment !== 'all' ? { sentiment: f.sentiment } : {}),
     ...(f.criticite !== 'all' ? { criticite: f.criticite } : {}),
     ...(f.note !== 'all' ? { note: Number(f.note) } : {}),
+    ...(f.discordance === 'oui' ? { discordance: true as const } : {}),
     ...(q ? { q } : {}),
     ...(onglet === 'a_traiter' ? { a_traiter: true as const } : {}),
     ...(onglet === 'critiques' ? { a_surveiller: true as const } : {}),
@@ -115,6 +118,7 @@ export function filtresActifs(f: FiltresAvis, aide: { nomAgence?: (id: string) =
   if (f.periode !== 'all') liste.push({ cle: 'periode', libelle: `Période : ${LIBELLES_PERIODE[f.periode] || f.periode}` });
   if (f.note !== 'all') liste.push({ cle: 'note', libelle: `Note : ${f.note}/5` });
   if (f.criticite !== 'all') liste.push({ cle: 'criticite', libelle: `Gravité : ${LIBELLES_CRITICITE[f.criticite] || f.criticite}` });
+  if (f.discordance === 'oui') liste.push({ cle: 'discordance', libelle: 'Avis contradictoires' });
   if (rechercheNormalisee(f.recherche)) liste.push({ cle: 'recherche', libelle: `Recherche : « ${rechercheNormalisee(f.recherche)} »` });
   return liste;
 }

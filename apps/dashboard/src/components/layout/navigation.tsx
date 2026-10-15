@@ -102,7 +102,8 @@ export const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
   ],
   // Sections calquées sur la boucle produit : Comprendre → Agir → Réseau.
   // Une entrée = une fonction ; aucune entrée ne mène à la même page qu'une autre.
-  // Avis clients, Suggestions et Demandes de rappel ne sont PAS dans cette sidebar : le CX Manager les
+  // « Avis du réseau » (/feedbacks) liste les avis de toutes les agences de l'organisation. Suggestions et Demandes de rappel ne
+  // sont PAS dans cette sidebar : le CX Manager les
   // ouvre depuis l'aperçu de chaque agence (/agences/:agenceId/apercu?tab=…), voir MonAgencePage.
   cx_manager: [
     {
@@ -110,6 +111,7 @@ export const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
       items: [
         { path: '/siege', label: "Vue d'ensemble", icon: <LayoutGridIcon size={18} /> },
         { path: '/statistiques', label: 'Statistiques', icon: <BarChartIcon size={18} /> },
+        { path: '/feedbacks', label: 'Avis du réseau', icon: <MessageSquareIcon size={18} /> },
       ],
     },
     {
