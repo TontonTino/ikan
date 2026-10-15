@@ -2,7 +2,6 @@ import React, { lazy, useEffect, useState } from 'react';
 import { Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { agencesApi, statisticsApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
-import { getFeedbackUrl } from '../../config';
 import type { Agence, Categorie, StatsAgenceResponse } from '../../types';
 import TabsNavigation, { TabItem } from '../../components/ui/TabsNavigation';
 const FeedbacksPage = lazy(() => import('./FeedbacksPage'));
@@ -15,6 +14,7 @@ import Button from '../../components/ui/Button';
 import {
   CopyIcon,
   DownloadIcon,
+  PrinterIcon,
   TagIcon,
   CheckCircleIcon,
   PlusIcon,
@@ -30,6 +30,9 @@ import {
   StoreIcon,
 } from '../../components/common/Icons';
 import { userFacingError } from '../../utils/userFacingError';
+import { creerMatriceQr, dessinerQrPdf, lienFeedbackAgence, pngQr } from '../../utils/qrCode';
+import QrCodeSvg from '../../components/qr/QrCodeSvg';
+import FicheQrImpression, { PHRASE_INVITATION_QR, imprimerFicheQr } from '../../components/qr/FicheQrImpression';
 
 const cardStyle: React.CSSProperties = {
   background: '#FFFFFF',
@@ -55,21 +58,7 @@ const boutonStyle: React.CSSProperties = {
   cursor: 'pointer',
 };
 
-const qrImageUrl = (lien: string, taille: number) =>
-  `https://api.qrserver.com/v1/create-qr-code/?size=${taille}x${taille}&data=${encodeURIComponent(lien)}`;
-
 const slug = (nom: string) => nom.trim().replace(/\s+/g, '-').toLowerCase();
-
-/** Récupère une image distante et la convertit en data URL (nécessaire pour jsPDF.addImage). */
-async function imageUrlEnDataUrl(url: string): Promise<string> {
-  const blob = await (await fetch(url)).blob();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
 
 /**
  * Génère la fiche QR code de l'agence en PDF : carte compacte au format A6
@@ -79,8 +68,6 @@ async function imageUrlEnDataUrl(url: string): Promise<string> {
  * toute taille sans dépendre du chargement d'un fichier logo.
  */
 async function genererPdfQrCode(agence: Agence, lien: string) {
-  const qrDataUrl = await imageUrlEnDataUrl(qrImageUrl(lien, 600));
-
   const { default: jsPDF } = await import('jspdf');
   const doc = new jsPDF({ unit: 'mm', format: 'a6', orientation: 'portrait' });
   const pageW = doc.internal.pageSize.getWidth();
@@ -106,17 +93,18 @@ async function genererPdfQrCode(agence: Agence, lien: string) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9.5);
   doc.setTextColor(100, 116, 139);
-  doc.text('Scannez pour partager votre avis', pageW / 2, y + 5, { align: 'center' });
+  doc.text(PHRASE_INVITATION_QR, pageW / 2, y + 5, { align: 'center' });
   y += 12;
 
   // QR code centré, sur un cadre blanc légèrement arrondi
-  const qrSize = 60;
+  // Le QR est dessiné en vectoriel (modules en rectangles), marge blanche de 4 modules comprise : net à toute taille, aucun appel réseau.
+  const qrSize = 66;
   const qrX = (pageW - qrSize) / 2;
   doc.setDrawColor(232, 236, 230);
   doc.setFillColor(255, 255, 255);
-  doc.roundedRect(qrX - 5, y - 5, qrSize + 10, qrSize + 10, 3, 3, 'FD');
-  doc.addImage(qrDataUrl, 'PNG', qrX, y, qrSize, qrSize);
-  y += qrSize + 12;
+  doc.roundedRect(qrX - 3, y - 3, qrSize + 6, qrSize + 6, 3, 3, 'FD');
+  dessinerQrPdf(doc, creerMatriceQr(lien), qrX, y, qrSize);
+  y += qrSize + 10;
 
   // Lien lisible en dessous
   doc.setFontSize(7.5);
@@ -283,7 +271,7 @@ export default function MonAgencePage() {
     return <div style={{ color: '#B91C1C', padding: '32px', fontWeight: 600 }}>{erreur || 'Agence introuvable.'}</div>;
   }
 
-  const lien = getFeedbackUrl(agence.qr_code_token || agence.id);
+  const lien = lienFeedbackAgence(agence);
 
   const copierLien = async () => {
     try {
@@ -309,9 +297,8 @@ export default function MonAgencePage() {
   // Conservée en option secondaire : utile pour insérer le QR brut dans un
   // autre support (flyer, site web) sans le cadre/texte de la fiche PDF.
   const telechargerImagePng = async () => {
-    const source = qrImageUrl(lien, 800);
     try {
-      const blob = await (await fetch(source)).blob();
+      const blob = await pngQr(lien);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -322,7 +309,7 @@ export default function MonAgencePage() {
       URL.revokeObjectURL(url);
       afficherMessage('Image PNG du QR code téléchargée.');
     } catch {
-      window.open(source, '_blank', 'noopener');
+      afficherMessage('Impossible de générer l’image pour le moment.');
     }
   };
 
@@ -562,25 +549,28 @@ export default function MonAgencePage() {
         </div>
       )}
 
-      {/* ── QR code (inchangé, toujours visible, hors onglets) ── */}
+      {/* ── QR code (toujours visible, hors onglets) ── */}
       <div style={cardStyle}>
+        <FicheQrImpression nom={agence.nom} url={lien} />
         <h3 style={{ margin: '0 0 4px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D' }}>QR code de l'agence</h3>
         <p style={{ margin: '0 0 16px', fontSize: '0.82rem', color: '#64748B' }}>
           Vos clients le scannent pour laisser leur avis. Lecture seule : il est géré par le CX Manager.
         </p>
         <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <img
-            src={qrImageUrl(lien, 220)}
-            alt={`QR code de ${agence.nom}`}
-            width={150}
-            height={150}
-            style={{ borderRadius: '12px', border: '1px solid #E8ECE6', padding: '8px', background: '#FFFFFF', flexShrink: 0 }}
+          <QrCodeSvg
+            url={lien}
+            taille={150}
+            titre={`QR code de ${agence.nom}`}
+            style={{ borderRadius: '12px', border: '1px solid #E8ECE6', background: '#FFFFFF', flexShrink: 0 }}
           />
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: '0.78rem', color: '#64748B', wordBreak: 'break-all' }}>{lien}</div>
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
               <button type="button" onClick={copierLien} style={boutonStyle}>
                 <CopyIcon size={16} /> Copier le lien
+              </button>
+              <button type="button" onClick={imprimerFicheQr} style={boutonStyle}>
+                <PrinterIcon size={16} /> Imprimer
               </button>
               <button type="button" onClick={telechargerPdf} disabled={pdfEnCours} style={{ ...boutonStyle, opacity: pdfEnCours ? 0.6 : 1 }}>
                 <DownloadIcon size={16} /> {pdfEnCours ? 'Génération…' : 'Télécharger le PDF'}

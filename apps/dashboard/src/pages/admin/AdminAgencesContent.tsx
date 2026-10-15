@@ -2,12 +2,15 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { agencesApi, utilisateursApi } from '../../services/api';
 import { getFeedbackUrl } from '../../config';
+import QrCodeSvg from '../../components/qr/QrCodeSvg';
+import FicheQrImpression, { imprimerFicheQr } from '../../components/qr/FicheQrImpression';
 import { useAuthStore } from '../../stores/authStore';
 import type { Agence } from '../../types';
 import SectionHeading from '../../components/ui/SectionHeading';
 import EmptyState from '../../components/ui/EmptyState';
 import {
   PlusIcon,
+  PrinterIcon,
   QrCodeIcon,
   SearchIcon,
   TagIcon,
@@ -724,11 +727,8 @@ export default function AdminAgencesContent() {
               <h3 style={{ margin: '0 0 4px', fontSize: '1.1rem', fontWeight: 800, color: '#02302D' }}>{qrModalTarget.nom}</h3>
               <p style={{ margin: '0 0 16px', fontSize: '0.78rem', color: '#64748B' }}>QR code de collecte des avis</p>
 
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(modalQrUrl)}`}
-                alt={`QR Code ${qrModalTarget.nom}`}
-                style={{ width: '180px', height: '180px', display: 'block', margin: '0 auto 16px' }}
-              />
+              <QrCodeSvg url={modalQrUrl} taille={180} titre={`QR code de ${qrModalTarget.nom}`} style={{ display: 'block', margin: '0 auto 16px' }} />
+              <FicheQrImpression nom={qrModalTarget.nom} url={modalQrUrl} />
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <button
@@ -738,6 +738,14 @@ export default function AdminAgencesContent() {
                   style={{ padding: '10px', fontWeight: 700, cursor: 'pointer' }}
                 >
                   Copier le lien
+                </button>
+                <button
+                  type="button"
+                  onClick={imprimerFicheQr}
+                  className="btn-secondary"
+                  style={{ padding: '10px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                >
+                  <PrinterIcon size={16} /> Imprimer
                 </button>
                 <button
                   type="button"

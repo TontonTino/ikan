@@ -1,0 +1,86 @@
+/* Feuille d'impression du QR code de l'agence. Invisible à l'écran ; à l'impression, seule cette feuille est imprimée
+   (et seulement quand la classe `impression-qr` est posée sur <html> par « Imprimer » : un Ctrl+P ordinaire imprime la page). */
+
+.fiche-qr-impression {
+  display: none;
+}
+
+@page fiche-qr {
+  size: A4 portrait;
+  margin: 15mm;
+}
+
+@media print {
+  /* Ni menu, ni bouton, ni fenêtre du dashboard : tout ce qui est rattaché à <body> disparaît, sauf la feuille. */
+  html.impression-qr body > *:not(.fiche-qr-impression) {
+    display: none !important;
+  }
+
+  html.impression-qr body {
+    margin: 0 !important;
+    background: #ffffff !important;
+  }
+
+  html.impression-qr .fiche-qr-impression {
+    display: block !important;
+  }
+
+  .fiche-qr {
+    page: fiche-qr;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6mm;
+    text-align: center;
+    color: #000000;
+    background: #ffffff;
+    font-family: system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .fiche-qr__marque {
+    margin: 0;
+    font-size: 14pt;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+  }
+
+  .fiche-qr__nom {
+    margin: 4mm 0 0;
+    font-size: 30pt;
+    line-height: 1.15;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+  }
+
+  .fiche-qr__invitation {
+    margin: 0;
+    font-size: 20pt;
+    font-weight: 600;
+  }
+
+  .fiche-qr__code {
+    width: 130mm;
+    height: 130mm;
+  }
+
+  .fiche-qr__code svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .fiche-qr__url {
+    margin: 0;
+    font-size: 13pt;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+    word-break: break-all;
+  }
+
+  .fiche-qr__aide {
+    margin: 0;
+    font-size: 11pt;
+  }
+}
