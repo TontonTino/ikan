@@ -46,6 +46,7 @@ import {
   type StatutSeuil,
 } from './siegeData';
 import type { ActionsTotaux, IssuesOuvertes, Source } from './useSiegeData';
+import type { AlertesSiege } from './siegeData';
 
 export type KpiKind = 'satisfaction' | 'volume' | 'critiques' | 'seuil';
 
@@ -99,7 +100,7 @@ export function SiegeKpis({
   onOpen,
 }: {
   stats: Source<StatsCXResponse>;
-  alertes: Source<Alerte[]>;
+  alertes: Source<AlertesSiege>;
   nbAgences: number | null;
   jours: number;
   onOpen: (k: KpiKind) => void;
@@ -120,7 +121,9 @@ export function SiegeKpis({
   const vol = volumeDelta(volume);
   const crit = compteDefavorableDelta(k?.alertes_critiques, prevVolume);
   const nbCritiques = k?.alertes_critiques?.valeur_num ?? 0;
-  const nbSousSeuil = alertes.status === 'ok' ? alertes.data.length : null;
+  // Forfait sans alertes : l'API renvoie des listes vides, qui ne veulent PAS dire « aucune agence sous son seuil ».
+  const alertesIncluses = alertes.status !== 'ok' || alertes.data.incluses;
+  const nbSousSeuil = alertes.status === 'ok' && alertes.data.incluses ? alertes.data.items.length : null;
 
   return (
     <>
@@ -169,16 +172,18 @@ export function SiegeKpis({
       <KpiCard
         icon={<StoreIcon />}
         label="Agences sous leur seuil"
-        hint={`Alertes actives : ${regleAlerteSeuilTexte()} C'est un état, pas une évolution.`}
+        hint={alertesIncluses ? `Alertes actives : ${regleAlerteSeuilTexte()} C'est un état, pas une évolution.` : 'Les alertes de satisfaction ne sont pas incluses dans le forfait de votre organisation.'}
         loading={alertes.status === 'loading'}
         value={nbSousSeuil == null ? '—' : String(nbSousSeuil)}
         tone={nbSousSeuil ? 'critical' : 'neutral'}
         subtitle={
           alertes.status === 'error'
             ? 'Alertes indisponibles'
+            : !alertesIncluses
+            ? 'Non inclus dans votre forfait'
             : `${nbAgences != null ? `sur ${nbAgences} agences · ` : ''}${REGLE_ALERTE_SEUIL_API.fenetreJours} derniers jours`
         }
-        onClick={alertes.status === 'ok' ? () => onOpen('seuil') : undefined}
+        onClick={alertes.status === 'ok' && alertesIncluses ? () => onOpen('seuil') : undefined}
       />
       </BentoItem>
     </>
@@ -203,6 +208,7 @@ export function Surveillance({
   loading,
   sourcesIndisponibles,
   toutesIndisponibles,
+  alertesIncluses = true,
   onRetry,
   onOpenAgence,
 }: {
@@ -212,6 +218,8 @@ export function Surveillance({
   sourcesIndisponibles: string[];
   /** Aucune source n'a pu être chargée : ne jamais afficher « aucun signal ». */
   toutesIndisponibles: boolean;
+  /** false : le forfait n'inclut pas les alertes de seuil, la liste ne les prend donc pas en compte. */
+  alertesIncluses?: boolean;
   onRetry: () => void;
   onOpenAgence: (id: string) => void;
 }) {
@@ -253,7 +261,11 @@ export function Surveillance({
           compact
           illustration="no-alert"
           title="Aucun signal prioritaire"
-          message="Aucune agence sous son seuil, sans avis critique, sans baisse importante ni problème critique à traiter."
+          message={
+            alertesIncluses
+              ? 'Aucune agence sous son seuil, sans avis critique, sans baisse importante ni problème critique à traiter.'
+              : 'Aucun avis critique, aucune baisse importante ni problème critique à traiter. Les alertes de seuil ne sont pas incluses dans votre forfait.'
+          }
         />
       ) : (
         <ol className="siege-rows">
@@ -286,6 +298,7 @@ export function Surveillance({
       <div className="siege-foot">
         {total > lignes.length && <span className="siege-note">+{total - lignes.length} autre{total - lignes.length > 1 ? 's' : ''} agence{total - lignes.length > 1 ? 's' : ''} avec un signal</span>}
         {sourcesIndisponibles.length > 0 && <span className="siege-note">Non vérifié : {sourcesIndisponibles.join(', ')}</span>}
+        {!alertesIncluses && lignes.length > 0 && <span className="siege-note">Alertes de seuil non incluses dans votre forfait.</span>}
         <span className="siege-foot__actions">
           {lignes.length > 0 && <AskYam question={`Parmi les agences de mon réseau, lesquelles nécessitent une intervention prioritaire sur les ${YAM_PERIODE}, et pourquoi ?`} />}
           <BlockLink to="/alertes">Voir les alertes</BlockLink>

@@ -58,7 +58,7 @@ export default function DashboardSiegePage() {
     () =>
       buildSurveillance({
         ranking,
-        alertesSeuil: alertes.status === 'ok' ? alertes.data : [],
+        alertesSeuil: alertes.status === 'ok' ? alertes.data.items : [],
         issuesOuvertes: issues.status === 'ok' ? issues.data.items : [],
         jours,
       }),
@@ -74,7 +74,7 @@ export default function DashboardSiegePage() {
 
   const vue = drawer[drawer.length - 1];
   const agenceVue = vue?.type === 'agence' ? ranking.find((a) => a.agence_id === vue.id) ?? null : null;
-  const agenceNom = vue?.type === 'agence' ? agenceVue?.agence_nom ?? agencesMeta.get(vue.id)?.nom ?? (alertes.status === 'ok' ? alertes.data.find((a) => a.agence_id === vue.id)?.agence_nom : undefined) ?? 'Agence' : '';
+  const agenceNom = vue?.type === 'agence' ? agenceVue?.agence_nom ?? agencesMeta.get(vue.id)?.nom ?? (alertes.status === 'ok' ? alertes.data.items.find((a) => a.agence_id === vue.id)?.agence_nom : undefined) ?? 'Agence' : '';
 
   return (
     <div className="siege">
@@ -107,6 +107,7 @@ export default function DashboardSiegePage() {
             loading={surveillanceLoading}
             sourcesIndisponibles={sourcesIndisponibles}
             toutesIndisponibles={sourcesIndisponibles.length === 3}
+            alertesIncluses={alertes.status !== 'ok' || alertes.data.incluses}
             onRetry={data.reloadAll}
             onOpenAgence={openAgence}
           />
@@ -145,7 +146,7 @@ export default function DashboardSiegePage() {
           <KpiDetail
             kind={vue.kind}
             ranking={ranking}
-            alertes={alertes.status === 'ok' ? alertes.data : []}
+            alertes={alertes.status === 'ok' ? alertes.data.items : []}
             seuils={seuils}
             jours={jours}
             onOpenAgence={openAgence}

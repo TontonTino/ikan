@@ -8,10 +8,17 @@ const chemins = (role: UserRole) => liens(role).map((item) => item.path);
 const libelles = (role: UserRole) => liens(role).map((item) => item.label);
 
 describe('sidebar du CX Manager', () => {
-  it('n’affiche plus Avis clients, Suggestions ni Demandes de rappel', () => {
+  it('n’affiche plus Suggestions ni Demandes de rappel, ni « Avis clients » (remplacé par « Avis du réseau »)', () => {
     const cx = chemins('cx_manager');
-    for (const chemin of ['/feedbacks', '/suggestions', '/demandes-rappel']) expect(cx).not.toContain(chemin);
+    for (const chemin of ['/suggestions', '/demandes-rappel']) expect(cx).not.toContain(chemin);
     for (const libelle of ['Avis clients', 'Suggestions', 'Demandes de rappel']) expect(libelles('cx_manager')).not.toContain(libelle);
+  });
+
+  it('affiche « Avis du réseau » (liste des avis de toutes les agences de l’organisation, CX-04)', () => {
+    const entree = liens('cx_manager').find((item) => item.path === '/feedbacks');
+    expect(entree?.label).toBe('Avis du réseau');
+    expect(ROUTE_ROLES['/feedbacks']).toContain('cx_manager');
+    expect(chemins('cx_manager').filter((chemin) => chemin === '/feedbacks')).toHaveLength(1);
   });
 
   it('n’a plus de section vide', () => {
