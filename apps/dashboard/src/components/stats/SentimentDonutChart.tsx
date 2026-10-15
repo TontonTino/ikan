@@ -32,7 +32,7 @@ export default function SentimentDonutChart({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#94A3B8',
+          color: '#5B6B7F',
           fontSize: '0.84rem',
           background: '#FAFCFA',
           borderRadius: '16px',
@@ -46,6 +46,7 @@ export default function SentimentDonutChart({
 
   return (
     <div
+      className="stats-cx__donut"
       style={{
         display: 'flex',
         flexDirection: 'row',

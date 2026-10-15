@@ -7,6 +7,7 @@ import { themeLabel } from '../../utils/themeLabels';
 interface ThemesBarListProps {
   themes: ThemeStatsDetail[];
   maxItems?: number;
+  showSentiment?: boolean;
 }
 
 const SENTIMENT_DOT_COLOR: Record<string, string> = {
@@ -15,8 +16,8 @@ const SENTIMENT_DOT_COLOR: Record<string, string> = {
   negatif: '#DC2626',
 };
 
-export default function ThemesBarList({ themes, maxItems = 6 }: ThemesBarListProps) {
-  const displayThemes = themes.slice(0, maxItems);
+export default function ThemesBarList({ themes, maxItems = 6, showSentiment = true }: ThemesBarListProps) {
+  const displayThemes = [...themes].sort((a, b) => b.count - a.count).slice(0, maxItems);
 
   if (!displayThemes || displayThemes.length === 0) {
     return (
@@ -51,7 +52,7 @@ export default function ThemesBarList({ themes, maxItems = 6 }: ThemesBarListPro
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span
+                {showSentiment && <span
                   style={{
                     width: '7px',
                     height: '7px',
@@ -60,11 +61,11 @@ export default function ThemesBarList({ themes, maxItems = 6 }: ThemesBarListPro
                     flexShrink: 0,
                   }}
                   title={`Ton dominant : ${SENTIMENT_LABELS[item.sentiment_predominant as SentimentType] ?? item.sentiment_predominant}`}
-                />
-                <span style={{ fontWeight: 600, color: '#0F172A' }}>{/^[a-z0-9_]+$/.test(item.label ?? '') || !item.label ? themeLabel(item.label || item.theme) : item.label}</span>
+                />}
+                <span style={{ minWidth: 0, fontWeight: 600, color: '#0F172A', overflowWrap: 'anywhere' }}>{/^[a-z0-9_]+$/.test(item.label ?? '') || !item.label ? themeLabel(item.label || item.theme) : item.label}</span>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                 <span style={{ color: '#64748B', fontSize: '0.74rem' }}>{item.count} avis</span>
                 <span style={{ fontWeight: 800, color: '#02302D', minWidth: '40px', textAlign: 'right' }}>
                   {item.pourcentage}%
