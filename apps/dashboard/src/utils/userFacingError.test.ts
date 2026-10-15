@@ -10,6 +10,12 @@ describe('messageRefusServeur', () => {
     expect(messageRefusServeur(refus(400, { detail: 'Email déjà utilisé' }))).toBe('Email déjà utilisé');
   });
 
+  it('reprend le texte d’un refus 409 en texte simple (agence qui a déjà reçu des avis)', () => {
+    const message = 'Cette agence a déjà reçu des avis : elle ne peut pas être supprimée. Désactivez-la pour la retirer des alertes et des statistiques du réseau.';
+    expect(messageRefusServeur(refus(409, { detail: message }))).toBe(message);
+    expect(messageRefusServeur(refus(409, {}))).toBeNull();
+  });
+
   it('reprend le texte d’un refus 422 en texte simple (agence obligatoire)', () => {
     expect(messageRefusServeur(refus(422, { detail: 'Un compte responsable d’agence doit être rattaché à une agence de votre organisation.' })))
       .toContain('rattaché à une agence');

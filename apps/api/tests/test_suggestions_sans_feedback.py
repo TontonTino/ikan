@@ -380,14 +380,21 @@ def test_les_tableaux_de_bord_comptent_les_suggestions_sans_feedback(ctx):
 # ───────────────────────── suppression d'agence ─────────────────────────
 
 def test_supprimer_une_agence_supprime_aussi_ses_suggestions_sans_feedback(ctx):
-    """Règle actuelle : seule la FK des problèmes récurrents bloque (409) ; les avis et suggestions de l'agence partent
-    en cascade. Une suggestion sans feedback suit la même règle (FK agence_id ON DELETE CASCADE) : elle ne reste jamais
-    orpheline ni ne survit à son agence."""
+    """Une agence SANS AVIS se supprime ; ses suggestions sans feedback partent avec elle (FK agence_id ON DELETE CASCADE) :
+    elles ne restent jamais orphelines ni ne survivent à leur agence. Une agence qui a des avis (A1, qui porte l'avis témoin)
+    n'est plus supprimable (409, PR B) : rien n'est alors supprimé, pas même ses suggestions."""
     poster(ctx, "QR-A1", contenu="idée seule A1"); poster(ctx, "QR-A2", contenu="idée seule A2")
-    r = ctx.client.delete(f"/api/v1/agences/{ctx.ids.a1}", headers=ctx.H(ctx.ids.cx_a))
+
+    refus = ctx.client.delete(f"/api/v1/agences/{ctx.ids.a1}", headers=ctx.H(ctx.ids.cx_a))
+    assert refus.status_code == 409, refus.text
+    s = ctx.Session()
+    assert {x.contenu for x in s.query(Suggestion).all()} == {"ancienne idée A1", "idée seule A1", "idée seule A2"}
+    s.close()
+
+    r = ctx.client.delete(f"/api/v1/agences/{ctx.ids.a2}", headers=ctx.H(ctx.ids.cx_a))
     assert r.status_code == 204, r.text
     s = ctx.Session()
     restantes = {x.contenu for x in s.query(Suggestion).all()}
     s.close()
-    assert restantes == {"idée seule A2"}      # idée seule A1 ET l'ancienne (via son avis) supprimées avec l'agence
+    assert restantes == {"ancienne idée A1", "idée seule A1"}      # idée seule A2 supprimée avec son agence, celles de A1 intactes
     assert ctx.lignes(HistoriqueSuggestion) == 0
