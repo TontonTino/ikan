@@ -3,6 +3,7 @@ Génération de recommandations d'action pour l'Agency Manager (BF-17).
 Approche basée sur des templates par thème et criticité pour les 15 catégories IKAN AI.
 """
 from app.models.enums import CriticiteType, PriorityLevel
+from app.services.ai.cles_modeles import resoudre_cle_modele
 
 # Origine des recommandations (transparence IA, 5B-2) : textes choisis par règles dans
 # RECOMMANDATIONS_TEMPLATES selon le thème et la criticité — aucun appel LLM.
@@ -210,9 +211,13 @@ def generer_recommandations(
     theme: str,
     criticite: CriticiteType,
     discordance: bool,
+    cle_categorie: str | None = None,
 ) -> list[tuple[str, PriorityLevel]]:
     """
     Génère une liste de recommandations basée sur le thème et la criticité.
+
+    `theme` : nom (ou clé) de la catégorie de l'avis ; `cle_categorie` : sa clé stable (`Categorie.cle`) quand elle existe.
+    Le modèle est choisi par `resoudre_cle_modele` (clé stable, puis nom normalisé, puis famille par mots-clés, puis « autre »).
 
     Returns:
         Liste de tuples (contenu_recommandation, priorite)
@@ -224,7 +229,7 @@ def generer_recommandations(
         niveau = "critique" if criticite == CriticiteType.CRITIQUE else "elevee"
         priorite = PriorityLevel.CRITICAL if criticite == CriticiteType.CRITIQUE else PriorityLevel.HIGH
 
-        theme_key = theme if theme in RECOMMANDATIONS_TEMPLATES else "autre"
+        theme_key = resoudre_cle_modele(cle_categorie, theme, RECOMMANDATIONS_TEMPLATES)
         contenu = RECOMMANDATIONS_TEMPLATES[theme_key][niveau]
         recommandations.append((contenu, priorite))
 

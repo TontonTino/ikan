@@ -161,7 +161,10 @@ def analyser_feedback(feedback_id: uuid.UUID, db: Session | None = None) -> None
         db.flush()
 
         # 5. Générer les recommandations d'action
-        recommandations = generer_recommandations(theme, criticite_enum, discordance)
+        # Le modèle est choisi par la clé stable de la catégorie (puis son nom normalisé) : `theme` (le nom, stocké tel quel dans
+        # theme_principal) ne suffit pas, il ne correspond presque jamais à une clé de modèle.
+        cle_categorie = feedback.categorie.cle if feedback.categorie else None
+        recommandations = generer_recommandations(theme, criticite_enum, discordance, cle_categorie=cle_categorie)
         for contenu, priorite in recommandations:
             reco = Recommandation(
                 analyse_ia_id=analyse.id,
