@@ -11,6 +11,7 @@ import SkeletonBlock from '../../components/ui/SkeletonBlock';
 import SectionHeading from '../../components/ui/SectionHeading';
 import { MessageSquareIcon, SearchIcon, FilterIcon, StoreIcon, AlertTriangleIcon, ClockIcon, TagIcon, XCloseIcon } from '../../components/common/Icons';
 import { themeLabel } from '../../utils/themeLabels';
+import { ThemeAgences, ThemeTonGravite, ThemeVerbatim } from '../../components/feedbacks/ThemeInfos';
 import { DEFINITION_NEGATIF, PartNegatifsTexte } from '../../utils/partNegatifs';
 import { useValeurDifferee } from '../../utils/debounce';
 import {
@@ -468,14 +469,14 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                       <span style={{ fontWeight: 800, fontSize: '0.92rem', color: '#02302D' }}>{thm.theme === 'non_categorise' ? 'Non catégorisé' : themeLabel(thm.theme)}</span>
                       <span style={{ background: '#02302D', color: '#FFFFFF', padding: '2px 8px', borderRadius: '9999px', fontSize: '0.72rem', fontWeight: 800 }}>{thm.count} avis ({thm.pourcentage.toLocaleString('fr-FR')} %)</span>
                     </div>
+                    <ThemeAgences theme={thm} />
                     <p style={{ margin: '0 0 8px', color: '#475569', fontSize: '0.78rem' }}>
                       {thm.part_negatifs
                         ? <PartNegatifsTexte pn={thm.part_negatifs} />
                         : <><strong>{thm.negatifs ?? 0}</strong> avis négatif{(thm.negatifs ?? 0) > 1 ? 's' : ''} sur {thm.count}</>}
                     </p>
-                    <p style={{ margin: 0, color: '#475569', fontSize: '0.76rem' }}>
-                      Ton dominant : {{ positif: 'positif', neutre: 'neutre', negatif: 'négatif' }[thm.sentiment_predominant] ?? 'non évalué'}
-                    </p>
+                    <ThemeTonGravite theme={thm} />
+                    <ThemeVerbatim theme={thm} />
                   </div>
                   <button type="button" onClick={() => { dispatch({ type: 'definir', champ: 'theme', valeur: thm.theme }); dispatch({ type: 'definir', champ: 'onglet', valeur: 'tous' }); }}
                     className="btn-primary" style={{ padding: '8px', fontSize: '0.76rem', borderRadius: '10px', width: '100%', justifyContent: 'center', minHeight: 44 }}>

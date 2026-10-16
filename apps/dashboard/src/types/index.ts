@@ -462,6 +462,11 @@ export interface ThemeStatsDetail {
   sentiment_predominant: string;
   negatifs?: number;
   part_negatifs?: PartNegatifs | null;
+  /** Seulement dans GET /feedbacks/themes/synthese. */
+  agences_concernees?: number | null;
+  /** critique | elevee | moyenne | faible ; null : aucun avis analysé. */
+  gravite_frequente?: string | null;
+  verbatims?: string[];
 }
 
 /** GET /feedbacks/themes/synthese : 20 thèmes au plus, sur tous les avis du périmètre et de la période. */

@@ -534,7 +534,7 @@ def synthese_themes(
     debut_prec = debut - timedelta(days=jours) if jours else None
     themes, total = agreger_themes(
         db, criteres, debut=debut, fin=maintenant if jours else None, debut_prec=debut_prec, fin_prec=debut,
-        inclure_non_categorise=True, limite=limit,
+        inclure_non_categorise=True, limite=limit, enrichir=True,
     )
     return ThemesSyntheseResponse(themes=themes, total_avis=total, jours=jours)
 

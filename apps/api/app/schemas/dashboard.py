@@ -227,6 +227,11 @@ class ThemeStatsDetail(BaseModel):
     # Champs additifs (CX-05) : part d'avis négatifs du thème et son évolution.
     negatifs: int = 0
     part_negatifs: PartNegatifs | None = None
+    # Champs additifs de GET /feedbacks/themes/synthese (absents ailleurs) : agences distinctes, gravité la plus fréquente
+    # (égalité : la plus grave ; None si aucun avis analysé) et extraits récents du texte des avis (jamais de données de contact).
+    agences_concernees: int | None = None
+    gravite_frequente: str | None = None
+    verbatims: List[str] = []
 
 
 class ThemesSyntheseResponse(BaseModel):
