@@ -10,7 +10,7 @@
  *  - aucun delta n'est affiché si la période précédente n'a aucun avis
  *    (l'API renvoie alors une évolution null et un taux null / status "no_data").
  */
-import type { AgenceRankDetail, Alerte, EvolutionPoint, Issue, StatKPI } from '../../../types';
+import type { AgenceRankDetail, AgenceSousSeuil, Alerte, EvolutionPoint, Issue, StatKPI } from '../../../types';
 
 // ════════════════════════════════════════════════════════════════════
 // PARAMÈTRES PROVISOIRES — « À surveiller »
@@ -304,14 +304,37 @@ export interface SurveillanceInput {
  * renvoie alors des listes vides, qui NE signifient PAS « aucune agence sous son seuil » : le siège doit le dire, pas afficher 0.
  */
 export interface AlertesSiege {
+  /** Alertes de seuil à 48 h (GET /alertes -> alertes_seuil) : celles qui déclenchent une alerte pour le CX Manager. */
   items: Alerte[];
   incluses: boolean;
+  /** Agences ACTUELLEMENT sous leur seuil, la plus en difficulté d'abord (compteur « Agences sous leur seuil » et sa liste). */
+  sousSeuil: AgenceSousSeuil[];
 }
 
 /** Réponse de GET /alertes -> alertes du siège. Absent ou `true` = incluses (valeur par défaut de l'API) ; seul `false` les exclut. */
-export function normaliserAlertes(donnees: { alertes_seuil?: Alerte[]; alertes_incluses?: boolean } | null | undefined): AlertesSiege {
-  return { items: donnees?.alertes_seuil ?? [], incluses: donnees?.alertes_incluses !== false };
+export function normaliserAlertes(
+  donnees: { alertes_seuil?: Alerte[]; alertes_incluses?: boolean; agences_sous_seuil?: AgenceSousSeuil[] } | null | undefined,
+): AlertesSiege {
+  const items = donnees?.alertes_seuil ?? [];
+  // Ancien serveur (sans le champ additif) : on retombe sur les alertes à 48 h, toutes « depuis plus de 48 h ».
+  const sousSeuil =
+    donnees?.agences_sous_seuil ??
+    items.map((a) => ({
+      agence_id: a.agence_id,
+      agence_nom: a.agence_nom,
+      taux_actuel: a.taux_actuel,
+      seuil: a.seuil,
+      ecart_seuil: a.ecart_seuil ?? Math.round((a.seuil - a.taux_actuel) * 10) / 10,
+      depuis_plus_de_48h: true,
+      gravite: a.gravite,
+    }));
+  return { items, incluses: donnees?.alertes_incluses !== false, sousSeuil };
 }
+
+/** Règle du compteur « Agences sous leur seuil » et de sa liste (expliquée à l'utilisateur, une seule fois). */
+export const regleSousSeuilTexte = () =>
+  `Agences dont la satisfaction des ${REGLE_ALERTE_SEUIL_API.fenetreJours} derniers jours (au moins ${REGLE_ALERTE_SEUIL_API.minAvis} avis) ` +
+  `est sous leur seuil. Le badge « Depuis plus de ${REGLE_ALERTE_SEUIL_API.persistanceHeures} h » signale celles qui déclenchent une alerte.`;
 
 export function buildSurveillance({ ranking, alertesSeuil, issuesOuvertes, jours }: SurveillanceInput) {
   const parAgence = new Map<string, AgenceASurveiller>();

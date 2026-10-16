@@ -10,6 +10,7 @@ import VolumeEvolutionChart from '../../components/stats/VolumeEvolutionChart';
 import SentimentDonutChart from '../../components/stats/SentimentDonutChart';
 import ThemesBarList from '../../components/stats/ThemesBarList';
 import AgencesRankingTable from '../../components/stats/AgencesRankingTable';
+import { LIBELLE_SCORE_FIABILISE } from '../../utils/scoreFiabilise';
 import AlertesSyntheseCard from '../../components/stats/AlertesSyntheseCard';
 import AiInsightsSummary from '../../components/stats/AiInsightsSummary';
 import type { AgenceCarte } from '../../components/map/AgencesMap';
@@ -265,7 +266,7 @@ export default function StatsCXView() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <StatsSectionCard
                 title="Classement des agences"
-                subtitle="Comparaison par score fiabilisé, satisfaction, avis pris en charge et avis critiques"
+                subtitle={`Comparaison par ${LIBELLE_SCORE_FIABILISE.toLowerCase()}, satisfaction, avis pris en charge et avis critiques`}
               >
                 <AgencesRankingTable
                   agences={data.agences_ranking}

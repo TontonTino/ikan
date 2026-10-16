@@ -49,6 +49,17 @@ class AlerteResponse(BaseModel):
     ecart_seuil: float = 0.0
 
 
+class AgenceSousSeuilResponse(BaseModel):
+    """Agence actuellement sous son seuil (CX Manager). Champs additifs de GET /alertes, `alertes_seuil` est inchangé."""
+    agence_id: UUID
+    agence_nom: str
+    taux_actuel: float
+    seuil: float
+    ecart_seuil: float          # points sous le seuil (> 0)
+    depuis_plus_de_48h: bool    # restée sous le seuil en continu pendant 48 h : c'est ce qui déclenche l'alerte du CX Manager
+    gravite: GraviteAlerte = "important"
+
+
 class AlerteFeedbackResponse(BaseModel):
     feedback_id: UUID
     agence_id: UUID
@@ -64,6 +75,8 @@ class AlerteFeedbackResponse(BaseModel):
 class AlertesResponse(BaseModel):
     alertes_seuil: List[AlerteResponse]
     alertes_feedback: List[AlerteFeedbackResponse]
+    # Champ additif (CX Manager) : toutes les agences ACTUELLEMENT sous leur seuil, y compris depuis moins de 48 h. Vide sinon.
+    agences_sous_seuil: List[AgenceSousSeuilResponse] = []
     # False quand le forfait de l'organisation n'inclut pas les alertes : les listes sont alors vides
     # parce que la fonctionnalité est indisponible, PAS parce qu'il n'y a rien à signaler.
     alertes_incluses: bool = True
@@ -73,12 +86,11 @@ class SeuilUpdate(BaseModel):
     seuil_alerte: SeuilAlerte
 
 
-def _calculer_alertes_seuil(db: Session, current_user: Utilisateur) -> List[AlerteResponse]:
+def _evaluer_agences_seuil(db: Session, current_user: Utilisateur):
     """
-    Alertes de seuil de satisfaction par agence (fenêtre glissante de 7 jours, au moins 3 avis).
-    - Agency Manager (son agence) : IMMÉDIAT, dès que la satisfaction est sous le seuil.
-    - CX Manager (agences actives de son organisation) : uniquement si la satisfaction est restée sous le
-      seuil EN CONTINU pendant DUREE_PERSISTANCE_SEUIL_CX (48 h) — voir app/services/alertes_seuil.py.
+    Satisfaction glissante (7 jours, au moins 3 avis) de chaque agence du périmètre de l'utilisateur.
+    Retourne (instant, pour_cx, [(agence, avis, taux)]) ; les agences sans assez d'avis (taux None) sont omises.
+    - Agency Manager : son agence. - CX Manager : agences ACTIVES de son organisation (jamais celles d'une autre).
     """
     maintenant = datetime.now(timezone.utc)
     pour_cx = current_user.role != UserRole.AGENCY_MANAGER
@@ -91,7 +103,7 @@ def _calculer_alertes_seuil(db: Session, current_user: Utilisateur) -> List[Aler
             Agence.active == True,
         ).all()
     if not agences:
-        return []
+        return maintenant, pour_cx, []
 
     # Une seule requête : les avis nécessaires à la fenêtre de 7 jours, en remontant de 48 h pour le CX Manager.
     debut_donnees = maintenant - FENETRE_SATISFACTION - (DUREE_PERSISTANCE_SEUIL_CX if pour_cx else timedelta(0))
@@ -108,13 +120,27 @@ def _calculer_alertes_seuil(db: Session, current_user: Utilisateur) -> List[Aler
     for agence_id, date_soumission, note in lignes:
         avis_par_agence.setdefault(agence_id, []).append((en_utc(date_soumission), note))
 
-    alertes: List[AlerteResponse] = []
+    evaluations = []
     for agence in agences:
         avis = avis_par_agence.get(agence.id, [])
         _, taux = satisfaction_a(avis, maintenant)
         if taux is None:
             continue  # Pas assez de données pour déclencher une alerte
+        evaluations.append((agence, avis, taux))
+    return maintenant, pour_cx, evaluations
 
+
+def _calculer_alertes_seuil(db: Session, current_user: Utilisateur) -> List[AlerteResponse]:
+    """
+    Alertes de seuil de satisfaction par agence (fenêtre glissante de 7 jours, au moins 3 avis).
+    - Agency Manager (son agence) : IMMÉDIAT, dès que la satisfaction est sous le seuil.
+    - CX Manager (agences actives de son organisation) : uniquement si la satisfaction est restée sous le
+      seuil EN CONTINU pendant DUREE_PERSISTANCE_SEUIL_CX (48 h) — voir app/services/alertes_seuil.py.
+    """
+    maintenant, pour_cx, evaluations = _evaluer_agences_seuil(db, current_user)
+
+    alertes: List[AlerteResponse] = []
+    for agence, avis, taux in evaluations:
         if pour_cx:
             sous_le_seuil, _ = sous_seuil_en_continu(avis, agence.seuil_alerte, maintenant)
             if not sous_le_seuil:
@@ -140,6 +166,34 @@ def _calculer_alertes_seuil(db: Session, current_user: Utilisateur) -> List[Aler
         ))
 
     return alertes
+
+
+def _calculer_agences_sous_seuil(db: Session, current_user: Utilisateur) -> List[AgenceSousSeuilResponse]:
+    """
+    CX Manager : les agences ACTUELLEMENT sous leur seuil (satisfaction glissante de 7 jours, au moins 3 avis, strictement sous le
+    seuil de l'agence), la plus en difficulté d'abord. `depuis_plus_de_48h` = restée sous le seuil en continu pendant 48 h (même
+    règle que l'alerte). Une agence exactement au seuil n'est pas sous son seuil. Vide pour un Agency Manager.
+    """
+    if current_user.role == UserRole.AGENCY_MANAGER:
+        return []
+    maintenant, _, evaluations = _evaluer_agences_seuil(db, current_user)
+
+    agences_sous_seuil: List[AgenceSousSeuilResponse] = []
+    for agence, avis, taux in evaluations:
+        if not taux < agence.seuil_alerte:
+            continue
+        persistante, _ = sous_seuil_en_continu(avis, agence.seuil_alerte, maintenant)
+        agences_sous_seuil.append(AgenceSousSeuilResponse(
+            agence_id=agence.id,
+            agence_nom=agence.nom,
+            taux_actuel=taux,
+            seuil=agence.seuil_alerte,
+            ecart_seuil=float(ecart_sous_le_seuil(taux, agence.seuil_alerte)),
+            depuis_plus_de_48h=persistante,
+            gravite=gravite_alerte_seuil(taux, agence.seuil_alerte),
+        ))
+    agences_sous_seuil.sort(key=lambda a: (-a.ecart_seuil, a.agence_nom.lower()))
+    return agences_sous_seuil
 
 
 def _raison_alerte_feedback(note: int, sentiment) -> "str | None":
@@ -225,6 +279,7 @@ def list_alertes(
     return AlertesResponse(
         alertes_seuil=_calculer_alertes_seuil(db, current_user),
         alertes_feedback=_calculer_alertes_feedback(db, current_user),
+        agences_sous_seuil=_calculer_agences_sous_seuil(db, current_user),
     )
 
 

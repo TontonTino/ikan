@@ -8,7 +8,9 @@ import { normaliserAlertes, type AlertesSiege } from './siegeData';
 import type { Source } from './useSiegeData';
 
 const alerte = (id: string): Alerte => ({ agence_id: id, agence_nom: `Agence ${id}`, taux_actuel: 50, seuil: 70, message: 'sous le seuil' });
-const ok = (items: Alerte[], incluses: boolean): Source<AlertesSiege> => ({ status: 'ok', data: { items, incluses } });
+const sousSeuilDe = (items: Alerte[]) =>
+  items.map((a) => ({ agence_id: a.agence_id, agence_nom: a.agence_nom, taux_actuel: a.taux_actuel, seuil: a.seuil, ecart_seuil: a.seuil - a.taux_actuel, depuis_plus_de_48h: true, gravite: undefined }));
+const ok = (items: Alerte[], incluses: boolean): Source<AlertesSiege> => ({ status: 'ok', data: { items, incluses, sousSeuil: sousSeuilDe(items) } });
 
 const kpis = (alertes: Source<AlertesSiege>) =>
   renderToStaticMarkup(
@@ -35,13 +37,13 @@ const surveillance = (alertesIncluses?: boolean) =>
 
 describe('normaliserAlertes — alertes_incluses de GET /alertes', () => {
   it('absent ou vrai : incluses (valeur par défaut inchangée)', () => {
-    expect(normaliserAlertes({ alertes_seuil: [alerte('a1')] })).toEqual({ items: [alerte('a1')], incluses: true });
+    expect(normaliserAlertes({ alertes_seuil: [alerte('a1')] })).toEqual({ items: [alerte('a1')], incluses: true, sousSeuil: sousSeuilDe([alerte('a1')]) });
     expect(normaliserAlertes({ alertes_seuil: [], alertes_incluses: true }).incluses).toBe(true);
-    expect(normaliserAlertes(undefined)).toEqual({ items: [], incluses: true });
+    expect(normaliserAlertes(undefined)).toEqual({ items: [], incluses: true, sousSeuil: [] });
   });
 
   it('faux : non incluses, la liste vide ne veut pas dire « aucune alerte »', () => {
-    expect(normaliserAlertes({ alertes_seuil: [], alertes_incluses: false })).toEqual({ items: [], incluses: false });
+    expect(normaliserAlertes({ alertes_seuil: [], alertes_incluses: false })).toEqual({ items: [], incluses: false, sousSeuil: [] });
   });
 });
 
