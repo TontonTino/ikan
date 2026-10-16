@@ -441,12 +441,34 @@ export interface EvolutionPoint {
   negatifs: number;
 }
 
+/** Part d'avis négatifs d'une période et son évolution (CX-05). `evolution_pts` > 0 : plus d'avis négatifs (défavorable). */
+export interface PartNegatifs {
+  negatifs: number;
+  total: number;
+  /** null si aucun avis sur la période (jamais 0). */
+  part: number | null;
+  total_precedent: number;
+  part_precedente: number | null;
+  /** Écart en points ; null sauf si statut_evolution = "ok". */
+  evolution_pts: number | null;
+  statut_evolution: 'ok' | 'insuffisant' | 'sans_avis';
+}
+
 export interface ThemeStatsDetail {
   theme: string;
   label: string;
   count: number;
   pourcentage: number;
   sentiment_predominant: string;
+  negatifs?: number;
+  part_negatifs?: PartNegatifs | null;
+}
+
+/** GET /feedbacks/themes/synthese : 20 thèmes au plus, sur tous les avis du périmètre et de la période. */
+export interface ThemesSynthese {
+  themes: ThemeStatsDetail[];
+  total_avis: number;
+  jours?: number | null;
 }
 
 export interface AgenceRankDetail {
@@ -462,6 +484,7 @@ export interface AgenceRankDetail {
   tendance_val?: string | null;
   tendance_positive: boolean;
   wilson_score: number;
+  part_negatifs?: PartNegatifs | null;
 }
 
 export interface AgenceImpacteeItem {
@@ -516,6 +539,8 @@ export interface StatsCXResponse {
   agences_ranking: AgenceRankDetail[];
   alertes_synthese: AlerteSyntheseDetail;
   insights_ia: InsightIADetail[];
+  part_negatifs?: PartNegatifs | null;
+  themes_total_avis?: number;
 }
 
 export interface StatsAgenceResponse {

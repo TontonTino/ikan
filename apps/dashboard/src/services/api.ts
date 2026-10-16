@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { ThemesSynthese } from '../types';
 
 const isLocal = typeof window !== 'undefined' && (
   window.location.hostname === 'localhost' ||
@@ -94,6 +95,9 @@ export const feedbacksApi = {
     offset?: number;
   }) => api.get('/feedbacks/', { params }),
   themes: (params?: { agence_id?: string }) => api.get<string[]>('/feedbacks/themes', { params }),
+  /** Thèmes agrégés côté serveur sur tous les avis correspondant aux filtres (jamais un échantillon). */
+  themesSynthese: (params?: { agence_id?: string; jours?: number; sentiment?: string; criticite?: string; note?: number; q?: string; discordance?: true }) =>
+    api.get<ThemesSynthese>('/feedbacks/themes/synthese', { params }),
   get: (feedbackId: string) =>
     api.get(`/feedbacks/${feedbackId}`),
   /** @deprecated Consultation sans effet de bord (le serveur ne modifie plus rien) : inutile côté interface. */

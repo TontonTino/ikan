@@ -174,6 +174,15 @@ def est_negatif(feedback, analyse=None) -> bool:
     return a_note_faible(feedback) or a_sentiment_negatif(analyse)
 
 
+def condition_negatif_sql():
+    """`est_negatif` en SQL (agrégats) : MÊME définition, note faible OU sentiment négatif ; exige un outer join sur AnalyseIA."""
+    from sqlalchemy import or_
+    from app.models.analyse_ia import AnalyseIA
+    from app.models.feedback import Feedback
+
+    return or_(Feedback.note <= NOTE_FAIBLE_MAX, AnalyseIA.sentiment == SentimentType.NEGATIF)
+
+
 def compter_negatifs(feedbacks, analyses_par_feedback: dict) -> int:
     """Nombre d'avis négatifs (chaque avis une seule fois) ; `analyses_par_feedback` : feedback.id -> AnalyseIA."""
     return sum(1 for f in feedbacks if est_negatif(f, analyses_par_feedback.get(f.id)))

@@ -5,7 +5,7 @@ import logging
 import uuid
 from uuid import UUID
 from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Response, BackgroundTasks
 from sqlalchemy import and_, or_
@@ -33,6 +33,8 @@ from app.models.demande_contact import DemandeContact
 from app.models.historique_feedback import HistoriqueFeedback
 from app.models.reponse_client import ReponseClient
 from app.models.enums import CriticiteType, SentimentType, UserRole
+from app.schemas.dashboard import ThemesSyntheseResponse
+from app.services.stats_negatifs_themes import MAX_THEMES, NON_CATEGORISE, agreger_themes, normaliser_theme, theme_normalise_sql
 from app.models.system_settings import SystemSettings, RETENTION_MOIS_DEFAUT
 from app.schemas.feedback import (
     FeedbackCreate,
@@ -420,10 +422,11 @@ def list_feedbacks(
     if note is not None:
         query = query.filter(Feedback.note == note)
     if theme:
-        if theme == "non_categorise":
-            query = query.filter((AnalyseIA.id.is_(None)) | (AnalyseIA.theme_principal.is_(None)) | (AnalyseIA.theme_principal == ""))
-        else:
-            query = query.filter(AnalyseIA.theme_principal == theme)
+        # Même clé canonique que les statistiques (casse et espaces ignorés) : un clic sur un thème retrouve les mêmes avis.
+        cle_theme = normaliser_theme(theme)
+        if cle_theme is None:
+            raise HTTPException(status_code=422, detail="Thème invalide.")
+        query = query.filter(theme_normalise_sql() == cle_theme)
     if sentiment:
         query = query.filter(AnalyseIA.sentiment == sentiment)
     if discordance is True:
@@ -452,9 +455,9 @@ def list_feedback_themes(
     agence_id: Optional[UUID] = Query(None),
 ):
     """Catalogue de thèmes distincts dans le périmètre RBAC, indépendant de la pagination."""
-    query = db.query(AnalyseIA.theme_principal).join(Feedback, AnalyseIA.feedback_id == Feedback.id).join(
+    query = db.query(theme_normalise_sql()).select_from(AnalyseIA).join(Feedback, AnalyseIA.feedback_id == Feedback.id).join(
         QRCode, Feedback.qr_code_id == QRCode.id
-    ).filter(AnalyseIA.theme_principal.isnot(None), AnalyseIA.theme_principal != "")
+    ).filter(theme_normalise_sql() != NON_CATEGORISE)
     if current_user.role == UserRole.AGENCY_MANAGER:
         query = query.filter(QRCode.agence_id == current_user.agence_id)
     elif current_user.role == UserRole.CX_MANAGER:
@@ -466,7 +469,7 @@ def list_feedback_themes(
         db.query(Feedback.id)
         .join(QRCode, Feedback.qr_code_id == QRCode.id)
         .outerjoin(AnalyseIA, AnalyseIA.feedback_id == Feedback.id)
-        .filter((AnalyseIA.id.is_(None)) | (AnalyseIA.theme_principal.is_(None)) | (AnalyseIA.theme_principal == ""))
+        .filter(theme_normalise_sql() == NON_CATEGORISE)
     )
     if current_user.role == UserRole.AGENCY_MANAGER:
         uncategorised = uncategorised.filter(QRCode.agence_id == current_user.agence_id)
@@ -477,8 +480,63 @@ def list_feedback_themes(
         if agence_id:
             uncategorised = uncategorised.filter(QRCode.agence_id == agence_id)
     if uncategorised.first():
-        themes.add("non_categorise")
+        themes.add(NON_CATEGORISE)
     return sorted(themes)
+
+
+@router.get("/themes/synthese", response_model=ThemesSyntheseResponse)
+def synthese_themes(
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_feedback_viewer_user),
+    agence_id: Optional[UUID] = Query(None),
+    jours: Optional[int] = Query(None, ge=1, le=365, description="Période en jours ; absent = toute la période."),
+    sentiment: Optional[SentimentType] = Query(None),
+    criticite: Optional[str] = Query(None, description="faible, moyenne, elevee, critique, ou non_evaluee (avis sans analyse)."),
+    note: Optional[int] = Query(None, ge=1, le=5),
+    discordance: Optional[bool] = Query(None),
+    q: Optional[str] = Query(None, max_length=LONGUEUR_MAX_RECHERCHE),
+    limit: int = Query(MAX_THEMES, ge=1, le=MAX_THEMES),
+):
+    """
+    Thèmes des avis (onglet « Thèmes » de la liste), agrégés en SQL sur TOUS les avis correspondant aux filtres — mêmes filtres et
+    même périmètre RBAC que la liste, jamais un échantillon. 20 thèmes au plus ; `total_avis` = avis pris en compte (thème « non
+    catégorisé » inclus). Avec `jours`, part d'avis négatifs et évolution par rapport à la période précédente de même durée.
+    """
+    recherche = valider_recherche(q)
+    if criticite is not None and criticite != "non_evaluee" and criticite not in {c.value for c in CriticiteType}:
+        raise HTTPException(status_code=422, detail="Gravité inconnue.")
+    criteres: list = []
+    if current_user.role == UserRole.AGENCY_MANAGER:
+        criteres.append(QRCode.agence_id == current_user.agence_id)
+    elif current_user.role == UserRole.CX_MANAGER:
+        criteres.append(Agence.organisation_id == current_user.organisation_id)
+        if agence_id:
+            criteres.append(QRCode.agence_id == agence_id)
+    else:
+        criteres.append(Agence.id.is_(None))  # rôle sans accès aux avis : périmètre vide, jamais « tout »
+    if sentiment:
+        criteres.append(AnalyseIA.sentiment == sentiment)
+    if criticite == "non_evaluee":
+        criteres.append(AnalyseIA.id.is_(None))
+    elif criticite:
+        criteres.append(AnalyseIA.criticite == CriticiteType(criticite))
+    if note is not None:
+        criteres.append(Feedback.note == note)
+    if discordance is True:
+        criteres.append(AnalyseIA.discordance_detectee.is_(True))
+    elif discordance is False:
+        criteres.append(or_(AnalyseIA.id.is_(None), AnalyseIA.discordance_detectee.is_(False)))
+    if recherche:
+        criteres.append(condition_recherche(db.get_bind().dialect.name, Feedback.commentaire, recherche))
+
+    maintenant = datetime.now(timezone.utc)
+    debut = maintenant - timedelta(days=jours) if jours else None
+    debut_prec = debut - timedelta(days=jours) if jours else None
+    themes, total = agreger_themes(
+        db, criteres, debut=debut, fin=maintenant if jours else None, debut_prec=debut_prec, fin_prec=debut,
+        inclure_non_categorise=True, limite=limit,
+    )
+    return ThemesSyntheseResponse(themes=themes, total_avis=total, jours=jours)
 
 
 @router.get("/demandes-contact", response_model=List[DemandeContactListItem])

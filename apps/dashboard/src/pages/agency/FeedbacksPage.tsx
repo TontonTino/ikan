@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { feedbacksApi, agencesApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
-import type { Feedback, Agence, StatutTraitement } from '../../types';
+import type { Feedback, Agence, StatutTraitement, ThemesSynthese } from '../../types';
 import FeedbackTreatmentModal from '../../components/feedbacks/FeedbackTreatmentModal';
 import { AvisCarteMobile, SignauxAvis, STATUT_BADGES, formatDateAvis } from '../../components/feedbacks/avisAffichage';
 import TabsNavigation from '../../components/ui/TabsNavigation';
@@ -11,34 +11,21 @@ import SkeletonBlock from '../../components/ui/SkeletonBlock';
 import SectionHeading from '../../components/ui/SectionHeading';
 import { MessageSquareIcon, SearchIcon, FilterIcon, StoreIcon, AlertTriangleIcon, ClockIcon, TagIcon, XCloseIcon } from '../../components/common/Icons';
 import { themeLabel } from '../../utils/themeLabels';
-import { normalizeCriticite, normalizeSentiment } from '../../utils/triageAvis';
+import { DEFINITION_NEGATIF, PartNegatifsTexte } from '../../utils/partNegatifs';
 import { useValeurDifferee } from '../../utils/debounce';
 import {
   FILTRES_INITIAUX, LONGUEUR_MAX_RECHERCHE, TAILLE_PAGE, filtresActifs as listerFiltresActifs, libelleTotal, nombrePages,
-  parametresApi, rechercheNormalisee, reduireFiltres, type FiltresAvis, type OngletAvis,
+  parametresApi, parametresThemes, periodeDepuisUrl, rechercheNormalisee, reduireFiltres, type FiltresAvis, type OngletAvis,
 } from './avisFiltres';
 import EtatListeAvis from './EtatListeAvis';
 import './FeedbacksPage.css';
 
-// Les thèmes (onglet « Thèmes ») sont agrégés sur les avis les plus récents correspondant aux filtres, au plus ECHANTILLON_THEMES.
-const ECHANTILLON_THEMES = 200;
-
 const TABS_VALIDES: readonly OngletAvis[] = ['tous', 'a_traiter', 'critiques', 'thematiques'];
 
 // Contexte de navigation (liens depuis les tableaux de bord) : valeurs reconnues, tout le reste est ignoré.
-const PERIODES_URL = ['7', '30', '90', '365'] as const;
-const periodeDepuisUrl = (valeur: string | null) => (valeur && (PERIODES_URL as readonly string[]).includes(valeur) ? valeur : 'all');
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const identifiantDepuisUrl = (valeur: string | null) => (valeur && UUID_RE.test(valeur) ? valeur : null);
 const ongletDepuisUrl = (valeur: string | null): OngletAvis => (TABS_VALIDES.includes(valeur as OngletAvis) ? (valeur as OngletAvis) : 'tous');
-
-const sentimentDominant = (positifs: number, negatifs: number, neutres: number) => {
-  const sentiments = [['positif', positifs], ['négatif', negatifs], ['neutre', neutres]] as const;
-  const maximum = Math.max(positifs, negatifs, neutres);
-  if (maximum === 0) return 'non évalué';
-  const dominants = sentiments.filter(([, count]) => count === maximum).map(([label]) => label);
-  return dominants.length > 1 ? `à égalité (${dominants.join(', ')})` : dominants[0];
-};
 
 interface FeedbacksPageProps {
   /**
@@ -69,7 +56,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
   const [avis, setAvis] = useState<Feedback[]>([]);
   const [total, setTotal] = useState(0);
   const [compteurs, setCompteurs] = useState<{ tous: number; a_traiter: number; critiques: number } | null>(null);
-  const [echantillon, setEchantillon] = useState<Feedback[]>([]);
+  const [synthese, setSynthese] = useState<ThemesSynthese | null>(null);
   const [themesDisponibles, setThemesDisponibles] = useState<string[]>([]);
   const [agences, setAgences] = useState<Agence[]>([]);
   const [loading, setLoading] = useState(true);
@@ -147,29 +134,24 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
     return () => { cancelled = true; };
   }, [cleCompteurs, reloadToken]);
 
-  // ── Onglet « Thèmes » : échantillon des avis les plus récents correspondant aux filtres ──
+  // ── Onglet « Thèmes » : agrégat serveur sur TOUS les avis correspondant aux filtres (sauf le thème lui-même) ──
+  const cleThemes = JSON.stringify(parametresThemes(filtres, { agenceFixe: agenceId }));
   useEffect(() => {
     if (filtres.onglet !== 'thematiques') return;
     let cancelled = false;
     setLoading(true);
     setLoadError(false);
-    feedbacksApi.list(parametresApi(filtres, { agenceFixe: agenceId, onglet: 'tous', limit: ECHANTILLON_THEMES, offset: 0 }))
-      .then((res) => {
-        if (cancelled) return;
-        const liste = (res?.data || []) as Feedback[];
-        const entete = Number(res?.headers?.['x-total-count']);
-        setEchantillon(liste);
-        setTotal(Number.isFinite(entete) ? entete : liste.length);
-      })
+    feedbacksApi.themesSynthese(parametresThemes(filtres, { agenceFixe: agenceId }))
+      .then((res) => { if (!cancelled) setSynthese(res.data); })
       .catch((err) => {
         console.error('Erreur chargement des thèmes:', err);
         if (cancelled) return;
-        setEchantillon([]);
+        setSynthese(null);
         setLoadError(true);
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [filtres.onglet, cleCompteurs, reloadToken]);
+  }, [filtres.onglet, cleThemes, reloadToken]);
 
   // ── Catalogue des thèmes et liste des agences ──
   useEffect(() => {
@@ -219,26 +201,8 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
     if (avisModifie.current) { avisModifie.current = false; setReloadToken((t) => t + 1); }
   };
 
-  // Thèmes réellement présents dans l'échantillon (catégories libres par agence, plus les anciennes clés IA).
-  const themesAggregated = useMemo(() => {
-    const map: Record<string, { theme: string; label: string; count: number; positifs: number; negatifs: number; neutres: number; criticites: Record<string, number>; agences: Set<string>; verbatims: string[] }> = {};
-    echantillon.forEach((f) => {
-      const tKey = f.analyse_ia?.theme_principal || 'non_categorise';
-      if (!map[tKey]) {
-        map[tKey] = { theme: tKey, label: tKey === 'non_categorise' ? 'Non catégorisé' : themeLabel(tKey), count: 0, positifs: 0, negatifs: 0, neutres: 0, criticites: {}, agences: new Set(), verbatims: [] };
-      }
-      map[tKey].count += 1;
-      const s = normalizeSentiment(f.analyse_ia?.sentiment);
-      if (s === 'positif') map[tKey].positifs += 1;
-      if (s === 'negatif') map[tKey].negatifs += 1;
-      if (s === 'neutre') map[tKey].neutres += 1;
-      const criticite = normalizeCriticite(f.analyse_ia?.criticite);
-      if (criticite) map[tKey].criticites[criticite] = (map[tKey].criticites[criticite] || 0) + 1;
-      if (f.agence_nom) map[tKey].agences.add(f.agence_nom);
-      if (f.commentaire && map[tKey].verbatims.length < 3) map[tKey].verbatims.push(f.commentaire);
-    });
-    return Object.values(map).sort((a, b) => b.count - a.count);
-  }, [echantillon]);
+  const themes = synthese?.themes ?? [];
+  const totalThemes = synthese?.total_avis ?? 0;
 
   // ── Filtres actifs ──
   const activeFilters = listerFiltresActifs(filtres, {
@@ -265,7 +229,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
     { id: 'tous', label: 'Tous les avis', icon: <MessageSquareIcon size={16} />, badge: compteurs ? compteurs.tous : undefined },
     { id: 'a_traiter', label: 'À traiter', icon: <ClockIcon size={16} />, badge: compteurs ? compteurs.a_traiter : undefined, badgeColor: compteurs && compteurs.a_traiter > 0 ? ('red' as const) : ('default' as const) },
     { id: 'critiques', label: 'À surveiller', icon: <AlertTriangleIcon size={16} />, badge: compteurs ? compteurs.critiques : undefined, badgeColor: compteurs && compteurs.critiques > 0 ? ('red' as const) : ('default' as const) },
-    { id: 'thematiques', label: 'Thèmes', icon: <TagIcon size={16} />, badge: filtres.onglet === 'thematiques' && !loading ? themesAggregated.length : undefined },
+    { id: 'thematiques', label: 'Thèmes', icon: <TagIcon size={16} />, badge: filtres.onglet === 'thematiques' && !loading && !loadError ? themes.length : undefined },
   ];
 
   const th = { textAlign: 'left' as const, padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase' as const };
@@ -320,7 +284,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
               <div className="feedbacks-filter-controls">
                 <label className="feedbacks-select-label">Période
                   <select value={filtres.periode} onChange={(e) => dispatch({ type: 'definir', champ: 'periode', valeur: e.target.value })} aria-label="Filtrer par période">
-                    <option value="all">Toutes les dates</option><option value="today">Aujourd'hui</option><option value="7">7 derniers jours</option><option value="30">30 derniers jours</option><option value="90">90 derniers jours</option><option value="365">12 derniers mois</option>
+                    <option value="all">Toutes les dates</option><option value="today">Aujourd'hui</option><option value="7">7 derniers jours</option><option value="14">14 derniers jours</option><option value="30">30 derniers jours</option><option value="90">90 derniers jours</option><option value="365">12 derniers mois</option>
                   </select>
                 </label>
                 <label className="feedbacks-select-label">Note
@@ -476,7 +440,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
         </section>
       )}
 
-      {/* ── ONGLET 4 : THÈMES (échantillon des avis les plus récents) ── */}
+      {/* ── ONGLET 4 : THÈMES (agrégat serveur sur tous les avis correspondant aux filtres) ── */}
       {filtres.onglet === 'thematiques' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div id="feedbacks-themes"><SectionHeading>Thèmes des avis</SectionHeading></div>
@@ -485,38 +449,33 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
               {[0, 1, 2].map((i) => <SkeletonBlock key={i} height={150} radius="var(--radius-xl)" />)}
             </div>
           )}
-          {!loading && loadError && <EmptyState illustration="no-data" title="Impossible de charger les avis" message="Une erreur est survenue lors du chargement des thèmes." action={{ label: 'Réessayer', onClick: () => setReloadToken((token) => token + 1) }} />}
-          {!loading && !loadError && themesAggregated.length === 0 && (
-            <EmptyState illustration="no-data" title="Aucun thème disponible" message={total === 0 ? 'Aucun avis dans ce périmètre.' : 'Aucun thème analysé pour ces avis.'} />
+          {!loading && loadError && <EmptyState illustration="no-data" title="Impossible de charger les thèmes" message="Une erreur est survenue lors du chargement des thèmes." action={{ label: 'Réessayer', onClick: () => setReloadToken((token) => token + 1) }} />}
+          {!loading && !loadError && themes.length === 0 && (
+            <EmptyState illustration="no-data" title="Aucun thème disponible" message={totalThemes === 0 ? 'Aucun avis dans ce périmètre.' : 'Aucun thème analysé pour ces avis.'} />
           )}
-          {!loading && !loadError && total > 0 && (
+          {!loading && !loadError && totalThemes > 0 && (
             <p role="status" style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.76rem' }}>
-              {echantillon.length < total
-                ? `Analyse basée sur les ${echantillon.length} avis les plus récents, sur ${total} correspondant aux filtres.`
-                : `Analyse basée sur les ${total} avis correspondant aux filtres.`}
+              {`Analyse basée sur les ${totalThemes} avis correspondant aux filtres, sur toute la période choisie (20 thèmes au plus). `}
+              {DEFINITION_NEGATIF}
             </p>
           )}
           {!loadError && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: '16px' }}>
-              {!loading && themesAggregated.map((thm) => (
+              {!loading && themes.map((thm) => (
                 <div key={thm.theme} style={{ background: '#FFFFFF', borderRadius: '20px', padding: '20px 24px', border: '1px solid #E8ECE6', boxShadow: '0 2px 10px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '14px' }}>
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <span style={{ fontWeight: 800, fontSize: '0.92rem', color: '#02302D' }}>{thm.label}</span>
-                      <span style={{ background: '#02302D', color: '#FFFFFF', padding: '2px 8px', borderRadius: '9999px', fontSize: '0.72rem', fontWeight: 800 }}>{thm.count} avis</span>
+                      <span style={{ fontWeight: 800, fontSize: '0.92rem', color: '#02302D' }}>{thm.theme === 'non_categorise' ? 'Non catégorisé' : themeLabel(thm.theme)}</span>
+                      <span style={{ background: '#02302D', color: '#FFFFFF', padding: '2px 8px', borderRadius: '9999px', fontSize: '0.72rem', fontWeight: 800 }}>{thm.count} avis ({thm.pourcentage.toLocaleString('fr-FR')} %)</span>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                      <span style={{ background: '#EBF6ED', color: '#3C7730', padding: '2px 6px', borderRadius: '6px', fontSize: '0.70rem', fontWeight: 700 }}>{thm.positifs} positifs</span>
-                      <span style={{ background: '#FEE2E2', color: '#B91C1C', padding: '2px 6px', borderRadius: '6px', fontSize: '0.70rem', fontWeight: 700 }}>{thm.negatifs} négatifs</span>
-                      <span style={{ color: '#64748B', fontSize: '0.70rem', marginLeft: 'auto', alignSelf: 'center' }}>📍 {thm.agences.size} agences concernées</span>
-                    </div>
-                    <p style={{ margin: '0 0 10px', color: '#475569', fontSize: '0.76rem' }}>
-                      Ton dominant : {sentimentDominant(thm.positifs, thm.negatifs, thm.neutres)}
-                      {Object.keys(thm.criticites).length > 0 ? ` · Gravité la plus fréquente : ${{ critique: 'critique', elevee: 'élevée', moyenne: 'moyenne', faible: 'faible' }[Object.entries(thm.criticites).sort((a, b) => b[1] - a[1])[0][0]] || Object.entries(thm.criticites).sort((a, b) => b[1] - a[1])[0][0]}` : ' · Aucune gravité disponible'}
+                    <p style={{ margin: '0 0 8px', color: '#475569', fontSize: '0.78rem' }}>
+                      {thm.part_negatifs
+                        ? <PartNegatifsTexte pn={thm.part_negatifs} />
+                        : <><strong>{thm.negatifs ?? 0}</strong> avis négatif{(thm.negatifs ?? 0) > 1 ? 's' : ''} sur {thm.count}</>}
                     </p>
-                    {thm.verbatims.length > 0 && (
-                      <div style={{ background: '#F8FAFC', borderRadius: '10px', padding: '10px 12px', fontSize: '0.78rem', color: '#475569', fontStyle: 'italic', lineHeight: 1.4 }}>"{thm.verbatims[0]}"</div>
-                    )}
+                    <p style={{ margin: 0, color: '#475569', fontSize: '0.76rem' }}>
+                      Ton dominant : {{ positif: 'positif', neutre: 'neutre', negatif: 'négatif' }[thm.sentiment_predominant] ?? 'non évalué'}
+                    </p>
                   </div>
                   <button type="button" onClick={() => { dispatch({ type: 'definir', champ: 'theme', valeur: thm.theme }); dispatch({ type: 'definir', champ: 'onglet', valeur: 'tous' }); }}
                     className="btn-primary" style={{ padding: '8px', fontSize: '0.76rem', borderRadius: '10px', width: '100%', justifyContent: 'center', minHeight: 44 }}>

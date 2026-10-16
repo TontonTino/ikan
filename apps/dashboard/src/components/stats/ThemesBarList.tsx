@@ -1,12 +1,16 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import type { ThemeStatsDetail } from '../../types';
 import type { SentimentType } from '../../types';
 import { SENTIMENT_LABELS } from '../../utils/vocabulaire';
 import { themeLabel } from '../../utils/themeLabels';
+import { PartNegatifsTexte } from '../../utils/partNegatifs';
 
 interface ThemesBarListProps {
   themes: ThemeStatsDetail[];
   maxItems?: number;
+  /** Lien vers les avis d'un thème (liste « Avis du réseau » filtrée) : le nom du thème devient cliquable. */
+  lienTheme?: (theme: ThemeStatsDetail) => string;
 }
 
 const SENTIMENT_DOT_COLOR: Record<string, string> = {
@@ -15,7 +19,7 @@ const SENTIMENT_DOT_COLOR: Record<string, string> = {
   negatif: '#DC2626',
 };
 
-export default function ThemesBarList({ themes, maxItems = 6 }: ThemesBarListProps) {
+export default function ThemesBarList({ themes, maxItems = 6, lienTheme }: ThemesBarListProps) {
   const displayThemes = themes.slice(0, maxItems);
 
   if (!displayThemes || displayThemes.length === 0) {
@@ -61,7 +65,16 @@ export default function ThemesBarList({ themes, maxItems = 6 }: ThemesBarListPro
                   }}
                   title={`Ton dominant : ${SENTIMENT_LABELS[item.sentiment_predominant as SentimentType] ?? item.sentiment_predominant}`}
                 />
-                <span style={{ fontWeight: 600, color: '#0F172A' }}>{/^[a-z0-9_]+$/.test(item.label ?? '') || !item.label ? themeLabel(item.label || item.theme) : item.label}</span>
+                {(() => {
+                  const libelle = /^[a-z0-9_]+$/.test(item.label ?? '') || !item.label ? themeLabel(item.label || item.theme) : item.label;
+                  return lienTheme ? (
+                    <Link to={lienTheme(item)} style={{ fontWeight: 600, color: '#0F172A', textDecoration: 'underline', textUnderlineOffset: 3 }} aria-label={`Voir les avis du thème ${libelle}`}>
+                      {libelle}
+                    </Link>
+                  ) : (
+                    <span style={{ fontWeight: 600, color: '#0F172A' }}>{libelle}</span>
+                  );
+                })()}
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -71,6 +84,12 @@ export default function ThemesBarList({ themes, maxItems = 6 }: ThemesBarListPro
                 </span>
               </div>
             </div>
+
+            {item.part_negatifs && (
+              <div style={{ fontSize: '0.76rem', color: '#475569', paddingLeft: '15px' }}>
+                <PartNegatifsTexte pn={item.part_negatifs} />
+              </div>
+            )}
 
             {/* Progress Bar Container */}
             <div

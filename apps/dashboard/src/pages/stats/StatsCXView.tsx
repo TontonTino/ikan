@@ -11,6 +11,8 @@ import SentimentDonutChart from '../../components/stats/SentimentDonutChart';
 import ThemesBarList from '../../components/stats/ThemesBarList';
 import AgencesRankingTable from '../../components/stats/AgencesRankingTable';
 import { LIBELLE_SCORE_FIABILISE } from '../../utils/scoreFiabilise';
+import { DEFINITION_NEGATIF, PartNegatifsTexte } from '../../utils/partNegatifs';
+import { lienAvisReseau } from '../../utils/liensAgence';
 import AlertesSyntheseCard from '../../components/stats/AlertesSyntheseCard';
 import AiInsightsSummary from '../../components/stats/AiInsightsSummary';
 import type { AgenceCarte } from '../../components/map/AgencesMap';
@@ -176,6 +178,15 @@ export default function StatsCXView() {
           {activeTab === 'feedbacks' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <StatsSectionCard
+                title="Part d’avis négatifs"
+                subtitle={data.agence_filtree_nom ? `Agence ${data.agence_filtree_nom}, sur la période choisie` : 'Réseau, sur la période choisie'}
+              >
+                <div data-testid="part-negatifs-reseau" style={{ fontSize: '1.1rem' }}>
+                  <PartNegatifsTexte pn={data.part_negatifs} />
+                </div>
+                <p style={{ margin: '10px 0 0', fontSize: '0.76rem', color: '#64748B' }}>{DEFINITION_NEGATIF}</p>
+              </StatsSectionCard>
+              <StatsSectionCard
                 title="Avis critiques ou négatifs : reçus et pris en charge"
                 subtitle="Avis reçus comparés aux avis pris en charge par les agences"
               >
@@ -254,7 +265,15 @@ export default function StatsCXView() {
                 title="Thèmes les plus cités"
                 subtitle="Selon la catégorie choisie par le client dans le formulaire"
               >
-                <ThemesBarList themes={data.themes} maxItems={15} />
+                <ThemesBarList
+                  themes={data.themes}
+                  maxItems={20}
+                  lienTheme={(t) => lienAvisReseau({ theme: t.theme, jours, agenceId: selectedAgenceId })}
+                />
+                <p role="status" style={{ margin: '14px 0 0', fontSize: '0.76rem', color: '#64748B' }}>
+                  {`Basé sur ${data.themes_total_avis ?? 0} avis classés par thème sur la période (20 thèmes au plus). Cliquez sur un thème pour voir les avis correspondants. `}
+                  {DEFINITION_NEGATIF}
+                </p>
               </StatsSectionCard>
             </div>
           )}
