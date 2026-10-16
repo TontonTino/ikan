@@ -4,6 +4,7 @@ import { lienApercuAgence, lienAvis } from '../../utils/liensAgence';
 import type { Agence, Alerte, AlerteFeedback } from '../../types';
 import AgenceFilterSelect from '../../components/stats/AgenceFilterSelect';
 import AgencyRecommendations, { type RecoAffichee } from '../../components/agency/AgencyRecommendations';
+import RecommandationsParAgence from '../../components/agency/RecommandationsParAgence';
 import Alert from '../../components/ui/Alert';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -251,6 +252,7 @@ export default function PilotageAlertesActionsTab(props: Props) {
         onMarquerTraitee={onMarquerRecoTraitee}
         onLoadMore={onLoadMoreRecos}
         onRetry={onRetryRecos}
+        vueGroupee={!isAgencyManager ? <RecommandationsParAgence agenceId={selectedAgenceId} onModifiee={onRetryRecos} /> : undefined}
       />
     </div>
   );

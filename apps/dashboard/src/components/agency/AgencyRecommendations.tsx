@@ -60,13 +60,16 @@ interface Props {
   titre?: string;
   /** Affiche le lien « N actions à mener en cours » (défaut : oui). */
   afficherLienActions?: boolean;
+  /** Vue regroupée par agence (CX Manager) : si fournie, une bascule « Vue à plat / Par agence » apparaît ; la vue à plat reste la vue par défaut. */
+  vueGroupee?: React.ReactNode;
 }
 
 export default function AgencyRecommendations({
   recos, total, loadFailed, loading, loadingMore, actionsEnCours, onMarquerTraitee, onLoadMore, onRetry,
-  titre = 'Recommandations en attente', afficherLienActions = true,
+  titre = 'Recommandations en attente', afficherLienActions = true, vueGroupee,
 }: Props) {
   const [toutes, setToutes] = useState(false);
+  const [vue, setVue] = useState<'plat' | 'agence'>('plat');
   const triees = trierRecommandations(recos);
   const visibles = triees.slice(0, RECOMMANDATIONS_VISIBLES);
   const reste = recos.length - visibles.length;
@@ -84,7 +87,13 @@ export default function AgencyRecommendations({
         ) : undefined
       }
     >
-      {loadFailed && recos.length === 0 ? (
+      {vueGroupee && (
+        <div role="group" aria-label="Présentation des recommandations" style={{ display: 'flex', gap: 'var(--space-2)', margin: '0 0 var(--space-3)' }}>
+          <Button size="sm" variant={vue === 'plat' ? 'primary' : 'secondary'} aria-pressed={vue === 'plat'} onClick={() => setVue('plat')}>Vue à plat</Button>
+          <Button size="sm" variant={vue === 'agence' ? 'primary' : 'secondary'} aria-pressed={vue === 'agence'} onClick={() => setVue('agence')}>Par agence</Button>
+        </div>
+      )}
+      {vue === 'agence' && vueGroupee ? vueGroupee : loadFailed && recos.length === 0 ? (
         <Alert
           tone="warning"
           title="Impossible de charger les recommandations. Cela ne signifie pas qu’il n’y en a pas."

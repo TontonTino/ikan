@@ -110,6 +110,8 @@ const EVENEMENT_AGENCE_LABELS: Record<string, string> = {
   reponse_client: 'Réponse envoyée au client',
   demande_recontactee: 'Client recontacté',
   reouverture: 'Avis rouvert',
+  recommandation_traitee: 'Recommandation traitée',
+  recommandation_rouverte: 'Recommandation remise à traiter',
 };
 
 export function libelleEvenementAgence(code: string | null | undefined): string {
