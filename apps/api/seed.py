@@ -2,9 +2,15 @@
 Script d'initialisation (Seed) de la base de données IKAN AI.
 Permet d'injecter des données de démonstration réalistes pour les tests et la présentation.
 
-Utilisation :
-    python seed.py
+Utilisation (DÉVELOPPEMENT LOCAL uniquement, base jetable) :
+    python seed.py                          # base vide
+    python seed.py --confirmer-ecrasement   # base locale jetable DÉJÀ remplie : efface d'abord ses données
+
+Garde-fous : le seed refuse de s'exécuter si APP_ENV n'est pas « development » (donc jamais en production), et
+refuse si la base contient déjà des utilisateurs, des agences ou des organisations, sauf confirmation explicite.
+Il n'est JAMAIS lancé par le démarrage de l'API.
 """
+import argparse
 import sys
 import uuid
 import logging
@@ -31,7 +37,57 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("seed")
 
 
-def seed_database():
+# Mot de passe des comptes de démonstration : jamais affiché ni journalisé.
+MOT_DE_PASSE_DEMO = "Password123!"
+ENVIRONNEMENT_AUTORISE = "development"
+
+
+class SeedRefuse(RuntimeError):
+    """Refus d'exécuter le seed ; le message est destiné à l'utilisateur (en français, sans donnée sensible)."""
+
+
+def _verifier_environnement() -> None:
+    env = (settings.APP_ENV or "").strip().lower()
+    if env != ENVIRONNEMENT_AUTORISE:
+        raise SeedRefuse(
+            "Seed refusé : il n'est autorisé qu'en développement local (APP_ENV=development). "
+            "Cet environnement n'est pas un environnement de développement ; aucune donnée n'a été modifiée."
+        )
+
+
+def _compter_donnees_existantes() -> dict:
+    """Nombre d'utilisateurs, agences et organisations déjà en base (0 si les tables n'existent pas encore). Lecture seule."""
+    from sqlalchemy import func, inspect, select
+
+    inspecteur = inspect(engine)
+    comptes = {}
+    with engine.connect() as connexion:
+        for libelle, modele in (("utilisateurs", Utilisateur), ("agences", Agence), ("organisations", Organisation)):
+            table = modele.__table__
+            comptes[libelle] = (
+                connexion.execute(select(func.count()).select_from(table)).scalar() or 0
+                if inspecteur.has_table(table.name)
+                else 0
+            )
+    return comptes
+
+
+def _verifier_base(confirmer_ecrasement: bool) -> None:
+    comptes = _compter_donnees_existantes()
+    if sum(comptes.values()) > 0 and not confirmer_ecrasement:
+        raise SeedRefuse(
+            "Seed refusé : la base contient déjà des données "
+            f"({comptes['utilisateurs']} utilisateur(s), {comptes['agences']} agence(s), {comptes['organisations']} organisation(s)). "
+            "Le seed les EFFACERAIT avant d'en créer de nouvelles. Aucune donnée n'a été modifiée. "
+            "Pour une base locale jetable uniquement, relancez avec --confirmer-ecrasement."
+        )
+
+
+def seed_database(confirmer_ecrasement: bool = False):
+    # Gardes AVANT toute écriture (y compris la création des tables). Le seed n'est jamais lancé par le démarrage de l'API.
+    _verifier_environnement()
+    _verifier_base(confirmer_ecrasement)
+
     logger.info("=== Début du Seeding de la base de données IKAN AI ===")
     
     # Créer les tables si elles n'existent pas
@@ -40,7 +96,7 @@ def seed_database():
     db = SessionLocal()
 
     try:
-        # 1. Nettoyage si des données existent déjà
+        # 1. Nettoyage si des données existent déjà (atteignable seulement avec --confirmer-ecrasement, hors production)
         existing_org = db.query(Organisation).first()
         if existing_org:
             logger.info("Des données existent déjà. Nettoyage de la base de données...")
@@ -120,7 +176,7 @@ def seed_database():
 
         # 4. Création des Utilisateurs
         logger.info("Création des comptes utilisateurs...")
-        password_hash = get_password_hash("Password123!")
+        password_hash = get_password_hash(MOT_DE_PASSE_DEMO)
 
         users_data = [
             {
@@ -382,11 +438,11 @@ def seed_database():
 
         db.commit()
         logger.info("=== Seeding terminé avec succès ! ===")
-        logger.info("Comptes de démonstration prêts :")
-        logger.info("  - Admin : admin@ikanai.app / Password123!")
-        logger.info("  - CX Manager : cx@orange.tn / Password123!")
-        logger.info("  - Agency Manager (Tunis) : manager.tunis@orange.tn / Password123!")
-        logger.info("  - Agency Manager (Sousse) : manager.sousse@orange.tn / Password123!")
+        logger.info("Comptes de démonstration prêts (mot de passe : voir MOT_DE_PASSE_DEMO dans seed.py, non affiché) :")
+        logger.info("  - Admin : admin@ikanai.app")
+        logger.info("  - CX Manager : cx@orange.tn")
+        logger.info("  - Agency Manager (Tunis) : manager.tunis@orange.tn")
+        logger.info("  - Agency Manager (Sousse) : manager.sousse@orange.tn")
 
     except Exception as e:
         logger.error(f"Erreur durant le seeding : {e}")
@@ -396,5 +452,20 @@ def seed_database():
         db.close()
 
 
+def main(argv=None) -> int:
+    parseur = argparse.ArgumentParser(description="Données de démonstration IKAN AI (développement local uniquement).")
+    parseur.add_argument(
+        "--confirmer-ecrasement", action="store_true",
+        help="Base locale jetable DÉJÀ remplie : efface ses données avant de créer la démonstration (refusé en production).",
+    )
+    arguments = parseur.parse_args(argv)
+    try:
+        seed_database(confirmer_ecrasement=arguments.confirmer_ecrasement)
+    except SeedRefuse as refus:
+        print(str(refus), file=sys.stderr)
+        return 1
+    return 0
+
+
 if __name__ == "__main__":
-    seed_database()
+    sys.exit(main())

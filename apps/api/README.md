@@ -27,6 +27,20 @@ TEST_DATABASE_URL=postgresql://postgres:test@localhost:5433/postgres pytest test
 docker stop ikan-schema-check
 ```
 
+## Données de démonstration (développement local uniquement)
+
+Le démarrage de l'API **ne charge jamais de données** : il ne crée ni ne supprime d'utilisateurs, d'agences ni d'organisations.
+Pour une base locale jetable, après `alembic upgrade head` :
+
+```bash
+python seed.py                          # base vide
+python seed.py --confirmer-ecrasement   # base locale DÉJÀ remplie : efface d'abord ses données
+```
+
+Garde-fous : le seed refuse de s'exécuter si `APP_ENV` n'est pas `development` (donc en production, quel que soit le paramètre), et refuse si la
+base contient déjà des utilisateurs, des agences ou des organisations sans `--confirmer-ecrasement`. Les comptes de démonstration utilisent le
+mot de passe défini dans `seed.py` (jamais affiché) ; ne les créez jamais sur une base réelle.
+
 ## Variables d'environnement liées au schéma de la base
 
 - `APP_ENV` (`development` par défaut ; déjà utilisée pour `COOKIE_SECURE` dans `auth.py`,
