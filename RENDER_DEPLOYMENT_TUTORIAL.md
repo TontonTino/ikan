@@ -113,7 +113,29 @@ Sur Render, nous allons créer 4 services :
 
 Les tables sont créées par `alembic upgrade head`, exécuté automatiquement à chaque déploiement (voir `startCommand` dans `render.yaml`).
 
-⚠️ **Le seed de démonstration (`python seed.py`) est interdit en production** : il refuse de s'exécuter si `APP_ENV` n'est pas `development`, et l'API ne le lance plus jamais au démarrage. Les organisations, agences et comptes se créent depuis l'application ; la création du premier compte administrateur fera l'objet d'une procédure dédiée.
+⚠️ **Le seed de démonstration (`python seed.py`) est interdit en production** : il refuse de s'exécuter si `APP_ENV` n'est pas `development`, et l'API ne le lance plus jamais au démarrage. Les organisations, agences et comptes se créent depuis l'application, une fois le premier compte administrateur créé (ci-dessous).
+
+### Créer le premier administrateur (une seule fois)
+
+Sur une base neuve il n'existe aucun compte. Dans le **Shell** du service `ikanai-api` (onglet *Shell* sur Render, dossier `apps/api`) :
+
+```bash
+python scripts/creer_admin.py --email votre.adresse@exemple.org
+```
+
+La commande demande le mot de passe deux fois (sans affichage), puis affiche seulement `Compte administrateur créé : <e-mail>`. Pour ajouter un administrateur supplémentaire plus tard : même commande avec `--ajouter`.
+
+⚠️ **Choisissez un mot de passe fort et unique** : 12 caractères ou plus, jamais utilisé ailleurs. Ne l'écrivez ni dans le dépôt, ni dans une variable d'environnement, ni dans une configuration Render, ni dans un message. La commande le demande deux fois, sans l'afficher, et refuse de le recevoir autrement (argument, variable, flux).
+
+**Si l'onglet Shell n'est pas disponible** (il est réservé aux instances payantes ; le service de `render.yaml` est en `plan: free`) : soit passer temporairement le service en instance payante le temps de la commande, soit lancer la commande depuis un poste de confiance, dans un terminal dédié, en ne renseignant que l'adresse de la base (jamais le mot de passe de l'administrateur) :
+
+```powershell
+$env:DATABASE_URL = "<URL externe de la base Render, avec SSL>"
+$env:SECRET_KEY = "valeur-quelconque-non-utilisee"
+python scripts/creer_admin.py --email votre.adresse@exemple.org
+```
+
+Fermez ensuite le terminal (les variables disparaissent avec lui). La commande ne dépend pas de `APP_ENV`.
 
 ---
 

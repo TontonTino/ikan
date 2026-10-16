@@ -14,6 +14,7 @@ from app.core.security import get_password_hash
 from app.models.utilisateur import Utilisateur
 from app.models.enums import UserRole
 from app.schemas.mot_de_passe import exiger_mot_de_passe_acceptable
+from app.services.comptes import normaliser_email
 from app.schemas.utilisateur import UtilisateurCreate, UtilisateurUpdate, UtilisateurResponse
 from app.services.acces_agence import verifier_agence_dans_organisation
 
@@ -83,7 +84,7 @@ def create_utilisateur(
     - Admin : peut uniquement créer des CX_MANAGER pour ses organisations.
     - CX Manager : peut uniquement créer des AGENCY_MANAGER pour son organisation.
     """
-    email = data.email.strip().lower()
+    email = normaliser_email(data.email)
     exiger_mot_de_passe_acceptable(data.password, email)
     if _email_deja_pris(db, email):
         raise HTTPException(status_code=400, detail=MESSAGE_EMAIL_UTILISE)
@@ -190,7 +191,7 @@ def update_utilisateur(
     if "email" in updates:
         if updates["email"] is None:
             raise HTTPException(status_code=422, detail=MESSAGE_EMAIL_VIDE)
-        updates["email"] = updates["email"].strip().lower()
+        updates["email"] = normaliser_email(updates["email"])
         if _email_deja_pris(db, updates["email"], sauf_id=user.id):
             raise HTTPException(status_code=400, detail=MESSAGE_EMAIL_UTILISE)
     if updates.get("password") is not None:
