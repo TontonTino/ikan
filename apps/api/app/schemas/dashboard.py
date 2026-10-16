@@ -203,12 +203,42 @@ class EvolutionPoint(BaseModel):
     negatifs: int = 0
 
 
+class PartNegatifs(BaseModel):
+    """Part d'avis négatifs d'une période et son évolution par rapport à la période précédente de même durée (CX-05).
+
+    `statut_evolution` : "ok" (écart en points disponible), "insuffisant" (moins de 5 avis sur la période précédente : pas de
+    comparaison), "sans_avis" (aucun avis sur la période : pas de part). `evolution_pts` > 0 = plus d'avis négatifs (défavorable).
+    """
+    negatifs: int = 0
+    total: int = 0
+    part: float | None = None
+    total_precedent: int = 0
+    part_precedente: float | None = None
+    evolution_pts: float | None = None
+    statut_evolution: str = "sans_avis"
+
+
 class ThemeStatsDetail(BaseModel):
     theme: str
     label: str
     count: int
     pourcentage: float
     sentiment_predominant: str = "neutre"
+    # Champs additifs (CX-05) : part d'avis négatifs du thème et son évolution.
+    negatifs: int = 0
+    part_negatifs: PartNegatifs | None = None
+    # Champs additifs de GET /feedbacks/themes/synthese (absents ailleurs) : agences distinctes, gravité la plus fréquente
+    # (égalité : la plus grave ; None si aucun avis analysé) et extraits récents du texte des avis (jamais de données de contact).
+    agences_concernees: int | None = None
+    gravite_frequente: str | None = None
+    verbatims: List[str] = []
+
+
+class ThemesSyntheseResponse(BaseModel):
+    """Thèmes de la liste des avis (GET /feedbacks/themes/synthese) : 20 au plus, sur tous les avis du périmètre et de la période."""
+    themes: List[ThemeStatsDetail]
+    total_avis: int
+    jours: int | None = None
 
 
 class AgenceRankDetail(BaseModel):
@@ -228,6 +258,8 @@ class AgenceRankDetail(BaseModel):
     # de pourcentage ("Score Wilson"), jamais présentée comme un "score de
     # fiabilité".
     wilson_score: float = 0.0
+    # Champ additif (CX-05) : part d'avis négatifs de l'agence et son évolution.
+    part_negatifs: PartNegatifs | None = None
 
 
 class AgenceImpacteeItem(BaseModel):
@@ -284,6 +316,9 @@ class StatsCXResponse(BaseModel):
     agences_ranking: List[AgenceRankDetail]
     alertes_synthese: AlerteSyntheseDetail
     insights_ia: List[InsightIADetail]
+    # Champs additifs (CX-05) : part d'avis négatifs du réseau (ou de l'agence filtrée) et nombre d'avis avec un thème analysé.
+    part_negatifs: PartNegatifs | None = None
+    themes_total_avis: int = 0
 
 
 class StatsAgenceResponse(BaseModel):

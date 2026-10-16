@@ -97,6 +97,36 @@ export function parametresApi(
   };
 }
 
+const PERIODES_URL = ['1', '7', '14', '30', '90', '365'] as const;
+// « jours=1 » (Statistiques, « Aujourd'hui ») correspond à la période « Aujourd'hui » de cette page.
+export const periodeDepuisUrl = (valeur: string | null) => (valeur === '1' ? 'today' : valeur && (PERIODES_URL as readonly string[]).includes(valeur) ? valeur : 'all');
+/** Période de la page en nombre de jours (« Aujourd'hui » = 1) ; undefined = toute la période. */
+export const joursPeriode = (periode: string): number | undefined => {
+  if (periode === 'all') return undefined;
+  if (periode === 'today') return 1;
+  const jours = Number(periode);
+  return Number.isInteger(jours) && jours > 0 ? jours : undefined;
+};
+
+/**
+ * Paramètres de GET /feedbacks/themes/synthese : MÊMES filtres que la liste (agence, période, ton, gravité, note, contradictions,
+ * recherche) SAUF le thème, puisque l'onglet liste justement les thèmes. Le serveur agrège tous les avis, jamais un échantillon.
+ */
+export function parametresThemes(f: FiltresAvis, options: { agenceFixe?: string } = {}) {
+  const agence = options.agenceFixe || (f.agenceId !== 'all' ? f.agenceId : undefined);
+  const jours = joursPeriode(f.periode);
+  const q = rechercheNormalisee(f.recherche);
+  return {
+    ...(agence ? { agence_id: agence } : {}),
+    ...(jours ? { jours } : {}),
+    ...(f.sentiment !== 'all' ? { sentiment: f.sentiment } : {}),
+    ...(f.criticite !== 'all' ? { criticite: f.criticite } : {}),
+    ...(f.note !== 'all' ? { note: Number(f.note) } : {}),
+    ...(f.discordance === 'oui' ? { discordance: true as const } : {}),
+    ...(q ? { q } : {}),
+  };
+}
+
 export const nombrePages = (total: number): number => Math.max(1, Math.ceil(total / TAILLE_PAGE));
 
 export const libelleTotal = (total: number): string => `${total} avis`;

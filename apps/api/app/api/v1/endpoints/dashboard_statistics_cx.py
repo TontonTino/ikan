@@ -60,6 +60,8 @@ from app.services.dashboard_helpers import (
 )
 
 from app.api.v1.endpoints.dashboard_statistics_shared import THEME_LABELS_MAP
+from app.schemas.dashboard import PartNegatifs
+from app.services.stats_negatifs_themes import agreger_themes, construire_part_negatifs, negatifs_par_agence
 
 router = APIRouter()
 
@@ -370,25 +372,24 @@ def get_statistics_cx(
     ]
 
     # 6. Principaux Thèmes IA
-    theme_agg: dict[str, dict] = defaultdict(lambda: {"count": 0, "sentiments": defaultdict(int)})
-    for a in analyses_current:
-        if a.theme_principal:
-            th = a.theme_principal.lower().strip()
-            theme_agg[th]["count"] += 1
-            st = a.sentiment.value if hasattr(a.sentiment, "value") else str(a.sentiment)
-            theme_agg[th]["sentiments"][st] += 1
+    # Agrégat SQL sur TOUTE la période (casse normalisée à la lecture), 20 thèmes au plus, avec part d'avis négatifs et évolution.
+    themes_res, themes_total_avis = agreger_themes(
+        db,
+        [QRCode.agence_id.in_(ag_filter_ids)],
+        debut=current_start, fin=now, debut_prec=previous_start, fin_prec=previous_end,
+        inclure_non_categorise=False,
+    )
 
-    themes_res: list[ThemeStatsDetail] = []
-    total_th_count = sum(t["count"] for t in theme_agg.values()) or 1
-    for th_key, t_data in sorted(theme_agg.items(), key=lambda x: -x[1]["count"]):
-        dominant_sent = max(t_data["sentiments"].items(), key=lambda x: x[1])[0] if t_data["sentiments"] else "neutre"
-        themes_res.append(ThemeStatsDetail(
-            theme=th_key,
-            label=THEME_LABELS_MAP.get(th_key, th_key.replace("_", " ").capitalize()),
-            count=t_data["count"],
-            pourcentage=round(t_data["count"] / total_th_count * 100, 1),
-            sentiment_predominant=dominant_sent,
-        ))
+    # Part d'avis négatifs : réseau (ou agence filtrée) et par agence, périodes courante et précédente, deux requêtes groupées.
+    neg_cur_ag = negatifs_par_agence(db, ag_filter_ids, current_start, now, fin_incluse=True)
+    neg_prev_ag = negatifs_par_agence(db, ag_filter_ids, previous_start, previous_end, fin_incluse=False)
+
+    def _part_negatifs(ids) -> PartNegatifs:
+        cur = [neg_cur_ag.get(i, (0, 0)) for i in ids]
+        prev = [neg_prev_ag.get(i, (0, 0)) for i in ids]
+        return construire_part_negatifs(sum(c[0] for c in cur), sum(c[1] for c in cur), sum(p[0] for p in prev), sum(p[1] for p in prev))
+
+    part_negatifs_reseau = _part_negatifs(ag_filter_ids)
 
     # 7. Classement des Agences (Ranking)
     # Grouper feedbacks par agence
@@ -455,6 +456,7 @@ def get_statistics_cx(
             tendance_val=ag_tend_str,
             tendance_positive=ag_tend_pos,
             wilson_score=ag_wilson,
+            part_negatifs=_part_negatifs([ag_id]),
         ))
 
     # Classement par score de Wilson décroissant (même logique que le
@@ -544,4 +546,6 @@ def get_statistics_cx(
         agences_ranking=agences_ranking,
         alertes_synthese=alertes_synthese,
         insights_ia=insights_ia,
+        part_negatifs=part_negatifs_reseau,
+        themes_total_avis=themes_total_avis,
     )

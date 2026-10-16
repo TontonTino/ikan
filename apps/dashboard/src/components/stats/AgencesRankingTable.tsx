@@ -3,6 +3,7 @@ import type { AgenceRankDetail } from '../../types';
 import { ArrowUpRightIcon, ArrowDownRightIcon, StoreIcon } from '../common/Icons';
 import { tendancePts } from '../../pages/cx/siege/siegeData';
 import Tooltip from '../ui/Tooltip';
+import { DEFINITION_NEGATIF, PartNegatifsTexte } from '../../utils/partNegatifs';
 import { AIDE_SCORE_FIABILISE, LIBELLE_SCORE_FIABILISE } from '../../utils/scoreFiabilise';
 
 interface AgencesRankingTableProps {
@@ -58,6 +59,7 @@ export default function AgencesRankingTable({
             <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Avis collectés</th>
             <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Pris en charge</th>
             <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Avis critiques</th>
+            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }} title={DEFINITION_NEGATIF}>Avis négatifs</th>
             <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Tendance</th>
             {onSelectAgence && (
               <th style={{ textAlign: 'right', padding: '8px 14px', fontWeight: 700 }}>Action</th>
@@ -181,6 +183,11 @@ export default function AgencesRankingTable({
                   ) : (
                     <span style={{ color: '#94A3B8', fontSize: '0.78rem' }}>0</span>
                   )}
+                </td>
+
+                {/* Part d'avis négatifs et son évolution */}
+                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                  {sansAvis ? <span style={{ color: '#5B6B7F' }}>—</span> : <PartNegatifsTexte pn={ag.part_negatifs} court />}
                 </td>
 
                 {/* Tendance */}
