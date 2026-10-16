@@ -27,6 +27,16 @@ TEST_DATABASE_URL=postgresql://postgres:test@localhost:5433/postgres pytest test
 docker stop ikan-schema-check
 ```
 
+## Créer le premier administrateur (toutes bases, y compris la production)
+
+```bash
+python scripts/creer_admin.py --email votre.adresse@exemple.org            # première fois
+python scripts/creer_admin.py --email autre.admin@exemple.org --ajouter      # un administrateur existe déjà
+```
+
+Le mot de passe est demandé **deux fois, sans affichage** (terminal interactif obligatoire) ; il n'est jamais accepté en argument ni en variable d'environnement. Choisissez un mot de passe fort (12 caractères ou plus), unique, et ne l'écrivez pas dans le dépôt.
+La commande refuse si l'e-mail existe déjà (sans modifier ce compte), si un administrateur existe déjà (sauf `--ajouter`) ou si le mot de passe ne respecte pas la règle. Elle écrit dans une seule transaction l'administrateur et, s'il n'en existe pas, l'organisation technique « Plateforme IKAN AI » à laquelle un compte doit être rattaché ; elle ne supprime et ne modifie rien d'autre, n'affiche jamais le mot de passe ni son hachage, et ne dépend pas de `APP_ENV`. Elle ne s'exécute jamais au démarrage de l'API.
+
 ## Données de démonstration (développement local uniquement)
 
 Le démarrage de l'API **ne charge jamais de données** : il ne crée ni ne supprime d'utilisateurs, d'agences ni d'organisations.
