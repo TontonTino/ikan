@@ -145,6 +145,12 @@ export const recommandationsApi = {
     api.get('/recommandations/organisation', { params: { ...(traitee !== undefined ? { traitee } : {}), ...pagination } }),
   marquerTraitee: (id: string) =>
     api.patch(`/recommandations/${id}/traiter`),
+  /** Remet une recommandation traitée à l'état « à traiter » (refusé si elle l'est déjà). */
+  rouvrir: (id: string) =>
+    api.patch(`/recommandations/${id}/rouvrir`),
+  /** Recommandations regroupées par agence (agences sans recommandation dans l'état demandé absentes). */
+  groupees: (params?: { traitee?: boolean; agence_id?: string }) =>
+    api.get<import('../types').RecommandationsGroupees>('/recommandations/organisation/groupees', { params }),
 };
 
 // ── Alertes ───────────────────────────────────────────

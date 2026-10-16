@@ -55,7 +55,7 @@ from app.core.security import create_nps_token, decode_token
 from app.core.rate_limit import limiter_ip_public, limiter_soumission
 from app.services.ai.analyse_service import analyser_feedback
 from app.core.config import settings
-from app.services.dashboard_helpers import NOTE_FAIBLE_MAX
+from app.services.dashboard_helpers import NOTE_FAIBLE_MAX, est_critique_ou_negatif
 from app.services.brouillon_reponse import (
     RAISON_AUCUN_SUIVI,
     RAISON_REPONSE_EXISTANTE,
@@ -852,6 +852,11 @@ def definir_action_cx(
         raise HTTPException(status_code=404, detail="Feedback introuvable")
 
     _check_feedback_access(feedback, current_user)
+
+    # CX-08 : réservé aux avis critiques ou négatifs, jugés ICI d'après la note et l'analyse en base. Le corps de la requête ne
+    # porte que le texte de l'action : tout indicateur supplémentaire envoyé par le navigateur est ignoré.
+    if not est_critique_ou_negatif(feedback, feedback.analyse_ia):
+        raise _conflit("Cet avis n'est ni critique ni négatif : une action à mener ne peut être définie que sur un avis critique ou négatif.")
 
     action = data.action.strip()
     statut = feedback.statut_traitement

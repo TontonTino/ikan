@@ -16,7 +16,7 @@ from typing import Iterable, Optional
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.models.enums import SentimentType, UserRole
+from app.models.enums import CriticiteType, SentimentType, UserRole
 from app.models.utilisateur import Utilisateur
 from app.schemas.dashboard import RepartitionForfaitItem, StatKPI
 
@@ -172,6 +172,14 @@ def a_sentiment_negatif(analyse) -> bool:
 
 def est_negatif(feedback, analyse=None) -> bool:
     return a_note_faible(feedback) or a_sentiment_negatif(analyse)
+
+
+def est_critique_ou_negatif(feedback, analyse=None) -> bool:
+    """Avis « critique ou négatif » (CX-08) : négatif (`est_negatif`) OU gravité élevée/critique de l'analyse IA.
+
+    MÊME règle que l'indicateur des avis critiques/négatifs des statistiques et que le filtre « à surveiller » de la liste.
+    Toujours évaluée à partir des données en base, jamais d'une valeur envoyée par le navigateur."""
+    return est_negatif(feedback, analyse) or (analyse is not None and analyse.criticite in (CriticiteType.ELEVEE, CriticiteType.CRITIQUE))
 
 
 def condition_negatif_sql():

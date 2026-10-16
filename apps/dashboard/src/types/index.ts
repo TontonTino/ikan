@@ -238,6 +238,21 @@ export interface RecommandationOrg extends Recommandation {
   agence_nom: string;
 }
 
+/** GET /recommandations/organisation/groupees (CX-09) : une entrée par agence ayant des recommandations dans l'état demandé. */
+export interface RecommandationsAgenceGroupe {
+  agence_id: string;
+  agence_nom: string;
+  /** Nombre total dans l'état demandé (peut dépasser les recommandations renvoyées). */
+  nombre: number;
+  plus_ancienne: string;
+  recommandations: Recommandation[];
+}
+
+export interface RecommandationsGroupees {
+  groupes: RecommandationsAgenceGroupe[];
+  total: number;
+}
+
 export interface KPIAgence {
   agence_id: string;
   agence_nom: string;

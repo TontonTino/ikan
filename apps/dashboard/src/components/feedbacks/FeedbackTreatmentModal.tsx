@@ -4,6 +4,7 @@ import { feedbacksApi, issuesApi, agencesApi } from '../../services/api';
 import { AVIS_STATUT_LABELS, GRAVITE_LABELS, PROBLEME_STATUT_LABELS, ROLE_LABELS, SENTIMENT_LABELS } from '../../utils/vocabulaire';
 import { themeLabel } from '../../utils/themeLabels';
 import { userFacingError } from '../../utils/userFacingError';
+import { aCriticiteElevee, estNegatif } from '../../utils/triageAvis';
 import EmptyState from '../ui/EmptyState';
 import { useOverlay } from '../ui/useOverlay';
 import PriseEnChargeBanner from './PriseEnChargeBanner';
@@ -88,6 +89,8 @@ export default function FeedbackTreatmentModal({
 
   const isAgencyManager = currentUserRole === 'agency_manager';
   const isCXManager = currentUserRole === 'cx_manager' || currentUserRole === 'admin';
+  // Reflet de la règle du serveur (CX-08), qui reste seule juge : avis négatif ou de gravité élevée/critique.
+  const actionPermise = feedback ? estNegatif(feedback) || aCriticiteElevee(feedback) : false;
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -932,7 +935,13 @@ export default function FeedbackTreatmentModal({
                       ACTION À MENER (DÉFINIE PAR LE CX MANAGER)
                     </div>
 
-                    {currentStatut === 'en_traitement' && (
+                    {currentStatut === 'en_traitement' && !actionPermise && (
+                      <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
+                        Une action à mener se définit seulement sur un avis critique ou négatif. Cet avis n’est ni l’un ni l’autre.
+                      </p>
+                    )}
+
+                    {currentStatut === 'en_traitement' && actionPermise && (
                       <form onSubmit={handleDefinirActionCX}>
                         <p style={{ fontSize: '0.82rem', color: '#64748B', margin: '0 0 10px 0' }}>
                           Décrivez l’action à mener. Dès l’enregistrement, le statut passera à <strong>« Action en cours »</strong>.
