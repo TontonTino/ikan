@@ -109,15 +109,11 @@ Sur Render, nous allons créer 4 services :
 
 ---
 
-## 🔄 Étape 5 : Exécuter le Seed & les Migrations sur Render
+## 🔄 Étape 5 : Migrations sur Render (pas de seed)
 
-Pour créer les données initiales et les tables sur la base PostgreSQL Render :
+Les tables sont créées par `alembic upgrade head`, exécuté automatiquement à chaque déploiement (voir `startCommand` dans `render.yaml`).
 
-Connectez-vous à la console Shell de votre Web Service Backend (`ikanai-api`) sur Render et lancez :
-```bash
-python seed.py
-```
-Toutes vos organisations, agences et comptes utilisateurs seront créés en BDD avec leurs QR Codes HTTPS permanents !
+⚠️ **Le seed de démonstration (`python seed.py`) est interdit en production** : il refuse de s'exécuter si `APP_ENV` n'est pas `development`, et l'API ne le lance plus jamais au démarrage. Les organisations, agences et comptes se créent depuis l'application ; la création du premier compte administrateur fera l'objet d'une procédure dédiée.
 
 ---
 

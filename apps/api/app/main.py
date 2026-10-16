@@ -133,19 +133,9 @@ def on_startup():
     except Exception as e:
         print(f"[STARTUP QUOTA ALERTS LOG] {e}")
 
-    # Auto-seeding si aucun QR Code n'existe en base
-    try:
-        db = SessionLocal()
-        from app.models.qr_code import QRCode
-        count = db.query(QRCode).count()
-        db.close()
-        if count == 0:
-            print("[STARTUP SEED] Aucune donnée détectée. Seeding automatique en cours...")
-            from seed import seed_database
-            seed_database()
-            print("[STARTUP SEED] Seeding automatique terminé avec succès !")
-    except Exception as e:
-        print(f"[STARTUP SEED LOG ERROR] {e}")
+    # Aucun seed au démarrage, dans AUCUN environnement : le démarrage ne crée ni ne supprime jamais
+    # d'utilisateurs, d'agences ni d'organisations. Les données de démonstration se chargent à la main,
+    # en local uniquement : `python seed.py` (voir apps/api/README.md et seed.py).
 
     # Jobs quotidiens — même scheduler pour tous (pas d'instance séparée par job).
     # Chaque enregistrement est indépendant : l'échec de l'un n'empêche jamais
