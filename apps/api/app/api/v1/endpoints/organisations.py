@@ -17,7 +17,7 @@ from app.schemas.organisation import (
     OrganisationCreate, OrganisationUpdate, OrganisationRead, UtilisationOrganisation,
     UpgradeCheckoutRequest, UpgradeCheckoutResponse, ChangementPlanRequest,
 )
-from app.services.administrateurs import controler_suppression_organisation
+from app.services.administrateurs import controler_desactivation_organisation
 from app.services.plan_catalog import STRIPE_PRICE_IDS
 from app.services.plan_service import utilisation_organisation
 from app.services.secteurs import libelle_secteur
@@ -190,6 +190,10 @@ def update_organisation(
             )
 
     update_dict = data.model_dump(exclude_unset=True)
+    if update_dict.get("active") is False and org.active:
+        # Désactivation réelle : les comptes de l'organisation ne se connectent plus (données conservées). Jamais le dernier
+        # administrateur actif, jamais l'organisation de l'administrateur connecté. Réactiver n'est jamais bloqué.
+        controler_desactivation_organisation(db, org.id, current_user)
     if "email_pro" in update_dict:
         update_dict["email"] = update_dict["email_pro"]
     # secteur_code change sans secteur_activite explicite -> on redérive le libellé legacy,
@@ -247,23 +251,3 @@ def changer_plan_organisation(
     db.commit()
     db.refresh(org)
     return org
-
-
-@router.delete("/{org_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_organisation(
-    org_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(get_admin_user),
-):
-    """Supprime une organisation (Réservé au rôle Admin créateur)."""
-    org = db.query(Organisation).filter(
-        Organisation.id == org_id,
-        (Organisation.created_by_id == current_user.id) | (Organisation.created_by_id.is_(None))
-    ).first()
-    if not org:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organisation introuvable")
-
-    # Ses comptes administrateurs partiraient avec elle (cascade) : jamais le dernier administrateur actif, jamais le sien.
-    controler_suppression_organisation(db, org.id, current_user)
-    db.delete(org)
-    db.commit()

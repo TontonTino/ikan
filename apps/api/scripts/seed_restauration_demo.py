@@ -29,7 +29,7 @@ porte le suffixe de titre MARQUEUR_TITRE.
 Idempotent : refuse de s'exécuter si l'organisation existe déjà, sauf --force (ajoute
 alors un second lot de feedbacks et d'Issues à l'organisation existante, sans recréer
 comptes ni agences). --supprimer retire l'organisation et tout ce qu'elle contient
-(delete_organisation, ON DELETE CASCADE) — UNIQUEMENT si tout son contenu vient de ce
+(suppression directe de l'organisation de démo, ON DELETE CASCADE ; la route API de suppression n'existe plus) — UNIQUEMENT si tout son contenu vient de ce
 script (sinon refus détaillé, rien n'est supprimé).
 
 Usage :
@@ -80,7 +80,8 @@ from app.services.plan_catalog import PLAN_PRO_ID
 from app.api.v1.endpoints.agences import create_agence
 from app.api.v1.endpoints.feedbacks import envoyer_reponse_client, marquer_demande_contact_traitee, submit_feedback
 from app.api.v1.endpoints.issues import creer_action_corrective, creer_issue, terminer_action_corrective, verifier_issue
-from app.api.v1.endpoints.organisations import changer_plan_organisation, create_organisation, delete_organisation
+from app.api.v1.endpoints.organisations import changer_plan_organisation, create_organisation
+from app.services.administrateurs import ids_administrateurs_de_organisation
 from app.api.v1.endpoints.utilisateurs import create_utilisateur
 
 ORGANISATION_NOM = "RESTAURANT LE PRESTIGE"
@@ -495,9 +496,12 @@ def supprimer(db, org: Organisation, admin_par_defaut: Utilisateur) -> None:
     if problemes:
         raise SystemExit("[REFUS] L'organisation contient des données qui ne viennent pas de ce script, rien n'est "
                          "supprimé :\n  " + "\n  ".join(problemes))
-    createur = db.get(Utilisateur, org.created_by_id) if org.created_by_id else None
-    admin = createur if createur is not None and createur.role == UserRole.ADMIN else admin_par_defaut
-    delete_organisation(org_id=org.id, db=db, current_user=admin)
+    if ids_administrateurs_de_organisation(db, org.id):
+        raise SystemExit("[REFUS] L'organisation contient un compte administrateur : rien n'est supprimé.")
+    # Outil de démonstration local : le contenu vient entièrement de ce script (vérifié ci-dessus). La suppression définitive d'une
+    # organisation n'existe plus dans l'API (désactivation uniquement).
+    db.delete(org)
+    db.commit()
 
 
 # ============================================================================

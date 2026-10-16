@@ -14,12 +14,13 @@ from uuid import UUID
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config.settings import settings
 from app.db.session import get_db
 from app.models.enums import UserRole
-from app.models.readonly import Utilisateur
+from app.models.readonly import Organisation, Utilisateur
 
 security_scheme = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
@@ -61,9 +62,14 @@ def get_current_user(
     if not user_id:
         raise credentials_exception
 
+    # Compte actif ET organisation active (même règle que apps/api : une organisation désactivée n'a plus aucun accès, YAM compris).
     user = (
         db.query(Utilisateur)
-        .filter(Utilisateur.id == UUID(user_id), Utilisateur.active == True)  # noqa: E712
+        .filter(
+            Utilisateur.id == UUID(user_id),
+            Utilisateur.active == True,  # noqa: E712
+            Utilisateur.organisation_id.not_in(select(Organisation.id).where(Organisation.active.is_(False))),
+        )
         .first()
     )
     if not user:

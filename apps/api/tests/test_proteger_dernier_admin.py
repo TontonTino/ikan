@@ -102,7 +102,8 @@ def rendre_inactif(ctx, uid):
 
 
 def supprimer_org(ctx, acteur, org_id):
-    return ctx.client.delete(f"/organisations/{org_id}", headers=ctx.H(acteur))
+    """Depuis la désactivation réelle d'une organisation (la suppression définitive n'existe plus) : même garde, même scénarios."""
+    return ctx.client.patch(f"/organisations/{org_id}", headers=ctx.H(acteur), json={"active": False})
 
 
 def appeler(fonction, ctx, *args):
@@ -124,7 +125,7 @@ def charger(ctx, uid):
 # ── Suppression d'une organisation (route réelle) ──────────────────────────────────────────────
 
 
-def test_supprimer_sa_propre_organisation_refuse_meme_dernier_admin_base_inchangee(ctx):
+def test_desactiver_sa_propre_organisation_refuse_meme_dernier_admin_base_inchangee(ctx):
     db = ctx.Session(); db.query(Utilisateur).filter(Utilisateur.id == ctx.admin_q).delete(); db.commit(); db.close()   # admin_p est le seul
     avant = photo(ctx)
     r = supprimer_org(ctx, ctx.admin_p, ctx.org_p)
@@ -132,30 +133,30 @@ def test_supprimer_sa_propre_organisation_refuse_meme_dernier_admin_base_inchang
     assert photo(ctx) == avant
 
 
-def test_supprimer_sa_propre_organisation_refuse_meme_si_un_autre_admin_existe(ctx):
+def test_desactiver_sa_propre_organisation_refuse_meme_si_un_autre_admin_existe(ctx):
     avant = photo(ctx)
     r = supprimer_org(ctx, ctx.admin_p, ctx.org_p)
     assert r.status_code == 409 and r.json()["detail"] == MESSAGE_AUTO_PROTECTION
     assert photo(ctx) == avant
 
 
-def test_supprimer_l_organisation_d_un_autre_admin_autorise_si_un_admin_actif_reste(ctx):
-    r = supprimer_org(ctx, ctx.admin_p, ctx.org_q)                      # comportement existant : l'organisation et ses comptes partent
-    assert r.status_code == 204
+def test_desactiver_l_organisation_d_un_autre_admin_autorise_si_un_admin_actif_reste(ctx):
+    r = supprimer_org(ctx, ctx.admin_p, ctx.org_q)                      # l'organisation est désactivée ; ses comptes sont CONSERVÉS
+    assert r.status_code == 200
     db = ctx.Session()
-    assert db.get(Organisation, ctx.org_q) is None and db.get(Utilisateur, ctx.admin_p) is not None
+    assert db.get(Organisation, ctx.org_q).active is False and db.get(Utilisateur, ctx.admin_q) is not None
     db.close()
 
 
-def test_organisation_dont_le_seul_autre_admin_est_inactif_peut_etre_supprimee(ctx):
+def test_organisation_dont_le_seul_autre_admin_est_inactif_peut_etre_desactivee(ctx):
     rendre_inactif(ctx, ctx.admin_q)                                     # un admin inactif ne compte pas : il ne protège rien
-    assert supprimer_org(ctx, ctx.admin_p, ctx.org_q).status_code == 204
+    assert supprimer_org(ctx, ctx.admin_p, ctx.org_q).status_code == 200
 
 
-def test_organisation_sans_administrateur_supprimee_comme_avant(ctx):
-    assert supprimer_org(ctx, ctx.admin_p, ctx.org_c).status_code == 204
+def test_organisation_sans_administrateur_desactivee_donnees_conservees(ctx):
+    assert supprimer_org(ctx, ctx.admin_p, ctx.org_c).status_code == 200
     db = ctx.Session()
-    assert db.get(Organisation, ctx.org_c) is None and db.get(Utilisateur, ctx.cx) is None      # cascade existante inchangée
+    assert db.get(Organisation, ctx.org_c).active is False and db.get(Utilisateur, ctx.cx) is not None   # données conservées
     db.close()
 
 
@@ -163,7 +164,7 @@ def test_ordre_des_controles_cx_et_agency_manager_recoivent_403_pas_409(ctx):
     avant = photo(ctx)
     assert supprimer_org(ctx, ctx.cx, ctx.org_p).status_code == 403
     assert supprimer_org(ctx, ctx.am, ctx.org_p).status_code == 403
-    assert ctx.client.delete(f"/organisations/{ctx.org_p}").status_code == 401
+    assert ctx.client.patch(f"/organisations/{ctx.org_p}", json={"active": False}).status_code == 401
     assert supprimer_org(ctx, ctx.admin_p, uuid.uuid4()).status_code == 404       # existence avant la règle
     assert photo(ctx) == avant
 
@@ -218,7 +219,7 @@ def test_retrait_du_dernier_admin_actif_refuse_par_chaque_voie(ctx):
         (administrateurs.controler_retrait_compte, (cible, acteur_tiers)),                                      # suppression / désactivation
         (administrateurs.controler_modification_compte, (cible, {"active": False}, acteur_tiers)),              # désactivation par PATCH
         (administrateurs.controler_modification_compte, (cible, {"role": UserRole.CX_MANAGER}, acteur_tiers)),  # rétrogradation
-        (administrateurs.controler_suppression_organisation, (ctx.org_p, acteur_tiers)),                        # cascade d'organisation
+        (administrateurs.controler_desactivation_organisation, (ctx.org_p, acteur_tiers)),                        # cascade d'organisation
     ):
         with pytest.raises(HTTPException) as refus:
             appeler(fonction, ctx, *args)
@@ -232,7 +233,7 @@ def test_retrait_autorise_quand_un_autre_admin_actif_reste_et_que_l_acteur_est_u
     appeler(administrateurs.controler_retrait_compte, ctx, cible, acteur_tiers)
     appeler(administrateurs.controler_modification_compte, ctx, cible, {"active": False}, acteur_tiers)
     appeler(administrateurs.controler_modification_compte, ctx, cible, {"role": UserRole.CX_MANAGER}, acteur_tiers)
-    appeler(administrateurs.controler_suppression_organisation, ctx, ctx.org_p, acteur_tiers)
+    appeler(administrateurs.controler_desactivation_organisation, ctx, ctx.org_p, acteur_tiers)
 
 
 def test_auto_protection_refusee_pour_chaque_voie_meme_avec_d_autres_admins(ctx):
@@ -242,7 +243,7 @@ def test_auto_protection_refusee_pour_chaque_voie_meme_avec_d_autres_admins(ctx)
         (administrateurs.controler_retrait_compte, (moi, moi)),
         (administrateurs.controler_modification_compte, (moi, {"active": False}, moi)),
         (administrateurs.controler_modification_compte, (moi, {"role": UserRole.CX_MANAGER}, moi)),
-        (administrateurs.controler_suppression_organisation, (ctx.org_p, moi)),
+        (administrateurs.controler_desactivation_organisation, (ctx.org_p, moi)),
     ):
         with pytest.raises(HTTPException) as refus:
             appeler(fonction, ctx, *args)

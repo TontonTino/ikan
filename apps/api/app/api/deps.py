@@ -13,6 +13,7 @@ from app.db.session import get_db
 from app.models.agence import Agence
 from app.models.utilisateur import Utilisateur
 from app.models.enums import UserRole
+from app.services.comptes import requete_comptes_utilisables
 
 # Permet à Swagger UI d'afficher le cadenas et d'injecter le token Bearer
 security_scheme = HTTPBearer(auto_error=False)
@@ -46,10 +47,13 @@ def get_current_user(
     if not user_id:
         raise credentials_exception
 
-    user = db.query(Utilisateur).filter(
-        Utilisateur.id == UUID(user_id),
-        Utilisateur.active == True,
-    ).first()
+    try:
+        identifiant = UUID(user_id)
+    except ValueError:
+        raise credentials_exception from None
+
+    # Compte actif ET organisation active, vérifiés à CHAQUE requête (un jeton déjà émis cesse d'être accepté dès la désactivation).
+    user = requete_comptes_utilisables(db).filter(Utilisateur.id == identifiant).first()
 
     if not user:
         raise credentials_exception
