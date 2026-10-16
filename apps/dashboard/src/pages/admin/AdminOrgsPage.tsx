@@ -5,7 +5,7 @@ import { useAuthStore } from '../../stores/authStore';
 import type { Organisation, SecteurInfo } from '../../types';
 import PageHeader from '../../components/ui/PageHeader';
 import { BuildingIcon, PlusIcon, AlertTriangleIcon, DownloadIcon } from '../../components/common/Icons';
-import { userFacingError } from '../../utils/userFacingError';
+import { messageRefusServeur, userFacingError } from '../../utils/userFacingError';
 import ConfirmActionModal from '../../components/admin/ConfirmActionModal';
 
 // Contrôle d'accès séparé du contenu : les hooks du contenu ne sont jamais appelés après un retour anticipé.
@@ -132,7 +132,8 @@ function AdminOrgsPageContenu() {
       setASupprimer(null);
     } catch (err: any) {
       console.error('Erreur suppression organisation:', err?.response?.data);
-      setErreurSuppression(userFacingError(err, 'Impossible de supprimer cette organisation. Veuillez réessayer.', undefined, {
+      // 409 : refus écrit en français par l'API (dernier administrateur actif, ou votre propre compte) — repris tel quel.
+      setErreurSuppression(messageRefusServeur(err) ?? userFacingError(err, 'Impossible de supprimer cette organisation. Veuillez réessayer.', undefined, {
         404: 'Cette organisation est introuvable, ou vous n’avez pas le droit de la supprimer.',
       }));
     } finally {
