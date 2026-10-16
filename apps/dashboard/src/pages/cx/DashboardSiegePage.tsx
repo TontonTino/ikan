@@ -146,7 +146,7 @@ export default function DashboardSiegePage() {
           <KpiDetail
             kind={vue.kind}
             ranking={ranking}
-            alertes={alertes.status === 'ok' ? alertes.data.items : []}
+            sousSeuil={alertes.status === 'ok' ? alertes.data.sousSeuil : []}
             seuils={seuils}
             jours={jours}
             onOpenAgence={openAgence}

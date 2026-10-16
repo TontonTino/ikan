@@ -337,9 +337,24 @@ export interface AlerteFeedback {
   date_soumission: string;
 }
 
+/** Agence ACTUELLEMENT sous son seuil (CX Manager) : satisfaction glissante de 7 jours, au moins 3 avis. */
+export interface AgenceSousSeuil {
+  agence_id: string;
+  agence_nom: string;
+  taux_actuel: number;
+  seuil: number;
+  /** Points de pourcentage sous le seuil (> 0). */
+  ecart_seuil: number;
+  /** Restée sous le seuil en continu pendant 48 h : c'est ce qui déclenche l'alerte du CX Manager. */
+  depuis_plus_de_48h: boolean;
+  gravite?: 'critique' | 'important';
+}
+
 export interface AlertesResponse {
   alertes_seuil: Alerte[];
   alertes_feedback: AlerteFeedback[];
+  /** CX Manager : toutes les agences actuellement sous leur seuil, la plus en difficulté d'abord. Absent d'un ancien serveur. */
+  agences_sous_seuil?: AgenceSousSeuil[];
   /** false : le forfait n'inclut pas les alertes (listes vides par indisponibilité, pas par absence d'alerte). */
   alertes_incluses?: boolean;
 }

@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { statisticsApi } from '../../../services/api';
-import type { Agence, AgenceRankDetail, Alerte, StatsCXResponse } from '../../../types';
+import { Link } from 'react-router-dom';
+import type { Agence, AgenceRankDetail, AgenceSousSeuil, StatsCXResponse } from '../../../types';
 import Alert from '../../../components/ui/Alert';
 import Badge from '../../../components/ui/Badge';
 import Button from '../../../components/ui/Button';
@@ -12,7 +13,7 @@ import { AlertTriangleIcon, SmileIcon } from '../../../components/common/Icons';
 import {
   STATUT_SEUIL_LABEL,
   RANG_CRITIQUE_MAX,
-  regleAlerteSeuilTexte,
+  regleSousSeuilTexte,
   serieSparkline,
   compteDefavorableDelta,
   satisfactionDelta,
@@ -22,7 +23,7 @@ import {
   type StatutSeuil,
 } from './siegeData';
 import { fetchActionsTotaux, fetchIssuesOuvertes, type ActionsTotaux, type IssuesOuvertes } from './useSiegeData';
-import { lienAvisReseau } from '../../../utils/liensAgence';
+import { lienApercuAgence, lienAvisReseau } from '../../../utils/liensAgence';
 import { AskYam, BlockLink, YAM_PERIODE, type KpiKind } from './SiegeBlocks';
 
 const STATUT_TONE: Record<StatutSeuil, 'success' | 'critical' | 'neutral' | 'outline'> = {
@@ -46,14 +47,15 @@ export const KPI_TITRE: Record<KpiKind, string> = {
 export function KpiDetail({
   kind,
   ranking,
-  alertes,
+  sousSeuil,
   seuils,
   jours,
   onOpenAgence,
 }: {
   kind: KpiKind;
   ranking: AgenceRankDetail[];
-  alertes: Alerte[];
+  /** Agences actuellement sous leur seuil, la plus en difficulté d'abord (ordre du serveur conservé). */
+  sousSeuil: AgenceSousSeuil[];
   seuils: Map<string, number>;
   jours: number;
   onOpenAgence: (id: string) => void;
@@ -72,18 +74,38 @@ export function KpiDetail({
   if (kind === 'seuil') {
     return (
       <>
-        <p className="siege-note">Alertes actives : {regleAlerteSeuilTexte()}</p>
-        <DataTable<Alerte>
+        <p className="siege-note">{regleSousSeuilTexte()}</p>
+        <DataTable<AgenceSousSeuil>
           caption="Agences sous leur seuil"
-          rows={alertes}
+          rows={sousSeuil}
           rowKey={(a) => a.agence_id}
           onRowClick={(a) => onOpenAgence(a.agence_id)}
           rowLabel={(a) => `Ouvrir le détail de ${a.agence_nom}`}
-          emptyTitle="Aucune agence sous son seuil."
+          emptyTitle="Aucune agence sous son seuil"
           columns={[
-            { key: 'agence_nom', header: 'Agence' },
+            {
+              key: 'agence_nom',
+              header: 'Agence',
+              render: (a) => (
+                <span>
+                  {a.agence_nom}
+                  {a.depuis_plus_de_48h && (
+                    <>
+                      {' '}
+                      <Badge variant="critical" label="Depuis plus de 48 h" />
+                    </>
+                  )}
+                </span>
+              ),
+            },
             { key: 'taux_actuel', header: 'Satisfaction', align: 'right', numeric: true, render: (a) => `${a.taux_actuel} %` },
             { key: 'seuil', header: 'Seuil', align: 'right', numeric: true, render: (a) => `${a.seuil} %` },
+            { key: 'ecart_seuil', header: 'Écart', align: 'right', numeric: true, render: (a) => `−${a.ecart_seuil} pts` },
+            {
+              key: 'detail',
+              header: 'Détail',
+              render: (a) => <Link to={lienApercuAgence(a.agence_id)} aria-label={`Voir l’agence ${a.agence_nom}`}>Voir l’agence</Link>,
+            },
           ]}
         />
         <div className="siege-drawer-actions"><Button variant="secondary" onClick={() => navigate('/alertes')}>Voir les alertes</Button></div>

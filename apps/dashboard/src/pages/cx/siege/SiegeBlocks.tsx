@@ -25,7 +25,7 @@ import {
   FAIBLE_VOLUME_POINT,
   RANG_CRITIQUE_MAX,
   REGLE_ALERTE_SEUIL_API,
-  regleAlerteSeuilTexte,
+  regleSousSeuilTexte,
   serieSparkline,
   MIN_AVIS_SEUIL,
   STATUT_SEUIL_LABEL,
@@ -47,6 +47,7 @@ import {
 } from './siegeData';
 import type { ActionsTotaux, IssuesOuvertes, Source } from './useSiegeData';
 import type { AlertesSiege } from './siegeData';
+import { AIDE_SCORE_FIABILISE, LIBELLE_SCORE_FIABILISE } from '../../../utils/scoreFiabilise';
 
 export type KpiKind = 'satisfaction' | 'volume' | 'critiques' | 'seuil';
 
@@ -123,7 +124,7 @@ export function SiegeKpis({
   const nbCritiques = k?.alertes_critiques?.valeur_num ?? 0;
   // Forfait sans alertes : l'API renvoie des listes vides, qui ne veulent PAS dire « aucune agence sous son seuil ».
   const alertesIncluses = alertes.status !== 'ok' || alertes.data.incluses;
-  const nbSousSeuil = alertes.status === 'ok' && alertes.data.incluses ? alertes.data.items.length : null;
+  const nbSousSeuil = alertes.status === 'ok' && alertes.data.incluses ? alertes.data.sousSeuil.length : null;
 
   return (
     <>
@@ -172,7 +173,7 @@ export function SiegeKpis({
       <KpiCard
         icon={<StoreIcon />}
         label="Agences sous leur seuil"
-        hint={alertesIncluses ? `Alertes actives : ${regleAlerteSeuilTexte()} C'est un état, pas une évolution.` : 'Les alertes de satisfaction ne sont pas incluses dans le forfait de votre organisation.'}
+        hint={alertesIncluses ? `${regleSousSeuilTexte()} C'est un état, pas une évolution.` : 'Les alertes de satisfaction ne sont pas incluses dans le forfait de votre organisation.'}
         loading={alertes.status === 'loading'}
         value={nbSousSeuil == null ? '—' : String(nbSousSeuil)}
         tone={nbSousSeuil ? 'critical' : 'neutral'}
@@ -425,8 +426,8 @@ export function Reseau({
 }) {
   const extremes = stats.status === 'ok' ? extremesWilson(stats.data.agences_ranking) : null;
   const wilson = (
-    <Tooltip content="Score fiabilisé (méthode de Wilson, 95 %). Classe les agences en tenant compte du nombre d'avis : 100 % sur 2 avis ne passe pas devant 90 % sur 200 avis.">
-      <button type="button" className="ui-info-btn" aria-label="À propos du score fiabilisé">?</button>
+    <Tooltip content={AIDE_SCORE_FIABILISE}>
+      <button type="button" className="ui-info-btn" aria-label={`À propos du ${LIBELLE_SCORE_FIABILISE.toLowerCase()}`}>?</button>
     </Tooltip>
   );
 
