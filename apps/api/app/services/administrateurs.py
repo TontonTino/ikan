@@ -13,6 +13,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.enums import UserRole
+from app.models.organisation import Organisation
 from app.models.utilisateur import Utilisateur
 
 MESSAGE_DERNIER_ADMIN = "Cette opération retirerait le dernier administrateur actif de la plateforme."
@@ -23,13 +24,15 @@ MESSAGE_AUTO_PROTECTION = (
 
 
 def requete_administrateurs_actifs(db: Session):
-    """Administrateurs actifs, triés par identifiant et VERROUILLÉS (FOR UPDATE) : deux opérations simultanées ne peuvent pas
-    retirer chacune « l'un des deux derniers » administrateurs. Sans effet sur SQLite (écritures déjà sérialisées)."""
+    """Administrateurs actifs dont l'ORGANISATION est active (ceux d'une organisation désactivée ne peuvent plus se connecter : ils ne
+    comptent plus), triés par identifiant et VERROUILLÉS (FOR UPDATE) : deux opérations simultanées ne peuvent pas retirer chacune
+    « l'un des deux derniers » administrateurs. Sans effet sur SQLite (écritures déjà sérialisées)."""
     return (
         db.query(Utilisateur)
-        .filter(Utilisateur.role == UserRole.ADMIN, Utilisateur.active == True)  # noqa: E712
+        .join(Organisation, Organisation.id == Utilisateur.organisation_id)
+        .filter(Utilisateur.role == UserRole.ADMIN, Utilisateur.active == True, Organisation.active == True)  # noqa: E712
         .order_by(Utilisateur.id)
-        .with_for_update()
+        .with_for_update(of=Utilisateur)
     )
 
 
@@ -71,6 +74,6 @@ def controler_modification_compte(db: Session, compte: Utilisateur, modification
         proteger_administrateurs(db, {compte.id}, acteur)
 
 
-def controler_suppression_organisation(db: Session, organisation_id: UUID, acteur: Utilisateur) -> None:
-    """À appeler avant de supprimer une organisation : ses comptes administrateurs partiraient avec elle (cascade)."""
+def controler_desactivation_organisation(db: Session, organisation_id: UUID, acteur: Utilisateur) -> None:
+    """À appeler avant de DÉSACTIVER une organisation : ses comptes administrateurs ne pourraient plus se connecter."""
     proteger_administrateurs(db, ids_administrateurs_de_organisation(db, organisation_id), acteur)

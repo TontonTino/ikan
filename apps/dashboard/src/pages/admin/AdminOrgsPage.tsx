@@ -7,6 +7,7 @@ import PageHeader from '../../components/ui/PageHeader';
 import { BuildingIcon, PlusIcon, AlertTriangleIcon, DownloadIcon } from '../../components/common/Icons';
 import { messageRefusServeur, userFacingError } from '../../utils/userFacingError';
 import ConfirmActionModal from '../../components/admin/ConfirmActionModal';
+import { BadgeEtatOrganisation, TEXTE_CONFIRMATION_DESACTIVATION, TEXTE_REACTIVATION_POSSIBLE } from '../../components/admin/EtatOrganisation';
 
 // Contrôle d'accès séparé du contenu : les hooks du contenu ne sont jamais appelés après un retour anticipé.
 export default function AdminOrgsPage() {
@@ -28,9 +29,9 @@ function AdminOrgsPageContenu() {
   const [enregistrement, setEnregistrement] = useState(false);
   const [succes, setSucces] = useState('');
   const [secteursIndisponibles, setSecteursIndisponibles] = useState(false);
-  const [aSupprimer, setASupprimer] = useState<Organisation | null>(null);
-  const [suppressionEnCours, setSuppressionEnCours] = useState(false);
-  const [erreurSuppression, setErreurSuppression] = useState('');
+  const [aDesactiver, setADesactiver] = useState<Organisation | null>(null);
+  const [changementEnCours, setChangementEnCours] = useState(false);
+  const [erreurChangement, setErreurChangement] = useState('');
   const [form, setForm] = useState({
     nom: '',
     logo: '',
@@ -122,22 +123,24 @@ function AdminOrgsPageContenu() {
     }
   };
 
-  const confirmerSuppression = async () => {
-    if (!aSupprimer) return;
-    setSuppressionEnCours(true);
-    setErreurSuppression('');
+  // Désactivation / réactivation (jamais de suppression) : les données sont conservées. Le refus du serveur (dernier administrateur
+  // actif, votre propre organisation) est affiché tel quel, en français.
+  const changerActivation = async (org: Organisation, active: boolean) => {
+    setChangementEnCours(true);
+    setErreurChangement('');
     try {
-      await organisationsApi.delete(aSupprimer.id);
-      setOrgs((prev) => prev.filter((o) => o.id !== aSupprimer.id));
-      setASupprimer(null);
+      const res = await organisationsApi.update(org.id, { active });
+      setOrgs((prev) => prev.map((o) => (o.id === org.id ? { ...o, ...(res?.data ?? {}), active } : o)));
+      setADesactiver(null);
+      return true;
     } catch (err: any) {
-      console.error('Erreur suppression organisation:', err?.response?.data);
-      // 409 : refus écrit en français par l'API (dernier administrateur actif, ou votre propre compte) — repris tel quel.
-      setErreurSuppression(messageRefusServeur(err) ?? userFacingError(err, 'Impossible de supprimer cette organisation. Veuillez réessayer.', undefined, {
-        404: 'Cette organisation est introuvable, ou vous n’avez pas le droit de la supprimer.',
+      console.error('Erreur changement d’état de l’organisation:', err?.response?.data);
+      setErreurChangement(messageRefusServeur(err) ?? userFacingError(err, active ? 'Impossible de réactiver cette organisation. Veuillez réessayer.' : 'Impossible de désactiver cette organisation. Veuillez réessayer.', undefined, {
+        404: 'Cette organisation est introuvable, ou vous n’avez pas le droit de la modifier.',
       }));
+      return false;
     } finally {
-      setSuppressionEnCours(false);
+      setChangementEnCours(false);
     }
   };
 
@@ -175,6 +178,12 @@ function AdminOrgsPageContenu() {
       {succes && (
         <div role="status" style={{ background: '#EAF5EC', border: '1px solid #CFE3D3', color: '#2F5D26', padding: '10px 14px', borderRadius: '12px', fontSize: '0.86rem', fontWeight: 700 }}>
           {succes}
+        </div>
+      )}
+
+      {erreurChangement && !aDesactiver && (
+        <div role="alert" style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C', padding: '10px 14px', borderRadius: '12px', fontSize: '0.86rem', fontWeight: 700 }}>
+          {erreurChangement}
         </div>
       )}
 
@@ -488,9 +497,7 @@ function AdminOrgsPageContenu() {
                 <td style={{ padding: '14px 20px', color: '#475569' }}>{o.pays_region || '—'}</td>
                 <td style={{ padding: '14px 20px', fontWeight: 500, color: '#1E293B' }}>{o.email_pro || o.email}</td>
                 <td style={{ padding: '14px 20px' }}>
-                  <span className={`badge ${o.active ? 'badge-success' : 'badge-neutral'}`}>
-                    {o.active ? 'Actif' : 'Inactif'}
-                  </span>
+                  <BadgeEtatOrganisation active={o.active} />
                 </td>
                 <td style={{ padding: '14px 20px' }}>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -508,11 +515,16 @@ function AdminOrgsPageContenu() {
                       Modifier
                     </button>
                     <button
-                      onClick={() => { setErreurSuppression(''); setASupprimer(o); }}
+                      onClick={() => {
+                        setErreurChangement('');
+                        if (o.active) setADesactiver(o);
+                        else void changerActivation(o, true);
+                      }}
+                      disabled={changementEnCours}
                       style={{
                         background: '#FFFFFF',
-                        color: '#DC2626',
-                        border: '1px solid #FEE2E2',
+                        color: o.active ? '#DC2626' : '#3C7730',
+                        border: o.active ? '1px solid #FEE2E2' : '1px solid #D6E8D9',
                         borderRadius: '8px',
                         padding: '6px 12px',
                         cursor: 'pointer',
@@ -520,10 +532,10 @@ function AdminOrgsPageContenu() {
                         fontWeight: 700,
                         fontFamily: 'inherit',
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = '#FEE2E2')}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = o.active ? '#FEE2E2' : '#EBF6ED')}
                       onMouseLeave={(e) => (e.currentTarget.style.background = '#FFFFFF')}
                     >
-                      Supprimer
+                      {o.active ? 'Désactiver' : 'Réactiver'}
                     </button>
                   </div>
                 </td>
@@ -534,21 +546,18 @@ function AdminOrgsPageContenu() {
         </div>
       </div>
 
-      {aSupprimer && (
+      {aDesactiver && (
         <ConfirmActionModal
-          title="Supprimer cette organisation ?"
-          subject={aSupprimer.nom}
-          confirmLabel="Supprimer définitivement"
-          requireText={aSupprimer.nom}
-          busy={suppressionEnCours}
-          error={erreurSuppression}
-          onConfirm={confirmerSuppression}
-          onCancel={() => setASupprimer(null)}
+          title="Désactiver cette organisation ?"
+          subject={aDesactiver.nom}
+          confirmLabel="Désactiver"
+          busy={changementEnCours}
+          error={erreurChangement}
+          onConfirm={() => void changerActivation(aDesactiver, false)}
+          onCancel={() => setADesactiver(null)}
         >
-          <p style={{ margin: 0 }}>
-            Cette suppression est <strong>définitive</strong> et supprime aussi tout ce qui dépend de cette organisation :
-            ses agences et QR codes, ses comptes utilisateurs et les avis clients collectés.
-          </p>
+          <p style={{ margin: 0 }}>{TEXTE_CONFIRMATION_DESACTIVATION}</p>
+          <p style={{ margin: '8px 0 0' }}>{TEXTE_REACTIVATION_POSSIBLE}</p>
         </ConfirmActionModal>
       )}
     </div>

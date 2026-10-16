@@ -16,6 +16,7 @@ from app.api.deps import get_admin_user, get_db
 from app.models.utilisateur import Utilisateur
 from app.models.qr_code import QRCode
 from app.models.agence import Agence
+from app.models.organisation import Organisation
 from app.core.config import settings
 from app.schemas.categorie import CategoriePublicResponse
 from app.models.categorie import Categorie
@@ -77,6 +78,21 @@ def _resolve_qr(clean_code: str, db: Session) -> QRCode | None:
     # tous les clients et d'obtenir leurs catégories pour leur soumettre des feedbacks.
     # Aucun lien généré par l'application n'utilise ce format.
     return None
+
+
+MESSAGE_SERVICE_INDISPONIBLE = "Ce service est momentanément indisponible."
+
+
+def exiger_service_disponible(db: Session, qr: QRCode) -> None:
+    """503 neutre si l'organisation du QR code est désactivée. Le message ne dit ni quelle organisation ni pourquoi."""
+    active = (
+        db.query(Organisation.active)
+        .join(Agence, Agence.organisation_id == Organisation.id)
+        .filter(Agence.id == qr.agence_id)
+        .scalar()
+    )
+    if active is False:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=MESSAGE_SERVICE_INDISPONIBLE)
 
 
 @router.get("/ping")
@@ -203,6 +219,7 @@ def validate_qr_code(
 
         if not qr:
             raise HTTPException(status_code=404, detail="QR Code ou agence introuvable ou inactif")
+        exiger_service_disponible(db, qr)
 
         agence_nom = qr.agence.nom if (qr and qr.agence) else "Agence"
         ville = qr.agence.ville if (qr and qr.agence) else None
@@ -237,6 +254,7 @@ def get_categories_for_qr(
     qr = _resolve_qr(clean_code, db)
     if not qr:
         raise HTTPException(status_code=404, detail="QR Code ou agence introuvable ou inactif")
+    exiger_service_disponible(db, qr)
 
     return (
         db.query(Categorie)
@@ -273,6 +291,7 @@ def soumettre_suggestion(
     qr = _resolve_qr(code.strip(), db)
     if not qr:
         raise HTTPException(status_code=404, detail="QR Code ou agence introuvable ou inactif")
+    exiger_service_disponible(db, qr)
 
     try:
         db.add(Suggestion(agence_id=qr.agence_id, feedback_id=None, contenu=data.contenu, statut=IdeaStatus.NOUVEAU))

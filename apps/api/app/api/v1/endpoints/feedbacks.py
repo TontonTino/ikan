@@ -21,7 +21,7 @@ from app.api.deps import (
     get_feedback_viewer_user,
     get_db,
 )
-from app.api.v1.endpoints.qr_codes import _resolve_qr
+from app.api.v1.endpoints.qr_codes import _resolve_qr, exiger_service_disponible
 from app.models.utilisateur import Utilisateur
 from app.models.feedback import Feedback
 from app.models.analyse_ia import AnalyseIA
@@ -188,6 +188,7 @@ def submit_feedback(
     qr = _resolve_qr(clean_code, db)
     if not qr:
         raise HTTPException(status_code=404, detail="QR Code ou agence introuvable ou inactif")
+    exiger_service_disponible(db, qr)
 
     # Idempotence : un renvoi du MÊME envoi (double clic, nouvelle tentative après coupure réseau) ne crée rien.
     cle = data.idempotency_key

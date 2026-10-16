@@ -2,6 +2,7 @@
 Endpoints d'authentification — login, logout, refresh, profil courant.
 """
 from datetime import timedelta
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import func
@@ -20,6 +21,7 @@ from app.db.session import get_db
 from app.models.enums import UserRole
 from app.models.utilisateur import Utilisateur
 from app.schemas.mot_de_passe import exiger_mot_de_passe_acceptable
+from app.services.comptes import requete_comptes_utilisables
 from app.schemas.auth import (
     AgentTokenResponse, ChangerMotDePasseRequest, LoginRequest, TokenResponse,
     UpdateMeRequest, UserPublic,
@@ -56,9 +58,9 @@ def login(
             detail="Le mot de passe est requis",
         )
 
-    user = db.query(Utilisateur).filter(
+    # Compte désactivé OU organisation désactivée : même réponse qu'un mauvais mot de passe (rien n'est révélé).
+    user = requete_comptes_utilisables(db).filter(
         func.lower(Utilisateur.email) == email,  # égalité sans casse ; `ilike` traitait « _ » et « % » comme des jokers
-        Utilisateur.active == True,
     ).first()
 
     if not user or not verify_password(pwd, user.mot_de_passe_hash):
@@ -126,11 +128,11 @@ def refresh_token(
     if payload is None or payload.get("type") != "refresh":
         raise credentials_exception
 
-    user_id = payload.get("sub")
-    user = db.query(Utilisateur).filter(
-        Utilisateur.id == user_id,
-        Utilisateur.active == True,
-    ).first()
+    try:
+        identifiant = UUID(str(payload.get("sub")))
+    except ValueError:
+        raise credentials_exception from None
+    user = requete_comptes_utilisables(db).filter(Utilisateur.id == identifiant).first()
 
     if not user:
         raise credentials_exception

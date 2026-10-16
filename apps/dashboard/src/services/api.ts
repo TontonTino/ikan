@@ -165,7 +165,6 @@ export const organisationsApi = {
   list: () => api.get('/organisations/'),
   create: (data: object) => api.post('/organisations/', data),
   update: (id: string, data: object) => api.patch(`/organisations/${id}`, data),
-  delete: (id: string) => api.delete(`/organisations/${id}`),
   utilisation: () =>
     api.get<import('../types').UtilisationOrganisation>('/organisations/moi/utilisation'),
   upgradeCheckout: (planCode: 'starter' | 'pro') =>
