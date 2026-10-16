@@ -17,6 +17,7 @@ from app.schemas.organisation import (
     OrganisationCreate, OrganisationUpdate, OrganisationRead, UtilisationOrganisation,
     UpgradeCheckoutRequest, UpgradeCheckoutResponse, ChangementPlanRequest,
 )
+from app.services.administrateurs import controler_suppression_organisation
 from app.services.plan_catalog import STRIPE_PRICE_IDS
 from app.services.plan_service import utilisation_organisation
 from app.services.secteurs import libelle_secteur
@@ -261,6 +262,8 @@ def delete_organisation(
     ).first()
     if not org:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organisation introuvable")
-    
+
+    # Ses comptes administrateurs partiraient avec elle (cascade) : jamais le dernier administrateur actif, jamais le sien.
+    controler_suppression_organisation(db, org.id, current_user)
     db.delete(org)
     db.commit()

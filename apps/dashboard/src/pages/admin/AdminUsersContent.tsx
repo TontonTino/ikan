@@ -187,7 +187,7 @@ export default function AdminUsersContent() {
       return true;
     } catch (err) {
       console.error('Erreur changement de statut du compte:', err);
-      return userFacingError(err, active ? 'Impossible de réactiver ce compte. Veuillez réessayer.' : 'Impossible de suspendre ce compte. Veuillez réessayer.');
+      return messageRefusServeur(err) ?? userFacingError(err, active ? 'Impossible de réactiver ce compte. Veuillez réessayer.' : 'Impossible de suspendre ce compte. Veuillez réessayer.');
     }
   };
 

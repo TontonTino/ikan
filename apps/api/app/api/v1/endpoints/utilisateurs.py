@@ -14,6 +14,7 @@ from app.core.security import get_password_hash
 from app.models.utilisateur import Utilisateur
 from app.models.enums import UserRole
 from app.schemas.mot_de_passe import exiger_mot_de_passe_acceptable
+from app.services.administrateurs import controler_modification_compte, controler_retrait_compte
 from app.services.comptes import normaliser_email
 from app.schemas.utilisateur import UtilisateurCreate, UtilisateurUpdate, UtilisateurResponse
 from app.services.acces_agence import verifier_agence_dans_organisation
@@ -188,6 +189,7 @@ def update_utilisateur(
         raise HTTPException(status_code=404, detail="Utilisateur introuvable")
 
     updates = data.model_dump(exclude_unset=True)
+    controler_modification_compte(db, user, updates, current_user)   # après l'existence et l'appartenance
     if "email" in updates:
         if updates["email"] is None:
             raise HTTPException(status_code=422, detail=MESSAGE_EMAIL_VIDE)
@@ -240,6 +242,7 @@ def delete_utilisateur(
     user = query.first()
     if not user:
         raise HTTPException(status_code=404, detail="Utilisateur introuvable")
-    
+
+    controler_retrait_compte(db, user, current_user)   # après l'existence et l'appartenance
     user.active = False
     db.commit()
