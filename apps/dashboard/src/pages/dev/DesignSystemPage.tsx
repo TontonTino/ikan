@@ -169,8 +169,8 @@ export default function DesignSystemPage() {
         <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>Composition type CX Manager. Ordre du DOM = ordre de lecture : Situation → Évolution → Priorités → Explication → Action → Impact.</p>
         <BentoGrid>
           <BentoItem size="kpi" aria-label="Situation — CSAT"><KpiCard icon={<SmileIcon />} label="CSAT global" value="78 %" trend={{ value: '+3 pts', isPositive: true }} sparkline={SERIES.map((x) => x.csat)} /></BentoItem>
-          <BentoItem size="kpi" aria-label="Situation — volume"><KpiCard icon={<MessageSquareIcon />} label="Volume de feedbacks" value="1 284" tone="neutral" trend={{ value: '+12 %', isPositive: true }} /></BentoItem>
-          <BentoItem size="kpi" aria-label="Situation — critiques"><KpiCard icon={<AlertTriangleIcon />} label="Feedbacks critiques" value="17" tone="critical" trend={{ value: '+4', isPositive: false }} /></BentoItem>
+          <BentoItem size="kpi" aria-label="Situation — volume"><KpiCard icon={<MessageSquareIcon />} label="Avis clients reçus" value="1 284" tone="neutral" trend={{ value: '+12 %', isPositive: true }} /></BentoItem>
+          <BentoItem size="kpi" aria-label="Situation — critiques"><KpiCard icon={<AlertTriangleIcon />} label="Avis clients critiques" value="17" tone="critical" trend={{ value: '+4', isPositive: false }} /></BentoItem>
           <BentoItem size="kpi" aria-label="Situation — alertes"><KpiCard icon={<AlertTriangleIcon />} label="Alertes ouvertes" value="5" tone="warning" /></BentoItem>
           <BentoItem size="hero" aria-label="Évolution">
             <Zone label="Évolution — graphique principal (hero, 8 col × 2 rangées)"><Skeleton variant="rect" height={300} /></Zone>
@@ -178,7 +178,7 @@ export default function DesignSystemPage() {
           <BentoItem size="side" aria-label="Priorités"><Zone label="Priorités — alertes réseau (side)" /></BentoItem>
           <BentoItem size="side" aria-label="Priorités"><Zone label="Priorités — agences en difficulté (side)" /></BentoItem>
           <BentoItem size="two-thirds" aria-label="Explication"><Zone label="Explication — sentiments & thèmes (two-thirds)" /></BentoItem>
-          <BentoItem size="third" aria-label="Insights"><Zone label="Insight IA (third)" /></BentoItem>
+          <BentoItem size="third" aria-label="Analyse"><Zone label="Analyse (third)" /></BentoItem>
           <BentoItem size="half" aria-label="Action"><Zone label="Action — actions correctives (half)" /></BentoItem>
           <BentoItem size="half" aria-label="Impact"><Zone label="Impact — suivi d'efficacité (half)" /></BentoItem>
         </BentoGrid>
@@ -297,8 +297,8 @@ export default function DesignSystemPage() {
       <Section title="Card & KpiCard">
         <div style={grid}>
           <KpiCard icon={<SmileIcon />} label="CSAT global" value="78 %" trend={{ value: '+3 pts', isPositive: true }} sparkline={SERIES.map((s) => s.csat)} highlight hint="Part des notes 4 et 5 sur 5." onClick={() => setDrawerLevel(1)} />
-          <KpiCard icon={<MessageSquareIcon />} label="Volume de feedbacks" value="1 284" tone="neutral" trend={{ value: '+12 %', isPositive: true }} />
-          <KpiCard icon={<AlertTriangleIcon />} label="Feedbacks critiques" value="17" tone="critical" trend={{ value: '+4', isPositive: false }} />
+          <KpiCard icon={<MessageSquareIcon />} label="Avis clients reçus" value="1 284" tone="neutral" trend={{ value: '+12 %', isPositive: true }} />
+          <KpiCard icon={<AlertTriangleIcon />} label="Avis clients critiques" value="17" tone="critical" trend={{ value: '+4', isPositive: false }} />
           <KpiCard icon={<SmileIcon />} label="Chargement" value="" loading />
         </div>
         <div style={grid}>
@@ -321,7 +321,7 @@ export default function DesignSystemPage() {
 
       <Section title="FeedbackCard & ActionCard">
         <div style={grid}>
-          <FeedbackCard feedback={DEMO_FEEDBACKS[0]} showAgency onOpen={() => toast.info('Ouverture du feedback')} />
+          <FeedbackCard feedback={DEMO_FEEDBACKS[0]} showAgency onOpen={() => toast.info('Ouverture de l’avis client')} />
           <FeedbackCard feedback={DEMO_FEEDBACKS[1]} showAgency />
           <ActionCard action={{ id: 'a1', title: 'Renforcer l’accueil le samedi matin', status: 'en_cours', owner: 'Responsable (exemple)', createdAt: new Date(Date.now() - 5 * 86400e3).toISOString(), source: 'attente' }} onComplete={() => toast.success('Action marquée comme réalisée.')} />
           <ActionCard action={{ id: 'a2', title: 'Exemple avec échéance dépassée', status: 'a_faire', dueDate: new Date(Date.now() - 86400e3).toISOString() }} />
@@ -341,7 +341,7 @@ export default function DesignSystemPage() {
           series={[{ key: 'csat', label: 'CSAT', color: 'positive' }, { key: 'previous', label: 'Période précédente', color: 'neutral', dashed: true }]}
           loading={chartState === 'loading'}
           isEmpty={chartState === 'empty'}
-          emptyTitle="Aucun feedback sur cette période."
+          emptyTitle="Aucun avis client sur cette période."
           emptyMessage="Élargissez la période ou vérifiez que les QR codes sont actifs."
           granularity={{ value: granularity, onChange: setGranularity }}
           table={
@@ -386,13 +386,13 @@ export default function DesignSystemPage() {
           ]}
         />
         <DataTable caption="Chargement" rows={[] as typeof SERIES} rowKey={(r) => r.label} loading skeletonRows={3} columns={[{ key: 'label', header: 'Semaine' }, { key: 'csat', header: 'CSAT', numeric: true }]} />
-        <DataTable caption="Vide" rows={[] as typeof SERIES} rowKey={(r) => r.label} emptyTitle="Aucune action en cours." emptyMessage="Les actions créées depuis un feedback apparaîtront ici." columns={[{ key: 'label', header: 'Semaine' }]} />
+        <DataTable caption="Vide" rows={[] as typeof SERIES} rowKey={(r) => r.label} emptyTitle="Aucune action en cours." emptyMessage="Les actions créées depuis un avis client apparaîtront ici." columns={[{ key: 'label', header: 'Semaine' }]} />
       </Section>
 
       <Section title="EmptyState & Skeleton">
         <div style={grid}>
           <Card padding="none"><EmptyState title="Aucune alerte active" message="Aucune agence ne dépasse les seuils sur cette période." illustration="no-alert" /></Card>
-          <Card padding="none"><EmptyState compact title="Aucun feedback critique sur cette période." action={{ label: 'Changer la période', onClick: () => undefined }} /></Card>
+          <Card padding="none"><EmptyState compact title="Aucun avis client critique sur cette période." action={{ label: 'Changer la période', onClick: () => undefined }} /></Card>
           <Card>
             <Skeleton variant="text" width="40%" height={20} />
             <Skeleton variant="text" lines={3} />

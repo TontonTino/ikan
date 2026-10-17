@@ -16,8 +16,8 @@ export type PilotageSection = 'alertes' | 'suggestions' | 'actions' | 'issues';
 const SECTION_HEADER: Record<PilotageSection, { title: string; cx: string; agency: string }> = {
   alertes: {
     title: 'Alertes',
-    cx: 'Agences sous leur seuil de satisfaction, feedbacks à risque et recommandations IA du réseau : filtrer, analyser, traiter.',
-    agency: 'Ce qui demande votre attention dans votre agence : seuil de satisfaction, feedbacks à risque, recommandations IA.',
+    cx: 'Agences sous leur seuil de satisfaction, avis clients à risque et recommandations du réseau : filtrer, analyser, traiter.',
+    agency: 'Ce qui demande votre attention dans votre agence : seuil de satisfaction, avis clients à risque et recommandations.',
   },
   suggestions: {
     title: 'Suggestions',
@@ -25,14 +25,14 @@ const SECTION_HEADER: Record<PilotageSection, { title: string; cx: string; agenc
     agency: 'Idées remontées par les clients de votre agence : étudier, décider, suivre.',
   },
   actions: {
-    title: 'Actions correctives',
-    cx: 'Suivi des actions décidées dans le réseau, en cours et réalisées.',
-    agency: 'Suivi de vos actions, en cours et réalisées.',
+    title: 'Actions à mener',
+    cx: 'Suivi des actions décidées dans le réseau, en cours ou menées à terme.',
+    agency: 'Suivi de vos actions, en cours ou menées à terme.',
   },
   issues: {
-    title: 'Issues',
-    cx: 'Problèmes récurrents détectés à partir des feedbacks, avec leurs actions et leur vérification.',
-    agency: 'Problèmes récurrents détectés dans votre agence, avec leurs actions et leur vérification.',
+    title: 'Problèmes à traiter',
+    cx: 'Problèmes signalés dans le réseau, avec leurs actions et leur vérification.',
+    agency: 'Problèmes signalés dans votre agence, avec leurs actions et leur vérification.',
   },
 };
 
@@ -352,7 +352,7 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
       const res = await issuesApi.get(issueId);
       setIssueDetail(res.data);
     } catch {
-      showToast('Impossible de charger le détail de cette Issue');
+      showToast('Impossible de charger le détail de ce problème');
       setSelectedIssueId(null);
     } finally {
       setIssueDetailLoading(false);
@@ -388,10 +388,10 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
   const verifierIssue = async (issueId: string) => {
     try {
       await issuesApi.verifier(issueId);
-      showToast('Issue marquée comme vérifiée');
+      showToast('Problème marqué comme vérifié');
       await rafraichirApresActionIssue(issueId);
     } catch {
-      showToast("Erreur lors de la vérification de l'Issue");
+      showToast('Erreur lors de la vérification du problème');
     }
   };
 

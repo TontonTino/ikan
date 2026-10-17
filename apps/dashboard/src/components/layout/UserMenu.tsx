@@ -16,12 +16,12 @@ const CATALOGUE_OFFRES: Record<'starter' | 'pro', { nom: string; prix: string; l
   starter: {
     nom: 'Starter',
     prix: '30 000 FCFA / mois',
-    limites: ['Jusqu\'à 3 agences', '1 CX Manager', 'Feedbacks illimités'],
+    limites: ['Jusqu\'à 3 agences', '1 responsable expérience client', 'Avis clients illimités'],
   },
   pro: {
     nom: 'Pro',
     prix: '50 000 FCFA / mois',
-    limites: ['Jusqu\'à 10 agences', '3 CX Managers', 'Feedbacks illimités', 'Détection de discordance'],
+    limites: ['Jusqu\'à 10 agences', '3 responsables expérience client', 'Avis clients illimités', 'Détection de discordance'],
   },
 };
 
@@ -280,7 +280,7 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
                   {utilisation ? (
                     <>
                       <QuotaBar label="Agences" quota={utilisation.agences} />
-                      <QuotaBar label="Feedbacks ce mois-ci" quota={utilisation.feedbacks_ce_mois} />
+                      <QuotaBar label="Avis clients ce mois-ci" quota={utilisation.feedbacks_ce_mois} />
                       <QuotaBar label="CX Managers" quota={utilisation.cx_managers} />
 
                       <div style={{ marginTop: '12px', fontWeight: 700, fontSize: '0.76rem', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>

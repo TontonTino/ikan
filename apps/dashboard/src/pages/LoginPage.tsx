@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { AlertTriangleIcon } from '../components/common/Icons';
+import { userFacingError } from '../utils/userFacingError';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -27,17 +28,7 @@ export default function LoginPage() {
       await login(email.trim(), password);
       navigate('/');
     } catch (err: any) {
-      const status = err?.response?.status;
-
-      if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
-        setError('Le serveur met du temps à répondre (réveil en cours). Veuillez réessayer.');
-      } else if (!err.response) {
-        setError('Impossible de joindre le serveur. Veuillez vérifier votre connexion ou réessayer.');
-      } else if (status === 500 || status === 503) {
-        setError('Le serveur d’authentification est indisponible. Vérifiez que l’API est bien démarrée.');
-      } else {
-        setError(err?.response?.data?.detail || 'Email ou mot de passe incorrect');
-      }
+      setError(userFacingError(err, 'Impossible de se connecter pour le moment. Veuillez réessayer.', 'Vérifiez votre adresse e-mail et votre mot de passe.'));
     } finally {
       setLoading(false);
     }
@@ -152,7 +143,7 @@ export default function LoginPage() {
             >
               <img
                 src="/scan2.png"
-                alt="Scan QR Code Feedback"
+                alt="Scanner le QR code pour donner un avis"
                 style={{
                   maxHeight: '340px',
                   maxWidth: '100%',

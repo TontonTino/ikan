@@ -11,6 +11,7 @@ import type {
 import PageHeader from '../../components/ui/PageHeader';
 import EmptyState from '../../components/ui/EmptyState';
 import { AlertTriangleIcon, ClockIcon, XCloseIcon } from '../../components/common/Icons';
+import { userFacingError } from '../../utils/userFacingError';
 
 const SOURCE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   stripe: { label: 'Stripe', color: '#3C7730', bg: '#EAF5EC' },
@@ -60,7 +61,7 @@ function ModaleChangerForfait({
       await organisationsApi.changerPlan(org.id, planId, raison.trim());
       onSuccess();
     } catch (err: any) {
-      setErreur(err?.response?.data?.detail || 'Erreur lors du changement de forfait.');
+      setErreur(userFacingError(err, 'Impossible de changer le forfait. Veuillez réessayer.', 'Vérifiez les informations du forfait puis réessayez.'));
     } finally {
       setEnvoi(false);
     }

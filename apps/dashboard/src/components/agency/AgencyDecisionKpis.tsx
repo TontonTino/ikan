@@ -22,13 +22,13 @@ export default function AgencyDecisionKpis({ data, jours }: Props) {
         icon={<SmileIcon size={16} />}
         label="Satisfaction"
         value={noFeedbacks ? 'Pas de données' : `${data.taux_satisfaction}%`}
-        subtitle={noFeedbacks ? 'sur cette période' : `sur ${data.nombre_feedbacks} feedbacks`}
+        subtitle={noFeedbacks ? 'sur cette période' : `sur ${data.nombre_feedbacks} avis clients`}
       />
       <KpiCard
         compact
         showSparkline={false}
         icon={<MessageSquareIcon size={16} />}
-        label="Feedbacks"
+        label="Avis clients"
         value={data.nombre_feedbacks}
         subtitle={`${jours} derniers jours · ${data.nombre_negatifs} négatif${data.nombre_negatifs !== 1 ? 's' : ''}`}
       />
@@ -36,7 +36,7 @@ export default function AgencyDecisionKpis({ data, jours }: Props) {
         compact
         showSparkline={false}
         icon={<AlertTriangleIcon size={16} />}
-        label="Feedbacks critiques"
+        label="Avis clients critiques"
         value={data.nombre_critiques}
         subtitle={`sur les ${jours} derniers jours`}
         tone={data.nombre_critiques > 0 ? 'critical' : 'neutral'}
@@ -56,7 +56,7 @@ export default function AgencyDecisionKpis({ data, jours }: Props) {
         icon={<CheckCircleIcon size={16} />}
         label="Prise en charge"
         value={data.taux_prise_en_charge === null ? 'Pas de données' : `${data.taux_prise_en_charge}%`}
-        subtitle="feedbacks ayant quitté le statut Nouveau"
+        subtitle="avis clients ayant quitté le statut Nouveau"
       />
     </div>
   );

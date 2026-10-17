@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ThemeStatsDetail } from '../../types';
+import { SENTIMENT_LABELS } from '../../utils/labels';
 
 interface ThemesBarListProps {
   themes: ThemeStatsDetail[];
@@ -56,7 +57,7 @@ export default function ThemesBarList({ themes, maxItems = 6 }: ThemesBarListPro
                     background: dotColor,
                     flexShrink: 0,
                   }}
-                  title={`Sentiment prédominant: ${item.sentiment_predominant}`}
+                  title={`Ton prédominant des avis : ${SENTIMENT_LABELS[item.sentiment_predominant as keyof typeof SENTIMENT_LABELS] ?? 'valeur non reconnue'}`}
                 />
                 <span style={{ fontWeight: 600, color: '#0F172A' }}>{item.label}</span>
               </div>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { RefreshCwIcon, AlertTriangleIcon, BarChartIcon } from '../common/Icons';
 
-export function StatsLoadingState({ message = 'Calcul des statistiques en cours...' }: { message?: string }) {
+export function StatsLoadingState({ message = 'Calcul des indicateurs en cours…' }: { message?: string }) {
   return (
     <div
       style={{
@@ -73,7 +73,7 @@ export function StatsErrorState({
         <AlertTriangleIcon size={24} />
       </div>
       <div style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0F172A' }}>
-        Impossible de charger les analyses
+        Impossible de charger les données
       </div>
       <p style={{ fontSize: '0.84rem', color: '#64748B', maxWidth: '420px', margin: 0 }}>
         {message}
@@ -94,7 +94,7 @@ export function StatsErrorState({
 
 export function StatsEmptyState({
   title = 'Aucune donnée disponible',
-  description = 'Aucun feedback n’a été enregistré pour les filtres sélectionnés.',
+  description = 'Aucun avis client n’a été enregistré pour les filtres sélectionnés.',
 }: {
   title?: string;
   description?: string;

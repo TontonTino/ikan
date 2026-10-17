@@ -69,7 +69,7 @@ export default function PilotageActionsCorrectivesTab({ isAgencyManager, agences
           </div>
 
           {actionsLoading ? (
-            <div aria-busy="true" aria-label="Chargement des actions correctives" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div aria-busy="true" aria-label="Chargement des actions à mener" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {[0, 1, 2].map((i) => (
                 <SkeletonBlock key={i} height={90} radius="var(--radius-2xl)" />
               ))}
@@ -81,7 +81,7 @@ export default function PilotageActionsCorrectivesTab({ isAgencyManager, agences
                 title={actionsToggle === 'en_cours' ? 'Aucune action en cours' : 'Aucune action terminée pour l’instant'}
                 message={
                   actionsToggle === 'en_cours'
-                    ? 'Toutes les actions correctives définies ont été confirmées comme réalisées.'
+                    ? 'Toutes les actions définies ont été confirmées comme menées à terme.'
                     : 'Les actions confirmées comme réalisées apparaîtront ici.'
                 }
               />

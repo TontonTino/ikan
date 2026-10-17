@@ -11,7 +11,7 @@ export const RAISON_LABELS: Record<string, string> = {
 };
 
 /** Libellé d'une raison ; une valeur inconnue reste lisible plutôt qu'une clé technique. */
-export const raisonLabel = (raison: string) => RAISON_LABELS[raison] ?? 'Feedback à risque';
+export const raisonLabel = (raison: string) => RAISON_LABELS[raison] ?? 'Avis client à risque';
 
 /** Ancres stables : la cloche pointe directement sur une alerte de la page /alertes. */
 export const alerteSeuilAnchor = (agenceId: string) => `alerte-seuil-${agenceId}`;

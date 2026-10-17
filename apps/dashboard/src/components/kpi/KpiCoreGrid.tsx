@@ -18,7 +18,7 @@ import type { KPIResult } from '../../types';
 import KpiCard from '../ui/KpiCard';
 import SkeletonBlock from '../ui/SkeletonBlock';
 import { StatsErrorState } from '../stats/StatsStates';
-import { kpiIconComponent, formatKpiValue, formatKpiSubtitle } from '../../utils/kpiFormat';
+import { kpiIconComponent, formatKpiLabel, formatKpiValue, formatKpiSubtitle } from '../../utils/kpiFormat';
 
 export interface KpiCoreGridProps {
   jours: number;
@@ -52,7 +52,7 @@ function Grille({ kpis, jours }: { kpis: KPIResult[]; jours: number }) {
             key={k.code}
             compact
             icon={<Icon size={16} />}
-            label={k.label}
+            label={formatKpiLabel(k)}
             value={formatKpiValue(k)}
             subtitle={formatKpiSubtitle(k, jours)}
           />
@@ -92,12 +92,12 @@ export default function KpiCoreGrid({ jours, agenceId, refreshToken }: KpiCoreGr
   }, [fetchKpis, refreshToken]);
 
   if (error) {
-    return <StatsErrorState message="Impossible de charger les indicateurs KPI." onRetry={fetchKpis} />;
+    return <StatsErrorState message="Impossible de charger les indicateurs." onRetry={fetchKpis} />;
   }
 
   if (loading) {
     return (
-      <div aria-busy="true" aria-label="Chargement des indicateurs KPI" style={GRILLE_STYLE}>
+      <div aria-busy="true" aria-label="Chargement des indicateurs" style={GRILLE_STYLE}>
         {Array.from({ length: 8 }).map((_, i) => (
           <SkeletonBlock key={i} height={90} radius="16px" />
         ))}
@@ -130,7 +130,7 @@ export default function KpiCoreGrid({ jours, agenceId, refreshToken }: KpiCoreGr
 
       {secteurSansPack && (
         <div style={{ marginTop: '14px', fontSize: '0.82rem', color: '#94A3B8', fontStyle: 'italic' }}>
-          KPIs spécifiques à votre secteur bientôt disponibles.
+          Indicateurs propres à votre secteur bientôt disponibles.
         </div>
       )}
     </div>

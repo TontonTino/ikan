@@ -9,8 +9,8 @@ export const YAM_PANEL_ID = 'yam-chat-panel';
 
 const SUGGESTIONS = [
   'Y a-t-il des alertes critiques ?',
-  'Quels sont les problèmes récurrents ?',
-  'Fais-moi un résumé de la période',
+  'Quels problèmes ont été signalés ?',
+  'Résume la période',
 ];
 
 // Au-delà de ce délai, on prévient l'utilisateur (réveil possible du service d'hébergement).
@@ -36,7 +36,7 @@ function ThinkingBubble() {
         </span>
         {slow && (
           <div className="yam-slow-hint">
-            Cela prend un peu plus de temps que d'habitude (le service se réveille), merci de patienter…
+            La réponse prend plus de temps que prévu. Merci de patienter…
           </div>
         )}
       </div>
@@ -158,8 +158,8 @@ export default function YamChatPanel({ open, onClose }: Props) {
           <YamAvatar size={28} />
           <div className="yam-bubble yam-bubble-assistant">
             <p className="yam-paragraph">
-              Bonjour, je suis <strong>YAM</strong>. Je peux analyser les feedbacks de votre
-              périmètre : alertes, thèmes, problèmes récurrents, tendances et recommandations.
+              Bonjour, je suis <strong>YAM</strong>. Je peux analyser les avis clients de votre
+              périmètre : alertes, thèmes, problèmes signalés, tendances et pistes d’action.
             </p>
             {messages.length === 0 && (
               <div className="yam-suggestions">

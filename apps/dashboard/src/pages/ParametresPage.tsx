@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { authApi } from '../services/api';
+import { userFacingError } from '../utils/userFacingError';
 import { useAuthStore } from '../stores/authStore';
 import PageHeader from '../components/ui/PageHeader';
 import { CheckCircleIcon, AlertTriangleIcon, KeyIcon, UsersIcon, BellIcon } from '../components/common/Icons';
@@ -52,7 +53,7 @@ export default function ParametresPage() {
       setUser(res.data);
       setMessageInfos({ type: 'succes', texte: 'Informations mises à jour.' });
     } catch (err: any) {
-      setMessageInfos({ type: 'erreur', texte: err?.response?.data?.detail || 'Erreur lors de la mise à jour.' });
+      setMessageInfos({ type: 'erreur', texte: userFacingError(err, 'Impossible de mettre à jour les informations. Veuillez réessayer.') });
     } finally {
       setEnregistrementEnCours(false);
     }
@@ -83,10 +84,9 @@ export default function ParametresPage() {
       setMessageDelai({ type: 'succes', texte: 'Délai mis à jour.' });
     } catch (err: any) {
       // FastAPI renvoie un tableau pour les erreurs de validation (422) : on n'affiche jamais un objet brut.
-      const detail = err?.response?.data?.detail;
       setMessageDelai({
         type: 'erreur',
-        texte: typeof detail === 'string' ? detail : `Saisissez un nombre entier d'heures entre ${DELAI_MIN} et ${DELAI_MAX}.`,
+        texte: userFacingError(err, 'Impossible de mettre à jour le délai. Veuillez réessayer.', `Saisissez un nombre entier d'heures entre ${DELAI_MIN} et ${DELAI_MAX}.`),
       });
     } finally {
       setDelaiEnCours(false);
@@ -121,7 +121,7 @@ export default function ParametresPage() {
       setNouveauMdp('');
       setConfirmationMdp('');
     } catch (err: any) {
-      setMessageMdp({ type: 'erreur', texte: err?.response?.data?.detail || 'Ancien mot de passe incorrect.' });
+      setMessageMdp({ type: 'erreur', texte: userFacingError(err, 'Impossible de changer le mot de passe. Vérifiez l’ancien mot de passe puis réessayez.', 'Vérifiez le mot de passe saisi puis réessayez.') });
     } finally {
       setChangementEnCours(false);
     }

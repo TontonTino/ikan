@@ -239,17 +239,17 @@ export default function DashboardLayout() {
     if (location.pathname.includes('/parametres')) return 'Paramètres';
     if (location.pathname.includes('/mon-agence')) return 'Mon agence';
     if (location.pathname.includes('/apercu')) return 'Agence';
-    if (location.pathname.includes('/admin/dashboard')) return 'Dashboard';
+    if (location.pathname.includes('/admin/dashboard')) return 'Tableau de bord';
     if (location.pathname.includes('/siege')) return 'Vue d\'ensemble';
     if (location.pathname.includes('/agence')) return 'Vue d\'ensemble';
-    if (location.pathname.includes('/feedbacks')) return 'Feedbacks';
+    if (location.pathname.includes('/feedbacks')) return 'Avis clients';
     if (location.pathname.includes('/alertes')) return 'Alertes';
     if (location.pathname.includes('/actions')) return 'Actions correctives';
-    if (location.pathname.includes('/issues')) return 'Issues';
+    if (location.pathname.includes('/issues')) return 'Problèmes à traiter';
     if (location.pathname.includes('/veille')) return 'Veille';
     if (location.pathname.includes('/suggestions')) return 'Suggestions';
     if (location.pathname.includes('/demandes-rappel')) return 'Demandes de rappel';
-    return 'Dashboard';
+    return 'Tableau de bord';
   };
 
   // Pages dont la bannière d'en-tête (et donc le fil d'Ariane) a été retirée :

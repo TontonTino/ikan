@@ -22,7 +22,7 @@ interface Props {
 }
 
 type AlertTypeFilter = 'toutes' | 'seuil' | 'feedback';
-const TYPE_LABEL: Record<AlertTypeFilter, string> = { toutes: 'Toutes', seuil: 'Satisfaction', feedback: 'Feedbacks' };
+const TYPE_LABEL: Record<AlertTypeFilter, string> = { toutes: 'Toutes', seuil: 'Satisfaction', feedback: 'Avis clients' };
 
 /** Défile jusqu'à l'alerte ciblée par l'URL (#alerte-…), la met en évidence et lui donne le focus. */
 function useHashTarget(ready: boolean) {
@@ -107,7 +107,7 @@ export default function PilotageAlertesActionsTab(props: Props) {
                     ? "Votre agence maintient un taux de satisfaction supérieur à son seuil d'alerte."
                     : "Toutes les agences du réseau maintiennent un taux de satisfaction supérieur à leurs seuils d'alerte."
               }
-              action={filtreActif ? { label: 'Réinitialiser les filtres', onClick: resetFiltres } : undefined}
+              action={filtreActif ? { label: 'Effacer les filtres', onClick: resetFiltres } : undefined}
             />
           </Card>
         ) : (

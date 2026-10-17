@@ -11,6 +11,7 @@ import SentimentDonutChart from '../../components/stats/SentimentDonutChart';
 import ThemesBarList from '../../components/stats/ThemesBarList';
 import AlertesSyntheseCard from '../../components/stats/AlertesSyntheseCard';
 import AiInsightsSummary from '../../components/stats/AiInsightsSummary';
+import { userFacingError } from '../../utils/userFacingError';
 import {
   StatsLoadingState,
   StatsErrorState,
@@ -37,7 +38,7 @@ export default function StatsAgencyView() {
       const res = await statisticsApi.agency({ jours });
       setData(res.data);
     } catch (err: any) {
-      setError(err?.response?.data?.detail || "Erreur lors du chargement des statistiques de l'agence.");
+      setError(userFacingError(err, "Impossible de charger les statistiques de l’agence. Veuillez réessayer."));
     } finally {
       setLoading(false);
     }
@@ -66,7 +67,7 @@ export default function StatsAgencyView() {
     { id: 'sentiments_themes', label: 'Sentiments & Thématiques', icon: <TagIcon size={16} /> },
     {
       id: 'alertes',
-      label: 'Alertes & Conseils IA',
+      label: 'Alertes et recommandations',
       badge: data?.alertes_synthese.total_critiques,
       badgeColor: (data?.alertes_synthese.total_critiques || 0) > 0 ? ('red' as const) : ('default' as const),
     },
@@ -124,7 +125,7 @@ export default function StatsAgencyView() {
 
           <KpiCard
             icon={<MessageSquareIcon size={20} />}
-            label="Feedbacks reçus"
+            label="Avis clients reçus"
             value={kpis.total_feedbacks?.valeur ?? 0}
             trend={
               kpis.total_feedbacks?.evolution

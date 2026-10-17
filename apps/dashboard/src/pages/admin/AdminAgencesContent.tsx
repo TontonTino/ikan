@@ -16,6 +16,7 @@ import {
 } from '../../components/common/Icons';
 import { AgencyLocationPicker, LocationData } from '../../components/agency/AgencyLocationPicker';
 import CreateAgencyManagerModal, { AgencyManagerLite } from '../../components/admin/CreateAgencyManagerModal';
+import { userFacingError } from '../../utils/userFacingError';
 
 interface AgenceForm {
   nom: string;
@@ -152,7 +153,7 @@ export default function AdminAgencesContent() {
       }
       setShowModal(false);
     } catch (err: any) {
-      showToast(err.response?.data?.detail || 'Erreur lors de la sauvegarde');
+      showToast(userFacingError(err, 'Impossible d’enregistrer cette agence. Veuillez réessayer.', 'Vérifiez les informations de l’agence puis réessayez.'));
     } finally {
       setSaving(false);
     }
@@ -175,7 +176,7 @@ export default function AdminAgencesContent() {
       setAgences((prev) => prev.filter((ag) => ag.id !== a.id));
       showToast('Agence supprimée');
     } catch {
-      showToast('Impossible de supprimer cette agence (feedbacks rattachés)');
+      showToast('Impossible de supprimer cette agence : des avis clients y sont rattachés.');
     }
   };
 
@@ -658,7 +659,7 @@ export default function AdminAgencesContent() {
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
             <div style={{ background: '#FFFFFF', borderRadius: '24px', padding: '28px', maxWidth: '360px', width: '100%', textAlign: 'center' }}>
               <h3 style={{ margin: '0 0 4px', fontSize: '1.1rem', fontWeight: 800, color: '#02302D' }}>{qrModalTarget.nom}</h3>
-              <p style={{ margin: '0 0 16px', fontSize: '0.78rem', color: '#64748B' }}>Borne de collecte feedback</p>
+              <p style={{ margin: '0 0 16px', fontSize: '0.78rem', color: '#64748B' }}>Borne de collecte des avis clients</p>
 
               <img
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(modalQrUrl)}`}

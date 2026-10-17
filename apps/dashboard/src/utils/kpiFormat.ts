@@ -59,6 +59,34 @@ export function kpiIconComponent(code: string): ComponentType<IconProps> {
   return ICONE_PAR_CODE[code] ?? ActivityIcon;
 }
 
+const LIBELLE_KPI: Record<string, string> = {
+  CSAT: 'Satisfaction client',
+  NPS: 'Recommandation client',
+  NEGATIVE_SENTIMENT_RATE: 'Part des avis au ton négatif',
+  ISSUE_VOLUME: 'Problèmes signalés',
+  CRITICAL_ISSUE_RATE: 'Part des problèmes critiques',
+  ISSUE_RESOLUTION_RATE: 'Taux de résolution',
+  MEDIAN_RESOLUTION_TIME: 'Délai médian de résolution',
+  LOOP_CLOSURE_RATE: 'Part des problèmes vérifiés',
+  FEEDBACK_VOLUME: 'Avis clients reçus',
+  ISSUE_BACKLOG: 'Problèmes ouverts',
+  BACKLOG_AGE: 'Ancienneté des problèmes ouverts',
+  ACTION_COMPLETION_RATE: 'Actions menées à terme',
+  SLA_COMPLIANCE_RATE: 'Respect des délais de traitement',
+  ISSUE_RECURRENCE_RATE: 'Récurrence des problèmes',
+  ESCALATION_RATE: 'Part des problèmes escaladés',
+  TEL_PART_HORS_PERIMETRE: 'Problèmes hors périmètre',
+  TEL_RECURRENCE_AGENCE: 'Récurrence dans l’agence',
+  TEL_RECURRENCE_HORS_PERIMETRE: 'Récurrence hors périmètre',
+};
+
+export function formatKpiLabel(k: KPIResult): string {
+  if (LIBELLE_KPI[k.code]) return LIBELLE_KPI[k.code];
+  const label = k.label?.trim();
+  // Préserve les libellés personnalisés, sans exposer un code technique reçu en guise de label.
+  return label && !/^[A-Z][A-Z0-9_]*$/.test(label) ? label : 'Indicateur complémentaire';
+}
+
 // Règle stricte du backend (KPI Engine) : status "no_data" signifie qu'aucune donnée
 // exploitable n'existe pour la période — jamais un 0%/0 trompeur. Le frontend ne doit
 // pas la contredire en affichant un faux zéro.
@@ -83,7 +111,7 @@ export function formatKpiSubtitle(k: KPIResult, jours: number): string {
   // information que "aucune Issue non classée" — voir app/services/kpi/engine.py.
   if (k.code === 'TEL_PART_HORS_PERIMETRE' && k.non_classees_count != null) {
     const n = k.non_classees_count;
-    const base = `${n} Issue${n !== 1 ? 's' : ''} non classée${n !== 1 ? 's' : ''}`;
+    const base = `${n} problème${n !== 1 ? 's' : ''} non classé${n !== 1 ? 's' : ''}`;
     return k.status === 'no_data' ? base : `${base} · ${jours} derniers jours`;
   }
   // NPS : le dénominateur EST le nombre de réponses (voir calculer_nps,

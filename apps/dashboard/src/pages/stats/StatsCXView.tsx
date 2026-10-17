@@ -12,6 +12,7 @@ import ThemesBarList from '../../components/stats/ThemesBarList';
 import AgencesRankingTable from '../../components/stats/AgencesRankingTable';
 import AlertesSyntheseCard from '../../components/stats/AlertesSyntheseCard';
 import AiInsightsSummary from '../../components/stats/AiInsightsSummary';
+import { userFacingError } from '../../utils/userFacingError';
 import type { AgenceCarte } from '../../components/map/AgencesMap';
 import { statutSeuil, satisfactionTexte, STATUT_SEUIL_LABEL } from '../cx/siege/siegeData';
 
@@ -75,7 +76,7 @@ export default function StatsCXView() {
       });
       setData(res.data);
     } catch (err: any) {
-      setError(err?.response?.data?.detail || 'Erreur lors du chargement des statistiques.');
+      setError(userFacingError(err, 'Impossible de charger les statistiques. Veuillez réessayer.'));
     } finally {
       setLoading(false);
     }
@@ -108,11 +109,11 @@ export default function StatsCXView() {
 
   const tabsConfig = [
     { id: 'satisfaction', label: 'Satisfaction', icon: <SmileIcon size={16} /> },
-    { id: 'feedbacks', label: 'Feedbacks', icon: <MessageSquareIcon size={16} /> },
+    { id: 'feedbacks', label: 'Avis clients', icon: <MessageSquareIcon size={16} /> },
     { id: 'sentiments', label: 'Sentiments', icon: <ThumbsUpIcon size={16} /> },
-    { id: 'thematiques', label: 'Thématiques IA', icon: <TagIcon size={16} />, badge: data?.themes.length },
+    { id: 'thematiques', label: 'Thèmes', icon: <TagIcon size={16} />, badge: data?.themes.length },
     { id: 'agences', label: 'Agences', icon: <StoreIcon size={16} />, badge: data?.agences_ranking.length },
-    { id: 'tendances', label: 'Tendances & IA' },
+    { id: 'tendances', label: 'Tendances' },
   ];
 
   return (
@@ -242,13 +243,13 @@ export default function StatsCXView() {
           )}
 
           {/* ══════════════════════════════════════════════════════
-              4. THÉMATIQUES IA (15 Thèmes & NLP)
+              4. THÈMES DES AVIS CLIENTS
           ══════════════════════════════════════════════════════ */}
           {activeTab === 'thematiques' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <StatsSectionCard
                 title="Cartographie des Thématiques Client Détectées"
-                subtitle="Extraction sémantique automatique par le moteur IKAN NLP"
+                subtitle="Thèmes relevés dans les avis clients par l’analyse IKAN"
               >
                 <ThemesBarList themes={data.themes} maxItems={15} />
               </StatsSectionCard>
@@ -303,7 +304,7 @@ export default function StatsCXView() {
           )}
 
           {/* ══════════════════════════════════════════════════════
-              6. TENDANCES (Évolutions, Anomalies & Insights IA)
+              6. TENDANCES (ÉVOLUTIONS ET ANOMALIES)
           ══════════════════════════════════════════════════════ */}
           {activeTab === 'tendances' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

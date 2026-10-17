@@ -5,6 +5,7 @@ import { useAuthStore } from '../../stores/authStore';
 import type { Organisation, SecteurInfo } from '../../types';
 import PageHeader from '../../components/ui/PageHeader';
 import { BuildingIcon, PlusIcon, AlertTriangleIcon, DownloadIcon } from '../../components/common/Icons';
+import { userFacingError } from '../../utils/userFacingError';
 
 export default function AdminOrgsPage() {
   const user = useAuthStore((s) => s.user);
@@ -86,13 +87,7 @@ export default function AdminOrgsPage() {
       setForm({ nom: '', logo: '', secteur_code: secteurs[0]?.code || '', pays_region: '', email_pro: '' });
     } catch (err: any) {
       console.error('Erreur API organisation:', err?.response?.data);
-      let detail = err?.response?.data?.detail;
-      if (Array.isArray(detail)) {
-        detail = detail.map((d: any) => `${d.loc ? d.loc.join('.') : ''}: ${d.msg}`).join(', ');
-      } else if (typeof detail === 'object') {
-        detail = JSON.stringify(detail);
-      }
-      setErrorMsg(detail || err?.message || "Erreur lors de l'enregistrement de l'organisation.");
+      setErrorMsg(userFacingError(err, "Impossible d’enregistrer l’organisation. Veuillez réessayer.", 'Vérifiez les informations saisies puis réessayez.'));
     }
   };
 
@@ -102,7 +97,7 @@ export default function AdminOrgsPage() {
       await organisationsApi.delete(id);
       setOrgs((prev) => prev.filter((o) => o.id !== id));
     } catch (err: any) {
-      alert(err?.response?.data?.detail || 'Impossible de supprimer cette organisation.');
+      alert(userFacingError(err, 'Impossible de supprimer cette organisation. Veuillez réessayer.'));
     }
   };
 

@@ -67,12 +67,12 @@ export default function AiInsightsSummary({ insights }: AiInsightsSummaryProps) 
         <FileTextIcon size={20} color="#75B72A" />
         <div>
           <div style={{ fontSize: '1rem', fontWeight: 800, color: '#02302D' }}>
-            {ia ? 'Synthèse & Recommandations IA' : 'Synthèse automatique'}
+            {ia ? 'Pistes issues de l’analyse' : 'Repères dans les données'}
           </div>
           <div style={{ fontSize: '0.76rem', color: '#64748B' }}>
             {ia
-              ? "Faits marquants et actions préconisées par l'intelligence IKAN"
-              : 'Constats calculés par règles à partir des avis de la période'}
+              ? "Pistes proposées par l’analyse IKAN, à examiner selon le contexte"
+              : 'Repères calculés à partir des avis de la période'}
           </div>
         </div>
       </div>

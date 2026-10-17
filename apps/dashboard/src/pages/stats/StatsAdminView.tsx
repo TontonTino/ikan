@@ -12,6 +12,7 @@ import {
   StatsSectionCard,
 } from '../../components/stats/StatsStates';
 import { BuildingIcon, StoreIcon, UsersIcon, TrendingUpIcon } from '../../components/common/Icons';
+import { userFacingError } from '../../utils/userFacingError';
 
 export default function StatsAdminView() {
   const [activeTab, setActiveTab] = useState<'overview' | 'organisations'>('overview');
@@ -26,7 +27,7 @@ export default function StatsAdminView() {
       const res = await statisticsApi.admin();
       setData(res.data);
     } catch (err: any) {
-      setError(err?.response?.data?.detail || 'Erreur lors du chargement des statistiques de la plateforme.');
+      setError(userFacingError(err, 'Impossible de charger les statistiques de la plateforme. Veuillez réessayer.'));
     } finally {
       setLoading(false);
     }
@@ -74,10 +75,10 @@ export default function StatsAdminView() {
             <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
                 <KpiCard icon={<BuildingIcon size={20} />} label="Organisations actives" value={kpis.organisations_actives?.valeur ?? 0} compact subtitle={kpis.organisations_actives?.sous_titre || undefined} />
-                <KpiCard icon={<StoreIcon size={20} />} label="Total Agences" value={kpis.total_agences?.valeur ?? 0} compact subtitle={kpis.total_agences?.sous_titre || undefined} />
+                <KpiCard icon={<StoreIcon size={20} />} label="Total des agences" value={kpis.total_agences?.valeur ?? 0} compact subtitle={kpis.total_agences?.sous_titre || undefined} />
                 <KpiCard icon={<UsersIcon size={20} />} label="Utilisateurs actifs" value={kpis.utilisateurs_actifs?.valeur ?? 0} compact subtitle={kpis.utilisateurs_actifs?.sous_titre || undefined} />
-                <KpiCard icon={<UsersIcon size={20} />} label="CX Managers" value={kpis.cx_managers?.valeur ?? 0} compact subtitle={kpis.cx_managers?.sous_titre || undefined} />
-                <KpiCard icon={<UsersIcon size={20} />} label="Agency Managers" value={kpis.agency_managers?.valeur ?? 0} compact subtitle={kpis.agency_managers?.sous_titre || undefined} />
+                <KpiCard icon={<UsersIcon size={20} />} label="Responsables CX" value={kpis.cx_managers?.valeur ?? 0} compact subtitle={kpis.cx_managers?.sous_titre || undefined} />
+                <KpiCard icon={<UsersIcon size={20} />} label="Responsables d’agence" value={kpis.agency_managers?.valeur ?? 0} compact subtitle={kpis.agency_managers?.sous_titre || undefined} />
               </div>
               <RepartitionForfaitsCard repartition={data.repartition_forfaits} />
             </>

@@ -49,7 +49,7 @@ export default function AlertesSyntheseCard({
               Synthèse des Alertes Critiques
             </div>
             <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
-              Détection automatique par le moteur de criticité IA
+              Alertes établies selon les critères de gravité configurés
             </div>
           </div>
         </div>

@@ -46,6 +46,7 @@ import {
   type StatutSeuil,
 } from './siegeData';
 import type { ActionsTotaux, IssuesOuvertes, Source } from './useSiegeData';
+import { SENTIMENT_LABELS } from '../../../utils/labels';
 
 export type KpiKind = 'satisfaction' | 'volume' | 'critiques' | 'seuil';
 
@@ -142,7 +143,7 @@ export function SiegeKpis({
       <BentoItem size="kpi" as="div">
       <KpiCard
         icon={<MessageSquareIcon />}
-        label="Feedbacks reçus"
+        label="Avis clients reçus"
         hint="Nombre d'avis clients reçus sur la période, toutes agences."
         loading={statsLoading}
         value={k ? nbAvis.toLocaleString('fr-FR') : '—'}
@@ -155,8 +156,8 @@ export function SiegeKpis({
       <BentoItem size="kpi" as="div">
       <KpiCard
         icon={<AlertTriangleIcon />}
-        label="Feedbacks critiques"
-        hint="Feedbacks classés « critique » par l'analyse IA sur la période."
+        label="Avis clients critiques"
+        hint="Avis classés « critique » par l’analyse de la période."
         loading={statsLoading}
         value={k ? nbCritiques.toLocaleString('fr-FR') : '—'}
         tone={nbCritiques > 0 ? 'critical' : 'neutral'}
@@ -192,9 +193,9 @@ export function SiegeKpis({
 const SIGNAL_TONE: Record<string, 'critical' | 'warning'> = { sous_seuil: 'critical', critiques: 'critical', baisse: 'warning', issues: 'warning' };
 const SIGNAL_TITRE: Record<string, string> = {
   sous_seuil: 'Sous son seuil',
-  critiques: 'Feedbacks critiques',
+  critiques: 'Avis clients critiques',
   baisse: 'Baisse importante',
-  issues: 'Issues à traiter',
+  issues: 'Problèmes à traiter',
 };
 
 export function Surveillance({
@@ -219,9 +220,9 @@ export function Surveillance({
     <span>
       Une ligne par agence, triée par sa raison la plus prioritaire :
       <br />1. sous son seuil configuré (alerte active)
-      <br />2. feedbacks critiques sur la période
+      <br />2. avis clients critiques sur la période
       <br />3. baisse ≥ {SURVEILLANCE.BAISSE_MIN_PTS} pts vs période précédente (≥ {SURVEILLANCE.BAISSE_MIN_AVIS} avis)
-      <br />4. Issues critiques ou élevées nécessitant une action
+      <br />4. problèmes de gravité élevée nécessitant une action
       <br />Seuils 3 et 4 provisoires. Aucun score composite.
     </span>
   );
@@ -253,7 +254,7 @@ export function Surveillance({
           compact
           illustration="no-alert"
           title="Aucun signal prioritaire"
-          message="Aucune agence sous son seuil, sans feedback critique, sans baisse importante ni Issue critique à traiter."
+          message="Aucune agence sous son seuil, sans avis client critique, sans baisse importante ni problème prioritaire à traiter."
         />
       ) : (
         <ol className="siege-rows">
@@ -471,8 +472,6 @@ export function Reseau({
 // 5. POURQUOI ?
 // ════════════════════════════════════════════════════════════════════
 
-const SENTIMENT_LABEL: Record<string, string> = { positif: 'Plutôt positif', neutre: 'Plutôt neutre', negatif: 'Plutôt négatif' };
-
 export function Pourquoi({ stats, jours, onRetry }: { stats: Source<StatsCXResponse>; jours: number; onRetry: () => void }) {
   const themes = stats.status === 'ok' ? stats.data.themes.slice(0, 3) : [];
   return (
@@ -482,7 +481,7 @@ export function Pourquoi({ stats, jours, onRetry }: { stats: Source<StatsCXRespo
       ) : stats.status === 'error' ? (
         <BlockError message="L'analyse des thèmes est indisponible pour le moment." onRetry={onRetry} />
       ) : themes.length === 0 ? (
-        <EmptyState compact title="Aucun thème détecté sur cette période." message="Les thèmes apparaissent quand l'analyse IA des feedbacks est disponible." />
+        <EmptyState compact title="Aucun thème détecté sur cette période." message="Les thèmes apparaissent quand l’analyse des avis clients est disponible." />
       ) : (
         <ol className="siege-themes">
           {themes.map((t, i) => (
@@ -494,7 +493,7 @@ export function Pourquoi({ stats, jours, onRetry }: { stats: Source<StatsCXRespo
               </div>
               <div className="siege-theme__meta">
                 <span>{t.count} mention{t.count > 1 ? 's' : ''} · des retours analysés</span>
-                <Badge value={t.sentiment_predominant} label={SENTIMENT_LABEL[t.sentiment_predominant] ?? t.sentiment_predominant} />
+                <Badge value={t.sentiment_predominant} label={SENTIMENT_LABELS[t.sentiment_predominant as keyof typeof SENTIMENT_LABELS] ?? 'Valeur non reconnue'} />
               </div>
               <AskYam label="Qu'en disent les clients ?" question={`Que disent les clients sur le thème « ${t.label} » sur les ${YAM_PERIODE} ? Donne des exemples représentatifs.`} />
             </li>
@@ -532,18 +531,18 @@ export function Action({ actions, issues, onRetryActions, onRetryIssues }: { act
             ? <BlockError message="Le suivi des actions est indisponible pour le moment." onRetry={onRetryActions} />
             : (
               <>
-                {stat('Actions correctives en cours', actions.data.enCours.toLocaleString('fr-FR'), <BlockLink to="/actions">Voir les actions</BlockLink>)}
+                {stat('Actions à mener en cours', actions.data.enCours.toLocaleString('fr-FR'), <BlockLink to="/actions">Voir les actions</BlockLink>)}
                 {stat('Actions réalisées', actions.data.realisees.toLocaleString('fr-FR'))}
               </>
             )}
         {issues.status === 'loading'
           ? <Skeleton height={72} />
           : issues.status === 'error'
-            ? <BlockError message="Les Issues sont indisponibles pour le moment." onRetry={onRetryIssues} />
+            ? <BlockError message="Les problèmes à traiter sont indisponibles pour le moment." onRetry={onRetryIssues} />
             : stat(
-                'Issues ouvertes nécessitant une action',
+                'Problèmes ouverts nécessitant une action',
                 `${issues.data.tronquee ? '≥ ' : ''}${issuesAction?.toLocaleString('fr-FR')}`,
-                <BlockLink to="/issues">Voir les Issues</BlockLink>,
+                <BlockLink to="/issues">Voir les problèmes</BlockLink>,
               )}
       </div>
     </Card>

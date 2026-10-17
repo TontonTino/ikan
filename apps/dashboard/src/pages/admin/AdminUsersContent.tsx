@@ -3,6 +3,7 @@ import { utilisateursApi, agencesApi, organisationsApi } from '../../services/ap
 import { useAuthStore } from '../../stores/authStore';
 import TabsNavigation from '../../components/ui/TabsNavigation';
 import CreateAgencyManagerModal from '../../components/admin/CreateAgencyManagerModal';
+import { userFacingError } from '../../utils/userFacingError';
 import {
   UsersIcon,
   PlusIcon,
@@ -155,7 +156,7 @@ export default function AdminUsersContent() {
       setShowForm(false);
       setEditingUser(null);
     } catch (err: any) {
-      showToast(err.response?.data?.detail || "Erreur lors de l'enregistrement");
+      showToast(userFacingError(err, "Impossible d’enregistrer l’utilisateur. Veuillez réessayer.", 'Vérifiez les informations saisies puis réessayez.'));
     } finally {
       setSaving(false);
     }

@@ -22,6 +22,7 @@ import {
   ActivityIcon,
   StoreIcon,
 } from '../../components/common/Icons';
+import { userFacingError } from '../../utils/userFacingError';
 
 const cardStyle: React.CSSProperties = {
   background: '#FFFFFF',
@@ -400,7 +401,7 @@ export default function MonAgencePage() {
       setFormulaireOuvert(false);
       afficherMessage('Catégorie ajoutée.');
     } catch (err: any) {
-      setErreurCategorie(err?.response?.data?.detail || "Impossible d'ajouter cette catégorie.");
+      setErreurCategorie(userFacingError(err, 'Impossible d’ajouter cette catégorie. Veuillez réessayer.', 'Vérifiez les informations de la catégorie puis réessayez.'));
     } finally {
       setAjoutEnCours(false);
     }
@@ -423,7 +424,7 @@ export default function MonAgencePage() {
       setCategorieEnEdition(null);
       afficherMessage('Catégorie modifiée.');
     } catch (err: any) {
-      afficherMessage(err?.response?.data?.detail || 'Impossible de modifier cette catégorie.');
+      afficherMessage(userFacingError(err, 'Impossible de modifier cette catégorie. Veuillez réessayer.', 'Vérifiez les informations de la catégorie puis réessayez.'));
     } finally {
       setActionEnCours(null);
     }
@@ -435,7 +436,7 @@ export default function MonAgencePage() {
       const r = await agencesApi.updateCategorie(agence.id, c.id, { est_categorie_suggestion: !c.est_categorie_suggestion });
       setCategories((prev) => prev.map((x) => (x.id === c.id ? r.data : x)));
     } catch (err: any) {
-      afficherMessage(err?.response?.data?.detail || 'Impossible de modifier cette catégorie.');
+      afficherMessage(userFacingError(err, 'Impossible de modifier cette catégorie. Veuillez réessayer.', 'Vérifiez les informations de la catégorie puis réessayez.'));
     } finally {
       setActionEnCours(null);
     }
@@ -448,7 +449,7 @@ export default function MonAgencePage() {
       setCategories((prev) => prev.filter((x) => x.id !== c.id));
       afficherMessage('Catégorie désactivée.');
     } catch (err: any) {
-      afficherMessage(err?.response?.data?.detail || 'Impossible de désactiver cette catégorie.');
+      afficherMessage(userFacingError(err, 'Impossible de désactiver cette catégorie. Veuillez réessayer.'));
     } finally {
       setActionEnCours(null);
     }
@@ -458,7 +459,7 @@ export default function MonAgencePage() {
     { id: 'informations', label: 'Informations', icon: <MapPinIcon size={16} /> },
     { id: 'categories', label: 'Catégories', icon: <TagIcon size={16} />, badge: categories.length },
     ...(ongletsEtendusAutorises ? [
-      { id: 'feedbacks', label: 'Feedbacks', icon: <MessageSquareIcon size={16} /> },
+      { id: 'feedbacks', label: 'Avis clients', icon: <MessageSquareIcon size={16} /> },
       { id: 'activite', label: 'Activité', icon: <ActivityIcon size={16} /> },
     ] : []),
   ];

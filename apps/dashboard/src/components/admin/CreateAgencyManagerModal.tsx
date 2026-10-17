@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { agencesApi, utilisateursApi } from '../../services/api';
 import { XCloseIcon } from '../common/Icons';
+import { userFacingError } from '../../utils/userFacingError';
 
 /** Compte Agency Manager tel que renvoyé par GET /utilisateurs/ (champs utiles à l'UI). */
 export interface AgencyManagerLite {
@@ -98,7 +99,7 @@ export default function CreateAgencyManagerModal({ onClose, onCreated, manager, 
       onCreated();
       onClose();
     } catch (err: any) {
-      setErreur(err?.response?.data?.detail || (enEdition ? 'Erreur lors de la modification du chef d’agence.' : 'Erreur lors de la création du chef d’agence.'));
+      setErreur(userFacingError(err, enEdition ? 'Impossible de modifier ce compte. Veuillez réessayer.' : 'Impossible de créer ce compte. Veuillez réessayer.', 'Vérifiez les informations saisies puis réessayez.'));
     } finally {
       setSaving(false);
     }

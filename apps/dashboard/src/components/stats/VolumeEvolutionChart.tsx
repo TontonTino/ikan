@@ -72,7 +72,7 @@ export default function VolumeEvolutionChart({
           border: '1px dashed #D6E8D9',
         }}
       >
-        Aucun feedback critique ou négatif enregistré pour cette période.
+        Aucun avis client critique ou négatif enregistré pour cette période.
       </div>
     );
   }

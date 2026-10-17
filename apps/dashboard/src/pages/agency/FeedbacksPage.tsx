@@ -26,6 +26,7 @@ import {
   XCloseIcon,
 } from '../../components/common/Icons';
 import { themeLabel } from '../../utils/themeLabels';
+import { GRAVITE_LABELS, SENTIMENT_LABELS } from '../../utils/labels';
 import './FeedbacksPage.css';
 
 const STATUT_BADGES: Record<StatutTraitement, { label: string; bg: string; text: string; icon: React.ReactNode }> = {
@@ -36,9 +37,9 @@ const STATUT_BADGES: Record<StatutTraitement, { label: string; bg: string; text:
 };
 
 const SENTIMENT_STYLE: Record<string, { bg: string; text: string; label: string; icon: React.ReactNode }> = {
-  positif: { bg: '#EBF5E9', text: '#3C7730', label: 'Positif', icon: <ThumbsUpIcon size={13} color="#3C7730" /> },
-  neutre: { bg: '#FEF3C7', text: '#B45309', label: 'Neutre', icon: <span style={{ fontSize: '0.85rem' }}>😐</span> },
-  negatif: { bg: '#FEE2E2', text: '#B91C1C', label: 'Négatif', icon: <ThumbsDownIcon size={13} color="#B91C1C" /> },
+  positif: { bg: '#EBF5E9', text: '#3C7730', label: SENTIMENT_LABELS.positif, icon: <ThumbsUpIcon size={13} color="#3C7730" /> },
+  neutre: { bg: '#FEF3C7', text: '#B45309', label: SENTIMENT_LABELS.neutre, icon: <span style={{ fontSize: '0.85rem' }}>😐</span> },
+  negatif: { bg: '#FEE2E2', text: '#B91C1C', label: SENTIMENT_LABELS.negatif, icon: <ThumbsDownIcon size={13} color="#B91C1C" /> },
 };
 
 const CRITICITE_STYLE: Record<string, { bg: string; text: string }> = {
@@ -217,7 +218,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
       setFeedbacks((current) => [...current, ...(response?.data || [])]);
     } catch (err) {
       console.error('Erreur chargement des feedbacks suivants:', err);
-      showToast('Impossible de charger les feedbacks suivants');
+      showToast('Impossible de charger les avis clients suivants');
     } finally {
       setLoadingMore(false);
     }
@@ -367,7 +368,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
   }, [activeTab, selectedAgenceId, filterSentiment, filterTheme, filterNote, filterCriticite, filterPeriode, search]);
 
   const tabsConfig = [
-    { id: 'tous', label: 'Tous les feedbacks', icon: <MessageSquareIcon size={16} />, badge: loading ? undefined : feedbackTotal },
+    { id: 'tous', label: 'Tous les avis clients', icon: <MessageSquareIcon size={16} />, badge: loading ? undefined : feedbackTotal },
     {
       id: 'a_traiter',
       label: 'À traiter',
@@ -382,7 +383,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
       badge: loading ? undefined : `${critiquesCount}${feedbacks.length < feedbackTotal ? '*' : ''}`,
       badgeColor: critiquesCount > 0 ? ('red' as const) : ('default' as const),
     },
-    { id: 'thematiques', label: 'Thématiques IA', icon: <TagIcon size={16} />, badge: loading ? undefined : themesAggregated.length },
+    { id: 'thematiques', label: 'Thèmes des avis', icon: <TagIcon size={16} />, badge: loading ? undefined : themesAggregated.length },
   ];
   const aucunFeedbackDansPerimetre = feedbacks.length === 0 && feedbackTotal === 0;
   const filtresSansAgence = activeFilters.some((filter) => filter.key !== 'agence') || activeTab !== 'tous';
@@ -413,21 +414,21 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
       </div>
       {!loading && !loadError && (
         <p role="status" style={{ margin: '-12px 0 0', fontSize: '0.76rem', color: 'var(--color-text-muted)' }}>
-          Les compteurs « À traiter » et « Critiques & alertes » portent sur {feedbacks.length} feedbacks chargés sur {feedbackTotal} au total{feedbacks.length < feedbackTotal ? ' (* couverture partielle)' : ''}. Recherche et filtres s’appliquent à ces éléments chargés.
+          Les compteurs « À traiter » et « Critiques & alertes » portent sur {feedbacks.length} avis clients chargés sur {feedbackTotal} au total{feedbacks.length < feedbackTotal ? ' (* couverture partielle)' : ''}. La recherche et les filtres s’appliquent aux éléments chargés.
         </p>
       )}
 
       {/* ── ONGLET 1, 2, 3 : VUES TABLEAU DE FEEDBACKS ── */}
       {activeTab !== 'thematiques' && (
         <section aria-labelledby="feedbacks-liste" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div id="feedbacks-liste"><SectionHeading>Liste des feedbacks</SectionHeading></div>
+          <div id="feedbacks-liste"><SectionHeading>Liste des avis clients</SectionHeading></div>
           {/* Barre de Recherche et Filtres */}
           <div className="feedbacks-toolbar">
             <div className="feedbacks-search">
               <SearchIcon size={16} color="#94A3B8" />
               <input
                 type="text"
-                placeholder="Rechercher parmi les feedbacks chargés..."
+                placeholder="Rechercher parmi les avis clients chargés…"
                 aria-label="Rechercher dans les commentaires chargés"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -543,7 +544,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                   <th scope="col" style={{ textAlign: 'left', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase' }}>Date & Agence</th>
                   <th scope="col" style={{ textAlign: 'left', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase' }}>Note & Sentiment</th>
                   <th scope="col" style={{ textAlign: 'left', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase' }}>Verbatim Client</th>
-                  <th scope="col" style={{ textAlign: 'left', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase' }}>Thème IA</th>
+                  <th scope="col" style={{ textAlign: 'left', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase' }}>Thème</th>
                   <th scope="col" style={{ textAlign: 'center', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase' }}>Statut</th>
                   <th scope="col" style={{ textAlign: 'right', padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase' }}>Action</th>
                 </tr>
@@ -562,7 +563,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                     <td colSpan={6}>
                       <EmptyState
                         illustration="no-data"
-                        title="Impossible de charger les feedbacks"
+                        title="Impossible de charger les avis clients"
                         message="Une erreur est survenue lors du chargement. Vérifiez votre connexion puis réessayez."
                         action={{ label: 'Réessayer', onClick: () => setReloadToken((token) => token + 1) }}
                       />
@@ -617,7 +618,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '7px' }}>
                             {f.analyse_ia?.criticite ? (
                               <span
-                                aria-label={`Criticité ${f.analyse_ia.criticite}`}
+                                aria-label={`Gravité : ${GRAVITE_LABELS[f.analyse_ia.criticite] || 'valeur non reconnue'}`}
                                 style={{
                                   background: CRITICITE_STYLE[f.analyse_ia.criticite]?.bg || '#F1F5F9',
                                   color: CRITICITE_STYLE[f.analyse_ia.criticite]?.text || '#475569',
@@ -628,9 +629,9 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                                   border: f.analyse_ia.criticite === 'critique' ? '1px solid #DC2626' : '1px solid transparent',
                                 }}
                               >
-                                {f.analyse_ia.criticite === 'critique' ? 'CRITIQUE' : f.analyse_ia.criticite === 'elevee' ? 'ÉLEVÉE' : `Criticité ${f.analyse_ia.criticite}`}
+                                {GRAVITE_LABELS[f.analyse_ia.criticite]?.toLocaleUpperCase('fr-FR') ?? 'GRAVITÉ NON RECONNUE'}
                               </span>
-                            ) : <span style={{ fontSize: '0.70rem', color: '#64748B' }}>{f.analyse_ia ? 'Criticité non évaluée' : 'Analyse indisponible'}</span>}
+                            ) : <span style={{ fontSize: '0.70rem', color: '#64748B' }}>{f.analyse_ia ? 'Gravité non évaluée' : 'Analyse indisponible'}</span>}
                             {f.analyse_ia?.discordance_detectee && <span style={{ color: '#9A3412', fontSize: '0.70rem', fontWeight: 800 }}>Discordance</span>}
                           </div>
                         </td>
@@ -676,7 +677,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                             {statMeta.icon}
                             {statMeta.label}
                           </span>
-                          {f.issue_id && <div style={{ marginTop: '6px', color: '#0369A1', fontSize: '0.70rem', fontWeight: 800 }}>Issue liée</div>}
+                          {f.issue_id && <div style={{ marginTop: '6px', color: '#0369A1', fontSize: '0.70rem', fontWeight: 800 }}>Problème lié</div>}
                         </td>
 
                         {/* Action */}
@@ -702,16 +703,16 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                       {filtresSansAgence && !aucunFeedbackDansPerimetre ? (
                         <EmptyState
                           illustration="no-feedback"
-                          title="Aucun feedback ne correspond à ces critères."
-                          message={`Les critères ont été appliqués aux ${feedbacks.length} feedbacks chargés sur ${feedbackTotal}.`}
-                          action={{ label: 'Réinitialiser les filtres', onClick: resetFilters }}
+                          title="Aucun avis client ne correspond à ces critères."
+                          message={`Les critères ont été appliqués aux ${feedbacks.length} avis clients chargés sur ${feedbackTotal}.`}
+                          action={{ label: 'Effacer les filtres', onClick: resetFilters }}
                         />
                       ) : (
                         <div className="saas-card saas-card--success">
                           <EmptyState
                             illustration="no-feedback"
-                            title="Aucun feedback dans ce périmètre"
-                            message="L’API ne retourne aucun feedback pour l’agence ou le périmètre sélectionné."
+                            title="Aucun avis client dans ce périmètre"
+            message="Aucun avis client n’est disponible pour l’agence ou le périmètre sélectionné."
                           />
                         </div>
                       )}
@@ -723,7 +724,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
           </div>
 
           {!loading && !loadError && tabFeedbacks.length > 0 && (
-            <div className="feedbacks-mobile-list" aria-label="Feedbacks">
+            <div className="feedbacks-mobile-list" aria-label="Avis clients">
               {pageFeedbacks.map((f) => {
                 const sentiment = normalizeSentiment(f.analyse_ia?.sentiment);
                 const sentimentMeta = SENTIMENT_STYLE[sentiment];
@@ -733,7 +734,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                   <article key={f.id} className="feedbacks-mobile-card">
                     <div className="feedbacks-mobile-card-top">
                       <strong>★ {f.note}/5</strong>
-                      <span>{f.analyse_ia ? (CRITICITE_STYLE[criticite] ? `${criticite === 'elevee' ? 'Élevée' : criticite.charAt(0).toUpperCase() + criticite.slice(1)}` : 'Criticité non évaluée') : 'Analyse indisponible'}</span>
+                      <span>{f.analyse_ia ? (GRAVITE_LABELS[criticite as keyof typeof GRAVITE_LABELS] ?? 'Gravité non reconnue') : 'Analyse indisponible'}</span>
                       <span>{sentimentMeta?.label || (f.analyse_ia ? 'Sentiment non évalué' : 'Sans analyse')}</span>
                     </div>
                     <p>{f.commentaire || 'Aucun commentaire texte rédigé.'}</p>
@@ -741,7 +742,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                       {showAgenceSelector && <span>{f.agence_nom || 'Agence'}</span>}
                       <time dateTime={f.date_soumission}>{formatDate(f.date_soumission)}</time>
                       <span className="feedbacks-mobile-status" style={{ background: statut.bg, color: statut.text }}>{statut.label}</span>
-                      {f.issue_id && <span>Issue liée</span>}
+                      {f.issue_id && <span>Problème lié</span>}
                     </div>
                     <button type="button" className="btn-primary" onClick={(e) => { e.stopPropagation(); setSelectedFeedbackForTreatment(f); }}>Consulter</button>
                   </article>
@@ -749,13 +750,13 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
               })}
             </div>
           )}
-          {!loading && loadError && <div className="feedbacks-mobile-empty"><EmptyState illustration="no-data" title="Impossible de charger les feedbacks" message="Une erreur est survenue lors du chargement. Vérifiez votre connexion puis réessayez." action={{ label: 'Réessayer', onClick: () => setReloadToken((token) => token + 1) }} /></div>}
-          {!loading && !loadError && tabFeedbacks.length === 0 && <div className="feedbacks-mobile-empty"><EmptyState illustration="no-feedback" title={filtresSansAgence && !aucunFeedbackDansPerimetre ? 'Aucun feedback ne correspond à ces critères.' : 'Aucun feedback dans ce périmètre'} message={filtresSansAgence && !aucunFeedbackDansPerimetre ? `Les critères ont été appliqués aux ${feedbacks.length} feedbacks chargés sur ${feedbackTotal}.` : 'Aucun feedback disponible dans ce périmètre.'} action={filtresSansAgence && !aucunFeedbackDansPerimetre ? { label: 'Réinitialiser les filtres', onClick: resetFilters } : undefined} /></div>}
-          {loading && <div className="feedbacks-mobile-empty" role="status" aria-busy="true">Chargement des feedbacks…</div>}
+          {!loading && loadError && <div className="feedbacks-mobile-empty"><EmptyState illustration="no-data" title="Impossible de charger les avis clients" message="Une erreur est survenue lors du chargement. Vérifiez votre connexion puis réessayez." action={{ label: 'Réessayer', onClick: () => setReloadToken((token) => token + 1) }} /></div>}
+          {!loading && !loadError && tabFeedbacks.length === 0 && <div className="feedbacks-mobile-empty"><EmptyState illustration="no-feedback" title={filtresSansAgence && !aucunFeedbackDansPerimetre ? 'Aucun avis client ne correspond à ces critères.' : 'Aucun avis client dans ce périmètre'} message={filtresSansAgence && !aucunFeedbackDansPerimetre ? `Les critères ont été appliqués aux ${feedbacks.length} avis clients chargés sur ${feedbackTotal}.` : 'Aucun avis client disponible dans ce périmètre.'} action={filtresSansAgence && !aucunFeedbackDansPerimetre ? { label: 'Effacer les filtres', onClick: resetFilters } : undefined} /></div>}
+          {loading && <div className="feedbacks-mobile-empty" role="status" aria-busy="true">Chargement des avis clients…</div>}
 
           {/* Pagination côté client */}
           {!loading && tabFeedbacks.length > 0 && (
-            <nav aria-label="Pagination des feedbacks" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+            <nav aria-label="Pagination des avis clients" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
                 {pageCourante * PAGE_SIZE + 1}–{Math.min((pageCourante + 1) * PAGE_SIZE, tabFeedbacks.length)} affichés sur {tabFeedbacks.length} correspondants · {feedbacks.length} chargés sur {feedbackTotal} au total
               </span>
@@ -797,7 +798,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
       {/* ── ONGLET 4 : THÉMATIQUES (thèmes réellement présents) ── */}
       {activeTab === 'thematiques' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <div id="feedbacks-themes"><SectionHeading>Thématiques des feedbacks</SectionHeading></div>
+        <div id="feedbacks-themes"><SectionHeading>Thèmes des avis clients</SectionHeading></div>
         {loading && (
           <div aria-busy="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
             {[0, 1, 2].map((i) => (
@@ -805,12 +806,12 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
             ))}
           </div>
         )}
-        {!loading && loadError && <EmptyState illustration="no-data" title="Impossible de charger les feedbacks" message="Une erreur est survenue lors du chargement des thèmes." action={{ label: 'Réessayer', onClick: () => setReloadToken((token) => token + 1) }} />}
+        {!loading && loadError && <EmptyState illustration="no-data" title="Impossible de charger les avis clients" message="Une erreur est survenue lors du chargement des thèmes." action={{ label: 'Réessayer', onClick: () => setReloadToken((token) => token + 1) }} />}
         {!loading && !loadError && themesAggregated.length === 0 && (
-          <EmptyState illustration="no-data" title="Aucune thématique disponible" message={feedbackTotal === 0 ? 'Aucun feedback dans ce périmètre.' : 'Aucun thème analysé parmi les feedbacks chargés.'} />
+          <EmptyState illustration="no-data" title="Aucun thème disponible" message={feedbackTotal === 0 ? 'Aucun avis client dans ce périmètre.' : 'Aucun thème analysé parmi les avis clients chargés.'} />
         )}
         {!loading && !loadError && feedbackTotal > 0 && (
-          <p role="status" style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.76rem' }}>Analyse basée sur les {feedbacks.length} feedbacks chargés sur {feedbackTotal} au total.</p>
+          <p role="status" style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.76rem' }}>Analyse basée sur les {feedbacks.length} avis clients chargés sur {feedbackTotal} au total.</p>
         )}
         {!loadError && <div
           style={{
