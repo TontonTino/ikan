@@ -27,9 +27,10 @@ from app.db.session import Base, get_db
 from app.models.agence import Agence
 from app.models.action_corrective import ActionCorrective
 from app.models.analyse_ia import AnalyseIA
-from app.models.enums import CriticiteType, SentimentType, UserRole
+from app.models.enums import CriticiteType, IssueEscalationReason, SentimentType, UserRole
 from app.models.feedback import Feedback
 from app.models.issue import Issue
+from app.models.issue_escalation import IssueEscalation
 from app.models.historique_issue import HistoriqueIssue
 from app.models.organisation import Organisation
 from app.models.plan import Plan
@@ -46,7 +47,8 @@ def ctx():
     Base.metadata.create_all(
         engine,
         tables=[Plan.__table__, Organisation.__table__, Agence.__table__, QRCode.__table__,
-                Feedback.__table__, AnalyseIA.__table__, Issue.__table__, HistoriqueIssue.__table__, ActionCorrective.__table__],
+                Feedback.__table__, AnalyseIA.__table__, Issue.__table__, HistoriqueIssue.__table__, ActionCorrective.__table__,
+                IssueEscalation.__table__],
     )
     Session = sessionmaker(bind=engine)
     db = Session()
@@ -91,9 +93,16 @@ def ctx():
     db.add(AnalyseIA(id=uuid4(), feedback_id=fb_a2.id, sentiment=SentimentType.POSITIF, criticite=CriticiteType.FAIBLE, score_sentiment=0.8))
 
     # Issue org A (sur agence A1) : résolue, critique, nécessite action.
-    db.add(Issue(id=uuid4(), organisation_id=org_a.id, agence_id=agence_a1.id, titre="Issue A",
-                 statut="resolue", severite=CriticiteType.CRITIQUE, necessite_action=True,
-                 premiere_detection=NOW, date_resolution=NOW, date_limite_sla=NOW + timedelta(hours=1)))
+    issue_a = Issue(id=uuid4(), organisation_id=org_a.id, agence_id=agence_a1.id, titre="Issue A",
+                    statut="resolue", severite=CriticiteType.CRITIQUE, necessite_action=True,
+                    premiere_detection=NOW, date_resolution=NOW, date_limite_sla=NOW + timedelta(hours=1))
+    db.add(issue_a)
+    db.flush()
+    db.add(IssueEscalation(
+        id=uuid4(), issue_id=issue_a.id, date_evenement=NOW, motif=IssueEscalationReason.SLA,
+        declenchee_par_id=uuid4(), declenchee_par_nom="CX A", declenchee_par_role=UserRole.CX_MANAGER,
+        created_at=NOW,
+    ))
 
     # Org B : 1 feedback très négatif, 1 Issue vérifiée nécessitant action (données très
     # différentes de A pour détecter toute fuite).
@@ -156,7 +165,7 @@ def test_tous_les_kpis_presents_avec_bons_codes(ctx):
     assert data["jours"] == 30
     codes = {k["code"] for k in data["kpis"]}
     assert codes == set(KPI_DEFINITIONS.keys())
-    assert len(data["kpis"]) == 14
+    assert len(data["kpis"]) == 15
 
 
 def test_champs_kpi_result_presents(ctx):
@@ -334,7 +343,30 @@ def test_sla_in_collection_endpoint_individuel_et_rbac(ctx):
     assert (org_b.status_code, org_b.json()["value"]) == (200, 0.0)
 
 
-@pytest.mark.parametrize("code", ["ISSUE_BACKLOG", "BACKLOG_AGE", "ACTION_COMPLETION_RATE", "SLA_COMPLIANCE_RATE"])
+def test_escalation_rate_collection_endpoint_agence_et_rbac(ctx):
+    collection = ctx.call("cx_a", "get", "/kpis/")
+    assert collection.status_code == 200
+    kpi = _kpis_by_code(collection.json())["ESCALATION_RATE"]
+    assert (kpi["value"], kpi["numerator"], kpi["denominator"]) == (100.0, 1, 1)
+
+    individual = ctx.call("cx_a", "get", "/kpis/ESCALATION_RATE", params={"agence_id": str(ctx.agence_a1)})
+    assert (individual.status_code, individual.json()["value"]) == (200, 100.0)
+
+    agency_manager = ctx.call("am_a1", "get", "/kpis/ESCALATION_RATE")
+    assert (agency_manager.status_code, agency_manager.json()["value"]) == (200, 100.0)
+
+    no_issue_agency = ctx.call("cx_a", "get", "/kpis/ESCALATION_RATE", params={"agence_id": str(ctx.agence_a2)})
+    assert (no_issue_agency.status_code, no_issue_agency.json()["status"]) == (200, "no_data")
+
+    forbidden_agency = ctx.call("cx_a", "get", "/kpis/ESCALATION_RATE", params={"agence_id": str(ctx.agence_b)})
+    assert forbidden_agency.status_code == 403
+    org_b = ctx.call("cx_b", "get", "/kpis/ESCALATION_RATE")
+    assert (org_b.status_code, org_b.json()["value"], org_b.json()["numerator"], org_b.json()["denominator"]) == (200, 0.0, 0, 1)
+    org_c = ctx.call("cx_c", "get", "/kpis/ESCALATION_RATE")
+    assert (org_c.status_code, org_c.json()["status"], org_c.json()["value"]) == (200, "no_data", None)
+
+
+@pytest.mark.parametrize("code", ["ISSUE_BACKLOG", "BACKLOG_AGE", "ACTION_COMPLETION_RATE", "SLA_COMPLIANCE_RATE", "ESCALATION_RATE"])
 def test_nouveaux_kpis_individuels_rbac_et_collection(ctx, code):
     r = ctx.call("cx_a", "get", f"/kpis/{code}")
     assert r.status_code == 200, r.text

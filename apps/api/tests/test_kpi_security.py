@@ -20,9 +20,10 @@ from app.db.session import Base
 from app.models.agence import Agence
 from app.models.action_corrective import ActionCorrective
 from app.models.analyse_ia import AnalyseIA
-from app.models.enums import CriticiteType, SentimentType
+from app.models.enums import CriticiteType, IssueEscalationReason, SentimentType, UserRole
 from app.models.feedback import Feedback
 from app.models.issue import Issue
+from app.models.issue_escalation import IssueEscalation
 from app.models.historique_issue import HistoriqueIssue
 from app.models.organisation import Organisation
 from app.models.plan import Plan
@@ -41,6 +42,7 @@ from app.services.kpi.engine import (
     calculer_negative_sentiment_rate,
     calculer_nps,
     calculer_sla_compliance_rate,
+    calculer_escalation_rate,
 )
 
 NOW = datetime.now(timezone.utc)
@@ -52,7 +54,8 @@ def ctx():
     Base.metadata.create_all(
         engine,
         tables=[Plan.__table__, Organisation.__table__, Agence.__table__, QRCode.__table__,
-                Feedback.__table__, AnalyseIA.__table__, Issue.__table__, HistoriqueIssue.__table__, ActionCorrective.__table__],
+                Feedback.__table__, AnalyseIA.__table__, Issue.__table__, HistoriqueIssue.__table__, ActionCorrective.__table__,
+                IssueEscalation.__table__],
     )
     Session = sessionmaker(bind=engine)
     db = Session()
@@ -79,9 +82,16 @@ def ctx():
         db.flush()
         if sentiment:
             db.add(AnalyseIA(id=uuid4(), feedback_id=fb.id, sentiment=sentiment, criticite=CriticiteType.FAIBLE, score_sentiment=0.5))
-    db.add(Issue(id=uuid4(), organisation_id=org_a.id, agence_id=agence_a.id, titre="Issue A",
-                 statut="resolue", severite=CriticiteType.CRITIQUE, necessite_action=True,
-                 premiere_detection=NOW, date_resolution=NOW, date_limite_sla=NOW + timedelta(hours=1)))
+    issue_a = Issue(id=uuid4(), organisation_id=org_a.id, agence_id=agence_a.id, titre="Issue A",
+                    statut="resolue", severite=CriticiteType.CRITIQUE, necessite_action=True,
+                    premiere_detection=NOW, date_resolution=NOW, date_limite_sla=NOW + timedelta(hours=1))
+    db.add(issue_a)
+    db.flush()
+    db.add(IssueEscalation(
+        id=uuid4(), issue_id=issue_a.id, date_evenement=NOW, motif=IssueEscalationReason.AUTRE,
+        declenchee_par_id=uuid4(), declenchee_par_nom="CX A", declenchee_par_role=UserRole.CX_MANAGER,
+        created_at=NOW,
+    ))
 
     # Org B : 1 seul feedback tres negatif, 1 Issue verifiee necessitant action (donnees tres
     # differentes de A pour detecter facilement toute fuite dans les tests ci-dessous).
@@ -157,6 +167,20 @@ def test_org_b_avec_agence_de_a_ne_recupere_rien_de_a(ctx):
     db = ctx.Session()
     assert calculer_feedback_volume(db, ctx.org_b, agence_id=ctx.agence_a).value == 0.0
     assert calculer_issue_volume(db, ctx.org_b, agence_id=ctx.agence_a).value == 0.0
+    db.close()
+
+
+def test_escalation_rate_isole_organisation_et_agence(ctx):
+    db = ctx.Session()
+    org_a = calculer_escalation_rate(db, ctx.org_a)
+    org_b = calculer_escalation_rate(db, ctx.org_b)
+    agence_a = calculer_escalation_rate(db, ctx.org_a, agence_id=ctx.agence_a)
+    agence_b = calculer_escalation_rate(db, ctx.org_a, agence_id=ctx.agence_b)
+
+    assert (org_a.numerator, org_a.denominator, org_a.value) == (1, 1, 100.0)
+    assert (org_b.numerator, org_b.denominator, org_b.value) == (0, 1, 0.0)
+    assert (agence_a.numerator, agence_a.denominator, agence_a.value) == (1, 1, 100.0)
+    assert (agence_b.status, agence_b.numerator, agence_b.denominator) == ("no_data", 0, 0)
     db.close()
 
 

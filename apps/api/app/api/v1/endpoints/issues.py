@@ -18,6 +18,7 @@ from app.models.enums import CriticiteType, UserRole
 from app.models.feedback import Feedback
 from app.models.historique_issue import HistoriqueIssue
 from app.models.issue import Issue
+from app.models.issue_escalation import IssueEscalation
 from app.models.qr_code import QRCode
 from app.models.utilisateur import Utilisateur
 from app.schemas.feedback import FeedbackResponse
@@ -26,6 +27,8 @@ from app.schemas.issue import (
     ActionCorrectiveResponse,
     IssueCreate,
     IssueDetailResponse,
+    IssueEscalationCreate,
+    IssueEscalationResponse,
     IssueResponse,
 )
 from app.services.acces_agence import verifier_acces_agence, verifier_acces_feedback, verifier_acces_issue
@@ -257,6 +260,52 @@ def detail_issue(
         **base.model_dump(),
         feedbacks=[_format_feedback_summary(fb) for fb in feedbacks],
         actions=[ActionCorrectiveResponse.model_validate(a) for a in actions],
+    )
+
+
+@router.post(
+    "/{issue_id}/escalations",
+    response_model=IssueEscalationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def creer_escalade_issue(
+    issue_id: UUID,
+    data: IssueEscalationCreate,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+):
+    """Enregistre une escalade explicite sans modifier l'état de l'Issue."""
+    issue = _get_issue_or_404(db, issue_id)
+    _check_issue_access(issue, current_user)
+
+    escalation = IssueEscalation(
+        issue_id=issue.id,
+        date_evenement=datetime.now(timezone.utc),
+        motif=data.motif,
+        declenchee_par_id=current_user.id,
+        declenchee_par_nom=f"{current_user.prenom} {current_user.nom}",
+        declenchee_par_role=current_user.role,
+    )
+    db.add(escalation)
+    db.commit()
+    db.refresh(escalation)
+    return IssueEscalationResponse.model_validate(escalation)
+
+
+@router.get("/{issue_id}/escalations", response_model=List[IssueEscalationResponse])
+def lister_escalades_issue(
+    issue_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+):
+    """Retourne le journal d'escalade d'une Issue, dans son périmètre RBAC."""
+    issue = _get_issue_or_404(db, issue_id)
+    _check_issue_access(issue, current_user)
+    return (
+        db.query(IssueEscalation)
+        .filter(IssueEscalation.issue_id == issue.id)
+        .order_by(IssueEscalation.date_evenement, IssueEscalation.created_at, IssueEscalation.id)
+        .all()
     )
 
 

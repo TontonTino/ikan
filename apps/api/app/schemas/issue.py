@@ -7,7 +7,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 from typing import Optional, List
 
-from app.models.enums import CriticiteType
+from app.models.enums import CriticiteType, IssueEscalationReason, UserRole
 from app.schemas.feedback import FeedbackResponse
 
 
@@ -73,3 +73,20 @@ class ActionCorrectiveResponse(BaseModel):
 class IssueDetailResponse(IssueResponse):
     feedbacks: List[FeedbackResponse] = []
     actions: List[ActionCorrectiveResponse] = []
+
+
+class IssueEscalationCreate(BaseModel):
+    motif: IssueEscalationReason
+
+
+class IssueEscalationResponse(BaseModel):
+    id: uuid.UUID
+    issue_id: uuid.UUID
+    date_evenement: datetime
+    motif: IssueEscalationReason
+    declenchee_par_id: uuid.UUID
+    declenchee_par_nom: str
+    declenchee_par_role: UserRole
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

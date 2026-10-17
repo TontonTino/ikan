@@ -35,6 +35,7 @@ from app.models.enums import CriticiteType, UserRole
 from app.models.feedback import Feedback
 from app.models.historique_issue import HistoriqueIssue
 from app.models.issue import Issue
+from app.models.issue_escalation import IssueEscalation
 from app.models.organisation import Organisation
 from app.models.plan import Plan
 from app.models.qr_code import QRCode
@@ -50,6 +51,7 @@ def ctx():
             Plan.__table__, Organisation.__table__, Agence.__table__, Utilisateur.__table__,
             QRCode.__table__, Feedback.__table__, Categorie.__table__, AnalyseIA.__table__,
             DemandeContact.__table__, Issue.__table__, ActionCorrective.__table__, HistoriqueIssue.__table__,
+            IssueEscalation.__table__,
         ],
     )
     Session = sessionmaker(bind=engine)
@@ -148,6 +150,67 @@ def test_creation_issue_valide(ctx):
 def test_creation_par_agency_manager(ctx):
     r = ctx.call("am_a", "post", "/issues/", json={"titre": "Bruit en salle", "agence_id": str(ctx.agence_a)})
     assert r.status_code == 201, r.text
+
+
+def test_escalade_explicite_est_creee_et_lisible_sans_modifier_issue(ctx):
+    issue_id = _creer_issue(ctx)
+    created = ctx.call("am_a", "post", f"/issues/{issue_id}/escalations", json={"motif": "sla"})
+
+    assert created.status_code == 201, created.text
+    event = created.json()
+    assert event["issue_id"] == issue_id
+    assert event["motif"] == "sla"
+    assert event["declenchee_par_id"] == str(ctx.am_a)
+    assert event["declenchee_par_role"] == "agency_manager"
+    assert event["date_evenement"]
+    assert event["created_at"]
+
+    listed = ctx.call("cx_a", "get", f"/issues/{issue_id}/escalations")
+    assert listed.status_code == 200
+    assert [row["id"] for row in listed.json()] == [event["id"]]
+    issue = ctx.call("cx_a", "get", f"/issues/{issue_id}").json()
+    assert issue["statut"] == "ouverte"
+    assert issue["date_limite_sla"] is None
+
+
+def test_escalade_valide_cx_manager_sur_autre_agence_de_son_organisation(ctx):
+    issue_id = _creer_issue(ctx, agence_id=ctx.agence_a2)
+    response = ctx.call("cx_a", "post", f"/issues/{issue_id}/escalations", json={"motif": "risque_client"})
+    assert response.status_code == 201, response.text
+
+
+@pytest.mark.parametrize("user_key", ["am_a", "cx_a"])
+def test_escalade_issue_autre_organisation_refusee(ctx, user_key):
+    issue_id = _creer_issue(ctx, user_key="cx_b", agence_id=ctx.agence_b)
+    response = ctx.call(user_key, "post", f"/issues/{issue_id}/escalations", json={"motif": "autre"})
+    assert response.status_code == 403
+
+
+def test_agency_manager_ne_peut_pas_escalader_issue_autre_agence(ctx):
+    issue_id = _creer_issue(ctx, agence_id=ctx.agence_a2)
+    response = ctx.call("am_a", "post", f"/issues/{issue_id}/escalations", json={"motif": "autre"})
+    assert response.status_code == 403
+
+
+def test_escalade_issue_inexistante_refusee(ctx):
+    response = ctx.call("cx_a", "post", f"/issues/{uuid4()}/escalations", json={"motif": "autre"})
+    assert response.status_code == 404
+
+
+def test_motif_escalade_non_repertorie_refuse(ctx):
+    issue_id = _creer_issue(ctx)
+    response = ctx.call("cx_a", "post", f"/issues/{issue_id}/escalations", json={"motif": "criticite_extreme"})
+    assert response.status_code == 422
+
+
+def test_reescalade_conserve_tous_les_evenements(ctx):
+    issue_id = _creer_issue(ctx)
+    for motif in ("sla", "decision_manageriale", "autre"):
+        response = ctx.call("cx_a", "post", f"/issues/{issue_id}/escalations", json={"motif": motif})
+        assert response.status_code == 201, response.text
+    events = ctx.call("cx_a", "get", f"/issues/{issue_id}/escalations").json()
+    assert len(events) == 3
+    assert [event["motif"] for event in events] == ["sla", "decision_manageriale", "autre"]
 
 
 def test_creation_et_reouverture_conservent_deadline_sla(ctx):

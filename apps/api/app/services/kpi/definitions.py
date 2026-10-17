@@ -142,6 +142,16 @@ KPI_DEFINITIONS: dict[str, KPIDefinition] = {
         ),
         unit="percent",
     ),
+    "ESCALATION_RATE": KPIDefinition(
+        code="ESCALATION_RATE",
+        label="Escalation Rate",
+        description=(
+            "Pourcentage d'Issues ayant été dans le backlog à un moment de la période et "
+            "avec au moins une escalade explicite pendant cette période. Chaque Issue ne "
+            "compte qu'une fois, même si elle est ré-escaladée."
+        ),
+        unit="percent",
+    ),
     "NPS": KPIDefinition(
         code="NPS",
         label="NPS",
