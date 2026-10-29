@@ -2,10 +2,17 @@ import { createReadStream, promises as fs } from 'node:fs';
 import { createServer } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { enTetesSecurite, estProduction } from './entetes-securite.mjs';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), 'dist');
 const indexFile = path.join(root, 'index.html');
 const port = Number(process.env.PORT || 10000);
+// En-têtes de sécurité (SD-11) : posés sur TOUTES les réponses, erreurs comprises (voir entetes-securite.mjs).
+const entetesSecurite = enTetesSecurite({
+  production: estProduction(process.env),
+  apiUrl: process.env.VITE_API_URL,
+  agentUrl: process.env.VITE_AGENT_URL,
+});
 const mimeTypes = {
   '.css': 'text/css; charset=utf-8',
   '.gif': 'image/gif',
@@ -51,6 +58,7 @@ async function resolveFile(pathname) {
 }
 
 const server = createServer(async (request, response) => {
+  for (const [nom, valeur] of Object.entries(entetesSecurite)) response.setHeader(nom, valeur);
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     response.writeHead(405, { Allow: 'GET, HEAD' }).end();
     return;

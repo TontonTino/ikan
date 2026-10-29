@@ -33,10 +33,13 @@ export function politiqueCsp(apiUrl: string): string {
   ].join('; ');
 }
 
-export function enTetesSecurite(apiUrl: string): Record<string, string> {
+export function enTetesSecurite(apiUrl: string, production = true): Record<string, string> {
+  const hsts: Record<string, string> = production
+    // HSTS : 6 mois, sans includeSubDomains ni preload. Absent en développement local (`astro dev`).
+    ? { 'Strict-Transport-Security': 'max-age=15552000' }
+    : {};
   return {
-    // HSTS : ignoré par les navigateurs en HTTP simple, appliqué dès que le site est servi en HTTPS.
-    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+    ...hsts,
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'DENY',
     // Le code du QR figure dans le chemin de la page : il ne doit pas fuiter vers un autre site.

@@ -12,6 +12,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from app.core.config import settings
 from app.core.body_limit import LimiteCorpsPublic
 from app.core.cors import appliquer_cors
+from app.core.entetes_securite import installer_entetes_securite
 from app.core.erreurs_validation import installer_erreurs_validation
 from app.core.journal_acces import installer_journal_acces
 from app.core.masquage_acces_http import installer_masquage_acces_http
@@ -179,6 +180,8 @@ print(f"[CORS] APP_ENV={settings.APP_ENV} origines autorisées : {', '.join(_ori
 # l'enveloppe, donc un refus 413 porte les en-têtes CORS et reste lisible par le navigateur.
 app.add_middleware(LimiteCorpsPublic)
 appliquer_cors(app, _origines_cors)
+# En-têtes de sécurité (SD-11) : enveloppe la pile complète, donc aussi les réponses d'erreur 500.
+installer_entetes_securite(app)
 
 # Inclusion des routes
 app.include_router(api_router, prefix=settings.API_V1_STR)
