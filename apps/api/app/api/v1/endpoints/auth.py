@@ -4,12 +4,13 @@ Endpoints d'authentification — login, logout, refresh, profil courant.
 from datetime import timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user
 from app.core.config import settings
+from app.core.login_throttle import noter_echec, noter_succes, verifier_avant_connexion
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -36,6 +37,7 @@ COOKIE_SAMESITE = "none" if COOKIE_SECURE else "lax"
 @router.post("/login", response_model=TokenResponse)
 def login(
     credentials: LoginRequest,
+    request: Request,
     response: Response,
     db: Session = Depends(get_db),
 ):
@@ -58,17 +60,22 @@ def login(
             detail="Le mot de passe est requis",
         )
 
+    # Trop d'échecs récents pour ce couple (IP, e-mail) ou cette IP : 429 avant toute vérification (aucune fuite d'existence).
+    verifier_avant_connexion(request, email)
+
     # Compte désactivé OU organisation désactivée : même réponse qu'un mauvais mot de passe (rien n'est révélé).
     user = requete_comptes_utilisables(db).filter(
         func.lower(Utilisateur.email) == email,  # égalité sans casse ; `ilike` traitait « _ » et « % » comme des jokers
     ).first()
 
     if not user or not verify_password(pwd, user.mot_de_passe_hash):
+        noter_echec(request, email)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email ou mot de passe incorrect",
         )
 
+    noter_succes(request, email)
     access_token = create_access_token(subject=str(user.id))
     refresh_token = create_refresh_token(subject=str(user.id))
 
