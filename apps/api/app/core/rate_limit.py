@@ -32,11 +32,14 @@ class LimiteurFenetre:
         self._fenetre = fenetre_s
         self._horloge = horloge
         self._evenements: dict[str, deque] = {}
+        self._fenetres_cles: dict[str, float] = {}
+        self._operations = 0
         self._verrou = threading.Lock()
 
     def reinitialiser(self) -> None:
         with self._verrou:
             self._evenements.clear()
+            self._fenetres_cles.clear()
 
     def tenter(self, cle: str, limite: int) -> tuple[bool, int]:
         """Enregistre une tentative. Retourne (autorisee, secondes_avant_nouvel_essai). limite <= 0 : jamais bloqué."""
@@ -57,6 +60,48 @@ class LimiteurFenetre:
                 return False, max(attente, 1)
             file.append(maintenant)
             return True, 0
+
+    # --- Compteurs d'ÉCHECS (connexion) : fenêtre propre à chaque appel, nettoyage des clés expirées. -----------------
+    def echecs(self, cle: str, fenetre_s: float) -> tuple[int, int]:
+        """(événements encore dans la fenêtre, secondes avant que le plus ancien n'expire). N'enregistre rien."""
+        maintenant = self._horloge()
+        with self._verrou:
+            file = self._evenements.get(cle)
+            if not file:
+                return 0, 0
+            seuil = maintenant - fenetre_s
+            while file and file[0] <= seuil:
+                file.popleft()
+            if not file:
+                del self._evenements[cle]
+                self._fenetres_cles.pop(cle, None)
+                return 0, 0
+            return len(file), max(int(file[0] + fenetre_s - maintenant) + 1, 1)
+
+    def noter(self, cle: str, fenetre_s: float) -> None:
+        """Enregistre un événement pour `cle` ; purge régulièrement les clés dont tous les événements ont expiré."""
+        maintenant = self._horloge()
+        with self._verrou:
+            self._operations += 1
+            if self._operations % 256 == 0 or len(self._evenements) >= MAX_CLES_SUIVIES:
+                self._purger_expires(maintenant)
+                while len(self._evenements) >= MAX_CLES_SUIVIES:
+                    cle_ancienne = next(iter(self._evenements))
+                    del self._evenements[cle_ancienne]
+                    self._fenetres_cles.pop(cle_ancienne, None)
+            self._fenetres_cles[cle] = fenetre_s
+            self._evenements.setdefault(cle, deque()).append(maintenant)
+
+    def oublier(self, cle: str) -> None:
+        with self._verrou:
+            self._evenements.pop(cle, None)
+            self._fenetres_cles.pop(cle, None)
+
+    def _purger_expires(self, maintenant: float) -> None:
+        for cle in [c for c, f in self._evenements.items()
+                    if not f or f[-1] <= maintenant - self._fenetres_cles.get(c, self._fenetre)]:
+            del self._evenements[cle]
+            self._fenetres_cles.pop(cle, None)
 
     def _purger(self, seuil: float) -> None:
         for cle in [c for c, f in self._evenements.items() if not f or f[-1] <= seuil]:

@@ -12,6 +12,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from app.core.config import settings
 from app.core.body_limit import LimiteCorpsPublic
 from app.core.cors import appliquer_cors
+from app.core.csrf import ProtectionCSRF
 from app.core.entetes_securite import installer_entetes_securite
 from app.core.erreurs_validation import installer_erreurs_validation
 from app.core.journal_acces import installer_journal_acces
@@ -179,6 +180,8 @@ print(f"[CORS] APP_ENV={settings.APP_ENV} origines autorisées : {', '.join(_ori
 # Plafond de taille du corps des envois publics (POST /feedbacks, /feedbacks/{id}/nps). Ajouté AVANT le CORS : le CORS
 # l'enveloppe, donc un refus 413 porte les en-têtes CORS et reste lisible par le navigateur.
 app.add_middleware(LimiteCorpsPublic)
+# CSRF (SD-08) : posé APRÈS le plafond de corps et AVANT le CORS, pour qu'un refus 403 porte lui aussi les en-têtes CORS.
+app.add_middleware(ProtectionCSRF)
 appliquer_cors(app, _origines_cors)
 # En-têtes de sécurité (SD-11) : enveloppe la pile complète, donc aussi les réponses d'erreur 500.
 installer_entetes_securite(app)
