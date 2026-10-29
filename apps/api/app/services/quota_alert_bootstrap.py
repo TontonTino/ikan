@@ -1,6 +1,6 @@
 """
 Schéma des alertes de quota — SQL idempotent, partagé par la migration
-Alembic 009 et le filet de démarrage (app/main.py), même principe que
+Alembic 009 (l'ancien filet de démarrage a été retiré, SD-03), même principe que
 plan_bootstrap.py / stripe_billing_bootstrap.py.
 """
 from sqlalchemy import text

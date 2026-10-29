@@ -51,13 +51,23 @@ Garde-fous : le seed refuse de s'exécuter si `APP_ENV` n'est pas `development` 
 base contient déjà des utilisateurs, des agences ou des organisations sans `--confirmer-ecrasement`. Les comptes de démonstration utilisent le
 mot de passe défini dans `seed.py` (jamais affiché) ; ne les créez jamais sur une base réelle.
 
+## Schéma de la base : migrer PUIS démarrer (SD-03)
+
+Le démarrage de l'API **ne modifie jamais la structure de la base** (aucun `ALTER`, `CREATE`, `DROP` ni `create_all()`, dans aucun
+environnement). Le schéma ne vient que d'Alembic, toujours lancé **avant** l'API :
+
+```bash
+alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT   # commande de démarrage Render (render.yaml)
+```
+
+Le `&&` empêche l'API de démarrer si la migration échoue : Render garde alors l'ancienne version en ligne. En local, lancez
+`alembic upgrade head` une fois sur une base neuve (ou après chaque nouvelle migration), puis `uvicorn`. Une migration doit être additive
+et idempotente (`IF NOT EXISTS`), avec `SET LOCAL lock_timeout = '5s'` quand elle prend un verrou.
+
 ## Variables d'environnement liées au schéma de la base
 
 - `APP_ENV` (`development` par défaut ; déjà utilisée pour `COOKIE_SECURE` dans `auth.py`,
-  réglée à `production` sur Render — voir `render.yaml`) contrôle aussi si `app/main.py`
-  exécute `Base.metadata.create_all()` au démarrage (uniquement en `development` — en
-  production, le schéma ne vient que de `alembic upgrade head`, déjà dans la commande de
-  démarrage Render) et si `app/db/session.py` refuse de démarrer lorsque `DATABASE_URL`
+  réglée à `production` sur Render — voir `render.yaml`) contrôle aussi si `app/db/session.py` refuse de démarrer lorsque `DATABASE_URL`
   pointe vers un hôte Supabase connu (`*.supabase.co` ou `*.pooler.supabase.com`) alors que
   `APP_ENV != "development"` — ces hôtes sont une base de développement partagée, jamais
   la production.

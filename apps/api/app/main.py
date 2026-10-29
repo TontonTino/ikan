@@ -6,7 +6,6 @@ import traceback
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from sqlalchemy import text
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.core.config import settings
@@ -74,66 +73,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 @app.on_event("startup")
 def on_startup():
-    """Création automatique des tables (développement uniquement), migration DDL et auto-seeding."""
-    if settings.APP_ENV == "development":
-        print(f"[STARTUP] APP_ENV='{settings.APP_ENV}' — Base.metadata.create_all() exécuté.")
-        try:
-            Base.metadata.create_all(bind=engine)
-        except Exception as e:
-            print(f"[STARTUP DB MIGRATION LOG] {e}")
-    else:
-        print(f"[STARTUP] APP_ENV='{settings.APP_ENV}' — Base.metadata.create_all() IGNORÉ "
-              f"(le schéma ne vient que de `alembic upgrade head`).")
-
-    try:
-        with engine.begin() as conn:
-            conn.execute(text("ALTER TABLE organisations ADD COLUMN IF NOT EXISTS logo TEXT;"))
-            # Plus de défaut 'Télécommunications' (voir secteur_code, app/services/secteurs.py,
-            # migration 023_organisation_secteur_code — seule source désormais).
-            conn.execute(text("ALTER TABLE organisations ADD COLUMN IF NOT EXISTS secteur_activite VARCHAR(100);"))
-            conn.execute(text("ALTER TABLE organisations ADD COLUMN IF NOT EXISTS pays_region VARCHAR(100) DEFAULT 'Tunisie / Afrique du Nord';"))
-            conn.execute(text("ALTER TABLE organisations ADD COLUMN IF NOT EXISTS email_pro VARCHAR(255);"))
-            conn.execute(text("ALTER TABLE organisations ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();"))
-            conn.execute(text("ALTER TABLE organisations ALTER COLUMN logo TYPE TEXT;"))
-            conn.execute(text("ALTER TABLE organisations ALTER COLUMN secteur DROP NOT NULL;"))
-            conn.execute(text("ALTER TABLE organisations ALTER COLUMN email DROP NOT NULL;"))
-            conn.execute(text("UPDATE organisations SET secteur_activite = secteur WHERE secteur_activite IS NULL AND secteur IS NOT NULL;"))
-            conn.execute(text("UPDATE organisations SET email_pro = email WHERE email_pro IS NULL AND email IS NOT NULL;"))
-            conn.execute(text("UPDATE organisations SET created_at = date_creation WHERE created_at IS NULL AND date_creation IS NOT NULL;"))
-    except Exception as e:
-        print(f"[STARTUP DB MIGRATION LOG] {e}")
-
-    # Filet forfaits (même SQL idempotent que la migration Alembic 006).
-    try:
-        from app.services.plan_bootstrap import appliquer_schema_plans
-        with engine.begin() as conn:
-            appliquer_schema_plans(conn)
-    except Exception as e:
-        print(f"[STARTUP PLANS LOG] {e}")
-
-    # Filet Stripe/facturation (même SQL idempotent que la migration Alembic 007).
-    try:
-        from app.services.stripe_billing_bootstrap import appliquer_schema_stripe
-        with engine.begin() as conn:
-            appliquer_schema_stripe(conn)
-    except Exception as e:
-        print(f"[STARTUP STRIPE LOG] {e}")
-
-    # Filet idempotence webhook Stripe (même SQL idempotent que la migration Alembic 008).
-    try:
-        from app.services.stripe_billing_bootstrap import appliquer_schema_webhook_events
-        with engine.begin() as conn:
-            appliquer_schema_webhook_events(conn)
-    except Exception as e:
-        print(f"[STARTUP STRIPE WEBHOOK LOG] {e}")
-
-    # Filet alertes de quota (même SQL idempotent que la migration Alembic 009).
-    try:
-        from app.services.quota_alert_bootstrap import appliquer_schema_alertes_quota
-        with engine.begin() as conn:
-            appliquer_schema_alertes_quota(conn)
-    except Exception as e:
-        print(f"[STARTUP QUOTA ALERTS LOG] {e}")
+    """Planifie les jobs quotidiens. Le démarrage ne touche JAMAIS à la structure de la base (SD-03) : le schéma ne vient que de
+    `alembic upgrade head`, lancé AVANT le démarrage (voir render.yaml), et la commande échoue si la migration échoue."""
 
     # Aucun seed au démarrage, dans AUCUN environnement : le démarrage ne crée ni ne supprime jamais
     # d'utilisateurs, d'agences ni d'organisations. Les données de démonstration se chargent à la main,
