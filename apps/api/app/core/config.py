@@ -64,6 +64,12 @@ class Settings(BaseSettings):
     # transmise dans X-Ikan-Client-Ip (sinon toutes les validations SSR compteraient pour l'IP du serveur client).
     SSR_FORWARD_SECRET: str = ""
 
+    # Connexion : échecs tolérés sur la fenêtre ci-dessous, par couple (IP, e-mail normalisé) puis par IP seule. 0 = limite
+    # désactivée. Compteurs EN MÉMOIRE (voir app/core/rate_limit.py). Le compte lui-même n'est JAMAIS verrouillé.
+    LOGIN_MAX_ECHECS_PAR_COUPLE: int = 5
+    LOGIN_MAX_ECHECS_PAR_IP: int = 30
+    LOGIN_FENETRE_SECONDES: int = 900
+
     # Agent IA YAM (optionnel — service séparé, port 8001). Vide = notification désactivée.
     # AGENT_WEBHOOK_URL = URL de BASE du service (ex. http://localhost:8001) ;
     # WEBHOOK_SECRET doit être IDENTIQUE à celui de apps/agent/.env.
