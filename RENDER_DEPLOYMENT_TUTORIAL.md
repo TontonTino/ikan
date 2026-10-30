@@ -113,6 +113,8 @@ Sur Render, nous allons créer 4 services :
 
 Les tables sont créées par `alembic upgrade head`, exécuté automatiquement à chaque déploiement (voir `startCommand` dans `render.yaml`).
 
+**Ordre : migrer, puis démarrer.** La commande de démarrage est `alembic upgrade head && uvicorn …` : l'API ne démarre que si la migration a réussi (sinon Render garde l'ancienne version). Le démarrage de l'API ne modifie plus jamais la structure de la base (plus aucun `ALTER` ni `create_all`) : tout changement de schéma passe par une migration Alembic versionnée, additive et idempotente. Sur une base neuve (AWS comprise), `alembic upgrade head` suffit à produire le schéma complet.
+
 ⚠️ **Le seed de démonstration (`python seed.py`) est interdit en production** : il refuse de s'exécuter si `APP_ENV` n'est pas `development`, et l'API ne le lance plus jamais au démarrage. Les organisations, agences et comptes se créent depuis l'application, une fois le premier compte administrateur créé (ci-dessous).
 
 ### Créer le premier administrateur (une seule fois)

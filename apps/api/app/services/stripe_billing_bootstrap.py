@@ -1,6 +1,6 @@
 """
 Schéma Stripe/facturation — SQL idempotent, partagé par la migration Alembic 007
-et le filet de démarrage (app/main.py), même principe que plan_bootstrap.py.
+(l'ancien filet de démarrage a été retiré, SD-03), même principe que plan_bootstrap.py.
 Peut être rejoué sans effet de bord.
 """
 from sqlalchemy import text

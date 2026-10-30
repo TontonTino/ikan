@@ -1,6 +1,6 @@
 """
 Schéma et données des forfaits — SQL idempotent, partagé par la migration
-Alembic 006 et le filet de démarrage (app/main.py) pour que les deux
+Alembic 006 (l'ancien filet de démarrage a été retiré, SD-03) pour que les deux
 appliquent strictement la même logique. Peut être rejoué sans effet de bord.
 """
 from sqlalchemy import text
