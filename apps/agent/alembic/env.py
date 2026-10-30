@@ -20,7 +20,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.db.session import Base
 from app.models import action_agent  # noqa — enregistre ActionAgent sur Base.metadata
 from app.models import conversation  # noqa — enregistre Conversation/ConversationTurn sur Base.metadata
+from app.config.garde_production import refuser_si_production
 from app.config.settings import settings
+
+# SD-02 : jamais de migration depuis un poste de développement vers la production protégée (Render : APP_ENV=production, jamais bloqué).
+refuser_si_production(settings.DATABASE_URL, "migration Alembic de l'agent", app_env=settings.APP_ENV)
 
 config = context.config
 

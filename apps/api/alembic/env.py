@@ -15,6 +15,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.db.session import Base
 from app.models import *  # noqa — importer tous les modèles pour la détection auto
 from app.core.config import settings
+from app.core.garde_production import refuser_si_production
+
+# SD-02 : jamais de migration depuis un poste de développement vers la production protégée (Render : APP_ENV=production, jamais bloqué).
+refuser_si_production(settings.DATABASE_URL, "migration Alembic", app_env=settings.APP_ENV)
 
 # Configuration Alembic
 config = context.config

@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.endpoints import agent_router, webhook_router
+from app.config.garde_production import refuser_si_production
 from app.config.settings import settings
 
 # Les loggers app.* (ex. replis Veille de qa_service) propagent vers la racine : sans handler
@@ -32,6 +33,12 @@ app.add_middleware(
 
 app.include_router(agent_router)
 app.include_router(webhook_router)
+
+
+@app.on_event("startup")
+def on_startup():
+    """SD-02 : hors APP_ENV=production (Render), refuse de démarrer contre la base de production protégée (aucune connexion ouverte)."""
+    refuser_si_production(settings.DATABASE_URL, "démarrage de l'agent YAM", app_env=settings.APP_ENV)
 
 
 @app.get("/health", tags=["Santé"])

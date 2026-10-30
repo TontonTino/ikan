@@ -43,6 +43,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Force stdout en UTF-8 (console Windows par défaut en cp1252).
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
+from app.core.config import settings
+from app.core.garde_production import refuser_si_production
 from app.db.session import SessionLocal
 from app.models.agence import Agence
 from app.models.action_corrective import ActionCorrective
@@ -454,6 +456,7 @@ def renseigner_nps(db, org: Organisation, n_cible: int = 30) -> list:
 # ============================================================================
 
 def main():
+    refuser_si_production(settings.DATABASE_URL, "seed des issues de démonstration")
     db = SessionLocal()
     try:
         org = db.query(Organisation).filter(Organisation.nom == ORGANISATION_NOM).first()

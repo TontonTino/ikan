@@ -47,6 +47,8 @@ if __name__ == "__main__":
 
 from fastapi import BackgroundTasks
 
+from app.core.config import settings
+from app.core.garde_production import refuser_si_production
 from app.db.session import SessionLocal
 from app.models.agence import Agence
 from app.models.analyse_ia import AnalyseIA
@@ -270,6 +272,7 @@ def supprimer(db, org: Organisation) -> int:
 # ============================================================================
 
 def main(argv: list[str] | None = None) -> None:
+    refuser_si_production(settings.DATABASE_URL, "seed des réclamations de démonstration")
     argv = sys.argv[1:] if argv is None else argv
     db = SessionLocal()
     try:
