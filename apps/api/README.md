@@ -74,6 +74,16 @@ Garde-fous : le seed refuse de s'exécuter si `APP_ENV` n'est pas `development` 
 base contient déjà des utilisateurs, des agences ou des organisations sans `--confirmer-ecrasement`. Les comptes de démonstration utilisent le
 mot de passe défini dans `seed.py` (jamais affiché) ; ne les créez jamais sur une base réelle.
 
+## Reprise automatique de l'analyse d'un avis (IA-01)
+
+L'analyse (moteur de sentiment local) est lancée à l'enregistrement de l'avis ; si elle échoue, l'avis reste enregistré et visible, sans erreur côté client.
+Un job planifié (`app/services/ai/reprise_analyse.py`, toutes les 5 minutes, même scheduler que les jobs quotidiens) reprend les avis sans analyse :
+délai croissant (5, 10, 20, 40, 80 minutes après chaque échec), plafond de 5 reprises, organisations désactivées ignorées, une seule requête de
+sélection par exécution. Les échecs sont comptés dans `historique_feedbacks` (type `analyse_reprise_echec`, masqué du fil d'un avis et de l'activité
+d'agence) : aucune migration. Après le plafond, l'avis garde sa note et son texte et le dashboard affiche « Analyse indisponible ». Chaque abandon
+écrit une ligne JSON dans le journal `ikan.analyse_ia` (identifiants seulement : ni texte d'avis, ni contact).
+Limite : le scheduler tourne dans le processus de l'API ; sur un plan Render gratuit qui s'endort, les reprises reprennent au réveil.
+
 ## Schéma de la base : migrer PUIS démarrer (SD-03)
 
 Le démarrage de l'API **ne modifie jamais la structure de la base** (aucun `ALTER`, `CREATE`, `DROP` ni `create_all()`, dans aucun

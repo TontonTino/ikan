@@ -230,6 +230,8 @@ class FeedbackResponse(BaseModel):
     discordance_status: Optional[str] = None
     issue_id: Optional[uuid.UUID] = None
     analyse_ia: Optional[AnalyseIAInfo] = None
+    # IA-01 : « disponible » / « en_attente » (reprise possible) / « indisponible » (reprises épuisées). Additif, calculé sans requête.
+    analyse_statut: Optional[str] = None
     demande_contact: Optional[DemandeContactInfo] = None
 
     model_config = {"from_attributes": True}
