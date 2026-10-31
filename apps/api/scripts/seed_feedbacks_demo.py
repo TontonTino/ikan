@@ -44,6 +44,7 @@ from app.models.enums import CriticiteType, UserRole
 from app.models.organisation import Organisation
 from app.models.utilisateur import Utilisateur
 from app.core.config import settings
+from app.core.garde_production import refuser_si_production
 from app.core.security import get_password_hash
 from app.services.categorie_service import get_or_create_categories_actives
 from app.services.plan_catalog import PLAN_GRATUIT_ID, PLAN_STARTER_ID, PLAN_PRO_ID
@@ -583,6 +584,7 @@ def seed_plans_demo():
 
 
 def main():
+    refuser_si_production(settings.DATABASE_URL, "seed des feedbacks de démonstration")
     if "--plans-demo" in sys.argv:
         seed_plans_demo()
         return

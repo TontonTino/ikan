@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.core.body_limit import LimiteCorpsPublic
 from app.core.cors import appliquer_cors
 from app.core.csrf import ProtectionCSRF
+from app.core.garde_production import refuser_si_production
 from app.core.entetes_securite import installer_entetes_securite
 from app.core.erreurs_validation import installer_erreurs_validation
 from app.core.journal_acces import installer_journal_acces
@@ -75,6 +76,9 @@ async def global_exception_handler(request: Request, exc: Exception):
 def on_startup():
     """Planifie les jobs quotidiens. Le démarrage ne touche JAMAIS à la structure de la base (SD-03) : le schéma ne vient que de
     `alembic upgrade head`, lancé AVANT le démarrage (voir render.yaml), et la commande échoue si la migration échoue."""
+
+    # SD-02 : hors APP_ENV=production (Render), refuse de démarrer contre la base de production protégée. Aucune connexion ouverte.
+    refuser_si_production(settings.DATABASE_URL, "démarrage de l'API", app_env=settings.APP_ENV)
 
     # Aucun seed au démarrage, dans AUCUN environnement : le démarrage ne crée ni ne supprime jamais
     # d'utilisateurs, d'agences ni d'organisations. Les données de démonstration se chargent à la main,

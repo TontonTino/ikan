@@ -26,6 +26,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from pydantic import EmailStr, TypeAdapter  # noqa: E402
 
 from app.api.v1.endpoints.utilisateurs import _email_deja_pris  # noqa: E402
+from app.core.config import settings  # noqa: E402
+from app.core.garde_production import avertir_si_production  # noqa: E402
 from app.core.security import get_password_hash  # noqa: E402
 from app.db.session import SessionLocal  # noqa: E402
 from app.models.enums import UserRole  # noqa: E402
@@ -88,6 +90,9 @@ def main(argv=None, *, saisir=getpass.getpass, interactif=None) -> int:
     parseur.add_argument("--email", required=True, help="Adresse e-mail de connexion du nouvel administrateur.")
     parseur.add_argument("--ajouter", action="store_true", help="Autorise la création alors qu'un administrateur existe déjà.")
     arguments = parseur.parse_args(argv)
+
+    # Cette commande est faite pour la production : elle n'est PAS bloquée par la garde SD-02, mais l'avertissement est explicite.
+    avertir_si_production(settings.DATABASE_URL, "création d'un compte administrateur")
 
     if interactif is None:
         interactif = sys.stdin.isatty()

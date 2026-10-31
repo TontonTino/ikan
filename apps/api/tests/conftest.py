@@ -4,8 +4,32 @@ import os
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-tests-0123456789abcdef")
 
 import pytest
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.ext.compiler import compiles
+
+
+# SD-02 : les tests tournent sur SQLite en mémoire et ne doivent JAMAIS toucher la base de production. Deux protections :
+# (1) la session échoue d'emblée si une adresse de base de la configuration (.env compris) est celle de la production ;
+# (2) toute connexion réelle vers une adresse protégée est refusée avant d'être ouverte (même si un test crée son propre moteur).
+from app.core.config import settings as _reglages  # noqa: E402
+from app.core.garde_production import est_base_de_production  # noqa: E402
+
+for _nom, _adresse in (("DATABASE_URL (configuration ou .env)", _reglages.DATABASE_URL),
+                       ("DATABASE_URL (environnement)", os.environ.get("DATABASE_URL", "")),
+                       ("TEST_DATABASE_URL", os.environ.get("TEST_DATABASE_URL", ""))):
+    if est_base_de_production(_adresse):
+        raise pytest.UsageError(
+            f"Tests arrêtés : {_nom} pointe vers la base de PRODUCTION (SD-02). Aucune connexion n'a été ouverte. "
+            "Repointez-la vers une base de développement ou retirez-la : les tests n'en ont pas besoin (SQLite en mémoire)."
+        )
+
+
+@event.listens_for(Engine, "do_connect")
+def _refuser_connexion_a_la_production(dialect, conn_rec, cargs, cparams):
+    if est_base_de_production(f"{cargs} {cparams}"):
+        raise AssertionError("Un test a tenté de se connecter à la base de PRODUCTION (SD-02) : connexion refusée avant son ouverture.")
 
 
 @compiles(PG_UUID, "sqlite")
