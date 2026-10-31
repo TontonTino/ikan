@@ -130,7 +130,9 @@ services:
     runtime: node
     rootDir: apps/client
     buildCommand: npm install && npm run build
-    startCommand: node ./dist/server/entry.mjs
+    # serveur.mjs : même serveur Astro, avec compression gzip/brotli, Cache-Control par type de fichier et en-têtes de sécurité
+    # sur les fichiers statiques. En cas de problème, l'ancienne commande `node ./dist/server/entry.mjs` fonctionne toujours.
+    startCommand: node ./serveur.mjs
     plan: free
     healthCheckPath: /
     envVars:
