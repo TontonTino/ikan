@@ -53,6 +53,8 @@ if __name__ == "__main__":
 from fastapi import BackgroundTasks
 from sqlalchemy import or_
 
+from app.core.config import settings
+from app.core.garde_production import refuser_si_production
 from app.db.session import SessionLocal
 from app.models.action_corrective import ActionCorrective
 from app.models.agence import Agence
@@ -517,6 +519,7 @@ def organisation_de_demo(db) -> Organisation | None:
 
 
 def main(argv: list[str] | None = None) -> None:
+    refuser_si_production(settings.DATABASE_URL, "seed de l'organisation de démonstration (restauration)")
     argv = sys.argv[1:] if argv is None else argv
     db = SessionLocal()
     try:

@@ -31,6 +31,7 @@ from app.models.suggestion import Suggestion
 from app.models.demande_contact import DemandeContact
 from app.core.security import get_password_hash
 from app.core.config import settings
+from app.core.garde_production import refuser_si_production
 from app.services.ai.analyse_service import analyser_feedback
 
 logging.basicConfig(level=logging.INFO)
@@ -85,6 +86,7 @@ def _verifier_base(confirmer_ecrasement: bool) -> None:
 
 def seed_database(confirmer_ecrasement: bool = False):
     # Gardes AVANT toute écriture (y compris la création des tables). Le seed n'est jamais lancé par le démarrage de l'API.
+    refuser_si_production(settings.DATABASE_URL, "seed de la base de démonstration")
     _verifier_environnement()
     _verifier_base(confirmer_ecrasement)
 

@@ -18,6 +18,8 @@ if hasattr(sys.stdout, "reconfigure"):
 
 from sqlalchemy import bindparam, text
 
+from app.core.config import settings
+from app.core.garde_production import refuser_si_production
 from app.db.session import SessionLocal
 
 
@@ -48,6 +50,7 @@ UPDATE_SQL = text(
 
 
 def main() -> int:
+    refuser_si_production(settings.DATABASE_URL, "nettoyage des URL de veille de démonstration")
     apply = "--apply" in sys.argv[1:]
     params = {"org_name": ORG_NAME, "external_ids": DEMO_EXTERNAL_IDS}
     db = SessionLocal()
