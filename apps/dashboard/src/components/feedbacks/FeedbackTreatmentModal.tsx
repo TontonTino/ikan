@@ -11,6 +11,7 @@ import PriseEnChargeBanner from './PriseEnChargeBanner';
 import WhatsAppReplyButton from './WhatsAppReplyButton';
 import { CoordonneesMasquees, ConsentementContact, InfoTraitement } from './DemandeContactBlocs';
 import ReponseClientSection from './ReponseClientSection';
+import { libelleAnalyseAbsente } from './avisAffichage';
 import { CANAL_LABELS } from '../../utils/brouillonReponse';
 import {
   AlertTriangleIcon,
@@ -635,12 +636,12 @@ export default function FeedbackTreatmentModal({
           >
             {feedback.analyse_ia?.sentiment === 'positif' && <ThumbsUpIcon size={12} color="#3C7730" />}
             {feedback.analyse_ia?.sentiment === 'negatif' && <ThumbsDownIcon size={12} color="#B91C1C" />}
-            <span>Ton : {feedback.analyse_ia ? (feedback.analyse_ia.sentiment ? SENTIMENT_LABELS[feedback.analyse_ia.sentiment] ?? feedback.analyse_ia.sentiment : 'Non évalué') : 'Non analysé'}</span>
+            <span>Ton : {feedback.analyse_ia ? (feedback.analyse_ia.sentiment ? SENTIMENT_LABELS[feedback.analyse_ia.sentiment] ?? feedback.analyse_ia.sentiment : 'Non évalué') : libelleAnalyseAbsente(feedback)}</span>
           </div>
 
           {/* Criticité : afficher uniquement l'analyse réelle et distinguer une valeur absente. */}
           <div style={{ background: feedback.analyse_ia?.criticite === 'critique' ? '#FEE2E2' : feedback.analyse_ia?.criticite === 'elevee' ? '#FFEDD5' : '#F8FAFC', color: feedback.analyse_ia?.criticite === 'critique' ? '#B91C1C' : feedback.analyse_ia?.criticite === 'elevee' ? '#C2410C' : '#475569', padding: '4px 10px', borderRadius: '8px', border: '1px solid #E2E8F0', fontWeight: 800 }}>
-            Gravité : {feedback.analyse_ia ? (feedback.analyse_ia.criticite ? GRAVITE_LABELS[feedback.analyse_ia.criticite] ?? feedback.analyse_ia.criticite : 'Non évaluée') : 'Non analysé'}
+            Gravité : {feedback.analyse_ia ? (feedback.analyse_ia.criticite ? GRAVITE_LABELS[feedback.analyse_ia.criticite] ?? feedback.analyse_ia.criticite : 'Non évaluée') : libelleAnalyseAbsente(feedback)}
           </div>
           {feedback.analyse_ia?.discordance_detectee && (
             <div role="status" style={{ background: '#FFF7ED', color: '#9A3412', padding: '4px 10px', borderRadius: '8px', border: '1px solid #FED7AA', fontWeight: 800 }}>

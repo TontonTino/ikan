@@ -179,6 +179,8 @@ export interface Feedback {
     discordance_detectee: boolean;
     score_sentiment?: number;
   };
+  /** IA-01 : « indisponible » quand l'analyse automatique a échoué après toutes les reprises (avis intact). */
+  analyse_statut?: 'disponible' | 'en_attente' | 'indisponible';
   demande_contact?: DemandeContact;
 }
 

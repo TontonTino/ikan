@@ -113,6 +113,22 @@ def on_startup():
     except Exception as e:
         print(f"[STARTUP SCHEDULER LOG ERROR] {e}")
 
+    # IA-01 : reprise des analyses en échec, toutes les 5 minutes (même scheduler ; aucune lecture n'y touche).
+    try:
+        from apscheduler.triggers.interval import IntervalTrigger
+        from app.services.ai.reprise_analyse import INTERVALLE_JOB_MINUTES, reprendre_analyses
+        scheduler.add_job(
+            reprendre_analyses,
+            IntervalTrigger(minutes=INTERVALLE_JOB_MINUTES),
+            id="reprise_analyses_ia",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+        )
+        print(f"[STARTUP SCHEDULER] Job de reprise des analyses planifié (toutes les {INTERVALLE_JOB_MINUTES} minutes).")
+    except Exception as e:
+        print(f"[STARTUP SCHEDULER LOG ERROR] {e}")
+
     try:
         if not scheduler.running:
             scheduler.start()

@@ -54,6 +54,7 @@ from app.schemas.feedback import (
 from app.core.security import create_nps_token, decode_token
 from app.core.rate_limit import limiter_ip_public, limiter_soumission
 from app.services.ai.analyse_service import analyser_feedback
+from app.services.ai.reprise_analyse import TYPES_TECHNIQUES, etat_analyse
 from app.core.config import settings
 from app.services.dashboard_helpers import NOTE_FAIBLE_MAX, est_critique_ou_negatif
 from app.services.brouillon_reponse import (
@@ -81,6 +82,7 @@ def _format_feedback_response(f: Feedback, user: Optional[Utilisateur] = None) -
     """Transforme une entité Feedback SQLAlchemy en schéma Pydantic FeedbackResponse complet.
     `user` : utilisateur authentifié ; absent (soumission publique) => pas de telephone_whatsapp."""
     res = FeedbackResponse.model_validate(f)
+    res.analyse_statut = etat_analyse(f)
     if res.demande_contact:
         res.demande_contact.telephone_whatsapp = _telephone_whatsapp(res.demande_contact.telephone, user)
     if f.qr_code and f.qr_code.agence:
@@ -1083,7 +1085,7 @@ def get_historique(
 
     historique = (
         db.query(HistoriqueFeedback)
-        .filter(HistoriqueFeedback.feedback_id == feedback_id)
+        .filter(HistoriqueFeedback.feedback_id == feedback_id, HistoriqueFeedback.type_evenement.notin_(TYPES_TECHNIQUES))
         .order_by(HistoriqueFeedback.date_evenement.desc())
         .all()
     )

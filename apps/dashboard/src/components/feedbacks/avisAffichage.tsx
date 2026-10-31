@@ -34,12 +34,16 @@ export const formatDateAvis = (dateStr?: string) => {
   }
 };
 
+/** Libellé d'un avis sans analyse : neutre, jamais un vide. « Analyse indisponible » quand les reprises automatiques ont échoué (IA-01). */
+export const libelleAnalyseAbsente = (feedback: Pick<Feedback, 'analyse_statut'>) =>
+  feedback.analyse_statut === 'indisponible' ? 'Analyse indisponible' : 'Non analysé';
+
 const libelleGravite = (criticite: string) => (GRAVITE_LABELS[criticite as CriticiteType] ?? criticite).toLowerCase();
 
 /** Pastille de gravité du tableau : toujours un texte (« CRITIQUE », « ÉLEVÉE », « Gravité faible »…). */
 export function PastilleGravite({ feedback }: { feedback: Feedback }) {
   const criticite = feedback.analyse_ia?.criticite;
-  if (!criticite) return <span style={{ fontSize: '0.70rem', color: '#64748B' }}>{feedback.analyse_ia ? 'Gravité non évaluée' : 'Non analysé'}</span>;
+  if (!criticite) return <span style={{ fontSize: '0.70rem', color: '#64748B' }}>{feedback.analyse_ia ? 'Gravité non évaluée' : libelleAnalyseAbsente(feedback)}</span>;
   const fort = criticite === 'critique' || criticite === 'elevee';
   return (
     <span
@@ -69,7 +73,7 @@ export function SignauxAvis({ feedback }: { feedback: Feedback }) {
         <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.90rem' }}>★ {feedback.note}/5</span>
         <span style={{ background: meta.bg, color: meta.text, padding: '2px 8px', borderRadius: '6px', fontSize: '0.70rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
           {meta.icon}
-          {feedback.analyse_ia ? meta.label : 'Non analysé'}
+          {feedback.analyse_ia ? meta.label : libelleAnalyseAbsente(feedback)}
         </span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '7px' }}>
@@ -88,13 +92,13 @@ export function AvisCarteMobile({ feedback, afficherAgence, onConsulter }: { fee
   const statut = STATUT_BADGES[(feedback.statut_traitement || 'nouveau') as StatutTraitement] || STATUT_BADGES.nouveau;
   const libelleCriticite = feedback.analyse_ia
     ? (CRITICITE_STYLE[criticite] ? `${criticite === 'elevee' ? 'Élevée' : criticite.charAt(0).toUpperCase() + criticite.slice(1)}` : 'Gravité non évaluée')
-    : 'Non analysé';
+    : libelleAnalyseAbsente(feedback);
   return (
     <article className="feedbacks-mobile-card">
       <div className="feedbacks-mobile-card-top">
         <strong>★ {feedback.note}/5</strong>
         <span>{libelleCriticite}</span>
-        <span>{sentimentMeta?.label || (feedback.analyse_ia ? 'Ton non évalué' : 'Non analysé')}</span>
+        <span>{sentimentMeta?.label || (feedback.analyse_ia ? 'Ton non évalué' : libelleAnalyseAbsente(feedback))}</span>
         <BadgeDiscordance discordance={feedback.analyse_ia?.discordance_detectee} />
       </div>
       <p>{feedback.commentaire || 'Pas de commentaire écrit.'}</p>

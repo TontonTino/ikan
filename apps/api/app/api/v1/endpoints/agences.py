@@ -20,6 +20,7 @@ from app.models.feedback import Feedback
 from app.models.suggestion import Suggestion, HistoriqueSuggestion
 from app.services.suggestions_scope import agence_effective
 from app.models.historique_feedback import HistoriqueFeedback
+from app.services.ai.reprise_analyse import TYPES_TECHNIQUES
 from app.models.enums import UserRole
 from app.schemas.agence import AgenceCreate, AgenceUpdate, AgenceResponse, AgencePhotoUpdate, ActiviteAgenceItem, AgenceContexteItem
 from app.schemas.categorie import CategorieCreate, CategorieUpdate, CategorieResponse
@@ -495,7 +496,7 @@ def get_activite_agence(
 
     historiques = (
         db.query(HistoriqueFeedback)
-        .filter(HistoriqueFeedback.agence_id == agence_id)
+        .filter(HistoriqueFeedback.agence_id == agence_id, HistoriqueFeedback.type_evenement.notin_(TYPES_TECHNIQUES))
         .order_by(HistoriqueFeedback.date_evenement.desc())
         .limit(limit)
         .all()
