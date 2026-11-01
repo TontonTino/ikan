@@ -22,6 +22,7 @@ from app.services import journal_audit as journal
 from app.schemas.categorie import CategoriePublicResponse
 from app.models.categorie import Categorie
 from app.models.system_settings import SystemSettings, RETENTION_MOIS_DEFAUT
+from app.services.parametres_systeme import retention_mois_affichee
 from app.core.rate_limit import limiter_ip_public, limiter_suggestion
 from app.models.enums import IdeaStatus
 from app.models.suggestion import Suggestion
@@ -198,10 +199,7 @@ def list_qr_codes(
 def _retention_mois(db: Session) -> int:
     """Durée de conservation configurée (SystemSettings.retention_mois), lue sans jamais écrire : sans ligne de
     configuration, valeur par défaut du modèle."""
-    ligne = db.query(SystemSettings).first()
-    if ligne is not None and ligne.retention_mois:
-        return ligne.retention_mois
-    return RETENTION_MOIS_DEFAUT
+    return retention_mois_affichee(db)      # hors bornes (valeur historique aberrante) : valeur par défaut, jamais affichée telle quelle (AD-05)
 
 
 @router.get("/{code}/validate", dependencies=[Depends(limiter_ip_public)])

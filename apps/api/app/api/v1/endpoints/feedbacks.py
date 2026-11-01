@@ -36,6 +36,7 @@ from app.models.enums import CriticiteType, SentimentType, UserRole
 from app.schemas.dashboard import ThemesSyntheseResponse
 from app.services.stats_negatifs_themes import MAX_THEMES, NON_CATEGORISE, agreger_themes, normaliser_theme, theme_normalise_sql
 from app.models.system_settings import SystemSettings, RETENTION_MOIS_DEFAUT
+from app.services.parametres_systeme import retention_mois_affichee
 from app.schemas.feedback import (
     FeedbackCreate,
     FeedbackResponse,
@@ -157,8 +158,7 @@ def _reponse_soumission(feedback: Feedback) -> FeedbackSoumisResponse:
 
 
 def _retention_mois_configuree(db: Session) -> int:
-    ligne = db.query(SystemSettings).first()
-    return ligne.retention_mois if ligne is not None and ligne.retention_mois else RETENTION_MOIS_DEFAUT
+    return retention_mois_affichee(db)      # valeur configurée si dans les bornes, sinon la valeur par défaut (AD-05)
 
 
 @router.post(
