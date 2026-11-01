@@ -104,3 +104,20 @@ et idempotente (`IF NOT EXISTS`), avec `SET LOCAL lock_timeout = '5s'` quand ell
   pointe vers un hôte Supabase connu (`*.supabase.co` ou `*.pooler.supabase.com`) alors que
   `APP_ENV != "development"` — ces hôtes sont une base de développement partagée, jamais
   la production.
+
+## Journal d'audit (AD-08, SD-13, AD-03)
+
+Table `journal_audit` (migration `033_journal_audit`), en **ajout seul** : un déclencheur PostgreSQL refuse UPDATE, DELETE et TRUNCATE
+(un déclencheur équivalent existe pour SQLite). Aucune clé étrangère : chaque ligne garde un instantané (e-mail de l'acteur, libellé de la
+cible) qui survit à la suppression du compte ou de l'agence. Adresse IP tronquée (/24 en IPv4, /48 en IPv6). Aucune donnée sensible :
+jamais de mot de passe, de hachage, de jeton, de contact client (téléphone, e-mail) ni de texte d'avis.
+
+- Un seul point d'écriture : `app/services/journal_audit.py` (`journaliser`, dans la MÊME transaction que l'action ; `journaliser_independant`
+  pour un refus ou une connexion échouée, écrit à part et sans jamais faire échouer la réponse).
+- Lecture : `GET /api/v1/admin/journal` (administrateur uniquement), filtres période / acteur / action / organisation / résultat,
+  pagination (200 lignes maximum par page), en-tête `X-Total-Count`. Aucune route d'écriture. Écran : « Journal d'audit » (menu administrateur).
+- Connexions échouées : une ligne par (adresse tronquée, e-mail) et par fenêtre de 15 minutes ; l'e-mail saisi n'est conservé que s'il
+  correspond à un compte existant, sinon « compte inconnu ».
+- **Conservation** : aucune purge automatique. Conserver au moins 12 mois. Une purge future (SD-06) passera par une migration dédiée qui
+  autorise le DELETE seulement quand `SET LOCAL ikan.purge_journal = 'on'` ; UPDATE et TRUNCATE restent toujours refusés.
+- **Déploiement** : `alembic upgrade head` (déjà dans la commande de démarrage Render) crée la table AVANT le démarrage du nouveau code.

@@ -34,6 +34,7 @@ from app.models.enums import UserRole  # noqa: E402
 from app.models.organisation import Organisation  # noqa: E402
 from app.models.utilisateur import Utilisateur  # noqa: E402
 from app.schemas.mot_de_passe import verifier_mot_de_passe  # noqa: E402
+from app.services import journal_audit as journal  # noqa: E402
 from app.services.comptes import normaliser_email  # noqa: E402
 
 NOM_ORGANISATION_PLATEFORME = "Plateforme IKAN AI"
@@ -73,10 +74,17 @@ def creer_admin(db, email_saisi: str, mot_de_passe: str, confirmation: str, *, a
             db.flush()
         organisation_id = organisation.id
 
+    identifiant = uuid.uuid4()
     db.add(Utilisateur(
-        id=uuid.uuid4(), organisation_id=organisation_id, nom=nom, prenom=prenom, email=email,
+        id=identifiant, organisation_id=organisation_id, nom=nom, prenom=prenom, email=email,
         mot_de_passe_hash=get_password_hash(mot_de_passe_propre), role=UserRole.ADMIN, active=True,
     ))
+    # Journal d'audit, dans la même transaction que la création : acteur « système » (commande exécutée en ligne de commande).
+    journal.journaliser(
+        db, action=journal.COMPTE_ADMIN_CREE, acteur=None, cible_type="utilisateur", cible_id=identifiant, cible_libelle=email,
+        organisation_id=organisation_id, details={"role": UserRole.ADMIN, "ajout": administrateur_existant is not None, "origine": "commande"},
+        role_si_absent=journal.ROLE_SYSTEME,
+    )
     try:
         db.commit()
     except Exception:  # noqa: BLE001 — une erreur SQL reprendrait les paramètres de la requête (dont le hachage)

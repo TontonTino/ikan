@@ -183,6 +183,15 @@ export const adminFacturationApi = {
     api.get<import('../types').ChangementPlanHistoriqueItem[]>(`/admin/facturation/historique/${organisationId}`),
 };
 
+export interface FiltresJournal {
+  date_debut?: string; date_fin?: string; acteur_email?: string; action?: string; organisation_id?: string; resultat?: string;
+  limit: number; offset: number;
+}
+export const adminJournalApi = {
+  lire: (params: FiltresJournal) =>
+    api.get<import('../types').JournalAuditEntree[]>('/admin/journal', { params }),
+};
+
 // ── Agences ───────────────────────────────────────────
 export const agencesApi = {
   list: () => api.get('/agences/'),

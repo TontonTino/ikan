@@ -6,6 +6,8 @@ os.environ.setdefault("SECRET_KEY", "test-secret-key-for-tests-0123456789abcdef"
 import pytest
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
+
+from app.db.session import Base
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.ext.compiler import compiles
 
@@ -30,6 +32,15 @@ for _nom, _adresse in (("DATABASE_URL (configuration ou .env)", _reglages.DATABA
 def _refuser_connexion_a_la_production(dialect, conn_rec, cargs, cparams):
     if est_base_de_production(f"{cargs} {cparams}"):
         raise AssertionError("Un test a tenté de se connecter à la base de PRODUCTION (SD-02) : connexion refusée avant son ouverture.")
+
+
+# Journal d'audit (AD-08, SD-13) : les actions tracées écrivent une ligne dans `journal_audit`. Beaucoup de tests ne créent qu'UNE LISTE de
+# tables ; après toute création de tables (même partielle), on crée donc aussi celle du journal, sans modifier ces tests.
+@event.listens_for(Base.metadata, "after_create")
+def _creer_aussi_le_journal_d_audit(metadata, connection, **kw):
+    from app.models.journal_audit import JournalAudit
+
+    JournalAudit.__table__.create(bind=connection, checkfirst=True)
 
 
 @compiles(PG_UUID, "sqlite")

@@ -22,6 +22,7 @@ from app.db.session import get_db
 from app.models.enums import UserRole
 from app.models.utilisateur import Utilisateur
 from app.schemas.mot_de_passe import exiger_mot_de_passe_acceptable
+from app.services import journal_audit as journal
 from app.services.comptes import requete_comptes_utilisables
 from app.schemas.auth import (
     AgentTokenResponse, ChangerMotDePasseRequest, LoginRequest, TokenResponse,
@@ -32,6 +33,19 @@ router = APIRouter()
 
 COOKIE_SECURE = settings.APP_ENV == "production"
 COOKIE_SAMESITE = "none" if COOKIE_SECURE else "lax"
+
+
+def _journaliser_connexion(db: Session, request: Request, email: str, action: str) -> None:
+    """Journal d'audit d'un échec ou d'une limitation de connexion : au plus UNE ligne par (adresse tronquée, compte) et par fenêtre de
+    15 minutes, écrite dans un fil séparé. NE LÈVE JAMAIS et ne retarde jamais la réponse 401/429. L'e-mail saisi n'est enregistré QUE
+    s'il correspond à un compte existant ; sinon seule la mention « compte inconnu » l'est (ni la valeur saisie, ni son hachage)."""
+    try:
+        journal.journaliser_independant(
+            db, action=action, acteur=None, resultat="refus", requete=request, dedoublonner_fenetre=True, differe=True,
+            email_a_resoudre=email,
+        )
+    except Exception:  # noqa: BLE001 — déjà sans exception par construction ; ceinture et bretelles
+        pass
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -61,7 +75,12 @@ def login(
         )
 
     # Trop d'échecs récents pour ce couple (IP, e-mail) ou cette IP : 429 avant toute vérification (aucune fuite d'existence).
-    verifier_avant_connexion(request, email)
+    try:
+        verifier_avant_connexion(request, email)
+    except HTTPException as limite:
+        if limite.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
+            _journaliser_connexion(db, request, email, journal.CONNEXION_LIMITEE)
+        raise
 
     # Compte désactivé OU organisation désactivée : même réponse qu'un mauvais mot de passe (rien n'est révélé).
     user = requete_comptes_utilisables(db).filter(
@@ -70,6 +89,7 @@ def login(
 
     if not user or not verify_password(pwd, user.mot_de_passe_hash):
         noter_echec(request, email)
+        _journaliser_connexion(db, request, email, journal.CONNEXION_ECHOUEE)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email ou mot de passe incorrect",

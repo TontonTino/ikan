@@ -17,6 +17,7 @@ from app.api.v1.endpoints import (
     alertes,
     system,
     admin_facturation,
+    journal,
     veille,
     issues,
     kpis,
@@ -38,6 +39,7 @@ api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboar
 api_router.include_router(alertes.router, prefix="/alertes", tags=["Alertes"])
 api_router.include_router(system.router, prefix="/system", tags=["Système"])
 api_router.include_router(admin_facturation.router, prefix="/admin/facturation", tags=["Admin — Facturation"])
+api_router.include_router(journal.router, prefix="/admin", tags=["Admin — Journal d'audit"])
 api_router.include_router(veille.router, prefix="/veille", tags=["Veille & Réseaux"])
 api_router.include_router(issues.router, prefix="/issues", tags=["Issues"])
 api_router.include_router(kpis.router, prefix="/kpis", tags=["KPI"])

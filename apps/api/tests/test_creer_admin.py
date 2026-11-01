@@ -116,7 +116,7 @@ def test_creation_reussie_compte_admin_hache_et_une_seule_ecriture_utile(memoire
     assert comptes[0].mot_de_passe_hash != MDP and comptes[0].mot_de_passe_hash.startswith("$argon2")
     apres = photo(memoire)
     changees = {t for t in avant if avant[t] != apres[t]}
-    assert changees == {"utilisateurs", "organisations"}                  # rien d'autre n'est touché
+    assert changees == {"utilisateurs", "organisations", "journal_audit"}                  # rien d'autre n'est touché
     assert len(apres["utilisateurs"]) == 1 and len(apres["organisations"]) == 1
     db = memoire.Session()
     assert db.query(Organisation).one().nom == creer_admin.NOM_ORGANISATION_PLATEFORME
@@ -179,7 +179,7 @@ def test_admin_existant_accepte_avec_ajouter_dans_la_meme_organisation(memoire):
     avant = photo(memoire)
     assert lancer(memoire, "--email", EMAIL, "--ajouter") == 0
     apres = photo(memoire)
-    assert {t for t in avant if avant[t] != apres[t]} == {"utilisateurs"}   # aucune organisation créée
+    assert {t for t in avant if avant[t] != apres[t]} == {"utilisateurs", "journal_audit"}   # aucune organisation créée
     assert len(apres["utilisateurs"]) == 2 and apres["organisations"] == avant["organisations"]
     assert sorted(u.email for u in utilisateurs(memoire)) == ["ancien.admin@exemple.org", EMAIL]
 

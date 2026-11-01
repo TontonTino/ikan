@@ -26,7 +26,7 @@ API_DIR = Path(__file__).resolve().parents[1]
 FICHIER_031 = API_DIR / "alembic" / "versions" / "031_suggestion_sans_feedback.py"
 # La 031 n'est plus la tête (032 la suit) : on descend explicitement jusqu'à sa révision parente, pas d'un cran.
 REV_030 = "030_demande_contact_consentement"
-REV_TETE = "032_demande_contact_traitement"
+REV_TETE = "033_journal_audit"
 
 
 def alembic(*args):

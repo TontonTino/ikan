@@ -2,12 +2,13 @@
 Endpoints Système — Paramètres globaux & Matrice des Rôles/Permissions.
 """
 from typing import Dict, Any, List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_admin_user, get_current_active_user, get_db
 from app.models.utilisateur import Utilisateur
 from app.models.system_settings import SystemSettings
+from app.services import journal_audit as journal
 from app.schemas.system_settings import SystemSettingsResponse, SystemSettingsUpdate
 
 router = APIRouter()
@@ -36,15 +37,22 @@ def get_system_settings(
 @router.patch("/settings", response_model=SystemSettingsResponse)
 def update_system_settings(
     data: SystemSettingsUpdate,
+    request: Request = None,
     db: Session = Depends(get_db),
-    _: Utilisateur = Depends(get_admin_user),
+    admin: Utilisateur = Depends(get_admin_user),
 ):
     """Met à jour la configuration générale de la plateforme (Admin uniquement)."""
     settings_obj = _get_or_create_settings(db)
     
     updates = data.model_dump(exclude_unset=True)
+    avant = {champ: getattr(settings_obj, champ, None) for champ in updates}
     for field, value in updates.items():
         setattr(settings_obj, field, value)
+    if updates:
+        journal.journaliser(
+            db, action=journal.PARAMETRES_MODIFIES, acteur=admin, cible_type="parametres", cible_id=settings_obj.id,
+            cible_libelle="Paramètres de la plateforme", details={"champs": sorted(updates), "avant": avant, "apres": updates}, requete=request,
+        )
 
     db.commit()
     db.refresh(settings_obj)
