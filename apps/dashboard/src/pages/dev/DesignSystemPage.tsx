@@ -27,6 +27,7 @@ import {
 } from '../../components/ui';
 import Sidebar from '../../components/layout/Sidebar';
 import NotificationCenter from '../../components/layout/NotificationCenter';
+import YamMascot, { type YamEtat, type YamVariante } from '../../components/agent/YamMascot';
 import { ROLE_NAV_SECTIONS } from '../../components/layout/navigation';
 import type { User, UserRole } from '../../types';
 import {
@@ -398,6 +399,33 @@ export default function DesignSystemPage() {
             <Skeleton variant="text" lines={3} />
             <div style={row}><Skeleton variant="circle" width={40} /><Skeleton variant="rect" width={120} height={32} /></div>
           </Card>
+        </div>
+      </Section>
+
+      <Section title="YAM">
+        <p style={{ margin: 0, color: 'var(--color-text-muted)' }}>Composant SVG (4 états × 2 variantes) aux tailles 24, 36 et 96 px, puis rendus 3D détourés sur trois fonds.</p>
+        {(['accueil', 'reflexion', 'alerte', 'resolu'] as YamEtat[]).map((etat) => (
+          <div key={etat} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+            <strong style={{ color: 'var(--color-text-main)' }}>{etat}</strong>
+            <div style={{ ...row, alignItems: 'flex-end', gap: 'var(--space-5)' }}>
+              {(['corps', 'tete'] as YamVariante[]).map((variante) => (
+                <div key={variante} style={{ ...row, alignItems: 'flex-end' }}>
+                  <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>{variante}</span>
+                  {[24, 36, 96].map((taille) => (
+                    <YamMascot key={taille} state={etat} variant={variante} size={taille} title={`YAM, état ${etat}, variante ${variante}, ${taille} pixels`} />
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+        <div style={{ ...row, alignItems: 'stretch' }}>
+          {[['Blanc', '#ffffff'], ['Vert foncé', '#02302d'], ['Vert clair', '#edf3e4']].map(([nom, fond]) => (
+            <figure key={nom} style={{ margin: 0, padding: 'var(--space-4)', background: fond, borderRadius: 'var(--radius-lg, 16px)', border: '1px solid var(--color-border)', textAlign: 'center' }}>
+              <img src="/yam/yam-3d-face.png" srcSet="/yam/yam-3d-face.png 1x, /yam/yam-3d-face@2x.png 2x" alt={`YAM en 3D sur fond ${nom.toLowerCase()}`} height={320} style={{ height: 320, width: 'auto', display: 'block', margin: '0 auto' }} />
+              <figcaption style={{ marginTop: 'var(--space-2)', color: fond === '#02302d' ? '#fff' : 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>{nom}</figcaption>
+            </figure>
+          ))}
         </div>
       </Section>
     </div>
