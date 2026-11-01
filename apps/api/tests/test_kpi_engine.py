@@ -53,6 +53,14 @@ from app.services.kpi.engine import (
 NOW = datetime.now(timezone.utc)
 
 
+@pytest.fixture(autouse=True)
+def _horloge_du_test():
+    """NOW est recalculé au début de CHAQUE test : le moteur lit l'horloge réelle à l'exécution, donc un NOW figé à l'import dérivait
+    de la durée de la suite (échec au-delà de ~9 minutes sur test_backlog_age_*). Les fonctions ci-dessous lisent le global à l'appel."""
+    global NOW
+    NOW = datetime.now(timezone.utc)
+
+
 @pytest.fixture()
 def ctx():
     engine = create_engine("sqlite+pysqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False})
