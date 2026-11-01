@@ -5,6 +5,10 @@ import YamMascot, { type YamEtat, type YamVariante } from './YamMascot';
 
 const ETATS: YamEtat[] = ['accueil', 'reflexion', 'alerte', 'resolu'];
 const VARIANTES: YamVariante[] = ['corps', 'tete'];
+const cadre = (html: string) => {
+  const [x, y, l, h] = /viewBox="([^"]+)"/.exec(html)![1].split(' ').map(Number);
+  return { gauche: x, haut: y, droite: x + l, bas: y + h };
+};
 const ids = (html: string) => [...html.matchAll(/<radialGradient id="([^"]+)"/g)].map((m) => m[1]);
 
 describe('YamMascot', () => {
@@ -23,7 +27,7 @@ describe('YamMascot', () => {
     expect(html).toContain('data-yam-state="accueil"');
     expect(html).toContain('viewBox="0 -4 120 144"');
     expect(html).toContain('height="96"');
-    expect(renderToStaticMarkup(<YamMascot variant="tete" />)).toContain('viewBox="18 -4 96 100"');
+    expect(renderToStaticMarkup(<YamMascot variant="tete" />)).toContain('viewBox="18 -4 104 100"');
   });
 
   it('la hauteur règle la taille et la largeur suit le cadre', () => {
@@ -65,6 +69,31 @@ describe('YamMascot', () => {
     expect(rendu('alerte')).not.toContain('#f4a58a');        // pas de joues en alerte
     expect(rendu('resolu')).toContain('M91.5 30 L96.5 35 L105 24');
     expect(rendu('accueil')).toContain('#f4a58a');
+  });
+
+  it('variante tête : le cadre couvre toute la scène de réflexion (3e pastille à x = 116, r = 4, donc jusqu’à x = 120)', () => {
+    const html = renderToStaticMarkup(<YamMascot state="reflexion" variant="tete" />);
+    expect(cadre(html).droite).toBeGreaterThanOrEqual(120);
+    expect(html).toContain('cx="116" cy="14"');
+  });
+
+  it.each(ETATS)('variante tête, état %s : aucun cercle (pastille, badge) n’est coupé par le cadre', (state) => {
+    const html = renderToStaticMarkup(<YamMascot state={state} variant="tete" />);
+    const c = cadre(html);
+    const cercles = [...html.matchAll(/<circle cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)"/g)].map((m) => ({ x: +m[1], y: +m[2], r: +m[3] }));
+    for (const { x, y, r } of cercles) {
+      expect(x - r).toBeGreaterThanOrEqual(c.gauche);
+      expect(x + r).toBeLessThanOrEqual(c.droite);
+      expect(y - r).toBeGreaterThanOrEqual(c.haut);
+      expect(y + r).toBeLessThanOrEqual(c.bas);
+    }
+    if (state !== 'accueil') expect(cercles.length).toBeGreaterThan(0);
+  });
+
+  it('la largeur suit le cadre de la tête (hauteur = size)', () => {
+    const html = renderToStaticMarkup(<YamMascot variant="tete" size={56} />);
+    expect(html).toContain('height="56"');
+    expect(html).toContain('width="58.24"');
   });
 
   it('la variante tête ne dessine ni ombre, ni bras, ni jambes', () => {

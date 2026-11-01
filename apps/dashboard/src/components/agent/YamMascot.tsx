@@ -1,11 +1,11 @@
 import React, { useId } from 'react';
 
 /**
- * Mascotte YAM en SVG (petites tailles et Ã©tats). Ne remplace pas YamAvatar : composant Ã  part, pas encore branchÃ© dans les pages.
+ * Mascotte YAM en SVG (petites tailles et états). Ne remplace pas YamAvatar : composant à part, pas encore branché dans les pages.
  *
- * Le dessin reproduit la gÃ©omÃ©trie validÃ©e (viewBox corps Â« 0 -4 120 144 Â», tÃªte Â« 18 -4 96 100 Â»). Aucun texte dans le SVG : le nom accessible
- * passe par `title` (role="img" + aria-label) ; sans `title`, le SVG est dÃ©coratif (aria-hidden). Aucune animation.
- * Variante Â« tÃªte Â» : le tronc est simplement recadrÃ© ; ombre, bras et jambes ne sont pas dessinÃ©s (ils seraient coupÃ©s par le cadre).
+ * Le dessin reproduit la géométrie validée (viewBox corps « 0 -4 120 144 », tête « 18 -4 104 100 »). Aucun texte dans le SVG : le nom accessible
+ * passe par `title` (role="img" + aria-label) ; sans `title`, le SVG est décoratif (aria-hidden). Aucune animation.
+ * Variante « tête » : le tronc est simplement recadré ; ombre, bras et jambes ne sont pas dessinés (ils seraient coupés par le cadre).
  */
 export type YamEtat = 'accueil' | 'reflexion' | 'alerte' | 'resolu';
 export type YamVariante = 'corps' | 'tete';
@@ -15,7 +15,7 @@ export interface YamMascotProps {
   variant?: YamVariante;
   /** Hauteur en pixels (la largeur suit le cadre du dessin). */
   size?: number;
-  /** Nom accessible. Absent : SVG dÃ©coratif. */
+  /** Nom accessible. Absent : SVG décoratif. */
   title?: string;
 }
 
@@ -27,13 +27,14 @@ const YAM_BRAS = '#69af2d';
 const YAM_FEUILLE_GAUCHE = '#2f6a26';
 const YAM_OEIL = '#10211d';
 const YAM_BADGE_ALERTE = '#d6452d';
-// Teintes qui correspondent Ã  des tokens du design system (valeur de repli = valeur du token)
+// Teintes qui correspondent à des tokens du design system (valeur de repli = valeur du token)
 const TIGE_ET_FEUILLE = { fill: 'var(--color-primary, #3c7730)' } as const;
 const TRAIT_BOUCHE = 'var(--color-primary-dark, #02302d)';
 
 const CADRES: Record<YamVariante, { viewBox: string; largeur: number; hauteur: number }> = {
   corps: { viewBox: '0 -4 120 144', largeur: 120, hauteur: 144 },
-  tete: { viewBox: '18 -4 96 100', largeur: 96, hauteur: 100 },
+  // Élargi à droite (104 au lieu de 96) : la 3e pastille de « réflexion » (x = 116, r = 4) va jusqu'à x = 120.
+  tete: { viewBox: '18 -4 104 100', largeur: 104, hauteur: 100 },
 };
 
 function Oeil({ x, y }: { x: number; y: number }) {
@@ -92,7 +93,7 @@ function Visage({ state }: { state: YamEtat }) {
 }
 
 export default function YamMascot({ state = 'accueil', variant = 'corps', size = 96, title }: YamMascotProps) {
-  // useId : un identifiant PAR INSTANCE (plusieurs YAM peuvent coexister) ; les Â« : Â» de React sont retirÃ©s pour url(#â€¦).
+  // useId : un identifiant PAR INSTANCE (plusieurs YAM peuvent coexister) ; les « : » de React sont retirés pour url(#…).
   const idDegrade = `yam-degrade-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
   const cadre = CADRES[variant];
   const accessible = title ? { role: 'img' as const, 'aria-label': title } : { 'aria-hidden': true as const };
