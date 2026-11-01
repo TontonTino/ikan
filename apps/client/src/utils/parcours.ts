@@ -224,3 +224,43 @@ export function messageEchecIdee(cause: CauseEchecEnvoi): string {
       return "Le service est momentanément indisponible, votre idée n'a pas été envoyée. Votre texte est conservé, réessayez dans un instant.";
   }
 }
+
+// ── Issue d'un envoi « Noter l'expérience » (logique pure, testée sans navigateur) ──────────────────
+
+export type IssueEnvoi =
+  | { type: 'succes'; cree: { id?: string; nps_token?: string } | null }
+  | { type: 'telephone_invalide' }
+  | { type: 'echec'; cause: CauseEchecEnvoi; message: string; erreur?: unknown };
+
+interface ReponseMinimale {
+  ok: boolean;
+  status: number;
+  json: () => Promise<any>;
+}
+
+/**
+ * Exécute l'envoi (`appeler` = le fetch) et en tire l'issue affichable. Seule une réponse 2xx confirme l'avis ; une coupure de
+ * réseau (TypeError de fetch) ou un délai dépassé (AbortError) donnent un message non technique qui dit que l'avis n'est PAS
+ * (ou peut-être pas) parti et qu'on peut réessayer. Ne lève jamais.
+ */
+export async function interpreterEnvoi(appeler: () => Promise<ReponseMinimale>): Promise<IssueEnvoi> {
+  try {
+    const res = await appeler();
+    if (res.ok) {
+      const cree = await res.json().catch(() => null);
+      return { type: 'succes', cree };
+    }
+    const err = await res.json().catch(() => ({}));
+    const erreurTelephone = res.status === 422 && Array.isArray(err?.detail) &&
+      err.detail.some((d: any) => Array.isArray(d?.loc) && d.loc.includes('contact_telephone'));
+    if (erreurTelephone) return { type: 'telephone_invalide' };
+    if (res.status === 429) {
+      return { type: 'echec', cause: 'trop_de_demandes', message: `${messageEchecEnvoi('trop_de_demandes')} Votre avis n'a pas été envoyé.` };
+    }
+    const cause = causeEchecHttp(res.status);
+    return { type: 'echec', cause, message: messageEchecEnvoi(cause) };
+  } catch (e: any) {
+    const cause: CauseEchecEnvoi = e?.name === 'AbortError' ? 'delai' : 'reseau';
+    return { type: 'echec', cause, message: messageEchecEnvoi(cause), erreur: e };
+  }
+}
