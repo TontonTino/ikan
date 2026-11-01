@@ -116,6 +116,7 @@ MATRICE: dict[tuple[str, str], object] = {
     ("GET", f"{V1}/system/settings"): TOUS, ("PATCH", f"{V1}/system/settings"): AD_, ("GET", f"{V1}/system/permissions"): TOUS,
     ("GET", f"{V1}/admin/facturation/vue-ensemble"): AD_, ("GET", f"{V1}/admin/facturation/paiements-echoues"): AD_,
     ("GET", f"{V1}/admin/facturation/historique/{{organisation_id}}"): AD_,
+    ("GET", f"{V1}/admin/journal"): AD_,                                            # journal d'audit : administrateur seul (AD-08)
     # --- Veille ---
     ("GET", f"{V1}/veille/status"): CX_, ("GET", f"{V1}/veille/facebook/status"): CX_, ("POST", f"{V1}/veille/facebook/connect"): CX_,
     ("POST", f"{V1}/veille/facebook/scrape"): CX_, ("POST", f"{V1}/veille/ingest"): CX_, ("GET", f"{V1}/veille/mentions"): CX_,
