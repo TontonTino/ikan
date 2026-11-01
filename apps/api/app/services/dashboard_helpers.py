@@ -10,7 +10,7 @@ Conventions de données (5B-2) :
 - Les périodes hebdomadaires utilisent une clé ISO « AAAA-Www » (année ISO), triable
   chronologiquement et sans fusion de semaines de deux années différentes.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Iterable, Optional
 
 from sqlalchemy import func
@@ -258,6 +258,12 @@ def _cle_semaine_iso(dt: datetime) -> str:
     """Clé triable « AAAA-Www » basée sur l'année ISO (le 29/12/2025 est en 2026-W01)."""
     annee, semaine, _ = dt.isocalendar()
     return f"{annee}-W{semaine:02d}"
+
+
+def _cle_heure_utc(dt: datetime) -> str:
+    """Clé horaire non ambiguë pour une fenêtre glissante traversant minuit."""
+    instant = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt.astimezone(timezone.utc)
+    return instant.strftime("%Y-%m-%d-%H")
 
 
 def _libelles_semaines(cles: Iterable[str], prefixe: str = "Sem") -> dict[str, str]:

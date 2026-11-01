@@ -1,0 +1,76 @@
+.stats-cx .ui-page-title {
+  align-items: flex-start;
+}
+
+.stats-cx .ui-page-title__actions button,
+.stats-cx .ui-page-title__actions select,
+.stats-cx__tabs button {
+  min-height: 44px;
+}
+
+.stats-cx__tabs > div {
+  width: 100%;
+}
+
+.stats-cx__tabs button:focus-visible,
+.stats-cx__mobile-view select:focus-visible,
+.stats-cx button:focus-visible {
+  outline: 3px solid #176B62;
+  outline-offset: 2px;
+}
+
+.stats-cx__mobile-view { display: none; }
+.stats-cx__content { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.stats-cx__chart-stack { display: grid; grid-template-rows: minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 8px; width: 100%; min-width: 0; }
+.stats-cx__chart-zone { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.stats-cx__chart-zone-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; color: #344541; }
+.stats-cx__chart-zone-heading h4 { margin: 0; color: #183B35; font-size: 13px; font-weight: 750; }
+.stats-cx__chart-zone-heading > span { color: #52625E; font-size: 12px; }
+.stats-cx__satisfaction-key { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.stats-cx__satisfaction-key i { width: 18px; border-top: 3px solid #367A32; }
+.stats-cx__chart-plot { flex: 1; min-height: 0; width: 100%; }
+.stats-cx__chart-legend { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; color: #344541; font-size: 12px; }
+.stats-cx__chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.stats-cx__legend-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.stats-cx__legend-swatch--red { background: #B42318; }
+.stats-cx__legend-swatch--teal { background: #086B67; }
+.stats-cx__chart-empty { display: grid; place-items: center; padding: 20px; box-sizing: border-box; text-align: center; color: #52625E; background: #F8FAF9; border: 1px dashed #C7D2CE; border-radius: 14px; }
+.stats-cx__chart-note { margin: 2px 0 0; color: #52625E; font-size: 12px; line-height: 1.5; }
+.stats-cx__tooltip { display: flex; flex-direction: column; gap: 7px; max-width: min(310px, calc(100vw - 32px)); padding: 10px 12px; border: 1px solid #35534D; border-radius: 10px; background: #073B37; color: #FFFFFF; box-shadow: 0 6px 20px rgb(2 48 45 / 20%); font-size: 12px; }
+.stats-cx__tooltip > span { display: flex; align-items: flex-start; gap: 7px; }
+.stats-cx__dot { flex: 0 0 8px; width: 8px; height: 8px; margin-top: 4px; border-radius: 50%; }
+.stats-cx__dot--green { background: #8BC34A; }
+.stats-cx__dot--red { background: #FF8379; }
+.stats-cx__dot--teal { background: #53C5BD; }
+.stats-cx__text-action { min-height: 44px; border: 0; padding: 4px 0; background: transparent; color: #086B67; font: inherit; font-size: 13px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.stats-cx__text-action:hover { color: #064E4A; }
+.stats-cx__refresh { align-self: flex-start; padding: 7px 10px; border-radius: 8px; background: #EFF5F2; color: #344541; font-size: 13px; }
+
+@media (max-width: 760px) {
+  .stats-cx__chart-stack { height: 470px !important; grid-template-rows: minmax(0, 1.15fr) minmax(0, 1fr) auto; }
+  .stats-cx__chart-zone-heading { align-items: flex-start; }
+  .stats-cx__chart-legend { gap: 6px 10px; }
+  .stats-cx__tabs { display: none; }
+  .stats-cx__mobile-view { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid #D5DFDB; border-radius: 14px; background: #FFFFFF; color: #344541; font-size: 14px; font-weight: 700; }
+  .stats-cx__mobile-view select { min-height: 44px; min-width: 0; padding: 8px 34px 8px 10px; border: 1px solid #9AAEA7; border-radius: 9px; background: #FFFFFF; color: #183B35; font: inherit; }
+}
+
+@media (max-width: 640px) {
+  .stats-cx .ui-page-title__actions {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .stats-cx .ui-page-title__actions > div {
+    max-width: 100%;
+  }
+
+  .stats-cx .ui-page-title__actions select {
+    max-width: 100%;
+    min-width: 0 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stats-cx *, .stats-cx *::before, .stats-cx *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

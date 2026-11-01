@@ -46,6 +46,7 @@ export default function TabsNavigation({
           <button
             key={tab.id}
             type="button"
+            aria-pressed={isActive}
             onClick={() => onChange(tab.id)}
             style={{
               display: 'inline-flex',

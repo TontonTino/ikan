@@ -144,18 +144,20 @@ export function StatsSectionCard({
   subtitle,
   children,
   action,
+  compact = false,
 }: {
   title: string;
   subtitle?: string;
   children: React.ReactNode;
   action?: React.ReactNode;
+  compact?: boolean;
 }) {
   return (
     <div
       style={{
         background: '#FFFFFF',
-        borderRadius: '24px',
-        padding: '24px 28px',
+        borderRadius: compact ? '18px' : '24px',
+        padding: compact ? '18px 20px' : '24px 28px',
         boxShadow: '0 2px 12px rgba(20, 60, 40, 0.03)',
         border: '1px solid #E8ECE6',
         width: '100%',
@@ -168,7 +170,7 @@ export function StatsSectionCard({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: '20px',
+          marginBottom: compact ? '14px' : '20px',
           flexWrap: 'wrap',
           gap: '12px',
         }}
