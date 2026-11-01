@@ -11,10 +11,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_cx_or_admin, get_current_active_user, get_db
-from app.core.security import get_password_hash
+from app.core.security import get_password_hash, verify_password
 from app.models.utilisateur import Utilisateur
 from app.models.enums import UserRole
-from app.schemas.mot_de_passe import exiger_mot_de_passe_acceptable
+from app.schemas.mot_de_passe import MESSAGE_MOT_DE_PASSE_IDENTIQUE, exiger_mot_de_passe_acceptable
 from app.services import journal_audit as journal
 from app.services.administrateurs import controler_modification_compte, controler_retrait_compte
 from app.services.comptes import normaliser_email
@@ -211,6 +211,9 @@ def update_utilisateur(
             raise HTTPException(status_code=400, detail=MESSAGE_EMAIL_UTILISE)
     if updates.get("password") is not None:
         exiger_mot_de_passe_acceptable(updates["password"], updates.get("email") or user.email)
+        # Identique à l'actuel ? Comparaison sur le HACHAGE existant (jamais en clair) ; la valeur est déjà normalisée (espaces de bord retirés).
+        if verify_password(updates["password"], user.mot_de_passe_hash):
+            raise HTTPException(status_code=422, detail=MESSAGE_MOT_DE_PASSE_IDENTIQUE)
     if user.role == UserRole.AGENCY_MANAGER and "agence_id" in updates and updates["agence_id"] is None:
         raise HTTPException(status_code=422, detail=MESSAGE_DETACHEMENT_REFUSE)
     if "role" in updates:
@@ -231,12 +234,20 @@ def update_utilisateur(
     for field, value in updates.items():
         setattr(user, field, value)
 
-    if champs_modifies:
+    mot_de_passe_change = "mot_de_passe" in champs_modifies
+    # Un changement de mot de passe SEUL n'écrit que la ligne dédiée (pas de doublon « compte.modifie ») ; combiné à d'autres champs, la
+    # ligne « modifié » garde la liste complète des champs et la ligne dédiée est ajoutée en plus (action de sécurité à part entière).
+    if champs_modifies and champs_modifies != ["mot_de_passe"]:
         suspension = updates.get("active") is False
         journal.journaliser(
             db, action=journal.COMPTE_SUSPENDU if suspension else journal.COMPTE_MODIFIE, acteur=current_user, cible_type="utilisateur",
             cible_id=user.id, cible_libelle=user.email, organisation_id=user.organisation_id,
             details={"champs": champs_modifies, "avant": avant, "apres": {c: updates[c] for c in avant}}, requete=request,
+        )
+    if mot_de_passe_change:
+        journal.journaliser(
+            db, action=journal.COMPTE_MOT_DE_PASSE_REINITIALISE, acteur=current_user, cible_type="utilisateur", cible_id=user.id,
+            cible_libelle=user.email, organisation_id=user.organisation_id, details={"changement": "oui"}, requete=request,
         )
     _enregistrer_compte(db)
     db.refresh(user)

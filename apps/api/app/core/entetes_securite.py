@@ -9,6 +9,7 @@ d'exceptions global, qui sort des middlewares ordinaires, portent donc elles aus
   celles qui posent un cookie ; jamais sur une route publique, et jamais par-dessus un Cache-Control déjà posé par la route.
 * Les autres en-têtes ne remplacent jamais une valeur déjà posée par la route.
 """
+import re
 from http.cookies import SimpleCookie
 
 from fastapi import FastAPI
@@ -24,6 +25,19 @@ EN_TETES_FIXES: dict[bytes, bytes] = {
     # L'API n'a besoin d'aucune fonction du navigateur.
     b"permissions-policy": b"camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
 }
+
+
+# Routes qui créent ou changent un mot de passe : no-store ET Pragma: no-cache sur TOUTE réponse (succès comme erreur), même sans cookie
+# d'authentification. Seul le chemin et la méthode sont lus (jamais le corps).
+_ROUTES_MOT_DE_PASSE = (
+    ("POST", re.compile(r"/auth/me/mot-de-passe/?$")),
+    ("POST", re.compile(r"/utilisateurs/?$")),
+    ("PATCH", re.compile(r"/utilisateurs/[^/]+/?$")),
+)
+
+
+def _route_mot_de_passe(scope) -> bool:
+    return any(scope.get("method") == methode and motif.search(scope.get("path", "")) for methode, motif in _ROUTES_MOT_DE_PASSE)
 
 
 def _entete_requete(scope, nom: bytes) -> bool:
@@ -52,6 +66,7 @@ class EntetesSecurite:
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
         authentifiee = _requete_authentifiee(scope)
+        sensible = _route_mot_de_passe(scope)
 
         async def envoyer(message):
             if message["type"] == "http.response.start":
@@ -62,8 +77,10 @@ class EntetesSecurite:
                         entetes.append((cle, valeur))
                 if settings.APP_ENV == "production" and b"strict-transport-security" not in presents:
                     entetes.append((b"strict-transport-security", f"max-age={HSTS_MAX_AGE_SECONDES}".encode()))
-                if b"cache-control" not in presents and (authentifiee or b"set-cookie" in presents):
+                if b"cache-control" not in presents and (authentifiee or sensible or b"set-cookie" in presents):
                     entetes.append((b"cache-control", b"no-store"))
+                if sensible and b"pragma" not in presents:
+                    entetes.append((b"pragma", b"no-cache"))
                 message = {**message, "headers": entetes}
             await send(message)
 
