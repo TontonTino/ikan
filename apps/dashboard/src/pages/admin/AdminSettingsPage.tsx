@@ -7,12 +7,13 @@ import Alert from '../../components/ui/Alert';
 import Button from '../../components/ui/Button';
 import { userFacingError } from '../../utils/userFacingError';
 import {
-  TagIcon,
-  BarChartIcon,
-  LightningIcon,
-  AlertTriangleIcon,
-  CheckIcon,
-} from '../../components/common/Icons';
+  erreurNom,
+  erreurRetention,
+  refusParametres,
+  type BornesParametres,
+  type ChampParametre,
+} from '../../utils/parametresSysteme';
+import { TagIcon, BarChartIcon, CheckIcon } from '../../components/common/Icons';
 
 interface Settings {
   id: string;
@@ -22,6 +23,129 @@ interface Settings {
   mode_ia: string;
   notifications_email_actives: boolean;
   date_modification: string;
+  valeurs_hors_bornes?: string[];
+  bornes?: BornesParametres;
+}
+
+// Les paramètres seuil_alerte_defaut, mode_ia et notifications_email_actives restent acceptés et stockés par l'API (aucune donnée
+// supprimée) mais aucun code ne les lit : ils ne sont ni affichés ni envoyés d'ici (voir le README de l'API, « Paramètres système »).
+
+const carte: React.CSSProperties = {
+  background: '#FFFFFF',
+  borderRadius: '24px',
+  padding: '24px 28px',
+  border: '1px solid #E8ECE6',
+  boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+};
+const titreCarte: React.CSSProperties = {
+  fontWeight: 800,
+  fontSize: '1.05rem',
+  marginBottom: '16px',
+  color: '#02302D',
+  borderBottom: '1px solid #F1F4EE',
+  paddingBottom: '12px',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+};
+const etiquette: React.CSSProperties = { display: 'block', fontWeight: 700, marginBottom: '6px', fontSize: '0.84rem', color: '#1E293B' };
+const aide: React.CSSProperties = { fontSize: '0.78rem', color: '#64748B', marginTop: '6px', margin: 0 };
+const erreurStyle: React.CSSProperties = { fontSize: '0.8rem', color: '#B91C1C', fontWeight: 700, marginTop: '6px' };
+
+export type ErreursParametres = Partial<Record<ChampParametre, string>>;
+
+export interface ParametresVueProps {
+  settings: Settings;
+  nom: string;
+  retentionTexte: string;
+  erreurs: ErreursParametres;
+  saving: boolean;
+  onNom: (v: string) => void;
+  onRetention: (v: string) => void;
+  onSave: () => void;
+}
+
+/** Formulaire (vue pure, testable sans réseau). Seuls les paramètres appliqués par la plateforme sont modifiables. */
+export function ParametresVue({ settings, nom, retentionTexte, erreurs, saving, onNom, onRetention, onSave }: ParametresVueProps) {
+  const borneRetention = settings.bornes?.retention_mois;
+  const horsBornes = (settings.valeurs_hors_bornes ?? []).includes('retention_mois');
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '800px' }}>
+      <PageHeader title="Paramètres système" subtitle="Configuration générale de la plateforme IKAN AI." />
+
+      {horsBornes && (
+        <Alert tone="warning" title="La durée de conservation enregistrée est hors des limites autorisées">
+          La valeur enregistrée ({settings.retention_mois} mois) n’est pas montrée aux clients : la durée par défaut s’affiche à la place.
+          Enregistrez une durée valide pour la corriger.
+        </Alert>
+      )}
+
+      <div
+        role="note"
+        style={{
+          background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E',
+          borderRadius: '16px', padding: '12px 16px', fontSize: '0.84rem', lineHeight: 1.5,
+        }}
+      >
+        <strong>À savoir :</strong> la durée de conservation est affichée aux clients dans la case de consentement, mais aucune suppression
+        automatique n’est encore effectuée. Autres paramètres : bientôt disponibles.
+      </div>
+
+      <div style={carte}>
+        <h2 style={titreCarte}>
+          <TagIcon size={18} color="#3C7730" />
+          <span>Identité de la plateforme</span>
+        </h2>
+        <div>
+          <label htmlFor="param-nom" style={etiquette}>Nom de l'application</label>
+          <input
+            id="param-nom"
+            className="saas-input"
+            value={nom}
+            onChange={(e) => onNom(e.target.value)}
+            placeholder="IKAN AI — Plateforme d’avis clients"
+            aria-invalid={erreurs.nom_application ? true : undefined}
+            aria-describedby={erreurs.nom_application ? 'param-nom-erreur' : undefined}
+          />
+          {erreurs.nom_application && <p id="param-nom-erreur" role="alert" style={erreurStyle}>{erreurs.nom_application}</p>}
+          <p style={aide}>Nom de référence de la plateforme (pas encore repris dans les exports ni les e-mails).</p>
+        </div>
+      </div>
+
+      <div style={carte}>
+        <h2 style={titreCarte}>
+          <BarChartIcon size={18} color="#3C7730" />
+          <span>Conservation des données</span>
+        </h2>
+        <div>
+          <label htmlFor="param-retention" style={etiquette}>Durée de conservation des avis clients (mois)</label>
+          <input
+            id="param-retention"
+            type="text"
+            inputMode="numeric"
+            className="saas-input"
+            style={{ width: '120px' }}
+            value={retentionTexte}
+            onChange={(e) => onRetention(e.target.value)}
+            aria-invalid={erreurs.retention_mois ? true : undefined}
+            aria-describedby={erreurs.retention_mois ? 'param-retention-erreur' : 'param-retention-aide'}
+          />
+          {erreurs.retention_mois && <p id="param-retention-erreur" role="alert" style={erreurStyle}>{erreurs.retention_mois}</p>}
+          <p id="param-retention-aide" style={aide}>
+            {borneRetention ? `De ${borneRetention.min} à ${borneRetention.max} mois. ` : ''}
+            Durée annoncée aux clients dans la case de consentement.
+          </p>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+        <button onClick={onSave} disabled={saving} className="btn-primary" style={{ padding: '12px 28px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+          <CheckIcon size={16} />
+          <span>{saving ? 'Enregistrement...' : 'Enregistrer les paramètres'}</span>
+        </button>
+      </div>
+    </div>
+  );
 }
 
 // Contrôle d'accès séparé du contenu : les hooks du contenu ne sont jamais appelés après un retour anticipé.
@@ -35,22 +159,28 @@ export default function AdminSettingsPage() {
 
 function AdminSettingsPageContenu() {
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [form, setForm] = useState<Partial<Settings>>({});
+  const [nom, setNom] = useState('');
+  const [retentionTexte, setRetentionTexte] = useState('');
+  const [erreurs, setErreurs] = useState<ErreursParametres>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
   const [erreurChargement, setErreurChargement] = useState('');
   const [rechargement, setRechargement] = useState(0);
 
+  const appliquer = (s: Settings) => {
+    setSettings(s);
+    setNom(s.nom_application ?? '');
+    setRetentionTexte(String(s.retention_mois ?? ''));
+    setErreurs({});
+  };
+
   useEffect(() => {
     setLoading(true);
     setErreurChargement('');
     systemApi
       .getSettings()
-      .then((r) => {
-        setSettings(r.data);
-        setForm(r.data);
-      })
+      .then((r) => appliquer(r.data))
       .catch((err) => {
         console.error('Erreur chargement des paramètres système:', err);
         setErreurChargement(userFacingError(err, 'Impossible de charger les paramètres. Veuillez réessayer.'));
@@ -64,21 +194,27 @@ function AdminSettingsPageContenu() {
   };
 
   const handleSave = async () => {
+    if (!settings) return;
+    // Mêmes bornes que le serveur (lues dans sa réponse) : la soumission est bloquée avant l'envoi si la saisie est invalide.
+    const locales: ErreursParametres = {};
+    const e1 = erreurNom(nom, settings.bornes);
+    const e2 = erreurRetention(retentionTexte, settings.bornes);
+    if (e1) locales.nom_application = e1;
+    if (e2) locales.retention_mois = e2;
+    setErreurs(locales);
+    if (e1 || e2) return;
+
     setSaving(true);
     try {
-      const r = await systemApi.updateSettings({
-        nom_application: form.nom_application,
-        seuil_alerte_defaut: form.seuil_alerte_defaut,
-        retention_mois: form.retention_mois,
-        mode_ia: form.mode_ia,
-        notifications_email_actives: form.notifications_email_actives,
-      });
-      setSettings(r.data);
-      setForm(r.data);
+      // Mise à jour partielle : seuls les paramètres affichés sont envoyés ; les autres ne sont jamais touchés.
+      const r = await systemApi.updateSettings({ nom_application: nom.trim(), retention_mois: Number(retentionTexte.trim()) });
+      appliquer(r.data);
       showToast('Paramètres enregistrés avec succès');
     } catch (err) {
       console.error('Erreur enregistrement des paramètres système:', err);
-      showToast(userFacingError(err, 'Impossible d’enregistrer les paramètres. Veuillez réessayer.'));
+      const refus = refusParametres(err);
+      if (refus?.champ) setErreurs({ [refus.champ]: refus.message });
+      else showToast(refus?.message ?? userFacingError(err, 'Impossible d’enregistrer les paramètres. Veuillez réessayer.'));
     } finally {
       setSaving(false);
     }
@@ -101,252 +237,28 @@ function AdminSettingsPageContenu() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '800px' }}>
-      {/* Toast */}
+    <>
       {toast && (
         <div
           role="status"
           style={{
-            position: 'fixed',
-            top: '24px',
-            right: '24px',
-            zIndex: 1000,
-            background: '#02302D',
-            color: 'white',
-            padding: '12px 20px',
-            borderRadius: '12px',
-            boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
-            fontSize: '0.88rem',
-            fontWeight: 700,
+            position: 'fixed', top: '24px', right: '24px', zIndex: 1000, background: '#02302D', color: 'white',
+            padding: '12px 20px', borderRadius: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.15)', fontSize: '0.88rem', fontWeight: 700,
           }}
         >
           {toast}
         </div>
       )}
-
-      {/* ── Page Header Standardisé ── */}
-      <PageHeader
-        title="Paramètres système"
-        subtitle="Configuration générale de la plateforme IKAN AI."
+      <ParametresVue
+        settings={settings}
+        nom={nom}
+        retentionTexte={retentionTexte}
+        erreurs={erreurs}
+        saving={saving}
+        onNom={setNom}
+        onRetention={setRetentionTexte}
+        onSave={handleSave}
       />
-
-      {/* Transparence : ces valeurs sont enregistrées (PATCH /system/settings) mais aucun
-          service ne les lit encore côté API. Ne pas laisser croire qu'elles agissent. */}
-      <div
-        role="note"
-        style={{
-          background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E',
-          borderRadius: '16px', padding: '12px 16px', fontSize: '0.84rem', lineHeight: 1.5,
-        }}
-      >
-        <strong>À savoir :</strong> ces paramètres sont enregistrés, mais la plateforme ne les applique pas encore.
-        Modifier une valeur ici ne change pas, pour l’instant, le fonctionnement des agences, des analyses ou des notifications.
-      </div>
-
-      {/* Section 1 : Identité de la plateforme */}
-      <div
-        style={{
-          background: '#FFFFFF',
-          borderRadius: '24px',
-          padding: '24px 28px',
-          border: '1px solid #E8ECE6',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-        }}
-      >
-        <h2
-          style={{
-            fontWeight: 800,
-            fontSize: '1.05rem',
-            marginBottom: '16px',
-            color: '#02302D',
-            borderBottom: '1px solid #F1F4EE',
-            paddingBottom: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <TagIcon size={18} color="#3C7730" />
-          <span>Identité de la plateforme</span>
-        </h2>
-        <div>
-          <label style={{ display: 'block', fontWeight: 700, marginBottom: '6px', fontSize: '0.84rem', color: '#1E293B' }}>
-            Nom de l'application
-          </label>
-          <input
-            className="saas-input"
-            value={form.nom_application || ''}
-            onChange={(e) => setForm({ ...form, nom_application: e.target.value })}
-            placeholder="IKAN AI — Plateforme d’avis clients"
-          />
-          <p style={{ fontSize: '0.78rem', color: '#64748B', marginTop: '6px', margin: 0 }}>
-            Nom de référence de la plateforme (pas encore repris dans les exports ni les e-mails).
-          </p>
-        </div>
-      </div>
-
-      {/* Section 2 : Alertes et données */}
-      <div
-        style={{
-          background: '#FFFFFF',
-          borderRadius: '24px',
-          padding: '24px 28px',
-          border: '1px solid #E8ECE6',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-        }}
-      >
-        <h2
-          style={{
-            fontWeight: 800,
-            fontSize: '1.05rem',
-            marginBottom: '16px',
-            color: '#02302D',
-            borderBottom: '1px solid #F1F4EE',
-            paddingBottom: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <BarChartIcon size={18} color="#3C7730" />
-          <span>Alertes et conservation des données</span>
-        </h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div>
-            <label htmlFor="param-seuil-alerte" style={{ display: 'block', fontWeight: 700, marginBottom: '6px', fontSize: '0.84rem', color: '#1E293B' }}>
-              Seuil d'alerte par défaut pour les nouvelles agences : <strong style={{ color: '#3C7730' }}>{form.seuil_alerte_defaut}%</strong>
-            </label>
-            <input
-              id="param-seuil-alerte"
-              type="range"
-              min={0}
-              max={100}
-              value={form.seuil_alerte_defaut || 80}
-              onChange={(e) => setForm({ ...form, seuil_alerte_defaut: Number(e.target.value) })}
-              style={{ width: '100%', accentColor: '#3C7730' }}
-            />
-            <p style={{ fontSize: '0.78rem', color: '#64748B', marginTop: '6px', margin: 0 }}>
-              Valeur prévue pour les nouvelles agences. Pas encore appliquée : le seuil se règle aujourd’hui agence par agence, dans Gestion des agences.
-            </p>
-          </div>
-          <div>
-            <label htmlFor="param-retention" style={{ display: 'block', fontWeight: 700, marginBottom: '6px', fontSize: '0.84rem', color: '#1E293B' }}>
-              Durée de conservation des avis clients (mois)
-            </label>
-            <input
-              id="param-retention"
-              type="number"
-              min={1}
-              max={120}
-              className="saas-input"
-              style={{ width: '120px' }}
-              value={form.retention_mois || 24}
-              onChange={(e) => setForm({ ...form, retention_mois: Number(e.target.value) })}
-            />
-            <p style={{ fontSize: '0.78rem', color: '#64748B', marginTop: '6px', margin: 0 }}>
-              Durée prévue. Aucun archivage automatique n’est encore effectué.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Section 3 : Moteur IA */}
-      <div
-        style={{
-          background: '#FFFFFF',
-          borderRadius: '24px',
-          padding: '24px 28px',
-          border: '1px solid #E8ECE6',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-        }}
-      >
-        <h2
-          style={{
-            fontWeight: 800,
-            fontSize: '1.05rem',
-            marginBottom: '16px',
-            color: '#02302D',
-            borderBottom: '1px solid #F1F4EE',
-            paddingBottom: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <LightningIcon size={18} color="#3C7730" />
-          <span>Analyse automatique des avis</span>
-        </h2>
-        <div>
-          <label htmlFor="param-mode-ia" style={{ display: 'block', fontWeight: 700, marginBottom: '6px', fontSize: '0.84rem', color: '#1E293B' }}>
-            Mode d’analyse
-          </label>
-          <select
-            id="param-mode-ia"
-            className="saas-input"
-            value={form.mode_ia || 'deterministique'}
-            onChange={(e) => setForm({ ...form, mode_ia: e.target.value })}
-          >
-            <option value="deterministique">Règles (analyse lexicale, sans IA externe)</option>
-            <option value="hybride">Hybride (règles + modèle externe Hugging Face)</option>
-          </select>
-          <p style={{ fontSize: '0.78rem', color: '#64748B', marginTop: '6px', margin: 0 }}>
-            Préférence enregistrée uniquement : l’analyse actuelle du ton des avis utilise toujours les règles, quel que soit le mode choisi.
-          </p>
-        </div>
-      </div>
-
-      {/* Section 4 : Notifications */}
-      <div
-        style={{
-          background: '#FFFFFF',
-          borderRadius: '24px',
-          padding: '24px 28px',
-          border: '1px solid #E8ECE6',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-        }}
-      >
-        <h2
-          style={{
-            fontWeight: 800,
-            fontSize: '1.05rem',
-            marginBottom: '16px',
-            color: '#02302D',
-            borderBottom: '1px solid #F1F4EE',
-            paddingBottom: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <AlertTriangleIcon size={18} color="#3C7730" />
-          <span>Notifications</span>
-        </h2>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '12px', minHeight: '44px', cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            checked={form.notifications_email_actives || false}
-            onChange={(e) => setForm({ ...form, notifications_email_actives: e.target.checked })}
-            style={{ width: '24px', height: '24px', flex: '0 0 24px', accentColor: '#3C7730', cursor: 'pointer' }}
-          />
-          <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#1E293B' }}>Activer les notifications par e-mail</span>
-        </label>
-        <p style={{ fontSize: '0.78rem', color: '#64748B', marginTop: '8px', marginLeft: '30px', margin: 0 }}>
-          Préférence enregistrée uniquement : aucun e-mail d’alerte n’est encore envoyé à partir de ce réglage.
-        </p>
-      </div>
-
-      {/* Bouton Enregistrer */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="btn-primary"
-          style={{ padding: '12px 28px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-        >
-          <CheckIcon size={16} />
-          <span>{saving ? 'Enregistrement...' : 'Enregistrer les paramètres'}</span>
-        </button>
-      </div>
-    </div>
+    </>
   );
 }

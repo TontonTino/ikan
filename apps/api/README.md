@@ -121,3 +121,22 @@ jamais de mot de passe, de hachage, de jeton, de contact client (téléphone, e-
 - **Conservation** : aucune purge automatique. Conserver au moins 12 mois. Une purge future (SD-06) passera par une migration dédiée qui
   autorise le DELETE seulement quand `SET LOCAL ikan.purge_journal = 'on'` ; UPDATE et TRUNCATE restent toujours refusés.
 - **Déploiement** : `alembic upgrade head` (déjà dans la commande de démarrage Render) crée la table AVANT le démarrage du nouveau code.
+
+## Paramètres système (AD-05)
+
+`PATCH /api/v1/system/settings` (administrateur seul) valide strictement chaque paramètre ; hors bornes, type invalide, `null` ou clé
+inconnue : 422 en français, sans répéter la valeur saisie. La mise à jour est partielle (seuls les champs envoyés changent). Les bornes
+sont définies une seule fois dans `app/services/parametres_systeme.py` et renvoyées par `GET /system/settings` (champ `bornes`) pour l'écran.
+
+| Paramètre | Borne | Lu par le code ? |
+|---|---|---|
+| `retention_mois` | entier de 1 à 120 mois (24 par défaut) | Oui : durée affichée au client dans la case de consentement (`/qr-codes/{code}/validate`, enregistrée avec la demande de recontact). **Aucune purge n'est appliquée** (SD-06). |
+| `nom_application` | texte de 1 à 255 caractères | Non (aucun export ni e-mail ne le reprend) |
+| `seuil_alerte_defaut` | nombre de 0 à 100 | **Non : sans effet** (le seuil se règle agence par agence) |
+| `mode_ia` | `deterministique` ou `hybride` | **Non : sans effet** (l'analyse utilise toujours les règles) |
+| `notifications_email_actives` | booléen strict | **Non : sans effet** (aucun e-mail n'en dépend) |
+
+- **Paramètres sans effet** : `seuil_alerte_defaut`, `mode_ia`, `notifications_email_actives`. Ils restent acceptés et stockés (aucune
+  donnée supprimée, la réponse de l'API garde tous ses champs) mais l'écran administrateur ne les affiche plus.
+- **Valeurs historiques hors bornes** : jamais corrigées ni supprimées. `GET /system/settings` les renvoie telles quelles et les liste dans
+  `valeurs_hors_bornes` ; la durée montrée aux clients retombe alors sur la valeur par défaut (24 mois) sans rien écrire.
