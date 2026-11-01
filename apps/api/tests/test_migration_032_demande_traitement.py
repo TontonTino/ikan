@@ -68,9 +68,10 @@ def _demande(conn, traitee=False):
     return dc, us
 
 
-def test_la_tete_alembic_est_unique_et_c_est_la_032():
+def test_la_tete_alembic_est_unique_et_la_032_precede_la_033():
     scripts = ScriptDirectory.from_config(Config(str(API_DIR / "alembic.ini")))
-    assert scripts.get_heads() == [REV_032]
+    assert scripts.get_heads() == ["033_journal_audit"]           # la 033 (journal d'audit) a succédé à la 032
+    assert scripts.get_revision("033_journal_audit").down_revision == REV_032
     assert scripts.get_revision(REV_032).down_revision == REV_031
 
 
@@ -86,7 +87,7 @@ def test_schema_apres_la_migration(pg):
 
 
 def test_une_demande_traitee_avant_la_migration_est_inchangee(pg):
-    r = alembic("downgrade", "-1")
+    r = alembic("downgrade", REV_031)
     assert r.returncode == 0, r.stdout + r.stderr
     with pg.begin() as c:
         dc, _ = _demande(c, traitee=True)
@@ -98,7 +99,7 @@ def test_une_demande_traitee_avant_la_migration_est_inchangee(pg):
 
 
 def test_downgrade_puis_upgrade(pg):
-    r = alembic("downgrade", "-1")
+    r = alembic("downgrade", REV_031)
     assert r.returncode == 0, r.stdout + r.stderr
     assert not {"date_traitement", "traitee_par_id"} & {c["name"] for c in sa.inspect(pg).get_columns("demandes_contact")}
     with pg.connect() as c:
@@ -135,12 +136,14 @@ def test_supprimer_l_auteur_du_traitement_met_la_colonne_a_null_sans_supprimer_l
 def test_lock_timeout_fait_echouer_vite_la_migration_si_la_table_est_verrouillee(pg):
     """Même mécanisme à l'upgrade (ici via le downgrade, qui pose aussi le délai) : un verrou tenu par une autre session ne met
     pas le trafic en file d'attente derrière la migration, elle échoue au bout de ~5 s et ne change rien."""
+    r = alembic("downgrade", REV_032)                          # la tête est désormais la 033 : on se place d'abord sur la 032
+    assert r.returncode == 0, r.stdout + r.stderr
     bloqueur = pg.connect()
     transaction = bloqueur.begin()
     try:
         bloqueur.execute(sa.text("LOCK TABLE demandes_contact IN ACCESS EXCLUSIVE MODE"))
         debut = time.monotonic()
-        r = alembic("downgrade", "-1")
+        r = alembic("downgrade", REV_031)
         duree = time.monotonic() - debut
         assert r.returncode != 0 and "lock timeout" in (r.stdout + r.stderr).lower()
         assert 4 <= duree < 40, f"échec attendu après ~5 s, obtenu après {duree:.1f} s"
@@ -150,13 +153,13 @@ def test_lock_timeout_fait_echouer_vite_la_migration_si_la_table_est_verrouillee
     with pg.connect() as c:                                   # rien n'a changé : toujours en 032, colonnes présentes
         assert c.execute(sa.text("SELECT version_num FROM alembic_version")).scalar() == REV_032
     assert {"date_traitement", "traitee_par_id"} <= {c["name"] for c in sa.inspect(pg).get_columns("demandes_contact")}
-    r = alembic("downgrade", "-1")                           # une fois le verrou levé, la migration passe
+    r = alembic("downgrade", REV_031)                           # une fois le verrou levé, la migration passe
     assert r.returncode == 0, r.stdout + r.stderr
 
 
 def test_lock_timeout_fait_echouer_vite_l_upgrade_si_la_table_est_verrouillee(pg):
     """Le cas du déploiement : la table `demandes_contact` est verrouillée par une session longue au moment de `upgrade head`."""
-    r = alembic("downgrade", "-1")
+    r = alembic("downgrade", REV_031)
     assert r.returncode == 0, r.stdout + r.stderr
     bloqueur = pg.connect()
     transaction = bloqueur.begin()
@@ -179,7 +182,7 @@ def test_lock_timeout_fait_echouer_vite_l_upgrade_si_la_table_est_verrouillee(pg
 
 
 def test_set_local_ne_laisse_aucun_delai_sur_la_session_apres_la_migration(pg):
-    alembic("downgrade", "-1")
+    alembic("downgrade", REV_031)
     r = alembic("upgrade", "head")
     assert r.returncode == 0, r.stdout + r.stderr
     with pg.connect() as c:

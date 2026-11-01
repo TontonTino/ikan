@@ -5,7 +5,7 @@ import uuid
 from uuid import UUID
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -18,6 +18,7 @@ from app.models.qr_code import QRCode
 from app.models.agence import Agence
 from app.models.organisation import Organisation
 from app.core.config import settings
+from app.services import journal_audit as journal
 from app.schemas.categorie import CategoriePublicResponse
 from app.models.categorie import Categorie
 from app.models.system_settings import SystemSettings, RETENTION_MOIS_DEFAUT
@@ -310,11 +311,16 @@ def soumettre_suggestion(
 @router.delete("/{qr_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_qr_code(
     qr_id: UUID,
+    request: Request = None,
     db: Session = Depends(get_db),
-    _: Utilisateur = Depends(get_admin_user),
+    admin: Utilisateur = Depends(get_admin_user),
 ):
     qr = db.query(QRCode).filter(QRCode.id == qr_id).first()
     if not qr:
         raise HTTPException(status_code=404, detail="QR Code introuvable")
+    journal.journaliser(
+        db, action=journal.QR_SUPPRIME, acteur=admin, cible_type="qr_code", cible_id=qr.id, cible_libelle=qr.label or qr.code,
+        organisation_id=qr.agence.organisation_id if qr.agence else None, details={"agence_id": qr.agence_id, "actif": qr.actif}, requete=request,
+    )
     db.delete(qr)
     db.commit()

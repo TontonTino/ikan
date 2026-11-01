@@ -840,3 +840,19 @@ export interface DemandeContactListItem {
   feedback_note: number;
   agence_nom?: string;
 }
+
+export interface JournalAuditEntree {
+  id: string;
+  date_action: string;
+  acteur_id: string | null;
+  acteur_role: string;
+  acteur_email: string | null;
+  action: string;
+  cible_type: string | null;
+  cible_id: string | null;
+  cible_libelle: string | null;
+  organisation_id: string | null;
+  resultat: string;
+  details: Record<string, unknown> | null;
+  adresse_ip: string | null;
+}

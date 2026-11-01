@@ -1,10 +1,11 @@
 """
 Endpoints Utilisateurs — gestion par l'Administrateur et le CX Manager.
 """
+import uuid
 from uuid import UUID
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -14,12 +15,16 @@ from app.core.security import get_password_hash
 from app.models.utilisateur import Utilisateur
 from app.models.enums import UserRole
 from app.schemas.mot_de_passe import exiger_mot_de_passe_acceptable
+from app.services import journal_audit as journal
 from app.services.administrateurs import controler_modification_compte, controler_retrait_compte
 from app.services.comptes import normaliser_email
 from app.schemas.utilisateur import UtilisateurCreate, UtilisateurUpdate, UtilisateurResponse
 from app.services.acces_agence import verifier_agence_dans_organisation
 
 router = APIRouter()
+
+# Champs dont l'avant/après est écrit dans le journal d'audit (jamais le mot de passe ni son hachage).
+CHAMPS_COMPTE_JOURNALISES = ("role", "active", "agence_id", "email")
 
 MESSAGE_EMAIL_UTILISE = "Email déjà utilisé"
 MESSAGE_AGENCE_OBLIGATOIRE = "Un compte responsable d'agence doit être rattaché à une agence de votre organisation."
@@ -77,6 +82,7 @@ def list_utilisateurs(
 @router.post("/", response_model=UtilisateurResponse, status_code=status.HTTP_201_CREATED)
 def create_utilisateur(
     data: UtilisateurCreate,
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_cx_or_admin),
 ):
@@ -125,6 +131,7 @@ def create_utilisateur(
             verifier_agence_dans_organisation(db, target_agence_id, target_org_id)
 
     user = Utilisateur(
+        id=uuid.uuid4(),
         organisation_id=target_org_id,
         nom=data.nom,
         prenom=data.prenom,
@@ -136,6 +143,11 @@ def create_utilisateur(
         active=True
     )
     db.add(user)
+    # Journal d'audit : même transaction que la création (annulée avec elle si l'e-mail est déjà pris au moment de l'enregistrement).
+    journal.journaliser(
+        db, action=journal.COMPTE_CREE, acteur=current_user, cible_type="utilisateur", cible_id=user.id, cible_libelle=user.email,
+        organisation_id=target_org_id, details={"role": data.role, "agence_id": target_agence_id}, requete=request,
+    )
     _enregistrer_compte(db)
     db.refresh(user)
     return user
@@ -169,6 +181,7 @@ def get_utilisateur(
 def update_utilisateur(
     user_id: UUID,
     data: UtilisateurUpdate,
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_cx_or_admin),
 ):
@@ -189,7 +202,7 @@ def update_utilisateur(
         raise HTTPException(status_code=404, detail="Utilisateur introuvable")
 
     updates = data.model_dump(exclude_unset=True)
-    controler_modification_compte(db, user, updates, current_user)   # après l'existence et l'appartenance
+    controler_modification_compte(db, user, updates, current_user, requete=request)   # après l'existence et l'appartenance
     if "email" in updates:
         if updates["email"] is None:
             raise HTTPException(status_code=422, detail=MESSAGE_EMAIL_VIDE)
@@ -212,9 +225,19 @@ def update_utilisateur(
     if "password" in updates and updates["password"]:
         updates["mot_de_passe_hash"] = get_password_hash(updates.pop("password"))
 
+    # Avant/après des seuls champs non secrets ; un mot de passe modifié n'est jamais écrit (seul le NOM du champ l'est).
+    champs_modifies = sorted({"mot_de_passe" if c == "mot_de_passe_hash" else c for c in updates})
+    avant = {c: getattr(user, c, None) for c in CHAMPS_COMPTE_JOURNALISES if c in updates}
     for field, value in updates.items():
         setattr(user, field, value)
 
+    if champs_modifies:
+        suspension = updates.get("active") is False
+        journal.journaliser(
+            db, action=journal.COMPTE_SUSPENDU if suspension else journal.COMPTE_MODIFIE, acteur=current_user, cible_type="utilisateur",
+            cible_id=user.id, cible_libelle=user.email, organisation_id=user.organisation_id,
+            details={"champs": champs_modifies, "avant": avant, "apres": {c: updates[c] for c in avant}}, requete=request,
+        )
     _enregistrer_compte(db)
     db.refresh(user)
     return user
@@ -223,6 +246,7 @@ def update_utilisateur(
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_utilisateur(
     user_id: UUID,
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_cx_or_admin),
 ):
@@ -243,6 +267,11 @@ def delete_utilisateur(
     if not user:
         raise HTTPException(status_code=404, detail="Utilisateur introuvable")
 
-    controler_retrait_compte(db, user, current_user)   # après l'existence et l'appartenance
+    controler_retrait_compte(db, user, current_user, requete=request)   # après l'existence et l'appartenance
+    avant_active = user.active
     user.active = False
+    journal.journaliser(
+        db, action=journal.COMPTE_SUSPENDU, acteur=current_user, cible_type="utilisateur", cible_id=user.id, cible_libelle=user.email,
+        organisation_id=user.organisation_id, details={"avant": {"active": avant_active}, "apres": {"active": False}}, requete=request,
+    )
     db.commit()

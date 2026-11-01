@@ -88,6 +88,8 @@ def photo(ctx):
     resultat = {}
     with ctx.moteur.connect() as c:
         for table in Base.metadata.tables.values():
+            if table.name == "journal_audit":      # un refus est tracé au journal d'audit (voulu) : la photo ne porte que sur les données métier
+                continue
             try:
                 resultat[table.name] = sorted(str(tuple(ligne)) for ligne in c.execute(select(table)))
             except Exception:  # noqa: BLE001
@@ -200,8 +202,8 @@ def test_un_cx_manager_se_desactive_et_se_modifie_comme_avant(ctx):
 
 def test_les_routes_utilisateurs_appellent_la_regle_pour_chaque_cible(ctx, monkeypatch):
     appels = []
-    monkeypatch.setattr(utilisateurs, "controler_retrait_compte", lambda db, compte, acteur: appels.append(("retrait", compte.id, acteur.id)))
-    monkeypatch.setattr(utilisateurs, "controler_modification_compte", lambda db, compte, mods, acteur: appels.append(("modif", compte.id, acteur.id)))
+    monkeypatch.setattr(utilisateurs, "controler_retrait_compte", lambda db, compte, acteur, **_: appels.append(("retrait", compte.id, acteur.id)))
+    monkeypatch.setattr(utilisateurs, "controler_modification_compte", lambda db, compte, mods, acteur, **_: appels.append(("modif", compte.id, acteur.id)))
     assert ctx.client.delete(f"/utilisateurs/{ctx.cx}", headers=ctx.H(ctx.admin_p)).status_code == 204
     assert ctx.client.patch(f"/utilisateurs/{ctx.cx}", headers=ctx.H(ctx.admin_p), json={"nom": "Nouveau"}).status_code == 200
     assert ("retrait", ctx.cx, ctx.admin_p) in appels and ("modif", ctx.cx, ctx.admin_p) in appels

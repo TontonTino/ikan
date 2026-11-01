@@ -6,7 +6,7 @@ import uuid
 from uuid import UUID
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -18,6 +18,7 @@ from app.models.qr_code import QRCode
 from app.models.categorie import Categorie
 from app.models.feedback import Feedback
 from app.models.suggestion import Suggestion, HistoriqueSuggestion
+from app.services import journal_audit as journal
 from app.services.suggestions_scope import agence_effective
 from app.models.historique_feedback import HistoriqueFeedback
 from app.services.ai.reprise_analyse import TYPES_TECHNIQUES
@@ -30,6 +31,9 @@ from app.services.plan_catalog import FEATURE_CATEGORIES
 from app.services.plan_service import organisation_a_la_fonctionnalite
 
 router = APIRouter()
+
+# Champs dont l'avant/après est écrit dans le journal d'audit (les autres modifications n'y figurent que par leur NOM).
+CHAMPS_AGENCE_JOURNALISES = ("nom", "ville", "active", "seuil_alerte")
 
 MESSAGE_AGENCE_AVEC_AVIS = (
     "Cette agence a déjà reçu des avis : elle ne peut pas être supprimée. "
@@ -187,6 +191,7 @@ def list_agences_contexte(
 @router.post("/", response_model=AgenceResponse, status_code=status.HTTP_201_CREATED)
 def create_agence(
     data: AgenceCreate,
+    request: Request = None,
     org_id: Optional[UUID] = Query(None),
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_cx_or_admin),
@@ -225,6 +230,10 @@ def create_agence(
     creer_categories_depart(db, agence)
     get_or_create_categories_actives(agence.id, db)
 
+    journal.journaliser(
+        db, action=journal.AGENCE_CREEE, acteur=current_user, cible_type="agence", cible_id=agence.id, cible_libelle=agence.nom,
+        organisation_id=target_org_id, requete=request,
+    )
     db.commit()
     db.refresh(agence)
     return _enrich_agence_qr(agence, db)
@@ -247,6 +256,7 @@ def get_agence(
 def update_agence(
     agence_id: UUID,
     data: AgenceUpdate,
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_cx_or_admin),
 ):
@@ -256,9 +266,17 @@ def update_agence(
 
     _check_agence_access(agence, current_user)
 
-    for field, value in data.model_dump(exclude_unset=True).items():
+    modifications = data.model_dump(exclude_unset=True)
+    avant = {c: getattr(agence, c, None) for c in CHAMPS_AGENCE_JOURNALISES if c in modifications}
+    for field, value in modifications.items():
         setattr(agence, field, value)
 
+    if modifications:
+        journal.journaliser(
+            db, action=journal.AGENCE_MODIFIEE, acteur=current_user, cible_type="agence", cible_id=agence.id, cible_libelle=agence.nom,
+            organisation_id=agence.organisation_id,
+            details={"champs": sorted(modifications), "avant": avant, "apres": {c: modifications[c] for c in avant}}, requete=request,
+        )
     db.commit()
     db.refresh(agence)
     return _enrich_agence_qr(agence, db)
@@ -268,6 +286,7 @@ def update_agence(
 def update_agence_photo(
     agence_id: UUID,
     data: AgencePhotoUpdate,
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ):
@@ -284,6 +303,10 @@ def update_agence_photo(
     _check_agence_access(agence, current_user)
 
     agence.photo = data.photo
+    journal.journaliser(
+        db, action=journal.AGENCE_MODIFIEE, acteur=current_user, cible_type="agence", cible_id=agence.id, cible_libelle=agence.nom,
+        organisation_id=agence.organisation_id, details={"champs": ["photo"]}, requete=request,
+    )
     db.commit()
     db.refresh(agence)
     return _enrich_agence_qr(agence, db)
@@ -292,6 +315,7 @@ def update_agence_photo(
 @router.delete("/{agence_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_agence(
     agence_id: UUID,
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_cx_or_admin),
 ):
@@ -312,6 +336,10 @@ def delete_agence(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=MESSAGE_AGENCE_AVEC_AVIS)
 
     db.delete(agence)
+    journal.journaliser(
+        db, action=journal.AGENCE_SUPPRIMEE, acteur=current_user, cible_type="agence", cible_id=agence.id, cible_libelle=agence.nom,
+        organisation_id=agence.organisation_id, requete=request,
+    )
     try:
         db.commit()
     except IntegrityError as exc:

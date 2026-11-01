@@ -21,6 +21,7 @@ const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage'));
 const AdminPermissionsPage = lazy(() => import('./pages/admin/AdminPermissionsPage'));
 const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage'));
 const AdminFacturationPage = lazy(() => import('./pages/admin/AdminFacturationPage'));
+const AdminJournalPage = lazy(() => import('./pages/admin/AdminJournalPage'));
 const StatistiquesPage = lazy(() => import('./pages/stats/StatistiquesPage'));
 const ParametresPage = lazy(() => import('./pages/ParametresPage'));
 const MonAgencePage = lazy(() => import('./pages/agency/MonAgencePage'));
@@ -132,6 +133,7 @@ export default function App() {
         <Route path="admin/statistiques" element={<RoleRoute pattern="/admin/statistiques"><StatistiquesPage /></RoleRoute>} />
         <Route path="admin/organisations" element={<RoleRoute pattern="/admin/organisations"><AdminOrgsPage /></RoleRoute>} />
         <Route path="admin/facturation" element={<RoleRoute pattern="/admin/facturation"><AdminFacturationPage /></RoleRoute>} />
+        <Route path="admin/journal" element={<RoleRoute pattern="/admin/journal"><AdminJournalPage /></RoleRoute>} />
         <Route path="admin/gestion-agences" element={<RoleRoute pattern="/admin/gestion-agences"><GestionAgencesPage /></RoleRoute>} />
         {/* Anciennes routes conservées en redirection pour ne pas casser les liens/favoris existants */}
         <Route path="admin/agences" element={<Navigate to="/admin/gestion-agences" replace />} />

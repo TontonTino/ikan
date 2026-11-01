@@ -233,6 +233,7 @@ export default function DashboardLayout() {
     if (location.pathname.includes('/statistiques')) return user?.role === 'admin' ? 'Statistiques de la plateforme' : 'Statistiques';
     if (location.pathname.includes('/admin/organisations')) return 'Organisations';
     if (location.pathname.includes('/admin/facturation')) return 'Facturation';
+    if (location.pathname.includes('/admin/journal')) return 'Journal d’audit';
     if (location.pathname.includes('/admin/gestion-agences')) return 'Gestion des agences';
     if (location.pathname.includes('/admin/permissions')) return 'Rôles & permissions';
     if (location.pathname.includes('/admin/settings')) return 'Paramètres';

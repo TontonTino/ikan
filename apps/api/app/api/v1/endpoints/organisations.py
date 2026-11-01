@@ -1,10 +1,11 @@
 """
 Endpoints CRUD Organisations — réservés exclusivement au rôle Administrateur (RBAC).
 """
+import uuid
 from uuid import UUID
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_admin_user, get_cx_manager, get_db
@@ -17,12 +18,16 @@ from app.schemas.organisation import (
     OrganisationCreate, OrganisationUpdate, OrganisationRead, UtilisationOrganisation,
     UpgradeCheckoutRequest, UpgradeCheckoutResponse, ChangementPlanRequest,
 )
+from app.services import journal_audit as journal
 from app.services.administrateurs import controler_desactivation_organisation
 from app.services.plan_catalog import STRIPE_PRICE_IDS
 from app.services.plan_service import utilisation_organisation
 from app.services.secteurs import libelle_secteur
 
 router = APIRouter()
+
+# Champs dont l'avant/après est écrit dans le journal (les autres modifications n'y figurent que par leur NOM).
+CHAMPS_ORGANISATION_JOURNALISES = ("nom", "secteur_code", "pays_region", "active")
 
 
 @router.get("/moi/utilisation", response_model=UtilisationOrganisation)
@@ -117,6 +122,7 @@ def list_organisations(
 @router.post("/", response_model=OrganisationRead, status_code=status.HTTP_201_CREATED)
 def create_organisation(
     data: OrganisationCreate,
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_admin_user),
 ):
@@ -140,7 +146,12 @@ def create_organisation(
     org_data["created_by_id"] = current_user.id
 
     org = Organisation(**org_data)
+    org.id = org.id or uuid.uuid4()
     db.add(org)
+    journal.journaliser(
+        db, action=journal.ORGANISATION_CREEE, acteur=current_user, cible_type="organisation", cible_id=org.id, cible_libelle=org.nom,
+        organisation_id=org.id, details={"secteur_code": org_data.get("secteur_code")}, requete=request,
+    )
     db.commit()
     db.refresh(org)
     return org
@@ -166,6 +177,7 @@ def get_organisation(
 def update_organisation(
     org_id: UUID,
     data: OrganisationUpdate,
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_admin_user),
 ):
@@ -193,7 +205,7 @@ def update_organisation(
     if update_dict.get("active") is False and org.active:
         # Désactivation réelle : les comptes de l'organisation ne se connectent plus (données conservées). Jamais le dernier
         # administrateur actif, jamais l'organisation de l'administrateur connecté. Réactiver n'est jamais bloqué.
-        controler_desactivation_organisation(db, org.id, current_user)
+        controler_desactivation_organisation(db, org.id, current_user, requete=request)
     if "email_pro" in update_dict:
         update_dict["email"] = update_dict["email_pro"]
     # secteur_code change sans secteur_activite explicite -> on redérive le libellé legacy,
@@ -203,9 +215,28 @@ def update_organisation(
     if "secteur_activite" in update_dict:
         update_dict["secteur"] = update_dict["secteur_activite"]
 
+    avant_active = org.active
+    avant_valeurs = {champ: getattr(org, champ, None) for champ in CHAMPS_ORGANISATION_JOURNALISES if champ in update_dict}
     for field, value in update_dict.items():
         setattr(org, field, value)
 
+    # Journal d'audit (même transaction que la modification). L'activation et la désactivation ont leurs propres codes.
+    autres_champs = sorted(champ for champ in update_dict if champ != "active")
+    if "active" in update_dict and bool(update_dict["active"]) != bool(avant_active):
+        journal.journaliser(
+            db, action=journal.ORGANISATION_REACTIVEE if update_dict["active"] else journal.ORGANISATION_DESACTIVEE, acteur=current_user,
+            cible_type="organisation", cible_id=org.id, cible_libelle=org.nom, organisation_id=org.id,
+            details={"avant": {"active": bool(avant_active)}, "apres": {"active": bool(update_dict["active"])}}, requete=request,
+        )
+    if autres_champs:
+        journal.journaliser(
+            db, action=journal.ORGANISATION_MODIFIEE, acteur=current_user, cible_type="organisation", cible_id=org.id, cible_libelle=org.nom,
+            organisation_id=org.id,
+            details={"champs": autres_champs,
+                     "avant": {c: v for c, v in avant_valeurs.items() if c != "active"},
+                     "apres": {c: update_dict[c] for c in avant_valeurs if c != "active"}},
+            requete=request,
+        )
     db.commit()
     db.refresh(org)
     return org
@@ -215,6 +246,7 @@ def update_organisation(
 def changer_plan_organisation(
     org_id: UUID,
     data: ChangementPlanRequest,
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_admin_user),
 ):
@@ -247,6 +279,11 @@ def changer_plan_organisation(
             modifie_par_id=current_user.id,
             source="admin_override",
         ))
+        journal.journaliser(
+            db, action=journal.FORFAIT_MODIFIE, acteur=current_user, cible_type="organisation", cible_id=org.id, cible_libelle=org.nom,
+            organisation_id=org.id,
+            details={"avant": {"plan_id": ancien_plan_id}, "apres": {"plan_id": data.plan_id}, "source": "admin_override"}, requete=request,
+        )
 
     db.commit()
     db.refresh(org)

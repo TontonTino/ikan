@@ -109,7 +109,7 @@ def photo(ctx, sauf=()):
     resultat = {}
     with ctx.moteur.connect() as c:
         for table in Base.metadata.tables.values():
-            if table.name in sauf:
+            if table.name in sauf or table.name == "journal_audit":      # un refus est tracé au journal d'audit (voulu)
                 continue
             try:
                 resultat[table.name] = sorted(str(tuple(ligne)) for ligne in c.execute(select(table)))
