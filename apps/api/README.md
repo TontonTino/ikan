@@ -149,7 +149,8 @@ sont définies une seule fois dans `app/services/parametres_systeme.py` et renvo
   n'écrit que la ligne dédiée ; combiné à d'autres champs, `compte.modifie` garde la liste complète des champs et la ligne dédiée s'y ajoute.
 - **En-têtes** : `Cache-Control: no-store` et `Pragma: no-cache` sur toute réponse (succès comme erreur) de `POST /auth/me/mot-de-passe`,
   `POST /utilisateurs/` et `PATCH /utilisateurs/{id}` (`app/core/entetes_securite.py`).
-- **Refus d'un mot de passe identique** : 422 « Le nouveau mot de passe doit être différent du mot de passe actuel. », comparaison sur le
-  hachage existant, après retrait des espaces de début et de fin (comme à la connexion) ; la casse compte. Sur le changement personnel, le
+- **Refus d'un mot de passe identique** : uniquement sur le changement PERSONNEL (`POST /auth/me/mot-de-passe`) ; pas sur `PATCH /utilisateurs/{id}`,
+  où la réponse permettrait à un tiers de tester un mot de passe deviné. 422 « Le nouveau mot de passe doit être différent du mot de passe actuel. », comparaison sur le
+  hachage existant, après retrait des espaces de début et de fin (comme à la connexion) ; la casse compte. Le
   contrôle suit la vérification de l'ancien mot de passe.
 - Hors périmètre (PR suivantes) : mot de passe temporaire et changement forcé, invalidation des jetons, rotation du refresh token.

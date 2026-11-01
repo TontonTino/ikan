@@ -11,10 +11,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_cx_or_admin, get_current_active_user, get_db
-from app.core.security import get_password_hash, verify_password
+from app.core.security import get_password_hash
 from app.models.utilisateur import Utilisateur
 from app.models.enums import UserRole
-from app.schemas.mot_de_passe import MESSAGE_MOT_DE_PASSE_IDENTIQUE, exiger_mot_de_passe_acceptable
+from app.schemas.mot_de_passe import exiger_mot_de_passe_acceptable
 from app.services import journal_audit as journal
 from app.services.administrateurs import controler_modification_compte, controler_retrait_compte
 from app.services.comptes import normaliser_email
@@ -211,9 +211,8 @@ def update_utilisateur(
             raise HTTPException(status_code=400, detail=MESSAGE_EMAIL_UTILISE)
     if updates.get("password") is not None:
         exiger_mot_de_passe_acceptable(updates["password"], updates.get("email") or user.email)
-        # Identique à l'actuel ? Comparaison sur le HACHAGE existant (jamais en clair) ; la valeur est déjà normalisée (espaces de bord retirés).
-        if verify_password(updates["password"], user.mot_de_passe_hash):
-            raise HTTPException(status_code=422, detail=MESSAGE_MOT_DE_PASSE_IDENTIQUE)
+        # Pas de refus « identique au mot de passe actuel » ici : la réponse permettrait à un tiers (administrateur, CX Manager) de tester si
+        # un mot de passe deviné est celui du compte visé. Ce refus n'existe que pour le changement PERSONNEL (auth.py).
     if user.role == UserRole.AGENCY_MANAGER and "agence_id" in updates and updates["agence_id"] is None:
         raise HTTPException(status_code=422, detail=MESSAGE_DETACHEMENT_REFUSE)
     if "role" in updates:

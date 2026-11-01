@@ -188,7 +188,6 @@ def test_la_ligne_suit_le_sort_de_la_transaction(ctx, monkeypatch):
     lambda c: changer(c, c.ids.am_x1, "Mauvais-Ancien-123", NOUVEAU),               # ancien incorrect (400)
     lambda c: changer(c, c.ids.am_x1, ACTUEL, "court"),                             # trop court (422)
     lambda c: changer(c, c.ids.am_x1, ACTUEL, ACTUEL),                              # identique (422)
-    lambda c: patch(c, c.ids.am_x1, {"password": ACTUEL}, c.ids.cx_x),             # identique par un tiers (422)
     lambda c: patch(c, c.ids.am_x1, {"password": "court"}, c.ids.cx_x),            # trop court (422)
     lambda c: patch(c, c.ids.am_x1, {"password": NOUVEAU}, c.ids.cx_y),            # autre organisation (404)
     lambda c: patch(c, c.ids.am_x1, {"password": NOUVEAU}, c.ids.am_x1),           # rôle non autorisé (403)
@@ -229,7 +228,7 @@ def test_aucun_mot_de_passe_ni_hachage_dans_le_journal_ni_dans_les_reponses(ctx)
         patch(ctx, ctx.ids.am_x1, {"password": PIEGE + "-2", "nom": "Zed"}, ctx.ids.cx_x),
         changer(ctx, ctx.ids.cx_x, ACTUEL, PIEGE + "-3"),
         changer(ctx, ctx.ids.cx_x, "Mauvais-Ancien-123", PIEGE + "-4"),
-        patch(ctx, ctx.ids.am_x1, {"password": PIEGE + "-2"}, ctx.ids.cx_x),                  # identique (refus)
+        patch(ctx, ctx.ids.am_x1, {"password": PIEGE + "-2"}, ctx.ids.cx_x),                  # identique (accepté)
         patch(ctx, ctx.ids.am_x1, {"password": "x"}, ctx.ids.cx_x),
     ]
     assert [r.status_code for r in reponses][:3] == [201, 200, 200]
@@ -254,7 +253,7 @@ def test_no_store_et_pragma_sur_succes_et_erreurs_de_chaque_route(ctx):
         "me 422 identique": changer(ctx, ctx.ids.am_x1, NOUVEAU, NOUVEAU),
         "me 401 anonyme": ctx.client.post("/auth/me/mot-de-passe", json={"ancien_mot_de_passe": "a", "nouveau_mot_de_passe": "b"}),
         "patch 200": patch(ctx, ctx.ids.cx_x, {"password": NOUVEAU}, ctx.ids.admin),
-        "patch 422 identique": patch(ctx, ctx.ids.cx_x, {"password": NOUVEAU}, ctx.ids.admin),
+        "patch 200 identique": patch(ctx, ctx.ids.cx_x, {"password": NOUVEAU}, ctx.ids.admin),
         "patch 422 court": patch(ctx, ctx.ids.cx_x, {"password": "c"}, ctx.ids.admin),
         "patch 404": patch(ctx, uuid.uuid4(), {"password": NOUVEAU}, ctx.ids.admin),
         "patch 403": patch(ctx, ctx.ids.cx_x, {"password": NOUVEAU}, ctx.ids.am_x1),
@@ -265,7 +264,7 @@ def test_no_store_et_pragma_sur_succes_et_erreurs_de_chaque_route(ctx):
         "post 401 anonyme": ctx.client.post("/utilisateurs/", json={"nom": "N"}),
     }
     attendus = {"me 200": 200, "me 400 ancien": 400, "me 422 court": 422, "me 422 identique": 422, "me 401 anonyme": 401, "patch 200": 200,
-                "patch 422 identique": 422, "patch 422 court": 422, "patch 404": 404, "patch 403": 403, "patch 401 anonyme": 401, "post 201": 201,
+                "patch 200 identique": 200, "patch 422 court": 422, "patch 404": 404, "patch 403": 403, "patch 401 anonyme": 401, "post 201": 201,
                 "post 422": 422, "post 401 anonyme": 401}
     for nom, r in reponses.items():
         assert r.status_code == attendus[nom], (nom, r.status_code, r.text)
@@ -289,9 +288,19 @@ def test_identique_refuse_sur_le_changement_personnel_message_francais_sans_echo
     assert ACTUEL not in r.text and mot_de_passe_actuel_valide(ctx, ctx.ids.am_x1, ACTUEL)
 
 
-def test_identique_refuse_sur_la_modification_par_un_tiers(ctx):
-    r = patch(ctx, ctx.ids.am_x1, {"password": ACTUEL}, ctx.ids.cx_x)
-    assert r.status_code == 422 and r.json()["detail"] == MESSAGE_MOT_DE_PASSE_IDENTIQUE and ACTUEL not in r.text
+def test_un_tiers_ne_peut_pas_distinguer_identique_de_different_par_la_reponse(ctx):
+    """Pas d'oracle : modifier le mot de passe d'un AUTRE compte avec la valeur actuelle ou avec une valeur différente donne la même
+    réponse (statut, corps, en-têtes) et la même trace de journal ; rien ne révèle si le mot de passe deviné est le bon."""
+    identique = patch(ctx, ctx.ids.am_x1, {"password": ACTUEL}, ctx.ids.cx_x)
+    different = patch(ctx, ctx.ids.am_x1, {"password": NOUVEAU}, ctx.ids.cx_x)
+    assert identique.status_code == different.status_code == 200
+    assert identique.json().keys() == different.json().keys()
+    assert {k: v for k, v in identique.json().items() if k != "updated_at"} == {k: v for k, v in different.json().items() if k != "updated_at"}
+    for nom in ("cache-control", "pragma", "content-type"):
+        assert identique.headers.get(nom) == different.headers.get(nom)
+    premiere, seconde = lignes(ctx, journal.COMPTE_MOT_DE_PASSE_REINITIALISE)
+    assert premiere.details == seconde.details == {"changement": "oui"}
+    assert MESSAGE_MOT_DE_PASSE_IDENTIQUE not in identique.text
 
 
 @pytest.mark.parametrize("variante", [f"  {ACTUEL}", f"{ACTUEL}   ", f"\t{ACTUEL}\n"])
@@ -299,7 +308,6 @@ def test_espaces_de_bord_ignores_comme_a_la_connexion(ctx, variante):
     """Règle de normalisation existante : les espaces de début et de fin sont retirés (login.strip()) ; un mot de passe qui n'en
     diffère que par eux est donc IDENTIQUE et refusé."""
     assert changer(ctx, ctx.ids.am_x1, ACTUEL, variante).status_code == 422
-    assert patch(ctx, ctx.ids.am_x1, {"password": variante}, ctx.ids.cx_x).status_code == 422
 
 
 def test_une_autre_casse_est_un_autre_mot_de_passe(ctx):
