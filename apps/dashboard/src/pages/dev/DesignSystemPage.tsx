@@ -403,7 +403,7 @@ export default function DesignSystemPage() {
       </Section>
 
       <Section title="YAM">
-        <p style={{ margin: 0, color: 'var(--color-text-muted)' }}>Composant SVG (4 états × 2 variantes) aux tailles 24, 36 et 96 px, puis rendus 3D détourés sur trois fonds.</p>
+        <p style={{ margin: 0, color: 'var(--color-text-muted)' }}>Composant SVG (4 états × 2 variantes) aux tailles 24, 36, 56 et 96 px, puis rendus 3D détourés sur trois fonds.</p>
         {(['accueil', 'reflexion', 'alerte', 'resolu'] as YamEtat[]).map((etat) => (
           <div key={etat} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
             <strong style={{ color: 'var(--color-text-main)' }}>{etat}</strong>
@@ -411,7 +411,7 @@ export default function DesignSystemPage() {
               {(['corps', 'tete'] as YamVariante[]).map((variante) => (
                 <div key={variante} style={{ ...row, alignItems: 'flex-end' }}>
                   <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>{variante}</span>
-                  {[24, 36, 96].map((taille) => (
+                  {[24, 36, 56, 96].map((taille) => (
                     <YamMascot key={taille} state={etat} variant={variante} size={taille} title={`YAM, état ${etat}, variante ${variante}, ${taille} pixels`} />
                   ))}
                 </div>
