@@ -12,6 +12,8 @@ export const LIBELLES_ACTION: Record<string, string> = {
   'compte.modifie': 'Compte modifié',
   'compte.suspendu': 'Compte suspendu',
   'compte.admin_cree': 'Compte administrateur créé',
+  'compte.mot_de_passe_reinitialise': 'Mot de passe d’un compte réinitialisé',
+  'compte.mot_de_passe_modifie': 'Mot de passe modifié par son titulaire',
   'agence.creee': 'Agence créée',
   'agence.modifiee': 'Agence modifiée',
   'agence.supprimee': 'Agence supprimée',

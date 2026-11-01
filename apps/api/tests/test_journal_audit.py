@@ -740,5 +740,5 @@ def test_le_modele_n_a_aucune_cle_etrangere_ni_relation():
 
 
 def test_codes_d_action_stables_et_uniques():
-    assert len(journal.CODES_ACTION) == len(set(journal.CODES_ACTION)) == 17
+    assert len(journal.CODES_ACTION) == len(set(journal.CODES_ACTION)) == 19
     assert all(code == code.lower() and "." in code and len(code) <= 60 for code in journal.CODES_ACTION)

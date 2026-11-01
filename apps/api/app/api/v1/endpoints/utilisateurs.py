@@ -211,6 +211,8 @@ def update_utilisateur(
             raise HTTPException(status_code=400, detail=MESSAGE_EMAIL_UTILISE)
     if updates.get("password") is not None:
         exiger_mot_de_passe_acceptable(updates["password"], updates.get("email") or user.email)
+        # Pas de refus « identique au mot de passe actuel » ici : la réponse permettrait à un tiers (administrateur, CX Manager) de tester si
+        # un mot de passe deviné est celui du compte visé. Ce refus n'existe que pour le changement PERSONNEL (auth.py).
     if user.role == UserRole.AGENCY_MANAGER and "agence_id" in updates and updates["agence_id"] is None:
         raise HTTPException(status_code=422, detail=MESSAGE_DETACHEMENT_REFUSE)
     if "role" in updates:
@@ -231,12 +233,20 @@ def update_utilisateur(
     for field, value in updates.items():
         setattr(user, field, value)
 
-    if champs_modifies:
+    mot_de_passe_change = "mot_de_passe" in champs_modifies
+    # Un changement de mot de passe SEUL n'écrit que la ligne dédiée (pas de doublon « compte.modifie ») ; combiné à d'autres champs, la
+    # ligne « modifié » garde la liste complète des champs et la ligne dédiée est ajoutée en plus (action de sécurité à part entière).
+    if champs_modifies and champs_modifies != ["mot_de_passe"]:
         suspension = updates.get("active") is False
         journal.journaliser(
             db, action=journal.COMPTE_SUSPENDU if suspension else journal.COMPTE_MODIFIE, acteur=current_user, cible_type="utilisateur",
             cible_id=user.id, cible_libelle=user.email, organisation_id=user.organisation_id,
             details={"champs": champs_modifies, "avant": avant, "apres": {c: updates[c] for c in avant}}, requete=request,
+        )
+    if mot_de_passe_change:
+        journal.journaliser(
+            db, action=journal.COMPTE_MOT_DE_PASSE_REINITIALISE, acteur=current_user, cible_type="utilisateur", cible_id=user.id,
+            cible_libelle=user.email, organisation_id=user.organisation_id, details={"changement": "oui"}, requete=request,
         )
     _enregistrer_compte(db)
     db.refresh(user)

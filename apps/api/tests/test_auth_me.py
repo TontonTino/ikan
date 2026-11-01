@@ -40,6 +40,9 @@ class _FakeDb:
     def query(self, *a, **k):
         return _FakeQuery(self.email_deja_pris)
 
+    def add(self, obj):   # ligne du journal d'audit (changement de mot de passe) : ajoutée à la session, validée avec elle
+        self.ajoutes = [*getattr(self, "ajoutes", []), obj]
+
     def commit(self):
         self.committed = True
 

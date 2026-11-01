@@ -140,3 +140,17 @@ sont définies une seule fois dans `app/services/parametres_systeme.py` et renvo
   donnée supprimée, la réponse de l'API garde tous ses champs) mais l'écran administrateur ne les affiche plus.
 - **Valeurs historiques hors bornes** : jamais corrigées ni supprimées. `GET /system/settings` les renvoie telles quelles et les liste dans
   `valeurs_hors_bornes` ; la durée montrée aux clients retombe alors sur la valeur par défaut (24 mois) sans rien écrire.
+
+## Mots de passe : journal, en-têtes, refus d'un mot de passe identique (AD-04, partie 1)
+
+- **Journal d'audit** : `compte.mot_de_passe_reinitialise` (un administrateur ou un CX Manager change le mot de passe d'un AUTRE compte, via
+  `PATCH /utilisateurs/{id}`) et `compte.mot_de_passe_modifie` (l'utilisateur change le sien, `POST /auth/me/mot-de-passe`), dans la même
+  transaction que le changement. Détails : `{"changement": "oui"}` seulement, jamais de valeur ni de hachage. Un changement de mot de passe seul
+  n'écrit que la ligne dédiée ; combiné à d'autres champs, `compte.modifie` garde la liste complète des champs et la ligne dédiée s'y ajoute.
+- **En-têtes** : `Cache-Control: no-store` et `Pragma: no-cache` sur toute réponse (succès comme erreur) de `POST /auth/me/mot-de-passe`,
+  `POST /utilisateurs/` et `PATCH /utilisateurs/{id}` (`app/core/entetes_securite.py`).
+- **Refus d'un mot de passe identique** : uniquement sur le changement PERSONNEL (`POST /auth/me/mot-de-passe`) ; pas sur `PATCH /utilisateurs/{id}`,
+  où la réponse permettrait à un tiers de tester un mot de passe deviné. 422 « Le nouveau mot de passe doit être différent du mot de passe actuel. », comparaison sur le
+  hachage existant, après retrait des espaces de début et de fin (comme à la connexion) ; la casse compte. Le
+  contrôle suit la vérification de l'ancien mot de passe.
+- Hors périmètre (PR suivantes) : mot de passe temporaire et changement forcé, invalidation des jetons, rotation du refresh token.

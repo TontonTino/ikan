@@ -20,6 +20,7 @@ MESSAGE_TROP_COURT = (
     "(les espaces au début et à la fin ne comptent pas)."
 )
 MESSAGE_EGAL_EMAIL = "Le mot de passe ne doit pas être identique à l'adresse e-mail."
+MESSAGE_MOT_DE_PASSE_IDENTIQUE = "Le nouveau mot de passe doit être différent du mot de passe actuel."
 
 
 def verifier_mot_de_passe(mot_de_passe: str, email: Optional[str] = None) -> str:

@@ -21,7 +21,7 @@ from app.core.security import (
 from app.db.session import get_db
 from app.models.enums import UserRole
 from app.models.utilisateur import Utilisateur
-from app.schemas.mot_de_passe import exiger_mot_de_passe_acceptable
+from app.schemas.mot_de_passe import MESSAGE_MOT_DE_PASSE_IDENTIQUE, exiger_mot_de_passe_acceptable
 from app.services import journal_audit as journal
 from app.services.comptes import requete_comptes_utilisables
 from app.schemas.auth import (
@@ -238,6 +238,7 @@ def update_me(
 @router.post("/me/mot-de-passe")
 def changer_mot_de_passe(
     data: ChangerMotDePasseRequest,
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_current_active_user),
 ):
@@ -249,7 +250,16 @@ def changer_mot_de_passe(
             detail="Ancien mot de passe incorrect.",
         )
 
+    # Après la vérification de l'ancien mot de passe (sinon la réponse servirait à deviner le mot de passe actuel) ; comparaison sur le
+    # HACHAGE existant, valeur déjà normalisée (espaces de bord retirés, comme à la connexion).
+    if verify_password(data.nouveau_mot_de_passe, current_user.mot_de_passe_hash):
+        raise HTTPException(status_code=422, detail=MESSAGE_MOT_DE_PASSE_IDENTIQUE)
+
     current_user.mot_de_passe_hash = get_password_hash(data.nouveau_mot_de_passe)
+    journal.journaliser(     # même transaction que le changement ; aucune valeur, seulement « changement : oui »
+        db, action=journal.COMPTE_MOT_DE_PASSE_MODIFIE, acteur=current_user, cible_type="utilisateur", cible_id=current_user.id,
+        cible_libelle=current_user.email, organisation_id=current_user.organisation_id, details={"changement": "oui"}, requete=request,
+    )
     db.commit()
     return {"message": "Mot de passe mis à jour."}
 
