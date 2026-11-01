@@ -41,6 +41,7 @@ from app.models.utilisateur import Utilisateur
 from app.schemas.dashboard import DashboardSiege
 from app.services.dashboard_helpers import (
     _calc_kpi_trend,
+    _cle_heure_utc,
     _cle_semaine_iso,
     _est_traite,
     _libelles_semaines,
@@ -109,6 +110,12 @@ def test_libelles_semaines():
     assert _libelles_semaines(["2026-W09", "2026-W10"]) == {"2026-W09": "Sem 9", "2026-W10": "Sem 10"}
     # Deux années ISO : l'année est ajoutée pour lever l'ambiguïté.
     assert _libelles_semaines(["2025-W52", "2026-W01"]) == {"2025-W52": "Sem 52 2025", "2026-W01": "Sem 1 2026"}
+
+
+def test_cle_heure_inclut_date_et_normalise_utc():
+    heure_utc = datetime(2026, 10, 13, 8, tzinfo=timezone.utc)
+    assert _cle_heure_utc(heure_utc) == "2026-10-13-08"
+    assert _cle_heure_utc(datetime(2026, 10, 13, 10, tzinfo=timezone(timedelta(hours=2)))) == "2026-10-13-08"
 
 
 def _fb(dt, note):
@@ -350,6 +357,26 @@ def test_statistics_series_hebdo_iso(ctx):
     assert cles == sorted(cles) and len(cles) == 4
     assert all(len(k) == 8 and k[4:6] == "-W" for k in cles)
     assert all(p["label"].startswith("Sem ") for p in serie)
+
+
+def test_statistics_series_24h_preserve_date_and_volume(ctx):
+    db = ctx.Session()
+    maintenant = datetime.now(timezone.utc)
+    avis_sans_note_positive = [
+        _feedback(db, ctx.qr[ctx.a1], 2)[0],
+        _feedback(db, ctx.qr[ctx.a1], 3)[0],
+    ]
+    avis_positif = _feedback(db, ctx.qr[ctx.a1], 5)[0]
+    for feedback in avis_sans_note_positive:
+        feedback.date_soumission = maintenant - timedelta(hours=23)
+    avis_positif.date_soumission = maintenant - timedelta(minutes=30)
+    db.commit(); db.close()
+
+    serie = _get(ctx, ctx.cx, "/dashboard/statistics/cx?jours=1")["evolution_satisfaction"]
+    assert len(serie) == 2  # Les heures sans avis ne sont pas présentées comme un taux à 0 %.
+    assert all(len(point["date"]) == 13 and point["date"][10] == "-" for point in serie)
+    assert serie[0]["satisfaction"] == 0.0 and serie[0]["feedbacks"] == 2
+    assert serie[1]["satisfaction"] == 100.0 and serie[1]["feedbacks"] == 1
 
 
 # -- Transparence : origine des insights et recommandations --

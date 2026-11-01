@@ -1,7 +1,7 @@
 import React from 'react';
 import {
-  AreaChart,
-  Area,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import type { EvolutionPoint } from '../../types';
+import { insererPeriodesSansAvis, libelleDatePoint, type SatisfactionChartPoint } from '../../utils/satisfactionSeries';
 
 interface SatisfactionEvolutionChartProps {
   data: EvolutionPoint[];
@@ -17,7 +18,8 @@ interface SatisfactionEvolutionChartProps {
 
 function CustomTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
-    const pt = payload[0].payload as EvolutionPoint;
+    const pt = payload[0].payload as SatisfactionChartPoint;
+    if (pt.sansAvis) return null;
     return (
       <div
         style={{
@@ -31,7 +33,7 @@ function CustomTooltip({ active, payload, label }: any) {
         }}
       >
         <div style={{ fontWeight: 700, marginBottom: '4px', color: '#E2F2E5' }}>
-          {pt.label || label}
+          {libelleDatePoint(pt.date, pt.label || label)}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ color: '#75B72A', fontWeight: 800 }}>Satisfaction :</span>
@@ -59,7 +61,7 @@ export default function SatisfactionEvolutionChart({
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#94A3B8',
+          color: '#5B6B7F',
           fontSize: '0.84rem',
           background: '#FAFCFA',
           borderRadius: '16px',
@@ -74,17 +76,11 @@ export default function SatisfactionEvolutionChart({
   return (
     <div style={{ width: '100%', height: `${height}px` }}>
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-          <defs>
-            <linearGradient id="satGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#3C7730" stopOpacity={0.28} />
-              <stop offset="95%" stopColor="#3C7730" stopOpacity={0.0} />
-            </linearGradient>
-          </defs>
+        <LineChart data={insererPeriodesSansAvis(data)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
           <XAxis
             dataKey="label"
-            stroke="#94A3B8"
+            stroke="#5B6B7F"
             fontSize={11}
             tickLine={false}
             axisLine={{ stroke: '#E2E8F0' }}
@@ -93,22 +89,22 @@ export default function SatisfactionEvolutionChart({
             domain={[0, 100]}
             ticks={[0, 25, 50, 75, 100]}
             unit="%"
-            stroke="#94A3B8"
+            stroke="#5B6B7F"
             fontSize={11}
             tickLine={false}
             axisLine={false}
           />
           <Tooltip content={<CustomTooltip />} />
-          <Area
-            type="monotone"
+          <Line
+            type="linear"
             dataKey="satisfaction"
             stroke="#3C7730"
-            strokeWidth={2.5}
-            fillOpacity={1}
-            fill="url(#satGradient)"
+            strokeWidth={2}
+            connectNulls={false}
+            dot={{ r: 3, fill: '#3C7730', stroke: '#FFFFFF', strokeWidth: 1 }}
             activeDot={{ r: 5, fill: '#02302D', stroke: '#75B72A', strokeWidth: 2 }}
           />
-        </AreaChart>
+        </LineChart>
       </ResponsiveContainer>
     </div>
   );

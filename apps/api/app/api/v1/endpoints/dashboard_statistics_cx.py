@@ -55,7 +55,7 @@ from app.schemas.dashboard import (
 
 from app.services.dashboard_helpers import (
     _calc_kpi_trend, _cle_semaine_iso, _compter_utilisateurs_actifs, _kpi_taux, compter_negatifs, est_negatif,
-    est_pris_en_charge,
+    est_pris_en_charge, _cle_heure_utc,
     _libelles_semaines, _period_label, _repartition_forfaits, _taux,
 )
 
@@ -275,8 +275,8 @@ def get_statistics_cx(
     for f in fbs_current:
         dt = f.date_soumission
         if jours <= 1:
-            key = dt.strftime("%Hh")
-            label = key
+            key = _cle_heure_utc(dt)
+            label = f"{key[11:13]}h"
         elif jours <= 14:
             key = dt.strftime("%Y-%m-%d")
             label = f"{_JOURS_FR[dt.weekday()]} {dt.day}"

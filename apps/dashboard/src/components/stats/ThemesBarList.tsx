@@ -11,6 +11,7 @@ interface ThemesBarListProps {
   maxItems?: number;
   /** Lien vers les avis d'un thème (liste « Avis du réseau » filtrée) : le nom du thème devient cliquable. */
   lienTheme?: (theme: ThemeStatsDetail) => string;
+  showSentiment?: boolean;
 }
 
 const SENTIMENT_DOT_COLOR: Record<string, string> = {
@@ -19,8 +20,8 @@ const SENTIMENT_DOT_COLOR: Record<string, string> = {
   negatif: '#DC2626',
 };
 
-export default function ThemesBarList({ themes, maxItems = 6, lienTheme }: ThemesBarListProps) {
-  const displayThemes = themes.slice(0, maxItems);
+export default function ThemesBarList({ themes, maxItems = 6, lienTheme, showSentiment = true }: ThemesBarListProps) {
+  const displayThemes = [...themes].sort((a, b) => b.count - a.count).slice(0, maxItems);
 
   if (!displayThemes || displayThemes.length === 0) {
     return (
@@ -55,7 +56,7 @@ export default function ThemesBarList({ themes, maxItems = 6, lienTheme }: Theme
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span
+                {showSentiment && <span
                   style={{
                     width: '7px',
                     height: '7px',
@@ -64,20 +65,20 @@ export default function ThemesBarList({ themes, maxItems = 6, lienTheme }: Theme
                     flexShrink: 0,
                   }}
                   title={`Ton dominant : ${SENTIMENT_LABELS[item.sentiment_predominant as SentimentType] ?? item.sentiment_predominant}`}
-                />
+                />}
                 {(() => {
                   const libelle = /^[a-z0-9_]+$/.test(item.label ?? '') || !item.label ? themeLabel(item.label || item.theme) : item.label;
                   return lienTheme ? (
-                    <Link to={lienTheme(item)} style={{ fontWeight: 600, color: '#0F172A', textDecoration: 'underline', textUnderlineOffset: 3 }} aria-label={`Voir les avis du thème ${libelle}`}>
+                    <Link to={lienTheme(item)} style={{ minWidth: 0, fontWeight: 600, color: '#0F172A', overflowWrap: 'anywhere', textDecoration: 'underline', textUnderlineOffset: 3 }} aria-label={`Voir les avis du thème ${libelle}`}>
                       {libelle}
                     </Link>
                   ) : (
-                    <span style={{ fontWeight: 600, color: '#0F172A' }}>{libelle}</span>
+                    <span style={{ minWidth: 0, fontWeight: 600, color: '#0F172A', overflowWrap: 'anywhere' }}>{libelle}</span>
                   );
                 })()}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                 <span style={{ color: '#64748B', fontSize: '0.74rem' }}>{item.count} avis</span>
                 <span style={{ fontWeight: 800, color: '#02302D', minWidth: '40px', textAlign: 'right' }}>
                   {item.pourcentage}%

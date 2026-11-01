@@ -27,6 +27,8 @@ export default function PeriodSelector({
 }: PeriodSelectorProps) {
   return (
     <div
+        role="group"
+        aria-label="Période d’analyse"
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -45,6 +47,7 @@ export default function PeriodSelector({
           <button
             key={opt.jours}
             type="button"
+            aria-pressed={isSelected}
             onClick={() => onChange(opt.jours)}
             style={{
               padding: '6px 12px',

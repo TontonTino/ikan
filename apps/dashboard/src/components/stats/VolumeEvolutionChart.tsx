@@ -10,14 +10,18 @@ import {
   Legend,
 } from 'recharts';
 import type { EvolutionPoint } from '../../types';
+import { libelleDatePoint } from '../../utils/satisfactionSeries';
 
 interface VolumeEvolutionChartProps {
   data: EvolutionPoint[];
   height?: number;
   showTreated?: boolean;
+  receivedLabel?: string;
+  treatedLabel?: string;
+  emptyMessage?: string;
 }
 
-function CustomTooltip({ active, payload, label }: any) {
+function CustomTooltip({ active, payload, label, receivedLabel, treatedLabel }: any) {
   if (active && payload && payload.length) {
     const pt = payload[0].payload as EvolutionPoint;
     return (
@@ -33,15 +37,15 @@ function CustomTooltip({ active, payload, label }: any) {
         }}
       >
         <div style={{ fontWeight: 700, marginBottom: '6px', color: '#E2F2E5' }}>
-          {pt.label || label}
+          {libelleDatePoint(pt.date, pt.label || label)}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
-            <span style={{ color: '#94A3B8' }}>Avis critiques ou négatifs reçus :</span>
+            <span style={{ color: '#94A3B8' }}>{receivedLabel} :</span>
             <strong style={{ color: '#FFFFFF' }}>{pt.feedbacks}</strong>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
-            <span style={{ color: '#75B72A' }}>Pris en charge par l'agence :</span>
+            <span style={{ color: '#75B72A' }}>{treatedLabel} :</span>
             <strong style={{ color: '#75B72A' }}>{pt.traites}</strong>
           </div>
         </div>
@@ -55,6 +59,9 @@ export default function VolumeEvolutionChart({
   data,
   height = 260,
   showTreated = true,
+  receivedLabel = 'Avis critiques ou négatifs reçus',
+  treatedLabel = "Pris en charge par l'agence",
+  emptyMessage = 'Aucun avis critique ou négatif enregistré pour cette période.',
 }: VolumeEvolutionChartProps) {
   if (!data || data.length === 0) {
     return (
@@ -65,14 +72,14 @@ export default function VolumeEvolutionChart({
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#94A3B8',
+          color: '#5B6B7F',
           fontSize: '0.84rem',
           background: '#FAFCFA',
           borderRadius: '16px',
           border: '1px dashed #D6E8D9',
         }}
       >
-        Aucun avis critique ou négatif enregistré pour cette période.
+        {emptyMessage}
       </div>
     );
   }
@@ -84,21 +91,22 @@ export default function VolumeEvolutionChart({
           <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
           <XAxis
             dataKey="label"
-            stroke="#94A3B8"
+            stroke="#5B6B7F"
             fontSize={11}
             tickLine={false}
             axisLine={{ stroke: '#E2E8F0' }}
           />
           <YAxis
-            stroke="#94A3B8"
+            stroke="#5B6B7F"
             fontSize={11}
             tickLine={false}
             axisLine={false}
             allowDecimals={false}
           />
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={<CustomTooltip receivedLabel={receivedLabel} treatedLabel={treatedLabel} />} />
+          {showTreated && <Legend wrapperStyle={{ fontSize: 12, color: '#475569', paddingTop: 8 }} />}
           <Bar
-            name="Critiques / Négatifs reçus"
+            name={receivedLabel}
             dataKey="feedbacks"
             fill="#3C7730"
             radius={[6, 6, 0, 0]}
@@ -106,7 +114,7 @@ export default function VolumeEvolutionChart({
           />
           {showTreated && (
             <Bar
-              name="Pris en charge par l'agence"
+              name={treatedLabel}
               dataKey="traites"
               fill="#02302D"
               radius={[6, 6, 0, 0]}

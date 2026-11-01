@@ -3,46 +3,37 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { statisticsApi, agencesApi } from '../../services/api';
 import type { StatsCXResponse, Agence } from '../../types';
 import TabsNavigation from '../../components/ui/TabsNavigation';
-import PeriodSelector from '../../components/stats/PeriodSelector';
+import PageTitle from '../../components/ui/PageTitle';
+import PeriodSelector, { PERIOD_OPTIONS } from '../../components/stats/PeriodSelector';
 import AgenceFilterSelect from '../../components/stats/AgenceFilterSelect';
-import SatisfactionEvolutionChart from '../../components/stats/SatisfactionEvolutionChart';
-import VolumeEvolutionChart from '../../components/stats/VolumeEvolutionChart';
-import SentimentDonutChart from '../../components/stats/SentimentDonutChart';
+import SatisfactionVolumeChart from '../../components/stats/SatisfactionVolumeChart';
 import ThemesBarList from '../../components/stats/ThemesBarList';
 import AgencesRankingTable from '../../components/stats/AgencesRankingTable';
 import { LIBELLE_SCORE_FIABILISE } from '../../utils/scoreFiabilise';
-import { DEFINITION_NEGATIF, PartNegatifsTexte } from '../../utils/partNegatifs';
 import { lienAvisReseau } from '../../utils/liensAgence';
-import AlertesSyntheseCard from '../../components/stats/AlertesSyntheseCard';
-import AiInsightsSummary from '../../components/stats/AiInsightsSummary';
 import type { AgenceCarte } from '../../components/map/AgencesMap';
 import { statutSeuil, satisfactionTexte, STATUT_SEUIL_LABEL } from '../cx/siege/siegeData';
 
 // Carte des agences (déplacée depuis le Dashboard CX) : chargée à la demande, Leaflet est lourd.
 const AgencesMap = lazy(() => import('../../components/map/AgencesMap'));
 
-type StatsTab = 'satisfaction' | 'feedbacks' | 'sentiments' | 'thematiques' | 'agences' | 'tendances';
-const STATS_TABS: StatsTab[] = ['satisfaction', 'feedbacks', 'sentiments', 'thematiques', 'agences', 'tendances'];
+type StatsTab = 'satisfaction' | 'agences';
+const STATS_TABS: StatsTab[] = ['satisfaction', 'agences'];
+const STATS_CX_PERIOD_OPTIONS = PERIOD_OPTIONS.map((option) =>
+  option.jours === 1 ? { ...option, label: '24 dernières heures' } : option,
+);
 import {
   StatsLoadingState,
   StatsErrorState,
-  StatsEmptyState,
   StatsSectionCard,
 } from '../../components/stats/StatsStates';
-import {
-  SmileIcon,
-  MessageSquareIcon,
-  ThumbsUpIcon,
-  AlertTriangleIcon,
-  BarChartIcon,
-  TagIcon,
-  StoreIcon,
-} from '../../components/common/Icons';
+import { SmileIcon, StoreIcon } from '../../components/common/Icons';
 import { userFacingError } from '../../utils/userFacingError';
+import './statsCx.css';
 
 export default function StatsCXView() {
   // Onglet piloté par l'URL (?tab=agences…) : le Dashboard CX peut pointer directement
-  // sur Performance > Agences ou > Thématiques.
+  // sur Performance > Agences.
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab') as StatsTab | null;
@@ -55,6 +46,7 @@ export default function StatsCXView() {
   const [data, setData] = useState<StatsCXResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAllThemes, setShowAllThemes] = useState<boolean>(false);
 
   // Charger la liste des agences pour le filtre
   useEffect(() => {
@@ -90,8 +82,6 @@ export default function StatsCXView() {
     fetchData();
   }, [fetchData]);
 
-  const kpis = data?.kpis || {};
-
   // Carte : coordonnées et seuil configuré viennent de /agences/, satisfaction et volume du classement.
   const agencesCarte = useMemo(() => {
     const meta = new Map(agencesList.map((a) => [a.id, a]));
@@ -113,45 +103,43 @@ export default function StatsCXView() {
 
   const tabsConfig = [
     { id: 'satisfaction', label: 'Satisfaction', icon: <SmileIcon size={16} /> },
-    { id: 'feedbacks', label: 'Avis clients', icon: <MessageSquareIcon size={16} /> },
-    { id: 'sentiments', label: 'Ton des avis', icon: <ThumbsUpIcon size={16} /> },
-    { id: 'thematiques', label: 'Thèmes', icon: <TagIcon size={16} />, badge: data?.themes.length },
     { id: 'agences', label: 'Agences', icon: <StoreIcon size={16} />, badge: data?.agences_ranking.length },
-    { id: 'tendances', label: 'Ce que suggère l’analyse' },
   ];
 
   return (
     <div
-      style={{
-        padding: '0 36px 48px',
-        width: '100%',
-        maxWidth: '100%',
-        minWidth: 0,
-        boxSizing: 'border-box',
-      }}
+      className="stats-cx"
+      style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)', width: '100%', maxWidth: '100%', minWidth: 0 }}
     >
-      {/* ── Filtres Globaux (agence + période) ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
-        {/* Sélecteur d'Agence */}
-        <AgenceFilterSelect
-          agences={agencesList}
-          selectedId={selectedAgenceId}
-          onChange={setSelectedAgenceId}
-        />
-
-        {/* Sélecteur de Période */}
-        <PeriodSelector value={jours} onChange={setJours} />
-      </div>
-
-      {/* ── Navigation par 6 Onglets Spécialisés ── */}
-      <TabsNavigation
-        tabs={tabsConfig}
-        activeTab={activeTab}
-        onChange={(id) => setActiveTab(id as StatsTab)}
+      <PageTitle
+        title="Statistiques et tendances"
+        description="Analysez les performances, les avis et les thèmes du réseau. Pour suivre et traiter un problème signalé, ouvrez Problèmes à traiter."
+        actions={
+          <>
+            <AgenceFilterSelect agences={agencesList} selectedId={selectedAgenceId} onChange={setSelectedAgenceId} />
+            <PeriodSelector value={jours} onChange={setJours} options={STATS_CX_PERIOD_OPTIONS} />
+          </>
+        }
       />
+
+      {/* Navigation par vues analytiques */}
+      <div className="stats-cx__tabs" role="group" aria-label="Vues des statistiques">
+        <TabsNavigation
+          tabs={tabsConfig}
+          activeTab={activeTab}
+          onChange={(id) => setActiveTab(id as StatsTab)}
+        />
+      </div>
+      <label className="stats-cx__mobile-view">
+        <span>Vue</span>
+        <select aria-label="Vue des statistiques" value={activeTab} onChange={(event) => setActiveTab(event.target.value as StatsTab)}>
+          {tabsConfig.map((tab) => <option key={tab.id} value={tab.id}>{tab.label}</option>)}
+        </select>
+      </label>
 
       {/* ── Gestion des États (Loading / Error) ── */}
       {loading && !data && <StatsLoadingState />}
+      {loading && data && <div className="stats-cx__refresh" role="status" aria-live="polite">Mise à jour des statistiques…</div>}
       {error && !loading && <StatsErrorState message={error} onRetry={fetchData} />}
 
       {/* ── Contenu Organisé par Onglets ── */}
@@ -161,129 +149,50 @@ export default function StatsCXView() {
           {/* ══════════════════════════════════════════════════════
               1. SATISFACTION (Analyse Approfondie du CSAT)
           ══════════════════════════════════════════════════════ */}
-          {activeTab === 'satisfaction' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <StatsSectionCard
-                title="Évolution de la satisfaction"
-                subtitle="Part des avis notés 4 ou 5 sur 5, période par période"
-              >
-                <SatisfactionEvolutionChart data={data.evolution_satisfaction} height={280} />
-              </StatsSectionCard>
-            </div>
-          )}
-
-          {/* ══════════════════════════════════════════════════════
-              2. FEEDBACKS (Volumes, Flux & Traitement)
-          ══════════════════════════════════════════════════════ */}
-          {activeTab === 'feedbacks' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <StatsSectionCard
-                title="Part d’avis négatifs"
-                subtitle={data.agence_filtree_nom ? `Agence ${data.agence_filtree_nom}, sur la période choisie` : 'Réseau, sur la période choisie'}
-              >
-                <div data-testid="part-negatifs-reseau" style={{ fontSize: '1.1rem' }}>
-                  <PartNegatifsTexte pn={data.part_negatifs} />
-                </div>
-                <p style={{ margin: '10px 0 0', fontSize: '0.76rem', color: '#64748B' }}>{DEFINITION_NEGATIF}</p>
-              </StatsSectionCard>
-              <StatsSectionCard
-                title="Avis critiques ou négatifs : reçus et pris en charge"
-                subtitle="Avis reçus comparés aux avis pris en charge par les agences"
-              >
-                <VolumeEvolutionChart data={data.evolution_volume} height={280} showTreated={true} />
-              </StatsSectionCard>
-            </div>
-          )}
-
-          {/* ══════════════════════════════════════════════════════
-              3. SENTIMENTS (État Émotionnel & Polarités)
-          ══════════════════════════════════════════════════════ */}
-          {activeTab === 'sentiments' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
-                <StatsSectionCard
-                  title="Ton des avis"
-                  subtitle="Ton détecté automatiquement à partir du commentaire (ou de la note si l’avis n’a pas de commentaire)"
-                >
-                  <SentimentDonutChart data={data.sentiments} height={260} />
+          {activeTab === 'satisfaction' && (() => {
+            return (
+              <div className="stats-cx__content">
+                <StatsSectionCard compact title="Évolution de la satisfaction et du traitement" subtitle="La satisfaction concerne tous les avis notés; les volumes ne concernent que les avis négatifs ou critiques. Une interruption indique une période sans avis.">
+                  <SatisfactionVolumeChart satisfaction={data.evolution_satisfaction} volume={data.evolution_volume} height={440} />
                 </StatsSectionCard>
-
-                <div
-                  style={{
-                    background: '#FFFFFF',
-                    borderRadius: '24px',
-                    padding: '24px 28px',
-                    border: '1px solid #E8ECE6',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                  }}
+                <StatsSectionCard
+                  compact
+                  title="Thèmes les plus cités"
+                  subtitle="Avis analysés pour l’agence et la période sélectionnées. La part porte sur les occurrences de thèmes attribuées; les avis sans thème en sont exclus."
+                  action={data.themes.length > 5 && (
+                    <button
+                      type="button"
+                      className="stats-cx__text-action"
+                      aria-expanded={showAllThemes}
+                      aria-controls="stats-cx-theme-list"
+                      onClick={() => setShowAllThemes((visible) => !visible)}
+                    >
+                      {showAllThemes ? 'Réduire la liste' : 'Voir tous les thèmes'}
+                    </button>
+                  )}
                 >
-                  <div>
-                    <h3 style={{ margin: '0 0 6px', fontSize: '1.05rem', fontWeight: 800, color: '#02302D' }}>
-                      Répartition des notes
-                    </h3>
-                    <p style={{ margin: '0 0 18px', fontSize: '0.78rem', color: '#64748B' }}>
-                      Avis classés selon la note donnée par le client
-                    </p>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: '#EBF6ED', borderRadius: '12px' }}>
-                        <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>Notés 4 ou 5 sur 5</span>
-                        <strong style={{ fontSize: '0.92rem', color: '#3C7730' }}>
-                          {kpis.feedbacks_positifs?.valeur ?? 0} avis
-                        </strong>
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: '#FEF3C7', borderRadius: '12px' }}>
-                        <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>Notés 3 sur 5</span>
-                        <strong style={{ fontSize: '0.92rem', color: '#D97706' }}>
-                          {/* Même base que les deux autres lignes (la note), pas le ton détecté. */}
-                          {Math.max(0, (kpis.total_feedbacks?.valeur_num ?? 0) - (kpis.feedbacks_positifs?.valeur_num ?? 0) - (kpis.feedbacks_notes_faibles?.valeur_num ?? 0))} avis
-                        </strong>
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', background: '#FEE2E2', borderRadius: '12px' }}>
-                        <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>Notés 1 ou 2 sur 5</span>
-                        <strong style={{ fontSize: '0.92rem', color: '#DC2626' }}>
-                          {kpis.feedbacks_notes_faibles?.valeur ?? 0} avis
-                        </strong>
-                      </div>
-                    </div>
+                  <div id="stats-cx-theme-list">
+                    <ThemesBarList
+                      themes={data.themes}
+                      maxItems={showAllThemes ? data.themes.length : 5}
+                      showSentiment={false}
+                      lienTheme={(t) => lienAvisReseau({ theme: t.theme, jours, agenceId: selectedAgenceId })}
+                    />
                   </div>
-                </div>
+                  <p role="status" style={{ margin: '14px 0 0', fontSize: '0.76rem', color: '#64748B' }}>
+                    {`Pourcentages calculés sur ${data.themes_total_avis ?? 0} occurrences de thèmes classifiées sur la période (et non sur l’ensemble des avis). Cliquez sur un thème pour voir les avis correspondants.`}
+                  </p>
+                </StatsSectionCard>
               </div>
-            </div>
-          )}
-
+            );
+          })()}
           {/* ══════════════════════════════════════════════════════
-              4. THÉMATIQUES IA (15 Thèmes & NLP)
-          ══════════════════════════════════════════════════════ */}
-          {activeTab === 'thematiques' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <StatsSectionCard
-                title="Thèmes les plus cités"
-                subtitle="Selon la catégorie choisie par le client dans le formulaire"
-              >
-                <ThemesBarList
-                  themes={data.themes}
-                  maxItems={20}
-                  lienTheme={(t) => lienAvisReseau({ theme: t.theme, jours, agenceId: selectedAgenceId })}
-                />
-                <p role="status" style={{ margin: '14px 0 0', fontSize: '0.76rem', color: '#64748B' }}>
-                  {`Basé sur ${data.themes_total_avis ?? 0} avis classés par thème sur la période (20 thèmes au plus). Cliquez sur un thème pour voir les avis correspondants. `}
-                  {DEFINITION_NEGATIF}
-                </p>
-              </StatsSectionCard>
-            </div>
-          )}
-
-          {/* ══════════════════════════════════════════════════════
-              5. AGENCES (Classement & Benchmark Réseau)
+              2. AGENCES (Classement & Benchmark Réseau)
           ══════════════════════════════════════════════════════ */}
           {activeTab === 'agences' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <StatsSectionCard
+                compact
                 title="Classement des agences"
                 subtitle={`Comparaison par ${LIBELLE_SCORE_FIABILISE.toLowerCase()}, satisfaction, avis pris en charge et avis critiques`}
               >
@@ -295,6 +204,7 @@ export default function StatsCXView() {
               </StatsSectionCard>
 
               <StatsSectionCard
+                compact
                 title="Carte du réseau"
                 subtitle="Statut de chaque agence sur la période, comparé à son seuil d'alerte configuré."
               >
@@ -322,33 +232,6 @@ export default function StatsCXView() {
                   </ul>
                 </StatsSectionCard>
               )}
-            </div>
-          )}
-
-          {/* ══════════════════════════════════════════════════════
-              6. TENDANCES (Évolutions, Anomalies & Insights IA)
-          ══════════════════════════════════════════════════════ */}
-          {activeTab === 'tendances' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
-                  gap: '20px',
-                }}
-              >
-                {/* Alertes Majeures */}
-                <AlertesSyntheseCard
-                  alertes={data.alertes_synthese}
-                  onSelectAgence={(id) => {
-                    setSelectedAgenceId(id);
-                    setActiveTab('agences');
-                  }}
-                />
-
-                {/* Synthèse IA & Recommandations */}
-                <AiInsightsSummary insights={data.insights_ia} />
-              </div>
             </div>
           )}
 
