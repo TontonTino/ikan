@@ -193,7 +193,6 @@ export default function PilotageAlertesActionsTab(props: Props) {
       <Card
         title="Alertes actives"
         className="alerte-carte"
-        tone={prete && incluses && filtrees.seuil.length + filtrees.avis.filter((a) => tonAvis(a.note) === 'critical').length > 0 ? 'critical' : 'default'}
         aria-busy={chargement || undefined}
       >
         {actualisationEchouee && (

@@ -343,3 +343,28 @@ describe('page /alertes — ligne d’alerte : ordre de lecture, une pastille, n
     for (let i = 1; i < ordre.length; i++) expect(apres(l, ordre[i - 1], ordre[i]), `${ordre[i - 1]} avant ${ordre[i]}`).toBe(true);
   });
 });
+
+describe('page /alertes — rouge : le badge de niveau est le seul signal', () => {
+  it('ni bordure rose sur la carte, ni liseré de couleur sur les lignes, même avec des alertes critiques', () => {
+    const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ seuil: [{ ...seuil(), gravite: 'critique' }], avis: [avis(1, 1), avis(2, 2)] }) });
+    const alertes = html.split('Recommandations automatiques')[0];
+    expect(alertes).not.toContain('ui-card--critical');
+    expect(alertes).not.toContain('agence-prio__item--critical');
+    expect(alertes).not.toContain('agence-prio__item--warning');
+    expect(alertes).not.toMatch(/border[^"]*critical/);
+  });
+
+  it('le rouge n’apparaît que dans les badges de niveau (une pastille « critique » par ligne critique)', () => {
+    const html = rendu({ alertes: etatAlertes({ seuil: [{ ...seuil(), gravite: 'critique' }], avis: [avis(1, 1), avis(2, 2)] }) });
+    const alertes = html.split('Recommandations automatiques')[0];
+    expect((alertes.match(/critical/g) || []).length).toBe((alertes.match(/ui-badge--critical/g) || []).length);
+    expect((alertes.match(/ui-badge--critical/g) || []).length).toBe(3);
+  });
+
+  it('niveaux mélangés : la carte reste neutre, chaque niveau garde son badge', () => {
+    const html = rendu({ alertes: etatAlertes({ seuil: [{ ...seuil(), gravite: 'important' }], avis: [avis(1, 3), avis(2, 1)] }) });
+    expect(html).not.toContain('ui-card--critical');
+    expect(html).toContain('ui-badge--warning');
+    expect(html).toContain('ui-badge--critical');
+  });
+});
