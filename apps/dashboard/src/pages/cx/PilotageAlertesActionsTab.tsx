@@ -29,6 +29,7 @@ import {
 } from './alertesVue';
 import type { AlertesData, RecosData } from './AlertesView';
 import type { EtatSource } from './alertesVue';
+import { formaterPourcentage } from '../../utils/formatNombre';
 
 interface Props {
   isAgencyManager: boolean;
@@ -82,7 +83,7 @@ export function LigneSeuil({ alerte, isAgencyManager, cible }: { alerte: Alerte;
           <strong className="agence-prio__title">{alerte.agence_nom}</strong>
         </div>
         <p className="agence-prio__detail">
-          <strong>{alerte.taux_actuel} %</strong> sur les 7 derniers jours, pour un seuil de {alerte.seuil} %
+          <strong>{formaterPourcentage(alerte.taux_actuel)}</strong> sur les 7 derniers jours, pour un seuil de {formaterPourcentage(alerte.seuil)}
           {alerte.ecart_seuil != null && alerte.ecart_seuil > 0 ? ` (${alerte.ecart_seuil.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} points sous le seuil)` : ''}
         </p>
         <p className="siege-note">

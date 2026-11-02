@@ -27,7 +27,6 @@ export interface Synthese {
   question: string;
 }
 
-const NBSP = ' ';
 export const periodeCourte = (jours: number) => (jours === 365 ? '12 derniers mois' : `${jours} derniers jours`);
 const nombre = (n: number) => n.toLocaleString('fr-FR');
 const avisTexte = (n: number) => `${nombre(n)} avis`;
@@ -55,7 +54,7 @@ export function construireSynthese(e: EntreesSynthese): Synthese {
   }
 
   const phrases: string[] = [];
-  const sat = e.satisfaction != null && Number.isFinite(e.satisfaction) ? satisfactionTexte(e.satisfaction, nb).replace(' %', `${NBSP}%`) : null;
+  const sat = e.satisfaction != null && Number.isFinite(e.satisfaction) ? satisfactionTexte(e.satisfaction, nb) : null;   // formateur commun : « 55,6 % » (espace insécable)
   phrases.push(sat ? `Sur ${sur}, ${avisTexte(nb)} et ${sat} de satisfaction.` : `Sur ${sur}, ${avisTexte(nb)}.`);
 
   if (e.agencesSousSeuil) {

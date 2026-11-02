@@ -10,6 +10,7 @@
  *  - aucun delta n'est affiché si la période précédente n'a aucun avis
  *    (l'API renvoie alors une évolution null et un taux null / status "no_data").
  */
+import { ESPACE_INSECABLE, formaterNombre, formaterPourcentage } from '../../../utils/formatNombre';
 import type { AgenceRankDetail, AgenceSousSeuil, Alerte, EvolutionPoint, Issue, StatKPI } from '../../../types';
 
 // ════════════════════════════════════════════════════════════════════
@@ -82,8 +83,7 @@ export interface KpiDelta {
   isPositive: boolean;
 }
 
-const fmt = (n: number, digits = 1) =>
-  n.toLocaleString('fr-FR', { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+const fmt = (n: number, digits = 1) => formaterNombre(n, digits);
 const signed = (n: number, suffix: string, digits = 1) =>
   `${n > 0 ? '+' : n < 0 ? '−' : ''}${fmt(Math.abs(n), digits)}${suffix}`;
 
@@ -111,7 +111,7 @@ export function volumeDelta(volume: StatKPI | undefined): KpiDelta | null {
   if (!prev || volume.valeur_num == null) return null;
   const pct = Math.round(((volume.valeur_num - prev) / prev) * 1000) / 10;
   return {
-    text: signed(pct, ' %'),
+    text: signed(pct, `${ESPACE_INSECABLE}%`),
     direction: pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat',
     // Plus de feedbacks = plus de voix clients : neutre-favorable, jamais rouge.
     isPositive: true,
@@ -227,7 +227,7 @@ export function statutSeuil(satisfaction: number | null, avis: number, seuil: nu
 
 /** Satisfaction affichable : « Pas d'avis » plutôt que « 0 % ». */
 export const satisfactionTexte = (satisfaction: number | null, avis: number) =>
-  avis === 0 || satisfaction == null ? "Pas d'avis" : `${fmt(satisfaction)} %`;
+  avis === 0 || satisfaction == null ? "Pas d'avis" : formaterPourcentage(satisfaction);
 
 /**
  * Tendance d'une agence en points, depuis AgenceRankDetail.tendance_val (« -12.3 pts »).
@@ -358,7 +358,7 @@ export function buildSurveillance({ ranking, alertesSeuil, issuesOuvertes, jours
   for (const a of alertesSeuil) {
     ajouter(a.agence_id, a.agence_nom, {
       type: 'sous_seuil',
-      texte: `${fmt(a.taux_actuel)} % pour un seuil de ${fmt(a.seuil)} %`,
+      texte: `${formaterPourcentage(a.taux_actuel)} pour un seuil de ${formaterPourcentage(a.seuil)}`,
       portee: `${REGLE_ALERTE_SEUIL_API.fenetreJours} derniers jours`,
     });
   }

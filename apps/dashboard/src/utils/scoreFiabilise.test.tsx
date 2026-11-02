@@ -50,7 +50,7 @@ describe('« Score fiabilisé » (CX-03)', () => {
     expect(html).toContain('aria-label="À propos du score fiabilisé"');
     expect(html).toContain('<strong>Score fiabilisé</strong>');
     expect(html).toContain('borne basse de l’intervalle de confiance de Wilson à 95 %');
-    expect(html).toContain('80%'); // valeur du score affichée
+    expect(html).toContain('80 %'); // valeur du score affichée
   });
 
   it('le libellé n’est écrit qu’à un seul endroit du code : plus de variante ni de texte dupliqué', () => {

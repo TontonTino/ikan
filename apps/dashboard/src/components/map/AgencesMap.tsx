@@ -4,6 +4,7 @@ import { pinIcon } from './pinIcon';
 import 'leaflet/dist/leaflet.css';
 import { STATUT_SEUIL_LABEL, satisfactionTexte, type StatutSeuil } from '../../pages/cx/siege/siegeData';
 import { LegendeCarte, ListeAgencesCarte, STATUT_COULEUR, STATUT_EXPLICATION, STATUT_SYMBOLE } from './LegendeCarte';
+import { formaterPourcentage } from '../../utils/formatNombre';
 
 export interface AgenceCarte {
   id: string;
@@ -46,7 +47,7 @@ export default function AgencesMap({ agences, onVoirAgence }: { agences: AgenceC
                   {a.ville && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>{a.ville}</div>}
                   <div style={{ marginTop: 'var(--space-2)', fontSize: 'var(--text-sm)' }}>
                     Satisfaction : <strong>{satisfactionTexte(a.satisfaction, a.avis)}</strong>
-                    {a.seuil != null && a.avis > 0 && <> (seuil {a.seuil} %)</>}
+                    {a.seuil != null && a.avis > 0 && <> (seuil {formaterPourcentage(a.seuil)})</>}
                   </div>
                   <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700 }}>Statut : {STATUT_SEUIL_LABEL[a.statut]}</div>
                   <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>{STATUT_EXPLICATION[a.statut]}</div>

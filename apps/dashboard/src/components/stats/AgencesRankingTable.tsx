@@ -5,6 +5,7 @@ import { tendancePts } from '../../pages/cx/siege/siegeData';
 import Tooltip from '../ui/Tooltip';
 import { DEFINITION_NEGATIF, PartNegatifsTexte } from '../../utils/partNegatifs';
 import { AIDE_SCORE_FIABILISE, LIBELLE_SCORE_FIABILISE } from '../../utils/scoreFiabilise';
+import { formaterPourcentage } from '../../utils/formatNombre';
 
 interface AgencesRankingTableProps {
   agences: AgenceRankDetail[];
@@ -126,7 +127,7 @@ export default function AgencesRankingTable({
                 {/* Score Wilson */}
                 <td style={{ padding: '12px 14px', textAlign: 'center' }}>
                   <span style={{ fontWeight: 700, color: '#0F172A' }}>
-                    {sansAvis ? '—' : `${Math.round(ag.wilson_score * 100)}%`}
+                    {sansAvis ? '—' : formaterPourcentage(Math.round(ag.wilson_score * 100), 0)}
                   </span>
                 </td>
 
@@ -148,7 +149,7 @@ export default function AgencesRankingTable({
                       display: 'inline-block',
                     }}
                   >
-                    {sansAvis ? "Pas d'avis" : `${ag.satisfaction_rate}%`}
+                    {sansAvis ? "Pas d'avis" : formaterPourcentage(ag.satisfaction_rate)}
                   </span>
                 </td>
 
@@ -159,7 +160,7 @@ export default function AgencesRankingTable({
 
                 {/* Taux de traitement */}
                 <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                  <span style={{ fontWeight: 700, color: '#02302D' }}>{sansAvis || ag.taux_traitement === null ? '—' : `${ag.taux_traitement}%`}</span>
+                  <span style={{ fontWeight: 700, color: '#02302D' }}>{sansAvis || ag.taux_traitement === null ? '—' : formaterPourcentage(ag.taux_traitement)}</span>
                   <span style={{ color: '#94A3B8', fontSize: '0.72rem', marginLeft: '4px' }}>
                     ({ag.feedbacks_traites})
                   </span>

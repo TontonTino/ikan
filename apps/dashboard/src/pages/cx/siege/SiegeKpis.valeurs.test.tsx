@@ -28,7 +28,7 @@ describe('vue siège : valeurs des indicateurs (jeu de l’API : 8 avis, CSAT 50
 
   it('libellés, valeurs et nombre d’avis', () => {
     for (const libelle of ['Satisfaction', 'Avis reçus', 'Avis critiques', 'Agences sous leur seuil']) expect(html).toContain(libelle);
-    expect(html).toContain('50 %');
+    expect(html).toContain('50 %');
     expect(html).toMatch(/>8</);
     expect(html).toMatch(/>2</);
     expect(html).toContain('sur 2 agences');
@@ -36,7 +36,7 @@ describe('vue siège : valeurs des indicateurs (jeu de l’API : 8 avis, CSAT 50
 
   it('évolutions : points pour le CSAT, pourcentage pour les avis, compte absolu pour les critiques, base de comparaison dite', () => {
     expect(html).toContain('−25 pts');
-    expect(html).toContain('+100 %');
+    expect(html).toContain('+100 %');
     expect(html).toContain('+1');
     expect(html).toContain('vs 30 derniers jours précédents');
   });
@@ -51,7 +51,7 @@ describe('vue siège : états vides', () => {
   it('aucun avis : « Pas d’avis », 0 avis, aucune évolution ni « 0 % »', () => {
     const html = rendu(stats({ satisfaction: kpi(null, null), total_feedbacks: kpi(0, 0), alertes_critiques: kpi(0, 0) }));
     expect(html).toMatch(/Pas d(&#x27;|')avis/);
-    expect(html).not.toContain('0 %');
+    expect(html).not.toContain('0 %');
     expect(html).not.toContain('ui-kpi__delta');
     expect(html).not.toMatch(/NaN|Infinity|undefined/);
     expect(html).toContain('30 derniers jours');
@@ -70,12 +70,12 @@ describe('vue siège : états vides', () => {
   it('grands nombres au format français (séparateur de milliers) et virgule décimale', () => {
     const html = rendu(stats({ satisfaction: kpi(61.5, 60), total_feedbacks: kpi(1234, 1000), alertes_critiques: kpi(12, 10) }));
     expect(html).toMatch(/1[\s  ]234/);
-    expect(html).toContain('61,5 %');
+    expect(html).toContain('61,5 %');
   });
 
   it('statistiques indisponibles : tiret et message, jamais une valeur inventée', () => {
     const html = rendu({ status: 'error' });
     expect(html).toContain('Statistiques indisponibles');
-    expect(html).not.toContain('0 %');
+    expect(html).not.toContain('0 %');
   });
 });

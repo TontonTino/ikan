@@ -4,6 +4,7 @@ import KpiCard, { type KpiCardProps } from '../ui/KpiCard';
 import { BentoItem } from '../ui/BentoGrid';
 import { AlertTriangleIcon, ClockIcon, MessageSquareIcon, SmileIcon } from '../common/Icons';
 import { TEXTE_SANS_DONNEES_AVANT, presenterEvolution } from '../../utils/evolution';
+import { formaterPourcentage } from '../../utils/formatNombre';
 
 type Props = {
   data: DashboardAgence;
@@ -45,7 +46,7 @@ function comparer(kpi: StatKPI | undefined, data: DashboardAgence, jours: number
  */
 export default function AgencyDecisionKpis({ data, jours }: Props) {
   const sansAvis = data.nombre_feedbacks === 0 || data.taux_satisfaction == null;
-  const priseEnCharge = data.taux_prise_en_charge === null ? 'prise en charge : aucune donnée' : `${data.taux_prise_en_charge} % pris en charge`;
+  const priseEnCharge = data.taux_prise_en_charge === null ? 'prise en charge : aucune donnée' : `${formaterPourcentage(data.taux_prise_en_charge)} pris en charge`;
 
   const sat = comparer(data.comparaison?.satisfaction, data, jours);
   const vol = comparer(data.comparaison?.total_feedbacks, data, jours);
@@ -62,7 +63,7 @@ export default function AgencyDecisionKpis({ data, jours }: Props) {
           icon={<SmileIcon />}
           label="Satisfaction"
           hint="Part des avis notés 4 ou 5 sur 5 sur la période, comparée à la période précédente de même durée (écart en points)."
-          value={sansAvis ? 'Aucune donnée' : `${data.taux_satisfaction} %`}
+          value={sansAvis ? 'Aucune donnée' : formaterPourcentage(data.taux_satisfaction)}
           tone={sansAvis ? 'neutral' : 'positive'}
           highlight={!sansAvis}
           trend={sat.trend && { ...sat.trend, period: avecContexte(sousTitreSat, sat.contexte) }}

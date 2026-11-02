@@ -25,7 +25,7 @@ describe('indicateurs de l’agence : valeurs affichées', () => {
   const html = rendu(A1);
   it('CSAT, nombre d’avis, avis critiques et avis à traiter', () => {
     for (const libelle of ['Satisfaction', 'Avis reçus', 'Avis critiques', 'Avis à traiter']) expect(html).toContain(libelle);
-    expect(html).toContain('50 %');
+    expect(html).toContain('50 %');
     expect(html).toMatch(/>6</);
     expect(html).toMatch(/>2</);
     expect(html).toMatch(/>5</);
@@ -33,7 +33,7 @@ describe('indicateurs de l’agence : valeurs affichées', () => {
   it('contexte : période, nombre d’avis, négatifs, prise en charge', () => {
     expect(html).toContain('sur 6 avis · 30 derniers jours');
     expect(html).toContain('3 négatifs');
-    expect(html).toContain('33.3 % pris en charge');
+    expect(html).toContain('33,3 % pris en charge');
   });
   it('évolution par rapport à la période précédente : points pour le CSAT, % pour le volume, base dite', () => {
     expect(html).toContain('−16,7 pts');
@@ -54,13 +54,13 @@ describe('indicateurs de l’agence : formatage et cas vides', () => {
     expect(html).not.toContain('1 négatifs');
   });
 
-  // DÉFAUT CONNU (présentation, non corrigé par cette PR de tests) : le CSAT et la prise en charge de la vue agence s'écrivent avec un POINT
+  // Défaut corrigé (PR « formats français ») : le CSAT et la prise en charge de la vue agence s'écrivent avec un POINT
   // décimal (« 61.5 % », « 33.3 % pris en charge »), alors que leurs évolutions (« −16,7 pts ») et la vue siège (« 61,5 % ») utilisent la
-  // virgule française. `it.fails` réussit tant que le défaut existe et ÉCHOUERA une fois corrigé : retirer alors `.fails`.
-  it.fails('CSAT et prise en charge avec la virgule décimale française', () => {
+  // virgule française. Ce test (autrefois `it.fails`) est désormais un test ordinaire.
+  it('CSAT et prise en charge avec la virgule décimale française', () => {
     const html = rendu({ ...A1, taux_satisfaction: 61.5, taux_prise_en_charge: 33.3 } as DashboardAgence);
-    expect(html).toContain('61,5 %');
-    expect(html).toContain('33,3 % pris en charge');
+    expect(html).toContain('61,5 %');
+    expect(html).toContain('33,3 % pris en charge');
   });
   it('aucun avis : « Aucune donnée », jamais 0 % ni NaN', () => {
     const html = rendu({ ...A1, nombre_feedbacks: 0, taux_satisfaction: null, nombre_negatifs: 0, nombre_critiques: 0, feedbacks_a_traiter: 0, taux_prise_en_charge: null,
@@ -69,7 +69,7 @@ describe('indicateurs de l’agence : formatage et cas vides', () => {
     expect(html).toContain('aucun avis sur les 30 derniers jours');
     expect(html).toContain('prise en charge : aucune donnée');
     expect(html).not.toMatch(/NaN|Infinity|undefined/);
-    expect(html).not.toContain('0 %');
+    expect(html).not.toContain('0 %');
   });
   it('avis critiques : ton critique seulement s’il y en a', () => {
     expect(rendu(A1)).toContain('ui-kpi--critical');

@@ -43,12 +43,12 @@ describe('part d’avis négatifs et évolution (CX-05)', () => {
     expect(libellePartNegatifs(vide)).toBe('Aucun avis');
     expect(libellePartNegatifs(undefined)).toBe('Aucun avis');
     expect(evolutionPartNegatifs(vide).texte).toBe('');
-    expect(rendu(<PartNegatifsTexte pn={vide} />)).not.toContain('0 %');
+    expect(rendu(<PartNegatifsTexte pn={vide} />)).not.toContain('0 %');
   });
 
   it('rendu : part, nombre d’avis et évolution lisibles sans la couleur', () => {
     const html = rendu(<PartNegatifsTexte pn={pn()} />);
-    expect(html).toContain('25 %');
+    expect(html).toContain('25 %');
     expect(html).toContain('5 sur 20');
     expect(html).toContain('↑');
     expect(html).toContain('en hausse');
@@ -70,7 +70,7 @@ describe('thèmes : clic vers la liste « Avis du réseau »', () => {
 
   it('la part d’avis négatifs et son évolution s’affichent sous le thème', () => {
     const html = rendu(<ThemesBarList themes={[theme('attente', pn())]} />);
-    expect(html).toContain('25 %');
+    expect(html).toContain('25 %');
     expect(html).toContain('en hausse');
   });
 
@@ -113,7 +113,7 @@ describe('classement des agences : part d’avis négatifs', () => {
   it('colonne « Avis négatifs » avec la part et l’évolution ; agence sans avis : tiret', () => {
     const html = rendu(<AgencesRankingTable agences={[agence('Lyon', 20, pn()), agence('Lille', 0)]} />);
     expect(html).toContain('Avis négatifs');
-    expect(html).toContain('25 %');
+    expect(html).toContain('25 %');
     expect(html).toContain('en hausse');
   });
 });

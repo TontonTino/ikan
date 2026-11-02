@@ -10,6 +10,7 @@ import {
 } from 'recharts';
 import type { EvolutionPoint } from '../../types';
 import { insererPeriodesSansAvis, libelleDatePoint, type SatisfactionChartPoint } from '../../utils/satisfactionSeries';
+import { formaterPourcentage } from '../../utils/formatNombre';
 
 interface SatisfactionEvolutionChartProps {
   data: EvolutionPoint[];
@@ -37,7 +38,7 @@ function CustomTooltip({ active, payload, label }: any) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ color: '#75B72A', fontWeight: 800 }}>Satisfaction :</span>
-          <span style={{ fontWeight: 800, fontSize: '0.90rem' }}>{pt.satisfaction}%</span>
+          <span style={{ fontWeight: 800, fontSize: '0.90rem' }}>{formaterPourcentage(pt.satisfaction)}</span>
         </div>
         <div style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '4px' }}>
           {pt.feedbacks} avis ({pt.positifs} positifs, {pt.neutres} neutres, {pt.negatifs} négatifs)
@@ -88,7 +89,7 @@ export default function SatisfactionEvolutionChart({
           <YAxis
             domain={[0, 100]}
             ticks={[0, 25, 50, 75, 100]}
-            unit="%"
+            tickFormatter={(v) => formaterPourcentage(Number(v), 0)}
             stroke="#5B6B7F"
             fontSize={11}
             tickLine={false}

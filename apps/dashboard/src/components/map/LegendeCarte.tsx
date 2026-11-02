@@ -1,6 +1,7 @@
 import React from 'react';
 import { MapPin } from '@phosphor-icons/react';
 import { STATUT_SEUIL_LABEL, satisfactionTexte, type StatutSeuil } from '../../pages/cx/siege/siegeData';
+import { formaterPourcentage } from '../../utils/formatNombre';
 
 /*
  * Légende de la carte du réseau. Les couleurs sont celles du STATUT de chaque agence vis-à-vis de SON seuil (pas d'un seuil unique) ;
@@ -73,7 +74,7 @@ export function ListeAgencesCarte({ agences }: { agences: LigneCarte[] }) {
           <li key={a.id}>
             <strong>{a.nom}</strong>
             {a.ville ? ` (${a.ville})` : ''} — {STATUT_SEUIL_LABEL[a.statut]}
-            {a.statut === 'au_dessus' || a.statut === 'sous' ? ` : ${satisfactionTexte(a.satisfaction, a.avis)}${a.seuil != null ? `, seuil ${a.seuil} %` : ''}` : ''}
+            {a.statut === 'au_dessus' || a.statut === 'sous' ? ` : ${satisfactionTexte(a.satisfaction, a.avis)}${a.seuil != null ? `, seuil ${formaterPourcentage(a.seuil)}` : ''}` : ''}
           </li>
         ))}
       </ul>

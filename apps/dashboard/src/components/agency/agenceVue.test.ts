@@ -119,10 +119,10 @@ describe('évolution de la satisfaction', () => {
   it('alternative textuelle : bornes, minimum et maximum réels', () => {
     const t = resumeAccessibleEvolution([point('2026-10-01', 40), point('2026-10-02', 90), point('2026-10-03', 70)]);
     expect(t).toContain('3 relevés');
-    expect(t).toContain('Premier relevé : 40 %');
-    expect(t).toContain('dernier : 70 %');
-    expect(t).toContain('Plus bas : 40 % (2026-10-01)');
-    expect(t).toContain('plus haut : 90 % (2026-10-02)');
+    expect(t).toContain('Premier relevé : 40 %');
+    expect(t).toContain('dernier : 70 %');
+    expect(t).toContain('Plus bas : 40 % (2026-10-01)');
+    expect(t).toContain('plus haut : 90 % (2026-10-02)');
   });
 
   it('alternative textuelle : aucune donnée', () => {

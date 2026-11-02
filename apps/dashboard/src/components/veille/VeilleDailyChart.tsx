@@ -1,6 +1,7 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { VeilleSyntheseJour } from '../../types';
+import { formaterDateAxe } from '../../utils/formatNombre';
 
 // Visuellement masqué mais accessible aux lecteurs d'écran (même donnée que le graphique).
 const srOnlyStyle: React.CSSProperties = {
@@ -35,7 +36,7 @@ export default function VeilleDailyChart({ data }: { data: VeilleSyntheseJour[] 
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-            <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} />
+            <XAxis dataKey="date" tickFormatter={formaterDateAxe} tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} />
             <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} />
             <Tooltip
               contentStyle={{ background: 'var(--color-primary-dark)', borderRadius: '10px', border: 'none', color: '#FFFFFF', fontSize: '0.78rem' }}

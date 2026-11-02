@@ -15,6 +15,7 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import { AlertTriangleIcon, ClockIcon } from '../../components/common/Icons';
 import { userFacingError } from '../../utils/userFacingError';
+import { formaterPourcentage } from '../../utils/formatNombre';
 
 const SOURCE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   stripe: { label: 'Stripe', color: '#3C7730', bg: '#EAF5EC' },
@@ -282,7 +283,7 @@ function AdminFacturationPageContenu() {
           <div style={{ fontSize: '1.7rem', fontWeight: 800, color: '#02302D', marginTop: '4px' }}>
             {vueEnsemble?.taux_conversion_30j === null || vueEnsemble?.taux_conversion_30j === undefined
               ? '—'
-              : `${Math.round(vueEnsemble.taux_conversion_30j * 100)}%`}
+              : formaterPourcentage(Math.round(vueEnsemble.taux_conversion_30j * 100), 0)}
           </div>
           <div style={{ fontSize: '0.72rem', color: '#3C7730', marginTop: '2px' }}>
             {vueEnsemble?.nb_conversions_30j ?? 0} conversion(s) / {vueEnsemble?.nb_base_calcul_30j ?? 0} organisation(s)

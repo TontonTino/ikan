@@ -23,6 +23,7 @@ import {
   TagIcon,
 } from '../../components/common/Icons';
 import { userFacingError } from '../../utils/userFacingError';
+import { formaterValeurApi } from '../../utils/formatNombre';
 
 export default function StatsAgencyView() {
   const [activeTab, setActiveTab] = useState<'satisfaction' | 'sentiments_themes' | 'alertes'>('satisfaction');
@@ -109,7 +110,7 @@ export default function StatsAgencyView() {
             icon={<SmileIcon size={20} />}
             label="Satisfaction"
             hint="Part des avis notés 4 ou 5 sur 5 sur la période."
-            value={kpis.satisfaction?.valeur ?? "Pas d'avis"}
+            value={formaterValeurApi(kpis.satisfaction?.valeur, kpis.satisfaction?.valeur_num) ?? "Pas d'avis"}
             trend={
               kpis.satisfaction?.evolution
                 ? {
@@ -146,7 +147,7 @@ export default function StatsAgencyView() {
             icon={<TrendingUpIcon size={20} />}
             label="Avis pris en charge"
             hint="Part des avis de la période dont le statut n’est plus Nouveau (pris en charge, action en cours ou résolu). L’analyse automatique par l’IA n’est pas une prise en charge ; cet indicateur ne mesure pas la résolution."
-            value={kpis.taux_traitement?.valeur ?? "Pas d'avis"}
+            value={formaterValeurApi(kpis.taux_traitement?.valeur, kpis.taux_traitement?.valeur_num) ?? "Pas d'avis"}
             trend={
               kpis.taux_traitement?.evolution
                 ? {
