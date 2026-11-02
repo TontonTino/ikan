@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import AdminAgencesContent from './AdminAgencesContent';
 import AdminUsersContent from './AdminUsersContent';
+import PageTitle from '../../components/ui/PageTitle';
 
 /**
  * Page "Gestion des agences".
@@ -19,6 +20,9 @@ export default function GestionAgencesPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+      {currentUser?.role === 'cx_manager' && (
+        <PageTitle title="Gestion des agences" description="Agences, QR codes et responsables d’agence de votre réseau." />
+      )}
       {currentUser?.role === 'cx_manager' ? <AdminAgencesContent /> : <AdminUsersContent />}
     </div>
   );

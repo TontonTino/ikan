@@ -29,8 +29,12 @@ export function formaterValeurApi<T extends string | number | null | undefined>(
   return valeur;
 }
 
-/** Date d'axe de graphique : « 2026-10-06 » (ou « 2026-10-06T… ») devient « 06/10 ». Toute autre valeur est rendue telle quelle. */
-export function formaterDateAxe(date: string | number): string {
+/**
+ * Date de graphique : « 2026-10-06 » (ou « 2026-10-06T… ») devient « 06/10 » (axe) ou, avec `avecAnnee`, « 06/10/2026 » (infobulle).
+ * Toute autre valeur est rendue telle quelle.
+ */
+export function formaterDateAxe(date: string | number, avecAnnee = false): string {
   const lu = /^(\d{4})-(\d{2})-(\d{2})(?:$|[T ])/.exec(String(date));
-  return lu ? `${lu[3]}/${lu[2]}` : String(date);
+  if (!lu) return String(date);
+  return avecAnnee ? `${lu[3]}/${lu[2]}/${lu[1]}` : `${lu[3]}/${lu[2]}`;
 }

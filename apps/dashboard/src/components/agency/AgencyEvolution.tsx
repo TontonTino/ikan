@@ -71,17 +71,17 @@ export default function AgencyEvolution({ points, periode }: { points: TendanceS
                 </linearGradient>
               </defs>
               <CartesianGrid {...chartGridProps} />
-              <XAxis dataKey="date" tickFormatter={formaterDateAxe} {...chartAxisProps} />
+              <XAxis dataKey="date" tickFormatter={(v) => formaterDateAxe(v)} {...chartAxisProps} />
               <YAxis domain={[0, 100]} tickFormatter={(v) => formaterPourcentage(v, 0)} width={48} {...chartAxisProps} />
               <Tooltip
                 content={
                   <ChartTooltip
-                    labelFormatter={(l) => String(l)}
+                    labelFormatter={(l) => formaterDateAxe(l, true)}
                     formatter={(v) => formaterPourcentage(Number(v))}
                   />
                 }
               />
-              <Area type="monotone" dataKey="taux" name="Satisfaction" stroke={DATAVIZ.positive} strokeWidth={2.5} fill="url(#gradAgenceEvolution)" dot={<Point />} activeDot={{ r: 5 }} />
+              <Area type="linear" dataKey="taux" name="Satisfaction" stroke={DATAVIZ.positive} strokeWidth={2.5} fill="url(#gradAgenceEvolution)" dot={<Point />} activeDot={{ r: 5 }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { agencesApi } from '../../services/api';
 import type { AgenceContexteItem, User } from '../../types';
 import { ChevronDownIcon, ChevronRightIcon, SearchIcon } from '../common/Icons';
+import { initialesOrganisation } from '../../utils/initialesOrganisation';
 
 interface SidebarWorkspaceCardProps {
   user: User | null;
@@ -173,7 +174,7 @@ export default function SidebarWorkspaceCard({ user, collapsed = false }: Sideba
   }
 
   const palette = getPalette(orgName);
-  const initial = orgName.trim().charAt(0).toUpperCase() || 'O';
+  const initiales = initialesOrganisation(orgName);
 
   if (isAgencyManager || isCxManager) {
     const tooltipId = 'agency-context-tooltip';
@@ -183,7 +184,7 @@ export default function SidebarWorkspaceCard({ user, collapsed = false }: Sideba
         {orgLogo ? (
           <img src={orgLogo} alt="" onError={() => setImgError(true)} />
         ) : (
-          <span aria-hidden="true">{initial}</span>
+          <span role="img" aria-label={orgName}>{initiales}</span>
         )}
       </span>
     );
@@ -420,7 +421,7 @@ export default function SidebarWorkspaceCard({ user, collapsed = false }: Sideba
             style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
           />
         ) : (
-          initial
+          initiales
         )}
       </div>
 

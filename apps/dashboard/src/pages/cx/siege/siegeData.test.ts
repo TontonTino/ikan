@@ -20,12 +20,17 @@ describe('CSAT du siège : texte affiché', () => {
 
 describe('évolution du CSAT en points', () => {
   it('baisse défavorable : signe moins typographique et virgule décimale', () => {
-    expect(satisfactionDelta(kpi(50, 75), kpi(8, 4))).toEqual({ text: '−25 pts', direction: 'down', isPositive: false });
-    expect(satisfactionDelta(kpi(50, 66.7), kpi(2, 3))).toEqual({ text: '−16,7 pts', direction: 'down', isPositive: false });
+    expect(satisfactionDelta(kpi(50, 75), kpi(8, 6))).toEqual({ text: '−25 pts', direction: 'down', isPositive: false });
+    expect(satisfactionDelta(kpi(50, 66.7), kpi(5, 7))).toEqual({ text: '−16,7 pts', direction: 'down', isPositive: false });
   });
   it('hausse favorable et stabilité', () => {
-    expect(satisfactionDelta(kpi(58.3, 0), kpi(12, 1))).toEqual({ text: '+58,3 pts', direction: 'up', isPositive: true });
-    expect(satisfactionDelta(kpi(50, 50), kpi(2, 2))).toEqual({ text: '0 pts', direction: 'flat', isPositive: true });
+    expect(satisfactionDelta(kpi(58.3, 0), kpi(12, 5))).toEqual({ text: '+58,3 pts', direction: 'up', isPositive: true });
+    expect(satisfactionDelta(kpi(50, 50), kpi(5, 5))).toEqual({ text: '0 pts', direction: 'flat', isPositive: true });
+  });
+  it('jamais d’écart en points sous 5 avis sur l’une des deux périodes (seuil « faible volume » existant)', () => {
+    expect(satisfactionDelta(kpi(50, 75), kpi(8, 4))).toBeNull();            // période précédente à 4 avis
+    expect(satisfactionDelta(kpi(50, 75), kpi(4, 8))).toBeNull();            // période courante à 4 avis
+    expect(satisfactionDelta(kpi(50, 75), kpi(5, 5))?.text).toBe('−25 pts');  // exactement 5 : comparé
   });
   it('aucune comparaison sans avis sur l’une des deux périodes (jamais un faux zéro)', () => {
     expect(satisfactionDelta(kpi(50, 75), kpi(8, 0))).toBeNull();            // période précédente sans avis
@@ -37,10 +42,17 @@ describe('évolution du CSAT en points', () => {
 });
 
 describe('évolution du nombre d’avis en pourcentage', () => {
-  it('+100 % (4 → 8) et −33,3 % (3 → 2) ; la variation de volume n’est jamais rouge', () => {
-    expect(volumeDelta(kpi(8, 4))).toEqual({ text: '+100 %', direction: 'up', isPositive: true });
-    expect(volumeDelta(kpi(2, 3))).toEqual({ text: '−33,3 %', direction: 'down', isPositive: true });
-    expect(volumeDelta(kpi(5, 5))).toEqual({ text: '0 %', direction: 'flat', isPositive: true });
+  it('+100 % (6 → 12) et −33,3 % (6 → 4) ; la variation de volume n’est jamais rouge', () => {
+    expect(volumeDelta(kpi(12, 6))).toEqual({ text: `+100 %`, direction: 'up', isPositive: true });
+    expect(volumeDelta(kpi(4, 6))).toEqual({ text: `−33,3 %`, direction: 'down', isPositive: true });
+    expect(volumeDelta(kpi(5, 5))).toEqual({ text: `0 %`, direction: 'flat', isPositive: true });
+  });
+  it('période précédente sous 5 avis : jamais de pourcentage, écart absolu en avis', () => {
+    expect(volumeDelta(kpi(44, 1))).toEqual({ text: '+43 avis', direction: 'up', isPositive: true });
+    expect(volumeDelta(kpi(8, 4))).toEqual({ text: '+4 avis', direction: 'up', isPositive: true });
+    expect(volumeDelta(kpi(2, 3))).toEqual({ text: '−1 avis', direction: 'down', isPositive: true });
+    expect(volumeDelta(kpi(3, 3))).toEqual({ text: '0 avis', direction: 'flat', isPositive: true });
+    expect(volumeDelta(kpi(44, 1))?.text).not.toContain('%');
   });
   it('grands nombres au format français et base nulle : pas de comparaison', () => {
     expect(volumeDelta(kpi(1300, 100))?.text).toMatch(/^\+1[\s  ]200 %$/);
