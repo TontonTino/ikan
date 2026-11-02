@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import type { EvolutionPoint } from '../../types';
 import { combinerSatisfactionEtVolume, libelleDatePoint } from '../../utils/satisfactionSeries';
+import { formaterPourcentage } from '../../utils/formatNombre';
 
 interface Props {
   satisfaction: EvolutionPoint[];
@@ -19,7 +20,7 @@ function PointTooltip({ active, payload, label }: any) {
   return (
     <div className="stats-cx__tooltip" role="status">
       <strong>{libelleDatePoint(point.date, point.label || label)}</strong>
-      <span><i className="stats-cx__dot stats-cx__dot--green" />Satisfaction : {point.satisfaction}% ({point.feedbacks} avis notés)</span>
+      <span><i className="stats-cx__dot stats-cx__dot--green" />Satisfaction : {formaterPourcentage(point.satisfaction)} ({point.feedbacks} avis notés)</span>
       <span><i className="stats-cx__dot stats-cx__dot--red" />Avis négatifs ou critiques reçus : {point.recus}</span>
       <span><i className="stats-cx__dot stats-cx__dot--teal" />Pris en charge : {point.traites}</span>
     </div>
@@ -53,7 +54,7 @@ export default function SatisfactionVolumeChart({ satisfaction, volume, height =
             <LineChart {...sharedChartProps}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E6EBE8" vertical={false} />
               <XAxis dataKey="label" hide />
-              <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tickFormatter={(value) => `${value}%`} stroke="#52625E" fontSize={11} tickLine={false} axisLine={false} width={48} />
+              <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tickFormatter={(value) => formaterPourcentage(Number(value), 0)} stroke="#52625E" fontSize={11} tickLine={false} axisLine={false} width={48} />
               <Tooltip content={<PointTooltip />} cursor={{ stroke: '#62736E', strokeDasharray: '3 3' }} />
               <Line dataKey="satisfaction" name="Satisfaction" type="linear" stroke="#367A32" strokeWidth={3} connectNulls={false} dot={{ r: 4, fill: '#367A32', stroke: '#FFFFFF', strokeWidth: 2 }} activeDot={{ r: 6, fill: '#245D25', stroke: '#FFFFFF', strokeWidth: 2 }} isAnimationActive={false} />
             </LineChart>

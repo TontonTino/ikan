@@ -2,6 +2,7 @@ import React from 'react';
 import type { StatsAgenceResponse } from '../../types';
 import Alert from '../ui/Alert';
 import Button from '../ui/Button';
+import { formaterValeurApi } from '../../utils/formatNombre';
 
 /**
  * Corps du bloc « Performances clés » de l'aperçu d'agence : chargement, erreur avec réessai ou données.
@@ -25,7 +26,7 @@ export default function PerformancesCles({ stats, erreur, onRetry }: { stats: St
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '12px' }}>
       <div style={{ background: '#F8FAF8', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
-        <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#02302D' }}>{stats.kpis.satisfaction?.valeur ?? '—'}</div>
+        <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#02302D' }}>{formaterValeurApi(stats.kpis.satisfaction?.valeur, stats.kpis.satisfaction?.valeur_num) ?? '—'}</div>
         <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600, marginTop: '4px' }}>Satisfaction</div>
       </div>
       <div style={{ background: '#EBF6ED', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>

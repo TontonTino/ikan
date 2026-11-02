@@ -51,6 +51,7 @@ import type { AlertesSiege } from './siegeData';
 import { AIDE_SCORE_FIABILISE, LIBELLE_SCORE_FIABILISE } from '../../../utils/scoreFiabilise';
 
 import YamNote from '../../../components/agent/YamNote';
+import { formaterPourcentage } from '../../../utils/formatNombre';
 
 export type KpiKind = 'satisfaction' | 'volume' | 'critiques' | 'seuil';
 
@@ -329,7 +330,7 @@ function EvolutionTooltip({ active, payload }: { active?: boolean; payload?: { p
       <p className="ui-chart-tooltip__label">{p.label}</p>
       <div className="ui-chart-tooltip__row">
         <span>Satisfaction</span>
-        <span className="ui-chart-tooltip__value">{p.satisfaction.toLocaleString('fr-FR')} %</span>
+        <span className="ui-chart-tooltip__value">{formaterPourcentage(p.satisfaction, 3)}</span>
       </div>
       <div className="ui-chart-tooltip__row">
         <span>Avis</span>
@@ -390,7 +391,7 @@ export function Evolution({ stats, jours, onRetry }: { stats: Source<StatsCXResp
           <ComposedChart data={points} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
             <CartesianGrid {...chartGridProps} />
             <XAxis dataKey="label" {...chartAxisProps} minTickGap={16} />
-            <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tickFormatter={(v) => `${v} %`} {...chartAxisProps} width={52} />
+            <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tickFormatter={(v) => formaterPourcentage(v, 0)} {...chartAxisProps} width={52} />
             <RTooltip content={<EvolutionTooltip />} cursor={{ stroke: 'var(--color-border-strong)' }} />
             <Line type="linear" dataKey="satisfaction" name="Satisfaction" stroke="var(--dataviz-positive)" strokeWidth={2} dot={<EvolutionDot />} activeDot={{ r: 6 }} isAnimationActive={false} />
           </ComposedChart>
@@ -515,7 +516,7 @@ export function Pourquoi({ stats, jours, onRetry }: { stats: Source<StatsCXRespo
               <div className="siege-theme__head">
                 <span className="siege-theme__rank" aria-hidden="true">{i + 1}</span>
                 <span className="siege-theme__label">{t.label}</span>
-                <span className="siege-theme__pct">{t.pourcentage.toLocaleString('fr-FR')} %</span>
+                <span className="siege-theme__pct">{formaterPourcentage(t.pourcentage, 3)}</span>
               </div>
               <div className="siege-theme__meta">
                 <span>{t.count} mention{t.count > 1 ? 's' : ''} · des avis analysés</span>

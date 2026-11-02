@@ -155,13 +155,13 @@ describe('indicateurs et analyses', () => {
     const html = rendu(<AgencyDecisionKpis data={dashboard()} jours={30} />);
     expect((html.match(/ui-kpi /g) || []).length).toBe(4);
     expect(html).toContain('30 derniers jours');
-    expect(html).toContain('5.6 % pris en charge');
+    expect(html).toContain('5,6 % pris en charge');
   });
 
   it('aucun avis : « Aucune donnée », pas de 0 % trompeur', () => {
     const html = rendu(<AgencyDecisionKpis data={dashboard({ taux_satisfaction: null, nombre_feedbacks: 0, nombre_negatifs: 0 })} jours={7} />);
     expect(html).toContain('Aucune donnée');
-    expect(html).not.toContain('0 %<');
+    expect(html).not.toContain('0 %<');
   });
 
   it('aucune comparaison inventée avec la période précédente', () => {
@@ -171,7 +171,7 @@ describe('indicateurs et analyses', () => {
   it('ton des avis : texte et pourcentage présents, pas seulement des couleurs', () => {
     const html = rendu(<TonDesAvis sentiments={[{ sentiment: 'positif', count: 27, pourcentage: 37.5 }, { sentiment: 'negatif', count: 31, pourcentage: 43.1 }] as DashboardAgence['sentiments']} />);
     expect(html).toContain('Positif');
-    expect(html).toContain('37.5 %');
+    expect(html).toContain('37,5 %');
     expect(html).toContain('27 avis analysés');
     expect(html).toContain('Aucune donnée');
     expect(html).toContain('aria-hidden="true"');
@@ -198,7 +198,7 @@ describe('indicateurs et analyses', () => {
   it('tableau d’évolution : les mêmes données que le graphique, avec le volume', () => {
     const html = rendu(<TableauEvolution points={[{ date: '2026-10-01', taux: 60, nombre_feedbacks: 2 }, { date: '2026-10-02', taux: 80, nombre_feedbacks: 12 }]} />);
     expect(html).toContain('2026-10-01');
-    expect(html).toContain('60 %');
+    expect(html).toContain('60 %');
     expect(html).toContain('(faible volume)');
     expect(html).toContain('scope="col"');
   });

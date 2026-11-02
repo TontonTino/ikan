@@ -2,6 +2,7 @@ import React from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import type { VeilleThemeBucket } from '../../types';
 import { themeLabel } from '../../utils/themeLabels';
+import { formaterPourcentage } from '../../utils/formatNombre';
 
 const COLORS = ['var(--color-primary)', 'var(--color-success)', 'var(--color-warning)', 'var(--color-error)', 'var(--color-info)', 'var(--color-text-muted)'];
 
@@ -22,7 +23,7 @@ export default function VeilleThemeChart({ data }: { data: VeilleThemeBucket[] }
         {labels.filter((item) => item.theme_principal !== null).map((item, index) => (
           <li key={item.nom} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, color: 'var(--color-text-body)' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><i aria-hidden="true" style={{ width: 10, height: 10, borderRadius: '50%', background: COLORS[index % COLORS.length] }} />{item.nom}</span>
-            <strong>{item.count} · {item.pourcentage}%</strong>
+            <strong>{item.count} · {formaterPourcentage(item.pourcentage)}</strong>
           </li>
         ))}
         {nonClasse && <li style={{ borderTop: '1px solid var(--color-border)', paddingTop: 10, display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-muted)' }}><span>Non classé</span><strong>{nonClasse.count} · {nonClasse.pourcentage}%</strong></li>}

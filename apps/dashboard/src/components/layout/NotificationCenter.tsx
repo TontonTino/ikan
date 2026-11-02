@@ -5,6 +5,7 @@ import { AlertTriangleIcon, BellIcon, MessageSquareIcon } from '../common/Icons'
 import { raisonLabel, alerteFeedbackAnchor, alerteSeuilAnchor } from '../alerts/alerteLabels';
 import BadgeGraviteAlerte, { LIBELLE_GRAVITE, type GraviteAlerte } from '../alerts/BadgeGraviteAlerte';
 import { fullDate, relativeTime } from '../ui/format';
+import { formaterPourcentage } from '../../utils/formatNombre';
 
 /*
  * Cloche = centre de notifications : événements récents, format court,
@@ -84,7 +85,7 @@ export default function NotificationCenter({ userId, data, loading, showAgency, 
     const seuils: NotifItem[] = (data.alertes_seuil ?? []).map((a) => ({
       key: `s-${a.agence_id}`,
       kind: 'seuil',
-      title: `Satisfaction ${a.taux_actuel} % (seuil ${a.seuil} %)`,
+      title: `Satisfaction ${formaterPourcentage(a.taux_actuel)} (seuil ${formaterPourcentage(a.seuil)})`,
       gravite: a.gravite,
       agence: a.agence_nom,
       href: `/alertes#${alerteSeuilAnchor(a.agence_id)}`,

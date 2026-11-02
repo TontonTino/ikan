@@ -25,6 +25,7 @@ import {
 import { fetchActionsTotaux, fetchIssuesOuvertes, type ActionsTotaux, type IssuesOuvertes } from './useSiegeData';
 import { lienApercuAgence, lienAvisReseau } from '../../../utils/liensAgence';
 import { AskYam, BlockLink, YAM_PERIODE, type KpiKind } from './SiegeBlocks';
+import { formaterPourcentage } from '../../../utils/formatNombre';
 
 const STATUT_TONE: Record<StatutSeuil, 'success' | 'critical' | 'neutral' | 'outline'> = {
   au_dessus: 'success',
@@ -98,8 +99,8 @@ export function KpiDetail({
                 </span>
               ),
             },
-            { key: 'taux_actuel', header: 'Satisfaction', align: 'right', numeric: true, render: (a) => `${a.taux_actuel} %` },
-            { key: 'seuil', header: 'Seuil', align: 'right', numeric: true, render: (a) => `${a.seuil} %` },
+            { key: 'taux_actuel', header: 'Satisfaction', align: 'right', numeric: true, render: (a) => formaterPourcentage(a.taux_actuel) },
+            { key: 'seuil', header: 'Seuil', align: 'right', numeric: true, render: (a) => formaterPourcentage(a.seuil) },
             { key: 'ecart_seuil', header: 'Écart', align: 'right', numeric: true, render: (a) => `−${a.ecart_seuil} pts` },
             {
               key: 'detail',
@@ -264,7 +265,7 @@ export function AgenceDetail({
       {statut && agence && (
         <p className="siege-note">
           Statut : <strong>{STATUT_SEUIL_LABEL[statut]}</strong>
-          {statut !== 'sans_avis' && ` (seuil configuré : ${agence.seuil_alerte} %)`}
+          {statut !== 'sans_avis' && ` (seuil configuré : ${formaterPourcentage(agence.seuil_alerte)})`}
         </p>
       )}
 

@@ -54,8 +54,8 @@ describe('liste des agences de la carte', () => {
         ]}
       />,
     );
-    expect(html).toContain('<strong>Alpha</strong> (Lyon) — Au-dessus du seuil : 90 %, seuil 80 %');
-    expect(html).toContain('<strong>Beta</strong> — Sous le seuil : 60 %, seuil 80 %');
+    expect(html).toContain('<strong>Alpha</strong> (Lyon) — Au-dessus du seuil : 90 %, seuil 80 %');
+    expect(html).toContain('<strong>Beta</strong> — Sous le seuil : 60 %, seuil 80 %');
     expect(html).toContain('<strong>Gamma</strong> — Moins de 3 avis');
     expect(html).toContain('<strong>Delta</strong> — Pas d&#x27;avis');
   });

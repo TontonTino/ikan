@@ -1,5 +1,6 @@
 import type { Alerte, AlerteFeedback, Issue, IssueStatut, PriorityLevel, Recommandation, TendanceSatisfaction } from '../../types';
 import { GRAVITE_LABELS, PROBLEME_STATUT_LABELS, libelleRaisonAlerte } from '../../utils/vocabulaire';
+import { formaterPourcentage } from '../../utils/formatNombre';
 
 /**
  * Règles de lecture de la vue d'ensemble du Responsable d'agence (/agence).
@@ -41,7 +42,7 @@ export function construirePriorites(entrees: { alertes: Alerte[]; avis: AlerteFe
     ton: 'critical',
     type: a.gravite ? `Alerte de seuil · ${a.gravite === 'critique' ? 'Critique' : 'Important'}` : 'Alerte de seuil',
     titre: 'Satisfaction sous le seuil de l’agence',
-    detail: `Taux actuel ${a.taux_actuel} % pour un seuil de ${a.seuil} %.`,
+    detail: `Taux actuel ${formaterPourcentage(a.taux_actuel)} pour un seuil de ${formaterPourcentage(a.seuil)}.`,
     lien: { to: '/statistiques', label: 'Analyser la tendance' },
   }));
 
@@ -133,8 +134,8 @@ export function resumeAccessibleEvolution(points: TendanceSatisfaction[]): strin
   const max = points.reduce((a, b) => (b.taux > a.taux ? b : a));
   return (
     `${points.length} relevé${points.length > 1 ? 's' : ''}, du ${points[0].date} au ${points[points.length - 1].date}. ` +
-    `Premier relevé : ${taux[0]} %, dernier : ${taux[taux.length - 1]} %. ` +
-    `Plus bas : ${min.taux} % (${min.date}), plus haut : ${max.taux} % (${max.date}). ` +
+    `Premier relevé : ${formaterPourcentage(taux[0])}, dernier : ${formaterPourcentage(taux[taux.length - 1])}. ` +
+    `Plus bas : ${formaterPourcentage(min.taux)} (${min.date}), plus haut : ${formaterPourcentage(max.taux)} (${max.date}). ` +
     `${interpretationEvolution(points)}`
   );
 }
