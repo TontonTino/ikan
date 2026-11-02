@@ -203,3 +203,18 @@ describe('indicateurs et analyses', () => {
     expect(html).toContain('scope="col"');
   });
 });
+
+describe('recommandations : le préfixe « URGENT — » n’est pas affiché, la priorité reste dans le badge', () => {
+  const avecTexte = (contenu: string) => ({ ...reco(1, 'critical'), contenu });
+  it('préfixe retiré à l’affichage, badge « Priorité critique » conservé, libellé accessible sans préfixe', () => {
+    const html = rendu(<AgencyRecommendations {...propsReco({ recos: [avecTexte('URGENT — Contactez immédiatement le responsable.')], total: 1 })} />);
+    expect(html).toContain('>Contactez immédiatement le responsable.</p>');
+    expect(html).not.toContain('URGENT');
+    expect(html).toContain('Priorité critique');
+    expect(html).toContain('Marquer comme traitée : Contactez immédiatement');
+  });
+  it('texte sans préfixe, ou avec « urgent » ailleurs : inchangé', () => {
+    const html = rendu(<AgencyRecommendations {...propsReco({ recos: [avecTexte('Situation URGENT — à suivre.')], total: 1 })} />);
+    expect(html).toContain('>Situation URGENT — à suivre.</p>');
+  });
+});

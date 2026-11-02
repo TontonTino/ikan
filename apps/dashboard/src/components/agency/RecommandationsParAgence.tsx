@@ -5,6 +5,7 @@ import Alert from '../ui/Alert';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import EmptyState from '../ui/EmptyState';
+import { texteRecommandationAffiche } from '../../utils/texteRecommandation';
 import { PRIORITE_RECO_LABEL, PRIORITE_RECO_TON } from './agenceVue';
 
 /*
@@ -35,10 +36,10 @@ export function GroupeAgence({
                 <time dateTime={r.date_generation}>{dateCourte(r.date_generation)}</time>
                 <span>{traitee ? 'Traitée' : 'À traiter'}</span>
               </div>
-              <p className="agence-reco__text">{r.contenu}</p>
+              <p className="agence-reco__text">{texteRecommandationAffiche(r.contenu)}</p>
             </div>
             <Button size="sm" variant="secondary" loading={occupee === r.id} onClick={() => onChangerStatut(r.id)}
-              aria-label={`${traitee ? 'Remettre à traiter' : 'Marquer comme traitée'} : ${r.contenu.slice(0, 80)}`}>
+              aria-label={`${traitee ? 'Remettre à traiter' : 'Marquer comme traitée'} : ${texteRecommandationAffiche(r.contenu).slice(0, 80)}`}>
               {traitee ? 'Remettre à traiter' : 'Marquer comme traitée'}
             </Button>
           </li>
