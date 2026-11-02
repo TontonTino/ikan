@@ -95,3 +95,16 @@ a.agence-meter:hover { background: var(--color-bg-hover); }
   .alerte-toolbar select { min-width: 150px; min-height: var(--touch-target); }
   .alerte-toolbar .ui-segmented__item { min-height: var(--touch-target); padding: 0 var(--space-2); }
 }
+
+/* Page Alertes : ligne d'alerte (agence → niveau → raison → détail → action). Bordure neutre : le signal est le badge de niveau, pas la couleur de la carte. */
+.alerte-ligne { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; padding: var(--space-3) var(--space-4); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.alerte-ligne__corps { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.alerte-ligne__qui { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
+.alerte-ligne__agence { font-size: var(--text-md); font-weight: var(--weight-black); color: var(--color-text-main); overflow-wrap: anywhere; }
+.alerte-ligne__date { font-size: var(--text-xs); color: var(--color-text-muted); }
+.alerte-ligne__niveau { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.alerte-ligne__raison { font-size: var(--text-sm); font-weight: var(--weight-bold); color: var(--color-text-body); }
+.alerte-ligne__meta { margin: 0; font-size: var(--text-xs); color: var(--color-text-muted); }
+.alerte-ligne__detail { margin: 0; font-size: var(--text-sm); color: var(--color-text-body); overflow-wrap: anywhere; }
+.alerte-ligne__detail--clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.alerte-ligne__action { flex: none; text-decoration: none; }

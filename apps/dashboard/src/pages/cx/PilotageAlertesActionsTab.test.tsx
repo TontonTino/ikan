@@ -86,7 +86,8 @@ describe('page /alertes — les six états', () => {
   it('données disponibles : deux types distincts avec leurs libellés écrits', () => {
     const html = rendu({ alertes: etatAlertes({ seuil: [seuil()], avis: [avis(1)] }) });
     expect(html).toContain('Satisfaction sous le seuil');
-    expect(html).toContain('Note basse · 1/5');
+    expect(html).toContain('alerte-ligne__raison">Note basse<');
+    expect(html).toContain('Catégorie « Accueil » · Note 1/5');
     expect(html).toContain('pour un seuil de 70 %');
   });
 });
@@ -290,5 +291,55 @@ describe('page /alertes — synthèse, repli des avis par groupe de 5', () => {
     const petit = rendu({ isAgencyManager: false, selectedAgenceId: 'a2', alertes: etatAlertes({ avis: mix }) });
     expect(lignes(petit)).toBe(3);
     expect(petit).not.toContain('Voir les');
+  });
+});
+
+describe('page /alertes — ligne d’alerte : ordre de lecture, une pastille, niveaux mélangés', () => {
+  const mel = (): AlerteFeedback[] => [
+    { ...avis(1, 1, 'a1'), raison: 'note_basse_et_sentiment_negatif' },
+    { ...avis(2, 3, 'a2'), raison: 'sentiment_negatif' },
+  ];
+  const ligne = (html: string, feedbackId: string) => (html.match(new RegExp(`<li id="alerte-feedback-${feedbackId}".*?</li>`)) || [''])[0];
+  const apres = (html: string, a: string, b: string) => html.indexOf(a) >= 0 && html.indexOf(b) > html.indexOf(a);
+
+  it('avis (CX) : agence et date, puis niveau, puis raison, puis catégorie et note, puis commentaire, puis action — dans le DOM', () => {
+    const l = ligne(rendu({ isAgencyManager: false, alertes: etatAlertes({ avis: mel() }) }), 'f1');
+    const ordre = ['alerte-ligne__agence', 'alerte-ligne__date', 'Critique', 'alerte-ligne__raison', 'alerte-ligne__meta', 'alerte-ligne__detail', 'alerte-ligne__action'];
+    for (let i = 1; i < ordre.length; i++) expect(apres(l, ordre[i - 1], ordre[i]), `${ordre[i - 1]} avant ${ordre[i]}`).toBe(true);
+    expect(l).toContain('Note basse et ton négatif');
+    expect(l).toContain('Catégorie « Accueil » · Note 1/5');
+  });
+
+  it('une seule pastille par ligne (le niveau) ; la raison et la note sont du texte, jamais une seconde pastille', () => {
+    const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ seuil: [{ ...seuil(), gravite: 'critique' }], avis: mel() }) });
+    for (const l of [ligne(html, 'f1'), ligne(html, 'f2')]) expect((l.match(/class="ui-badge /g) || []).length).toBe(1);
+    const lseuil = (html.match(/<li id="alerte-seuil-.*?<\/li>/) || [''])[0];
+    expect((lseuil.match(/class="ui-badge /g) || []).length).toBe(1);
+    expect(lseuil).not.toContain('ui-badge--outline');
+  });
+
+  it('niveaux mélangés : Critique et À surveiller coexistent, l’ordre critiques d’abord est conservé', () => {
+    const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ avis: [...mel().reverse()] }) });
+    expect(html.indexOf('alerte-feedback-f1')).toBeLessThan(html.indexOf('alerte-feedback-f2'));
+    expect(ligne(html, 'f1')).toContain('ui-badge--critical');
+    expect(ligne(html, 'f2')).toContain('ui-badge--warning');
+    expect(ligne(html, 'f2')).toContain('>À surveiller<');
+  });
+
+  it('Responsable d’agence : pas de nom d’agence dans la ligne d’avis', () => {
+    expect(ligne(rendu({ alertes: etatAlertes({ avis: mel() }) }), 'f1')).not.toContain('alerte-ligne__agence');
+  });
+
+  it('l’action est un vrai bouton secondaire (zone tactile du design system)', () => {
+    const l = ligne(rendu({ alertes: etatAlertes({ avis: mel() }) }), 'f1');
+    expect(l).toContain('class="ui-btn ui-btn--secondary ui-btn--sm alerte-ligne__action"');
+    expect(l).toContain('Traiter l’avis');
+  });
+
+  it('alerte de seuil : agence, puis niveau, puis raison, puis détail, puis action', () => {
+    const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ seuil: [{ ...seuil('a9'), gravite: 'important' }] }) });
+    const l = (html.match(/<li id="alerte-seuil-a9".*?<\/li>/) || [''])[0];
+    const ordre = ['alerte-ligne__agence', 'Important', 'alerte-ligne__raison', 'alerte-ligne__detail', 'alerte-ligne__action'];
+    for (let i = 1; i < ordre.length; i++) expect(apres(l, ordre[i - 1], ordre[i]), `${ordre[i - 1]} avant ${ordre[i]}`).toBe(true);
   });
 });
