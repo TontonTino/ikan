@@ -2,6 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { PlusIcon, SendIcon, XCloseIcon } from '../common/Icons';
 import RichText from './RichText';
 import YamAvatar from './YamAvatar';
+import YamMascot from './YamMascot';
+import YamPicture3D from './YamPicture3D';
+import { YAM_PRESENCE } from '../../config';
+import './yamPresence.css';
 import { MAX_QUESTION_LENGTH, useYamChat } from './useYamChat';
 import { useYamStore } from '../../stores/yamStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -36,6 +40,12 @@ function ThinkingBubble() {
             <span className="yam-dot" />
           </span>
         </span>
+        {YAM_PRESENCE && (
+          <span className="yam-attente">
+            <YamMascot variant="tete" state="reflexion" size={30} />
+            YAM analyse vos avis…
+          </span>
+        )}
         {slow && (
           <div className="yam-slow-hint">
             Cela prend un peu plus de temps que d’habitude (le service peut être en cours de réveil). Merci de patienter…
@@ -188,6 +198,11 @@ export default function YamChatPanel({ open, onClose }: Props) {
 
       {/* Messages */}
       <div className="yam-messages" aria-live="polite" ref={messagesRef}>
+        {YAM_PRESENCE && messages.length === 0 && (
+          <div className="yam-hero">
+            <YamPicture3D largeur={110} alt="YAM" />
+          </div>
+        )}
         <div className="yam-row yam-row-assistant">
           <YamAvatar size={28} />
           <div className="yam-bubble yam-bubble-assistant">
@@ -225,7 +240,14 @@ export default function YamChatPanel({ open, onClose }: Props) {
             <div key={m.id} className="yam-row yam-row-assistant" role="alert">
               <YamAvatar size={28} />
               <div className="yam-bubble yam-bubble-error">
-                <div>{m.text}</div>
+                <div>
+                  {YAM_PRESENCE && (
+                    <span className="yam-erreur-mascotte">
+                      <YamMascot variant="tete" state="alerte" size={30} />
+                    </span>
+                  )}
+                  {m.text}
+                </div>
                 {m.retryQuestion && (
                   <button
                     type="button"
