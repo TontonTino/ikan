@@ -12,7 +12,7 @@ import Card from '../../components/ui/Card';
 import EmptyState from '../../components/ui/EmptyState';
 import IconButton from '../../components/ui/IconButton';
 import Skeleton from '../../components/ui/Skeleton';
-import { fullDate, relativeTime } from '../../components/ui/format';
+import { dateRelativeOuAbsolue, fullDate } from '../../components/ui/format';
 import { ArrowUpRightIcon, FilterIcon, RefreshIcon } from '../../components/common/Icons';
 import { raisonLabel, alerteFeedbackAnchor, alerteSeuilAnchor } from '../../components/alerts/alerteLabels';
 import BadgeGraviteAlerte from '../../components/alerts/BadgeGraviteAlerte';
@@ -23,12 +23,14 @@ import {
   avisCible,
   compterAlertes,
   filtrerAlertes,
+  libelleVoirAvis,
   messageForfait,
+  noteTriAvis,
   nombreAvisVisibles,
+  decouperChiffres,
+  partiesSynthese,
   phraseAgencesConcernees,
-  phraseSynthese,
   syntheseAlertes,
-  sousTitreAlertes,
   tonAvis,
   type TypeAlerte,
 } from './alertesVue';
@@ -58,6 +60,10 @@ const TYPES: Array<{ id: TypeAlerte; label: string }> = [
   { id: 'avis', label: 'Avis clients' },
 ];
 
+/** Texte dont les nombres sont mis en valeur (<b>) : le texte lu, copié ou annoncé reste identique. */
+const avecChiffres = (texte: string) =>
+  decouperChiffres(texte).map((m, i) => (m.nombre ? <b key={i} className="alerte-synthese__n">{m.texte}</b> : <React.Fragment key={i}>{m.texte}</React.Fragment>));
+
 /** Défile jusqu'à l'alerte ciblée par l'URL (#alerte-…), la met en évidence et lui donne le focus. */
 function useHashTarget(ready: boolean, signature: string) {
   const { hash } = useLocation();
@@ -77,25 +83,34 @@ function useHashTarget(ready: boolean, signature: string) {
   return target;
 }
 
+/** Action de la ligne : un vrai bouton (secondaire) plutôt qu'un lien de texte, pour qu'elle soit identifiable d'un coup d'œil. */
+const CLASSE_ACTION = 'ui-btn ui-btn--secondary ui-btn--sm alerte-ligne__action';
+
+/**
+ * Ordre de lecture (et du DOM, donc des lecteurs d'écran) : 1) agence (et date) ; 2) niveau ; 3) raison ; 4) informations complémentaires,
+ * en discret ; 5) action. L'agence est comprise avant les indicateurs ; une seule pastille (le niveau), la raison est du texte.
+ */
 export function LigneSeuil({ alerte, isAgencyManager, cible }: { alerte: Alerte; isAgencyManager: boolean; cible: boolean }) {
   const id = alerteSeuilAnchor(alerte.agence_id);
   return (
-    <li id={id} tabIndex={-1} className={`agence-prio__item agence-prio__item--critical ui-alert-item${cible ? ' is-target' : ''}`}>
-      <div className="agence-prio__main">
-        <div className="agence-prio__head">
-          <BadgeGraviteAlerte gravite={alerte.gravite} />
-          <Badge variant={alerte.gravite ? 'outline' : 'critical'} label="Satisfaction sous le seuil" />
-          <strong className="agence-prio__title">{alerte.agence_nom}</strong>
+    <li id={id} tabIndex={-1} className={`alerte-ligne ui-alert-item${cible ? ' is-target' : ''}`}>
+      <div className="alerte-ligne__corps">
+        <div className="alerte-ligne__qui">
+          <strong className="alerte-ligne__agence">{alerte.agence_nom}</strong>
         </div>
-        <p className="agence-prio__detail">
+        <div className="alerte-ligne__niveau">
+          <BadgeGraviteAlerte gravite={alerte.gravite} />
+          <span className="alerte-ligne__raison">Satisfaction sous le seuil</span>
+        </div>
+        <p className="alerte-ligne__detail">
           <strong>{formaterPourcentage(alerte.taux_actuel)}</strong> sur les 7 derniers jours, pour un seuil de {formaterPourcentage(alerte.seuil)}
           {alerte.ecart_seuil != null && alerte.ecart_seuil > 0 ? ` (${alerte.ecart_seuil.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} points sous le seuil)` : ''}
         </p>
       </div>
       {isAgencyManager ? (
-        <Link to="/statistiques" className="siege-link">Analyser la tendance<ArrowUpRightIcon size={13} aria-hidden="true" /></Link>
+        <Link to="/statistiques" className={CLASSE_ACTION}>Analyser la tendance<ArrowUpRightIcon size={13} aria-hidden="true" /></Link>
       ) : (
-        <Link to={lienApercuAgence(alerte.agence_id)} className="siege-link">Voir l’agence<ArrowUpRightIcon size={13} aria-hidden="true" /></Link>
+        <Link to={lienApercuAgence(alerte.agence_id)} className={CLASSE_ACTION}>Voir l’agence<ArrowUpRightIcon size={13} aria-hidden="true" /></Link>
       )}
     </li>
   );
@@ -103,24 +118,25 @@ export function LigneSeuil({ alerte, isAgencyManager, cible }: { alerte: Alerte;
 
 export function LigneAvis({ avis, isAgencyManager, cible }: { avis: AlerteFeedback; isAgencyManager: boolean; cible: boolean }) {
   const id = alerteFeedbackAnchor(avis.feedback_id);
-  const ton = tonAvis(avis.note);
   return (
-    <li id={id} tabIndex={-1} className={`agence-prio__item agence-prio__item--${ton} ui-alert-item${cible ? ' is-target' : ''}`}>
-      <div className="agence-prio__main">
-        <div className="agence-prio__head">
-          <BadgeNiveauAvis note={avis.note} />
-          <Badge variant="outline" label={`${raisonLabel(avis.raison)} · ${avis.note}/5`} />
-          {!isAgencyManager && <strong className="agence-prio__title">{avis.agence_nom}</strong>}
-          <time className="siege-note" dateTime={avis.date_soumission} title={fullDate(avis.date_soumission)}>
-            {relativeTime(avis.date_soumission)}
+    <li id={id} tabIndex={-1} className={`alerte-ligne ui-alert-item${cible ? ' is-target' : ''}`}>
+      <div className="alerte-ligne__corps">
+        <div className="alerte-ligne__qui">
+          {!isAgencyManager && <strong className="alerte-ligne__agence">{avis.agence_nom}</strong>}
+          <time className="alerte-ligne__date" dateTime={avis.date_soumission} title={fullDate(avis.date_soumission)}>
+            {dateRelativeOuAbsolue(avis.date_soumission)}
           </time>
         </div>
-        <p className={`agence-prio__detail agence-prio__detail--clamp${avis.commentaire ? '' : ' ui-item__text--empty'}`}>
-          {avis.categorie_nom ? `Catégorie « ${avis.categorie_nom} » — ` : ''}
-          {avis.commentaire || 'Aucun commentaire.'}
+        <div className="alerte-ligne__niveau">
+          <BadgeNiveauAvis note={avis.note} />
+          <span className="alerte-ligne__raison">{raisonLabel(avis.raison)}</span>
+        </div>
+        <p className="alerte-ligne__meta">
+          {avis.categorie_nom ? `Catégorie « ${avis.categorie_nom} » · ` : ''}Note {avis.note}/5
         </p>
+        <p className={`alerte-ligne__detail alerte-ligne__detail--clamp${avis.commentaire ? '' : ' ui-item__text--empty'}`}>{avis.commentaire || 'Aucun commentaire.'}</p>
       </div>
-      <Link to={lienAvis(isAgencyManager ? 'agency_manager' : 'cx_manager', avis.agence_id, 'critiques', { avisId: avis.feedback_id })} className="siege-link">
+      <Link to={lienAvis(isAgencyManager ? 'agency_manager' : 'cx_manager', avis.agence_id, 'critiques', { avisId: avis.feedback_id })} className={CLASSE_ACTION}>
         Traiter l’avis<ArrowUpRightIcon size={13} aria-hidden="true" />
       </Link>
     </li>
@@ -153,27 +169,14 @@ export default function PilotageAlertesActionsTab(props: Props) {
   const actualisationEchouee = alertes.statut === 'erreur' && prete;
   const resetFiltres = () => { setType('toutes'); onSelectAgence(null); };
 
-  const sousTitre = chargement
-    ? 'Chargement…'
-    : !prete || !incluses
-      ? undefined
-      : sousTitreAlertes(compteurs) ?? undefined;
-
   return (
     <div className="agence">
-      <details className="alerte-aide">
-        <summary>Comment lire cette page</summary>
-        <p>
-          Les alertes sont recalculées à chaque ouverture : elles n’ont pas d’état « lu » ou « traité » et disparaissent d’elles-mêmes quand la situation redevient
-          normale. Une alerte n’est pas un problème à traiter : c’est vous qui décidez d’en créer un.
-        </p>
-      </details>
-
       {prete && incluses && synthese && (
         <p className="alerte-synthese">
-          <strong>{phraseSynthese(synthese)}</strong>
-          {phraseAgencesConcernees(synthese) && <span>{phraseAgencesConcernees(synthese)}</span>}
-          {synthese.avisLePlusAncien && <span>Avis le plus ancien : {relativeTime(synthese.avisLePlusAncien)}</span>}
+          <span className="alerte-synthese__titre">{avecChiffres(partiesSynthese(synthese).titre)} :</span>{' '}
+          <span className="alerte-synthese__detail">{avecChiffres(partiesSynthese(synthese).detail)}</span>
+          {phraseAgencesConcernees(synthese) && <span className="alerte-synthese__plus">{avecChiffres(phraseAgencesConcernees(synthese) ?? '')}</span>}
+          {synthese.avisLePlusAncien && <span className="alerte-synthese__plus">Avis le plus ancien : <time dateTime={synthese.avisLePlusAncien} title={fullDate(synthese.avisLePlusAncien)}>{dateRelativeOuAbsolue(synthese.avisLePlusAncien)}</time></span>}
         </p>
       )}
 
@@ -192,8 +195,6 @@ export default function PilotageAlertesActionsTab(props: Props) {
       <Card
         title="Alertes actives"
         className="alerte-carte"
-        subtitle={sousTitre}
-        tone={prete && incluses && filtrees.seuil.length + filtrees.avis.filter((a) => tonAvis(a.note) === 'critical').length > 0 ? 'critical' : 'default'}
         aria-busy={chargement || undefined}
       >
         {actualisationEchouee && (
@@ -226,32 +227,34 @@ export default function PilotageAlertesActionsTab(props: Props) {
           <>
             {filtrees.seuil.length > 0 && (
               <section aria-label="Alertes de satisfaction">
-                <h3 className="agence-group-title">Satisfaction sous le seuil ({filtrees.seuil.length})</h3>
+                <h3 className="alerte-groupe-titre">Satisfaction sous le seuil ({filtrees.seuil.length})</h3>
                 <p className="siege-note">
                   {isAgencyManager
                     ? 'Chaque alerte disparaît quand la satisfaction des 7 derniers jours repasse au-dessus du seuil.'
                     : 'Chaque alerte est affichée après 48 h sous le seuil ; elle disparaît quand la satisfaction des 7 derniers jours repasse au-dessus.'}
                 </p>
-                <ul className="agence-prio">
+                <ul className="agence-prio alerte-liste">
                   {filtrees.seuil.map((a) => <LigneSeuil key={a.agence_id} alerte={a} isAgencyManager={isAgencyManager} cible={target === alerteSeuilAnchor(a.agence_id)} />)}
                 </ul>
               </section>
             )}
             {filtrees.avis.length > 0 && (
               <section aria-label="Avis à risque">
-                <h3 className="agence-group-title">Avis à risque ({filtrees.avis.length}) · critiques d’abord, puis du plus récent au plus ancien</h3>
-                <p className="siege-note">Chaque alerte disparaît quand l’avis est marqué comme résolu.</p>
-                <ul className="agence-prio">
+                <h3 className="alerte-groupe-titre">Avis à risque ({filtrees.avis.length})</h3>
+                <p className="siege-note">{noteTriAvis(filtrees.avis) ? `${noteTriAvis(filtrees.avis)} ` : ''}Chaque alerte disparaît quand l’avis est marqué comme résolu.</p>
+                <ul className="agence-prio alerte-liste">
                   {avisVisibles.map((a) => <LigneAvis key={a.feedback_id} avis={a} isAgencyManager={isAgencyManager} cible={target === alerteFeedbackAnchor(a.feedback_id)} />)}
                 </ul>
-                <p className="siege-note" role="status">
-                  {avisVisibles.length} avis affichés sur {filtrees.avis.length}.
-                </p>
-                {filtrees.avis.length > AVIS_VISIBLES && (
-                  <Button className="agence-more" size="sm" variant="ghost" aria-expanded={nbAvisVisibles === filtrees.avis.length} onClick={() => setDepliee((v) => !v)}>
-                    {nbAvisVisibles === filtrees.avis.length ? 'Réduire' : filtrees.avis.length - AVIS_VISIBLES > 1 ? `Voir les ${filtrees.avis.length - AVIS_VISIBLES} avis` : 'Voir l’avis restant'}
-                  </Button>
-                )}
+                <div className="alerte-pied">
+                  {filtrees.avis.length > AVIS_VISIBLES && (
+                    <Button className="alerte-voir-plus" variant="secondary" aria-expanded={nbAvisVisibles === filtrees.avis.length} onClick={() => setDepliee((v) => !v)}>
+                      {libelleVoirAvis(filtrees.avis.length, nbAvisVisibles === filtrees.avis.length)}
+                    </Button>
+                  )}
+                  <p className="siege-note" role="status">
+                    {avisVisibles.length} avis affichés sur {filtrees.avis.length}
+                  </p>
+                </div>
               </section>
             )}
           </>

@@ -7,6 +7,7 @@ import PilotageActionsCorrectivesTab from './PilotageActionsCorrectivesTab';
 import AlertesView from './AlertesView';
 import type { Agence, Feedback, Issue, IssueDetail } from '../../types';
 import PageTitle from '../../components/ui/PageTitle';
+import AideAlertes from '../../components/alerts/AideAlertes';
 import { useToast } from '../../components/ui/Toast';
 import { userFacingError } from '../../utils/userFacingError';
 
@@ -16,7 +17,7 @@ export type PilotageSection = 'alertes' | 'suggestions' | 'actions' | 'issues';
 const SECTION_HEADER: Record<PilotageSection, { title: string; cx: string; agency: string }> = {
   alertes: {
     title: 'Alertes',
-    cx: 'Agences sous leur seuil de satisfaction, avis à risque et recommandations du réseau. Une alerte signale une situation ; elle ne crée pas de problème à traiter.',
+    cx: 'Agences sous leur seuil de satisfaction, avis à risque et recommandations du réseau.',
     agency: 'Ce qui demande votre attention dans votre agence : satisfaction sous le seuil, avis à risque, recommandations.',
   },
   suggestions: {
@@ -295,7 +296,7 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)', width: '100%', maxWidth: '100%', minWidth: 0 }}>
-      <PageTitle title={header.title} description={isAgencyManager ? header.agency : header.cx} />
+      <PageTitle title={header.title} description={isAgencyManager ? header.agency : header.cx} meta={section === 'alertes' ? <AideAlertes /> : undefined} />
 
       {/* ── SECTION ALERTES & ACTIONS (fusion : alertes réseau + recommandations IA) ── */}
       {section === 'alertes' && <AlertesView />}

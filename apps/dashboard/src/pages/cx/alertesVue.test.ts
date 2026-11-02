@@ -6,13 +6,15 @@ import {
   avisCible,
   compterAlertes,
   filtrerAlertes,
+  libelleVoirAvis,
   messageForfait,
   nombreAvisVisibles,
   sourceInitiale,
   sourceReducer,
+  decouperChiffres,
+  partiesSynthese,
   phraseAgencesConcernees,
   phraseSynthese,
-  sousTitreAlertes,
   syntheseAlertes,
   tonAvis,
   trierAvis,
@@ -132,23 +134,6 @@ describe('message de forfait', () => {
   });
 });
 
-describe('sousTitreAlertes', () => {
-  const cas: Array<[string, { seuil: number; avis: number; critiques: number }, string | null]> = [
-    ['rien', { seuil: 0, avis: 0, critiques: 0 }, null],
-    ['une alerte de seuil seule', { seuil: 1, avis: 0, critiques: 0 }, '1 alerte de satisfaction'],
-    ['plusieurs alertes de seuil seules', { seuil: 3, avis: 0, critiques: 0 }, '3 alertes de satisfaction'],
-    ['un avis critique', { seuil: 0, avis: 1, critiques: 1 }, '1 avis à risque (critique : note ≤ 2)'],
-    ['un avis non critique', { seuil: 0, avis: 1, critiques: 0 }, '1 avis à risque (non critique : note ≤ 2)'],
-    ['tous critiques (plus de « 16 dont 16 »)', { seuil: 0, avis: 16, critiques: 16 }, '16 avis à risque (tous critiques : note ≤ 2)'],
-    ['aucun critique', { seuil: 0, avis: 4, critiques: 0 }, '4 avis à risque (aucun critique : note ≤ 2)'],
-    ['mélange', { seuil: 2, avis: 10, critiques: 1 }, '2 alertes de satisfaction · 10 avis à risque (dont 1 critique : note ≤ 2)'],
-    ['mélange, plusieurs critiques', { seuil: 1, avis: 10, critiques: 3 }, '1 alerte de satisfaction · 10 avis à risque (dont 3 critiques : note ≤ 2)'],
-  ];
-  it.each(cas)('%s', (_nom, c, attendu) => {
-    expect(sousTitreAlertes({ ...c, total: c.seuil + c.avis })).toBe(attendu);
-  });
-});
-
 describe('syntheseAlertes et phrases', () => {
   const sd = (id: string): Alerte => ({ agence_id: id, agence_nom: id, taux_actuel: 50, seuil: 70, message: '' });
   const av = (id: string, ag: string, note = 1, date = '2026-11-01T10:00:00Z'): AlerteFeedback =>
@@ -174,4 +159,31 @@ describe('syntheseAlertes et phrases', () => {
     expect(syntheseAlertes({ seuil: [], avis: [av('f', 'a', 1, 'pas une date')], agenceId: null, cx: true })!.avisLePlusAncien).toBeNull();
   });
   it('champ agence manquant : agences concernées omises plutôt que 0', () => expect(phrase([], [av('f', '')])).toEqual(['1 situation à surveiller : 1 avis à risque', null]));
+});
+
+describe('mise en valeur des chiffres', () => {
+  it('découpe sans rien changer au texte', () => {
+    const t = '18 situations à surveiller : 2 alertes de seuil, 16 avis à risque';
+    const morceaux = decouperChiffres(t);
+    expect(morceaux.map((m) => m.texte).join('')).toBe(t);
+    expect(morceaux.filter((m) => m.nombre).map((m) => m.texte)).toEqual(['18', '2', '16']);
+  });
+  it('un nombre à milliers français reste un seul nombre', () => {
+    const t = `${formaterNombre(1234, 0)} avis`;
+    expect(decouperChiffres(t).filter((m) => m.nombre)).toHaveLength(1);
+  });
+  it('parties de la synthèse : titre et détail séparés, sans « : »', () => {
+    const s = syntheseAlertes({ seuil: [{ agence_id: 'a', agence_nom: 'a', taux_actuel: 1, seuil: 2, message: '' }], avis: [], agenceId: null, cx: false })!;
+    expect(partiesSynthese(s)).toEqual({ titre: '1 situation à surveiller', detail: '1 alerte de seuil' });
+  });
+});
+
+describe('libellé du bouton « Voir les N avis »', () => {
+  it('N réel = avis encore masqués ; singulier ; Réduire une fois dépliée', () => {
+    expect(libelleVoirAvis(16, false)).toBe('Voir les 11 avis');
+    expect(libelleVoirAvis(7, false)).toBe('Voir les 2 avis');
+    expect(libelleVoirAvis(6, false)).toBe('Voir l’avis restant');
+    expect(libelleVoirAvis(16, true)).toBe('Réduire');
+    expect(libelleVoirAvis(30, false, 10)).toBe('Voir les 20 avis');
+  });
 });

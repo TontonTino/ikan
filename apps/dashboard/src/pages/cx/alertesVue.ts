@@ -52,6 +52,16 @@ export function trierAvis(avis: AlerteFeedback[]): AlerteFeedback[] {
   });
 }
 
+/**
+ * Note discrète sur l'ordre des avis : donnée seulement quand il y a de quoi trier (au moins deux avis). « Critiques d'abord » n'est dit que si les deux
+ * niveaux sont présents, sinon l'ordre ne dépend que de la date.
+ */
+export function noteTriAvis(avis: AlerteFeedback[]): string | null {
+  if (avis.length < 2) return null;
+  const critiques = avis.filter((a) => tonAvis(a.note) === 'critical').length;
+  return critiques > 0 && critiques < avis.length ? 'Critiques d’abord, puis du plus récent au plus ancien.' : 'Du plus récent au plus ancien.';
+}
+
 export interface AlertesFiltrees {
   seuil: Alerte[];
   avis: AlerteFeedback[];
@@ -69,26 +79,6 @@ export function compterAlertes(seuil: Alerte[], avis: AlerteFeedback[], agenceId
   const s = seuil.filter((a) => !agenceId || a.agence_id === agenceId).length;
   const a = avis.filter((x) => !agenceId || x.agence_id === agenceId);
   return { seuil: s, avis: a.length, critiques: a.filter((x) => tonAvis(x.note) === 'critical').length, total: s + a.length };
-}
-
-/**
- * Sous-titre de la carte « Alertes actives », à partir des compteurs déjà calculés. Il dit ce que les onglets ne disent pas : la part d'avis
- * critiques (note ≤ 2). « tous critiques » / « aucun critique » plutôt que « 16 dont 16 critiques ». Null quand il n'y a aucune alerte.
- */
-export function sousTitreAlertes(c: { seuil: number; avis: number; critiques: number; total: number }): string | null {
-  if (c.total === 0) return null;
-  const parties: string[] = [];
-  if (c.seuil > 0) parties.push(`${c.seuil} alerte${c.seuil > 1 ? 's' : ''} de satisfaction`);
-  if (c.avis > 0) {
-    const detail =
-      c.critiques === c.avis
-        ? c.avis > 1 ? 'tous critiques' : 'critique'
-        : c.critiques === 0
-          ? c.avis > 1 ? 'aucun critique' : 'non critique'
-          : `dont ${c.critiques} critique${c.critiques > 1 ? 's' : ''}`;
-    parties.push(`${c.avis} avis à risque (${detail} : note ≤ ${NOTE_CRITIQUE_MAX})`);
-  }
-  return parties.join(' · ');
 }
 
 export interface SyntheseAlertes {
@@ -118,12 +108,26 @@ export function syntheseAlertes(entrees: { seuil: Alerte[]; avis: AlerteFeedback
   };
 }
 
-/** « 18 situations à surveiller : 2 alertes de seuil, 16 avis à risque » ; une partie à zéro est omise (jamais « 0 » par défaut). */
-export function phraseSynthese(s: SyntheseAlertes): string {
+/** Les deux moitiés de la phrase de synthèse, séparées pour la mise en page : « 18 situations à surveiller » et « 2 alertes de seuil, 16 avis à risque ». Une partie à zéro est omise (jamais « 0 » par défaut). */
+export function partiesSynthese(s: SyntheseAlertes): { titre: string; detail: string } {
   const detail: string[] = [];
   if (s.seuil > 0) detail.push(`${formaterNombre(s.seuil, 0)} alerte${s.seuil > 1 ? 's' : ''} de seuil`);
   if (s.avis > 0) detail.push(`${formaterNombre(s.avis, 0)} avis à risque`);
-  return `${formaterNombre(s.situations, 0)} situation${s.situations > 1 ? 's' : ''} à surveiller : ${detail.join(', ')}`;
+  return { titre: `${formaterNombre(s.situations, 0)} situation${s.situations > 1 ? 's' : ''} à surveiller`, detail: detail.join(', ') };
+}
+
+/** « 18 situations à surveiller : 2 alertes de seuil, 16 avis à risque ». */
+export function phraseSynthese(s: SyntheseAlertes): string {
+  const { titre, detail } = partiesSynthese(s);
+  return `${titre} : ${detail}`;
+}
+
+/** Coupe un texte en morceaux { texte, nombre } pour mettre les chiffres en valeur sans modifier le texte (« 1 234 » reste un seul nombre). */
+export function decouperChiffres(texte: string): Array<{ texte: string; nombre: boolean }> {
+  return texte
+    .split(/(\d+(?:[\u202f\u00a0]\d{3})*)/)
+    .filter((t) => t !== '')
+    .map((t) => ({ texte: t, nombre: /^\d/.test(t) }));
 }
 
 /** Part complémentaire de la synthèse (CX Manager : agences concernées). Vide si l'information manque. */
@@ -147,6 +151,13 @@ export function nombreAvisVisibles(avis: AlerteFeedback[], depliee: boolean, cib
   if (depliee || avis.length <= limite) return avis.length;
   const index = cibleId ? avis.findIndex((a) => a.feedback_id === cibleId) : -1;
   return index >= limite ? avis.length : limite;
+}
+
+/** Libellé du bouton qui déplie ou replie les avis : « Voir les N avis » (N = avis encore masqués), « Voir l'avis restant » s'il n'en reste qu'un, « Réduire » une fois dépliée. */
+export function libelleVoirAvis(total: number, depliee: boolean, limite = AVIS_VISIBLES): string {
+  if (depliee) return 'Réduire';
+  const masques = total - limite;
+  return masques > 1 ? `Voir les ${masques} avis` : 'Voir l’avis restant';
 }
 
 /** Message de forfait : explicite, jamais confondu avec « aucune alerte ». */

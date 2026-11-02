@@ -7,6 +7,8 @@ import Button from '../ui/Button';
 import Card from '../ui/Card';
 import EmptyState from '../ui/EmptyState';
 import { ArrowUpRightIcon, CheckIcon } from '../common/Icons';
+import { dateRelativeOuAbsolue, fullDate } from '../ui/format';
+import { texteRecommandationAffiche } from '../../utils/texteRecommandation';
 import { PRIORITE_RECO_LABEL, PRIORITE_RECO_TON, grouperRecommandations, trierRecommandations } from './agenceVue';
 
 /** Recommandations visibles d'emblée : les plus prioritaires. Les autres se dépliaient en une longue pile : elles sont groupées. */
@@ -15,7 +17,6 @@ export const RECOMMANDATIONS_VISIBLES = 3;
 /** Recommandation, avec l'agence concernée quand la liste couvre plusieurs agences (vue réseau du CX Manager). */
 export type RecoAffichee = Recommandation & { agence_nom?: string | null };
 
-const dateCourte = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 
 export function RecoLigne({ reco, onMarquerTraitee }: { reco: RecoAffichee; onMarquerTraitee: (id: string) => void }) {
   return (
@@ -24,12 +25,12 @@ export function RecoLigne({ reco, onMarquerTraitee }: { reco: RecoAffichee; onMa
         <div className="agence-reco__meta">
           <Badge variant={PRIORITE_RECO_TON[reco.priorite] ?? 'neutral'} label={`Priorité ${(PRIORITE_RECO_LABEL[reco.priorite] ?? String(reco.priorite)).toLowerCase()}`} />
           {reco.agence_nom && <strong>{reco.agence_nom}</strong>}
-          <time dateTime={reco.date_generation}>{dateCourte(reco.date_generation)}</time>
+          <time dateTime={reco.date_generation} title={fullDate(reco.date_generation)}>{dateRelativeOuAbsolue(reco.date_generation)}</time>
           <span>En attente</span>
         </div>
-        <p className="agence-reco__text">{reco.contenu}</p>
+        <p className="agence-reco__text">{texteRecommandationAffiche(reco.contenu)}</p>
       </div>
-      <Button size="sm" variant="secondary" icon={<CheckIcon size={14} />} onClick={() => onMarquerTraitee(reco.id)} aria-label={`Marquer comme traitée : ${reco.contenu.slice(0, 80)}`}>
+      <Button size="sm" variant="secondary" icon={<CheckIcon size={14} />} onClick={() => onMarquerTraitee(reco.id)} aria-label={`Marquer comme traitée : ${texteRecommandationAffiche(reco.contenu).slice(0, 80)}`}>
         Marquer comme traitée
       </Button>
     </li>
