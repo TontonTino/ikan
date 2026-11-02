@@ -70,6 +70,26 @@ export function compterAlertes(seuil: Alerte[], avis: AlerteFeedback[], agenceId
   return { seuil: s, avis: a.length, critiques: a.filter((x) => tonAvis(x.note) === 'critical').length, total: s + a.length };
 }
 
+/**
+ * Sous-titre de la carte « Alertes actives », à partir des compteurs déjà calculés. Il dit ce que les onglets ne disent pas : la part d'avis
+ * critiques (note ≤ 2). « tous critiques » / « aucun critique » plutôt que « 16 dont 16 critiques ». Null quand il n'y a aucune alerte.
+ */
+export function sousTitreAlertes(c: { seuil: number; avis: number; critiques: number; total: number }): string | null {
+  if (c.total === 0) return null;
+  const parties: string[] = [];
+  if (c.seuil > 0) parties.push(`${c.seuil} alerte${c.seuil > 1 ? 's' : ''} de satisfaction`);
+  if (c.avis > 0) {
+    const detail =
+      c.critiques === c.avis
+        ? c.avis > 1 ? 'tous critiques' : 'critique'
+        : c.critiques === 0
+          ? c.avis > 1 ? 'aucun critique' : 'non critique'
+          : `dont ${c.critiques} critique${c.critiques > 1 ? 's' : ''}`;
+    parties.push(`${c.avis} avis à risque (${detail} : note ≤ ${NOTE_CRITIQUE_MAX})`);
+  }
+  return parties.join(' · ');
+}
+
 const PREFIXE_ANCRE_AVIS = 'alerte-feedback-';
 
 /** Identifiant de l'avis ciblé par l'ancre de la cloche (#alerte-feedback-…), ou null. */

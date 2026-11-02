@@ -13,9 +13,10 @@ import EmptyState from '../../components/ui/EmptyState';
 import IconButton from '../../components/ui/IconButton';
 import Skeleton from '../../components/ui/Skeleton';
 import { fullDate, relativeTime } from '../../components/ui/format';
-import { ArrowUpRightIcon, RefreshIcon } from '../../components/common/Icons';
+import { ArrowUpRightIcon, FilterIcon, RefreshIcon } from '../../components/common/Icons';
 import { raisonLabel, alerteFeedbackAnchor, alerteSeuilAnchor } from '../../components/alerts/alerteLabels';
 import BadgeGraviteAlerte from '../../components/alerts/BadgeGraviteAlerte';
+import BadgeNiveauAvis from '../../components/alerts/BadgeNiveauAvis';
 import { libelleRecommandations } from '../../utils/sourceAnalyse';
 import {
   AVIS_VISIBLES,
@@ -24,6 +25,7 @@ import {
   filtrerAlertes,
   messageForfait,
   nombreAvisVisibles,
+  sousTitreAlertes,
   tonAvis,
   type TypeAlerte,
 } from './alertesVue';
@@ -86,11 +88,6 @@ export function LigneSeuil({ alerte, isAgencyManager, cible }: { alerte: Alerte;
           <strong>{formaterPourcentage(alerte.taux_actuel)}</strong> sur les 7 derniers jours, pour un seuil de {formaterPourcentage(alerte.seuil)}
           {alerte.ecart_seuil != null && alerte.ecart_seuil > 0 ? ` (${alerte.ecart_seuil.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} points sous le seuil)` : ''}
         </p>
-        <p className="siege-note">
-          {isAgencyManager
-            ? 'Disparaît quand la satisfaction des 7 derniers jours repasse au-dessus du seuil.'
-            : 'Affichée après 48 h sous le seuil ; disparaît quand la satisfaction des 7 derniers jours repasse au-dessus.'}
-        </p>
       </div>
       {isAgencyManager ? (
         <Link to="/statistiques" className="siege-link">Analyser la tendance<ArrowUpRightIcon size={13} aria-hidden="true" /></Link>
@@ -108,7 +105,8 @@ export function LigneAvis({ avis, isAgencyManager, cible }: { avis: AlerteFeedba
     <li id={id} tabIndex={-1} className={`agence-prio__item agence-prio__item--${ton} ui-alert-item${cible ? ' is-target' : ''}`}>
       <div className="agence-prio__main">
         <div className="agence-prio__head">
-          <Badge variant={ton} label={`${raisonLabel(avis.raison)} · ${avis.note}/5`} />
+          <BadgeNiveauAvis note={avis.note} />
+          <Badge variant="outline" label={`${raisonLabel(avis.raison)} · ${avis.note}/5`} />
           {!isAgencyManager && <strong className="agence-prio__title">{avis.agence_nom}</strong>}
           <time className="siege-note" dateTime={avis.date_soumission} title={fullDate(avis.date_soumission)}>
             {relativeTime(avis.date_soumission)}
@@ -118,7 +116,6 @@ export function LigneAvis({ avis, isAgencyManager, cible }: { avis: AlerteFeedba
           {avis.categorie_nom ? `Catégorie « ${avis.categorie_nom} » — ` : ''}
           {avis.commentaire || 'Aucun commentaire.'}
         </p>
-        <p className="siege-note">Disparaît quand l’avis est marqué comme résolu.</p>
       </div>
       <Link to={lienAvis(isAgencyManager ? 'agency_manager' : 'cx_manager', avis.agence_id, 'critiques', { avisId: avis.feedback_id })} className="siege-link">
         Traiter l’avis<ArrowUpRightIcon size={13} aria-hidden="true" />
@@ -156,16 +153,17 @@ export default function PilotageAlertesActionsTab(props: Props) {
     ? 'Chargement…'
     : !prete || !incluses
       ? undefined
-      : compteurs.total === 0
-        ? undefined
-        : `${compteurs.seuil} alerte${compteurs.seuil > 1 ? 's' : ''} de satisfaction · ${compteurs.avis} avis à risque dont ${compteurs.critiques} critique${compteurs.critiques > 1 ? 's' : ''} (note ≤ 2)`;
+      : sousTitreAlertes(compteurs) ?? undefined;
 
   return (
     <div className="agence">
-      <Alert tone="info" title="Comment lire cette page">
-        Les alertes sont recalculées à chaque ouverture : elles n’ont pas d’état « lu » ou « traité » et disparaissent d’elles-mêmes quand la situation redevient
-        normale. Une alerte n’est pas un problème à traiter : c’est vous qui décidez d’en créer un.
-      </Alert>
+      <details className="alerte-aide">
+        <summary>Comment lire cette page</summary>
+        <p>
+          Les alertes sont recalculées à chaque ouverture : elles n’ont pas d’état « lu » ou « traité » et disparaissent d’elles-mêmes quand la situation redevient
+          normale. Une alerte n’est pas un problème à traiter : c’est vous qui décidez d’en créer un.
+        </p>
+      </details>
 
       <div className="alerte-toolbar">
         <div className="ui-segmented" role="group" aria-label="Type d'alerte">
@@ -200,11 +198,11 @@ export default function PilotageAlertesActionsTab(props: Props) {
         ) : nbAffichees === 0 ? (
           <EmptyState
             compact
-            illustration="no-alert"
+            illustration={filtreActif && totalGlobal > 0 ? <span className="alerte-vide-filtre"><FilterIcon size={30} /></span> : 'no-alert'}
             title={filtreActif && totalGlobal > 0 ? 'Aucune alerte pour ces filtres' : 'Aucune alerte active'}
             message={
               filtreActif && totalGlobal > 0
-                ? `Il y a ${totalGlobal} alerte${totalGlobal > 1 ? 's' : ''} au total : élargissez le type ou l’agence pour les voir.`
+                ? `Ces filtres masquent les alertes : il y a ${totalGlobal} alerte${totalGlobal > 1 ? 's' : ''} au total. Élargissez le type ou l’agence pour les voir.`
                 : isAgencyManager
                   ? 'Votre agence maintient un taux de satisfaction supérieur à son seuil et aucun avis ne déclenche d’alerte.'
                   : 'Aucune agence du réseau ne déclenche d’alerte pour le moment.'
@@ -216,6 +214,11 @@ export default function PilotageAlertesActionsTab(props: Props) {
             {filtrees.seuil.length > 0 && (
               <section aria-label="Alertes de satisfaction">
                 <h3 className="agence-group-title">Satisfaction sous le seuil ({filtrees.seuil.length})</h3>
+                <p className="siege-note">
+                  {isAgencyManager
+                    ? 'Chaque alerte disparaît quand la satisfaction des 7 derniers jours repasse au-dessus du seuil.'
+                    : 'Chaque alerte est affichée après 48 h sous le seuil ; elle disparaît quand la satisfaction des 7 derniers jours repasse au-dessus.'}
+                </p>
                 <ul className="agence-prio">
                   {filtrees.seuil.map((a) => <LigneSeuil key={a.agence_id} alerte={a} isAgencyManager={isAgencyManager} cible={target === alerteSeuilAnchor(a.agence_id)} />)}
                 </ul>
@@ -224,6 +227,7 @@ export default function PilotageAlertesActionsTab(props: Props) {
             {filtrees.avis.length > 0 && (
               <section aria-label="Avis à risque">
                 <h3 className="agence-group-title">Avis à risque ({filtrees.avis.length}) · critiques d’abord, puis du plus récent au plus ancien</h3>
+                <p className="siege-note">Chaque alerte disparaît quand l’avis est marqué comme résolu.</p>
                 <ul className="agence-prio">
                   {avisVisibles.map((a) => <LigneAvis key={a.feedback_id} avis={a} isAgencyManager={isAgencyManager} cible={target === alerteFeedbackAnchor(a.feedback_id)} />)}
                 </ul>
