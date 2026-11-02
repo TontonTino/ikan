@@ -32,6 +32,7 @@ import {
   SURVEILLANCE,
   aggregateWeekly,
   compteDefavorableDelta,
+  messageComparaison,
   extremesWilson,
   granularitesDisponibles,
   isDailyPoint,
@@ -113,7 +114,6 @@ export function SiegeKpis({
   const volume = k?.total_feedbacks;
   const nbAvis = volume?.valeur_num ?? 0;
   const prevVolume = volume?.valeur_precedente ?? 0;
-  const sansComparaison = 'Pas de comparaison : aucun avis sur la période précédente';
 
   const sparkline = useMemo(() => {
     if (stats.status !== 'ok') return undefined;
@@ -139,7 +139,7 @@ export function SiegeKpis({
         value={k ? satisfactionTexte(k.satisfaction?.valeur_num ?? null, nbAvis) : '—'}
         tone={nbAvis === 0 ? 'neutral' : 'positive'}
         trend={toTrend(sat, jours)}
-        subtitle={stats.status === 'error' ? 'Statistiques indisponibles' : k && !sat ? (nbAvis === 0 ? periodeLabel(jours) : sansComparaison) : undefined}
+        subtitle={stats.status === 'error' ? 'Statistiques indisponibles' : k && !sat ? periodeLabel(jours) : undefined}
         sparkline={sparkline}
         highlight={nbAvis > 0}
         onClick={k ? () => onOpen('satisfaction') : undefined}
@@ -154,7 +154,7 @@ export function SiegeKpis({
         value={k ? nbAvis.toLocaleString('fr-FR') : '—'}
         tone="neutral"
         trend={toTrend(vol, jours)}
-        subtitle={stats.status === 'error' ? 'Statistiques indisponibles' : k && !vol ? (nbAvis === 0 ? periodeLabel(jours) : sansComparaison) : undefined}
+        subtitle={stats.status === 'error' ? 'Statistiques indisponibles' : k && !vol ? periodeLabel(jours) : undefined}
         onClick={k ? () => onOpen('volume') : undefined}
       />
       </BentoItem>
@@ -167,7 +167,7 @@ export function SiegeKpis({
         value={k ? nbCritiques.toLocaleString('fr-FR') : '—'}
         tone={nbCritiques > 0 ? 'critical' : 'neutral'}
         trend={toTrend(crit, jours)}
-        subtitle={stats.status === 'error' ? 'Statistiques indisponibles' : k && !crit ? (prevVolume === 0 && nbAvis > 0 ? sansComparaison : periodeLabel(jours)) : undefined}
+        subtitle={stats.status === 'error' ? 'Statistiques indisponibles' : k && !crit ? periodeLabel(jours) : undefined}
         onClick={k ? () => onOpen('critiques') : undefined}
       />
       </BentoItem>
@@ -189,6 +189,12 @@ export function SiegeKpis({
         onClick={alertes.status === 'ok' && alertesIncluses ? () => onOpen('seuil') : undefined}
       />
       </BentoItem>
+      {/* UNE seule mention de comparaison indisponible pour la rangée (au lieu d'un texte répété sur chaque carte). */}
+      {k && messageComparaison(volume) && (
+        <BentoItem size="full" as="div">
+          <p className="siege-note" role="note">{messageComparaison(volume)}</p>
+        </BentoItem>
+      )}
     </>
   );
 }
@@ -386,7 +392,7 @@ export function Evolution({ stats, jours, onRetry }: { stats: Source<StatsCXResp
             <XAxis dataKey="label" {...chartAxisProps} minTickGap={16} />
             <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tickFormatter={(v) => `${v} %`} {...chartAxisProps} width={52} />
             <RTooltip content={<EvolutionTooltip />} cursor={{ stroke: 'var(--color-border-strong)' }} />
-            <Line type="monotone" dataKey="satisfaction" name="Satisfaction" stroke="var(--dataviz-positive)" strokeWidth={2} dot={<EvolutionDot />} activeDot={{ r: 6 }} isAnimationActive={false} />
+            <Line type="linear" dataKey="satisfaction" name="Satisfaction" stroke="var(--dataviz-positive)" strokeWidth={2} dot={<EvolutionDot />} activeDot={{ r: 6 }} isAnimationActive={false} />
           </ComposedChart>
         </ResponsiveContainer>
       )}

@@ -19,6 +19,7 @@ import {
   parametresApi, parametresThemes, periodeDepuisUrl, rechercheNormalisee, reduireFiltres, type FiltresAvis, type OngletAvis,
 } from './avisFiltres';
 import EtatListeAvis from './EtatListeAvis';
+import PageTitle from '../../components/ui/PageTitle';
 import './FeedbacksPage.css';
 
 const TABS_VALIDES: readonly OngletAvis[] = ['tous', 'a_traiter', 'critiques', 'thematiques'];
@@ -241,6 +242,14 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
         <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 1000, background: '#02302D', color: 'white', padding: '12px 20px', borderRadius: '12px', fontWeight: 600 }}>
           {toast}
         </div>
+      )}
+
+      {/* Titre de page (absent quand la liste est intégrée à la page d'une agence : elle a déjà le sien). */}
+      {!agenceId && (
+        <PageTitle
+          title={currentUser?.role === 'agency_manager' ? 'Avis clients' : 'Avis du réseau'}
+          description={currentUser?.role === 'agency_manager' ? 'Les avis clients de votre agence.' : 'Les avis clients de toutes les agences de votre réseau.'}
+        />
       )}
 
       {/* Contexte d'agence et vues : le périmètre précède les résultats. */}

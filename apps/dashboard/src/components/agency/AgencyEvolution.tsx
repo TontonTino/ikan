@@ -80,7 +80,7 @@ export default function AgencyEvolution({ points, periode }: { points: TendanceS
                   />
                 }
               />
-              <Area type="monotone" dataKey="taux" name="Satisfaction" stroke={DATAVIZ.positive} strokeWidth={2.5} fill="url(#gradAgenceEvolution)" dot={<Point />} activeDot={{ r: 5 }} />
+              <Area type="linear" dataKey="taux" name="Satisfaction" stroke={DATAVIZ.positive} strokeWidth={2.5} fill="url(#gradAgenceEvolution)" dot={<Point />} activeDot={{ r: 5 }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>

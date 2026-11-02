@@ -24,7 +24,7 @@ const rendu = (s: Source<StatsCXResponse>, jours = 30) =>
   );
 
 describe('vue siège : valeurs des indicateurs (jeu de l’API : 8 avis, CSAT 50 %, 2 critiques)', () => {
-  const html = rendu(stats({ satisfaction: kpi(50, 75), total_feedbacks: kpi(8, 4), alertes_critiques: kpi(2, 1) }));
+  const html = rendu(stats({ satisfaction: kpi(50, 75), total_feedbacks: kpi(8, 6), alertes_critiques: kpi(2, 1) }));
 
   it('libellés, valeurs et nombre d’avis', () => {
     for (const libelle of ['Satisfaction', 'Avis reçus', 'Avis critiques', 'Agences sous leur seuil']) expect(html).toContain(libelle);
@@ -36,7 +36,7 @@ describe('vue siège : valeurs des indicateurs (jeu de l’API : 8 avis, CSAT 50
 
   it('évolutions : points pour le CSAT, pourcentage pour les avis, compte absolu pour les critiques, base de comparaison dite', () => {
     expect(html).toContain('−25 pts');
-    expect(html).toContain('+100 %');
+    expect(html).toContain('+33,3 %');
     expect(html).toContain('+1');
     expect(html).toContain('vs 30 derniers jours précédents');
   });
@@ -57,10 +57,39 @@ describe('vue siège : états vides', () => {
     expect(html).toContain('30 derniers jours');
   });
 
-  it('avis cette période mais aucun avant : pas de comparaison, dit pourquoi', () => {
+  it('avis cette période mais aucun avant : une SEULE mention de comparaison indisponible, aucun delta', () => {
     const html = rendu(stats({ satisfaction: kpi(50, null), total_feedbacks: kpi(8, 0), alertes_critiques: kpi(2, 0) }));
-    expect(html).toContain('Pas de comparaison : aucun avis sur la période précédente');
+    expect(html).toContain('Comparaison indisponible : moins de 5 avis sur la période précédente.');
+    expect((html.match(/Comparaison indisponible/g) || []).length).toBe(1);
+    expect(html).not.toContain('Pas de comparaison');
     expect(html).not.toContain('ui-kpi__delta');
+  });
+
+  it('période précédente à 1 avis : écart absolu (« +43 avis »), jamais « +4300 % », une seule mention', () => {
+    const html = rendu(stats({ satisfaction: kpi(55.6, 100), total_feedbacks: kpi(44, 1), alertes_critiques: kpi(16, 0) }));
+    expect(html).toContain('+43 avis');
+    expect(html).not.toContain('4300');
+    expect(html).not.toMatch(/\+[\d\s\u202f\u00a0]+ %/);
+    expect(html).not.toContain('pts');
+    expect(html).toContain('vs 30 derniers jours précédents');
+    expect((html.match(/Comparaison indisponible/g) || []).length).toBe(1);
+  });
+
+  it('période précédente à 4 avis (sous le seuil) : écart absolu et mention ; à 5 avis : pourcentage et points, aucune mention', () => {
+    const sous = rendu(stats({ satisfaction: kpi(50, 75), total_feedbacks: kpi(8, 4), alertes_critiques: kpi(2, 1) }));
+    expect(sous).toContain('+4 avis');
+    expect(sous).not.toContain('−25 pts');
+    expect(sous).toContain('Comparaison indisponible');
+    const normal = rendu(stats({ satisfaction: kpi(50, 75), total_feedbacks: kpi(8, 5), alertes_critiques: kpi(2, 1) }));
+    expect(normal).toContain('−25 pts');
+    expect(normal).toContain('+60 %');
+    expect(normal).not.toContain('Comparaison indisponible');
+  });
+
+  it('période courante sous 5 avis (précédente normale) : pas de points, mention dédiée', () => {
+    const html = rendu(stats({ satisfaction: kpi(50, 75), total_feedbacks: kpi(3, 20), alertes_critiques: kpi(1, 2) }));
+    expect(html).not.toContain('pts');
+    expect(html).toContain('Comparaison indisponible : moins de 5 avis sur la période.');
   });
 
   it('période de 12 mois : libellé « 12 derniers mois »', () => {

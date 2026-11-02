@@ -88,14 +88,15 @@ const signed = (n: number, suffix: string, digits = 1) =>
   `${n > 0 ? '+' : n < 0 ? '−' : ''}${fmt(Math.abs(n), digits)}${suffix}`;
 
 /**
- * Variation de satisfaction en POINTS. Null si l'une des deux périodes n'a aucun avis.
+ * Variation de satisfaction en POINTS. Null si l'une des deux périodes a moins de FAIBLE_VOLUME_POINT avis (écart non fiable).
  * `volume` = KPI total_feedbacks (sa valeur_precedente donne le volume de la période précédente).
  */
 export function satisfactionDelta(satisfaction: StatKPI | undefined, volume: StatKPI | undefined): KpiDelta | null {
   if (!satisfaction || !volume) return null;
   const volCur = volume.valeur_num;
   const volPrev = volume.valeur_precedente ?? 0;
-  if (!volCur || !volPrev || satisfaction.valeur_num == null || satisfaction.valeur_precedente == null) return null;
+  if (volCur == null || volCur < FAIBLE_VOLUME_POINT || volPrev < FAIBLE_VOLUME_POINT) return null;
+  if (satisfaction.valeur_num == null || satisfaction.valeur_precedente == null) return null;
   const diff = Math.round((satisfaction.valeur_num - satisfaction.valeur_precedente) * 10) / 10;
   return {
     text: signed(diff, ' pts'),
@@ -104,11 +105,22 @@ export function satisfactionDelta(satisfaction: StatKPI | undefined, volume: Sta
   };
 }
 
-/** Variation relative d'un volume (en %). Null si la période précédente n'a aucun avis. */
+/**
+ * Variation d'un volume d'avis. Période précédente d'au moins FAIBLE_VOLUME_POINT avis : variation RELATIVE (en %). Entre 1 et
+ * FAIBLE_VOLUME_POINT − 1 avis : jamais de pourcentage (un « +4300 % » n'informe pas), écart ABSOLU en avis. Aucun avis : null.
+ */
 export function volumeDelta(volume: StatKPI | undefined): KpiDelta | null {
   if (!volume) return null;
   const prev = volume.valeur_precedente ?? 0;
   if (!prev || volume.valeur_num == null) return null;
+  if (prev < FAIBLE_VOLUME_POINT) {
+    const ecart = volume.valeur_num - prev;
+    return {
+      text: `${signed(ecart, '', 0)} avis`,
+      direction: ecart > 0 ? 'up' : ecart < 0 ? 'down' : 'flat',
+      isPositive: true,
+    };
+  }
   const pct = Math.round(((volume.valeur_num - prev) / prev) * 1000) / 10;
   return {
     text: signed(pct, ' %'),
@@ -116,6 +128,17 @@ export function volumeDelta(volume: StatKPI | undefined): KpiDelta | null {
     // Plus de feedbacks = plus de voix clients : neutre-favorable, jamais rouge.
     isPositive: true,
   };
+}
+
+/**
+ * Mention UNIQUE posée sous la rangée de cartes KPI quand l'écart avec la période précédente n'est pas affiché (au lieu d'un texte
+ * répété sur chaque carte). Null quand les deux périodes ont au moins FAIBLE_VOLUME_POINT avis.
+ */
+export function messageComparaison(volume: StatKPI | undefined): string | null {
+  if (!volume) return null;
+  if ((volume.valeur_precedente ?? 0) < FAIBLE_VOLUME_POINT) return `Comparaison indisponible : moins de ${FAIBLE_VOLUME_POINT} avis sur la période précédente.`;
+  if ((volume.valeur_num ?? 0) < FAIBLE_VOLUME_POINT) return `Comparaison indisponible : moins de ${FAIBLE_VOLUME_POINT} avis sur la période.`;
+  return null;
 }
 
 /**
