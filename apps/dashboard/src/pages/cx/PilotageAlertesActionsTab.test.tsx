@@ -165,7 +165,56 @@ describe('page /alertes — liens vers les avis et les agences', () => {
   it('une alerte n’est jamais déclarée résolue par l’interface : aucun bouton « résoudre » ni « acquitter »', () => {
     const html = rendu({ alertes: etatAlertes({ seuil: [seuil()], avis: [avis(1)] }) });
     expect(html).not.toMatch(/Résoudre|Acquitter|Marquer l’alerte|Clôturer/);
-    expect(html).toContain('Disparaît quand l’avis est marqué comme résolu');
+    expect(html).toContain('disparaît quand l’avis est marqué comme résolu');
+  });
+});
+
+describe('page /alertes — niveau écrit, aide repliée, aucun résultat, sous-titre', () => {
+  const avisSentiment = (i: number, note: number): AlerteFeedback => ({ ...avis(i, note), raison: 'sentiment_negatif' });
+  const occurrences = (html: string, motif: string) => html.split(motif).length - 1;
+
+  it('niveau de chaque avis écrit : note ≤ 2 « Critique », sinon « À surveiller » (texte + icône, pas la couleur seule)', () => {
+    const html = rendu({ alertes: etatAlertes({ avis: [avis(1, 2), avisSentiment(2, 3)] }) });
+    expect(html).toContain('ui-badge--critical"><span class="ui-badge__icon" aria-hidden="true">');
+    expect(html).toMatch(/ui-badge--critical"><span[^>]*>.*?<\/span>Critique</);
+    expect(html).toMatch(/ui-badge--warning"><span[^>]*>.*?<\/span>À surveiller</);
+    expect(occurrences(html, '>Critique<')).toBe(1);
+    expect(occurrences(html, '>À surveiller<')).toBe(1);
+  });
+
+  it('la phrase « disparaît… » et la phrase de seuil sont écrites UNE fois par groupe, pas par ligne', () => {
+    const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ seuil: [seuil('a1'), seuil('a2'), seuil('a3')], avis: [avis(1), avis(2), avis(3)] }) });
+    expect(occurrences(html, 'disparaît quand l’avis est marqué comme résolu')).toBe(1);
+    expect(occurrences(html, 'Chaque alerte est affichée après 48 h sous le seuil')).toBe(1);
+    expect(rendu({ alertes: etatAlertes({ seuil: [seuil('a1'), seuil('a2')] }) })).toContain('Chaque alerte disparaît quand la satisfaction des 7 derniers jours repasse au-dessus du seuil.');
+  });
+
+  it('encadré d’aide replié par défaut, au clavier (élément natif), texte conservé', () => {
+    const html = rendu({ alertes: etatAlertes({ avis: [avis(1)] }) });
+    expect(html).toContain('<details class="alerte-aide">');
+    expect(html).not.toMatch(/<details[^>]*\sopen/);
+    expect(html).toContain('<summary>Comment lire cette page</summary>');
+    expect(html).toContain('Une alerte n’est pas un problème à traiter');
+  });
+
+  it('aucun résultat : icône neutre de filtre (pas la coche verte) et message qui dit que le filtre masque les alertes', () => {
+    const html = rendu({ isAgencyManager: false, selectedAgenceId: 'autre', alertes: etatAlertes({ avis: [avis(1)] }) });
+    const alertes = html.split('Recommandations automatiques')[0];
+    expect(alertes).toContain('alerte-vide-filtre');
+    expect(alertes).not.toContain('var(--color-success)');
+    expect(html).toContain('Ces filtres masquent les alertes');
+  });
+
+  it('aucune alerte active : la coche positive est conservée', () => {
+    const alertes = rendu().split('Recommandations automatiques')[0];
+    expect(alertes).not.toContain('alerte-vide-filtre');
+    expect(alertes).toContain('var(--color-success)');
+  });
+
+  it('sous-titre informatif : plus de « 16 dont 16 critiques »', () => {
+    const tous = rendu({ alertes: etatAlertes({ avis: [avis(1, 1), avis(2, 2)] }) });
+    expect(tous).toContain('2 avis à risque (tous critiques : note ≤ 2)');
+    expect(tous).not.toContain('dont 2 critiques');
   });
 });
 
