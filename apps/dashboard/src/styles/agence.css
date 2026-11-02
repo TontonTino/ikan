@@ -108,3 +108,6 @@ a.agence-meter:hover { background: var(--color-bg-hover); }
 .alerte-ligne__detail { margin: 0; font-size: var(--text-sm); color: var(--color-text-body); overflow-wrap: anywhere; }
 .alerte-ligne__detail--clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .alerte-ligne__action { flex: none; text-decoration: none; }
+
+/* Titres de groupe de la page Alertes : casse normale (les majuscules intégrales fatiguent la lecture). */
+.alerte-groupe-titre { margin: var(--space-2) 0 0; font-size: var(--text-lg); font-weight: var(--weight-black); color: var(--color-text-main); }

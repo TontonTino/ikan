@@ -52,6 +52,16 @@ export function trierAvis(avis: AlerteFeedback[]): AlerteFeedback[] {
   });
 }
 
+/**
+ * Note discrète sur l'ordre des avis : donnée seulement quand il y a de quoi trier (au moins deux avis). « Critiques d'abord » n'est dit que si les deux
+ * niveaux sont présents, sinon l'ordre ne dépend que de la date.
+ */
+export function noteTriAvis(avis: AlerteFeedback[]): string | null {
+  if (avis.length < 2) return null;
+  const critiques = avis.filter((a) => tonAvis(a.note) === 'critical').length;
+  return critiques > 0 && critiques < avis.length ? 'Critiques d’abord, puis du plus récent au plus ancien.' : 'Du plus récent au plus ancien.';
+}
+
 export interface AlertesFiltrees {
   seuil: Alerte[];
   avis: AlerteFeedback[];

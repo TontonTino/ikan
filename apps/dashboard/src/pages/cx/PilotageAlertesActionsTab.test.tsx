@@ -368,3 +368,20 @@ describe('page /alertes — rouge : le badge de niveau est le seul signal', () =
     expect(html).toContain('ui-badge--critical');
   });
 });
+
+describe('page /alertes — titres de groupe', () => {
+  it('« Avis à risque (16) » et « Satisfaction sous le seuil (2) », sans majuscules intégrales ni ordre de tri dans le titre', () => {
+    const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ seuil: [seuil('a1'), seuil('a2')], avis: Array.from({ length: 16 }, (_, i) => avis(i, 1)) }) });
+    expect(html).toContain('<h3 class="alerte-groupe-titre">Avis à risque (16)</h3>');
+    expect(html).toContain('<h3 class="alerte-groupe-titre">Satisfaction sous le seuil (2)</h3>');
+    expect(html).not.toContain('critiques d’abord, puis du plus récent au plus ancien</h3>');
+    expect(html).not.toContain('agence-group-title');
+  });
+
+  it('note de tri discrète : seulement si au moins deux avis ; « critiques d’abord » seulement si les deux niveaux sont présents', () => {
+    expect(rendu({ alertes: etatAlertes({ avis: [avis(1, 1)] }) })).not.toContain('plus récent');
+    expect(rendu({ alertes: etatAlertes({ avis: [avis(1, 1), avis(2, 1)] }) })).toContain('Du plus récent au plus ancien.');
+    expect(rendu({ alertes: etatAlertes({ avis: [avis(1, 1), avis(2, 1)] }) })).not.toContain('Critiques d’abord');
+    expect(rendu({ alertes: etatAlertes({ avis: [avis(1, 1), avis(2, 4)] }) })).toContain('Critiques d’abord, puis du plus récent au plus ancien.');
+  });
+});

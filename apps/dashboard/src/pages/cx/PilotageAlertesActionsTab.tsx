@@ -24,6 +24,7 @@ import {
   compterAlertes,
   filtrerAlertes,
   messageForfait,
+  noteTriAvis,
   nombreAvisVisibles,
   decouperChiffres,
   partiesSynthese,
@@ -225,7 +226,7 @@ export default function PilotageAlertesActionsTab(props: Props) {
           <>
             {filtrees.seuil.length > 0 && (
               <section aria-label="Alertes de satisfaction">
-                <h3 className="agence-group-title">Satisfaction sous le seuil ({filtrees.seuil.length})</h3>
+                <h3 className="alerte-groupe-titre">Satisfaction sous le seuil ({filtrees.seuil.length})</h3>
                 <p className="siege-note">
                   {isAgencyManager
                     ? 'Chaque alerte disparaît quand la satisfaction des 7 derniers jours repasse au-dessus du seuil.'
@@ -238,8 +239,8 @@ export default function PilotageAlertesActionsTab(props: Props) {
             )}
             {filtrees.avis.length > 0 && (
               <section aria-label="Avis à risque">
-                <h3 className="agence-group-title">Avis à risque ({filtrees.avis.length}) · critiques d’abord, puis du plus récent au plus ancien</h3>
-                <p className="siege-note">Chaque alerte disparaît quand l’avis est marqué comme résolu.</p>
+                <h3 className="alerte-groupe-titre">Avis à risque ({filtrees.avis.length})</h3>
+                <p className="siege-note">{noteTriAvis(filtrees.avis) ? `${noteTriAvis(filtrees.avis)} ` : ''}Chaque alerte disparaît quand l’avis est marqué comme résolu.</p>
                 <ul className="agence-prio alerte-liste">
                   {avisVisibles.map((a) => <LigneAvis key={a.feedback_id} avis={a} isAgencyManager={isAgencyManager} cible={target === alerteFeedbackAnchor(a.feedback_id)} />)}
                 </ul>
