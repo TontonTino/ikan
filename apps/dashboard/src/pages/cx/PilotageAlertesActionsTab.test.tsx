@@ -113,7 +113,8 @@ describe('page /alertes — hiérarchie, volume et filtres', () => {
     expect(html.indexOf('alerte-feedback-f2')).toBeLessThan(html.indexOf('alerte-feedback-f1'));
     expect(html).toContain('ui-badge--critical');
     expect(html).toContain('ui-badge--warning');
-    expect(html).toContain('1 critique');
+    expect(html).toContain('>Critique<');
+    expect(html).toContain('>À surveiller<');
   });
 
   it('les ancres de la cloche sont conservées pour les deux types', () => {
@@ -210,10 +211,13 @@ describe('page /alertes — niveau écrit, aide repliée, aucun résultat, sous-
     expect(alertes).toContain('var(--color-success)');
   });
 
-  it('sous-titre informatif : plus de « 16 dont 16 critiques »', () => {
-    const tous = rendu({ alertes: etatAlertes({ avis: [avis(1, 1), avis(2, 2)] }) });
-    expect(tous).toContain('2 avis à risque (tous critiques : note ≤ 2)');
-    expect(tous).not.toContain('dont 2 critiques');
+  it('plus de sous-titre sous « Alertes actives » : les volumes ne sont pas répétés dans la carte', () => {
+    const html = rendu({ alertes: etatAlertes({ seuil: [seuil()], avis: [avis(1, 1), avis(2, 2)] }) });
+    const carte = html.split('Recommandations automatiques')[0];
+    expect(carte).toContain('Alertes actives');
+    expect(carte).not.toContain('ui-card__subtitle');
+    expect(carte).not.toContain('tous critiques');
+    expect(carte).not.toContain('note ≤ 2)');
   });
 });
 

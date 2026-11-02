@@ -29,7 +29,6 @@ import {
   partiesSynthese,
   phraseAgencesConcernees,
   syntheseAlertes,
-  sousTitreAlertes,
   tonAvis,
   type TypeAlerte,
 } from './alertesVue';
@@ -158,12 +157,6 @@ export default function PilotageAlertesActionsTab(props: Props) {
   const actualisationEchouee = alertes.statut === 'erreur' && prete;
   const resetFiltres = () => { setType('toutes'); onSelectAgence(null); };
 
-  const sousTitre = chargement
-    ? 'Chargement…'
-    : !prete || !incluses
-      ? undefined
-      : sousTitreAlertes(compteurs) ?? undefined;
-
   return (
     <div className="agence">
       {prete && incluses && synthese && (
@@ -190,7 +183,6 @@ export default function PilotageAlertesActionsTab(props: Props) {
       <Card
         title="Alertes actives"
         className="alerte-carte"
-        subtitle={sousTitre}
         tone={prete && incluses && filtrees.seuil.length + filtrees.avis.filter((a) => tonAvis(a.note) === 'critical').length > 0 ? 'critical' : 'default'}
         aria-busy={chargement || undefined}
       >

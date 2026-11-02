@@ -14,7 +14,6 @@ import {
   partiesSynthese,
   phraseAgencesConcernees,
   phraseSynthese,
-  sousTitreAlertes,
   syntheseAlertes,
   tonAvis,
   trierAvis,
@@ -131,23 +130,6 @@ describe('message de forfait', () => {
     const m = messageForfait(null, false);
     expect(m.titre).toContain('forfait de votre organisation');
     expect(m.detail).toMatch(/CX Manager/);
-  });
-});
-
-describe('sousTitreAlertes', () => {
-  const cas: Array<[string, { seuil: number; avis: number; critiques: number }, string | null]> = [
-    ['rien', { seuil: 0, avis: 0, critiques: 0 }, null],
-    ['une alerte de seuil seule', { seuil: 1, avis: 0, critiques: 0 }, '1 alerte de satisfaction'],
-    ['plusieurs alertes de seuil seules', { seuil: 3, avis: 0, critiques: 0 }, '3 alertes de satisfaction'],
-    ['un avis critique', { seuil: 0, avis: 1, critiques: 1 }, '1 avis à risque (critique : note ≤ 2)'],
-    ['un avis non critique', { seuil: 0, avis: 1, critiques: 0 }, '1 avis à risque (non critique : note ≤ 2)'],
-    ['tous critiques (plus de « 16 dont 16 »)', { seuil: 0, avis: 16, critiques: 16 }, '16 avis à risque (tous critiques : note ≤ 2)'],
-    ['aucun critique', { seuil: 0, avis: 4, critiques: 0 }, '4 avis à risque (aucun critique : note ≤ 2)'],
-    ['mélange', { seuil: 2, avis: 10, critiques: 1 }, '2 alertes de satisfaction · 10 avis à risque (dont 1 critique : note ≤ 2)'],
-    ['mélange, plusieurs critiques', { seuil: 1, avis: 10, critiques: 3 }, '1 alerte de satisfaction · 10 avis à risque (dont 3 critiques : note ≤ 2)'],
-  ];
-  it.each(cas)('%s', (_nom, c, attendu) => {
-    expect(sousTitreAlertes({ ...c, total: c.seuil + c.avis })).toBe(attendu);
   });
 });
 

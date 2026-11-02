@@ -92,8 +92,6 @@ a.agence-meter:hover { background: var(--color-bg-hover); }
 @media (max-width: 640px) {
   .alerte-toolbar { flex-wrap: nowrap; gap: var(--space-2); overflow-x: auto; scrollbar-width: none; }
   .alerte-toolbar > * { flex: none; }
-  /* Le sous-titre de la carte répète les chiffres de la synthèse : masqué sur petit écran pour remonter la première alerte. */
-  .alerte-carte .ui-card__subtitle { display: none; }
   .alerte-toolbar select { min-width: 150px; min-height: var(--touch-target); }
   .alerte-toolbar .ui-segmented__item { min-height: var(--touch-target); padding: 0 var(--space-2); }
 }
