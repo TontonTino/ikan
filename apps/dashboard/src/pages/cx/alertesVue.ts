@@ -118,12 +118,26 @@ export function syntheseAlertes(entrees: { seuil: Alerte[]; avis: AlerteFeedback
   };
 }
 
-/** « 18 situations à surveiller : 2 alertes de seuil, 16 avis à risque » ; une partie à zéro est omise (jamais « 0 » par défaut). */
-export function phraseSynthese(s: SyntheseAlertes): string {
+/** Les deux moitiés de la phrase de synthèse, séparées pour la mise en page : « 18 situations à surveiller » et « 2 alertes de seuil, 16 avis à risque ». Une partie à zéro est omise (jamais « 0 » par défaut). */
+export function partiesSynthese(s: SyntheseAlertes): { titre: string; detail: string } {
   const detail: string[] = [];
   if (s.seuil > 0) detail.push(`${formaterNombre(s.seuil, 0)} alerte${s.seuil > 1 ? 's' : ''} de seuil`);
   if (s.avis > 0) detail.push(`${formaterNombre(s.avis, 0)} avis à risque`);
-  return `${formaterNombre(s.situations, 0)} situation${s.situations > 1 ? 's' : ''} à surveiller : ${detail.join(', ')}`;
+  return { titre: `${formaterNombre(s.situations, 0)} situation${s.situations > 1 ? 's' : ''} à surveiller`, detail: detail.join(', ') };
+}
+
+/** « 18 situations à surveiller : 2 alertes de seuil, 16 avis à risque ». */
+export function phraseSynthese(s: SyntheseAlertes): string {
+  const { titre, detail } = partiesSynthese(s);
+  return `${titre} : ${detail}`;
+}
+
+/** Coupe un texte en morceaux { texte, nombre } pour mettre les chiffres en valeur sans modifier le texte (« 1 234 » reste un seul nombre). */
+export function decouperChiffres(texte: string): Array<{ texte: string; nombre: boolean }> {
+  return texte
+    .split(/(\d+(?:[\u202f\u00a0]\d{3})*)/)
+    .filter((t) => t !== '')
+    .map((t) => ({ texte: t, nombre: /^\d/.test(t) }));
 }
 
 /** Part complémentaire de la synthèse (CX Manager : agences concernées). Vide si l'information manque. */

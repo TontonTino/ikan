@@ -10,6 +10,8 @@ import {
   nombreAvisVisibles,
   sourceInitiale,
   sourceReducer,
+  decouperChiffres,
+  partiesSynthese,
   phraseAgencesConcernees,
   phraseSynthese,
   sousTitreAlertes,
@@ -174,4 +176,21 @@ describe('syntheseAlertes et phrases', () => {
     expect(syntheseAlertes({ seuil: [], avis: [av('f', 'a', 1, 'pas une date')], agenceId: null, cx: true })!.avisLePlusAncien).toBeNull();
   });
   it('champ agence manquant : agences concernées omises plutôt que 0', () => expect(phrase([], [av('f', '')])).toEqual(['1 situation à surveiller : 1 avis à risque', null]));
+});
+
+describe('mise en valeur des chiffres', () => {
+  it('découpe sans rien changer au texte', () => {
+    const t = '18 situations à surveiller : 2 alertes de seuil, 16 avis à risque';
+    const morceaux = decouperChiffres(t);
+    expect(morceaux.map((m) => m.texte).join('')).toBe(t);
+    expect(morceaux.filter((m) => m.nombre).map((m) => m.texte)).toEqual(['18', '2', '16']);
+  });
+  it('un nombre à milliers français reste un seul nombre', () => {
+    const t = `${formaterNombre(1234, 0)} avis`;
+    expect(decouperChiffres(t).filter((m) => m.nombre)).toHaveLength(1);
+  });
+  it('parties de la synthèse : titre et détail séparés, sans « : »', () => {
+    const s = syntheseAlertes({ seuil: [{ agence_id: 'a', agence_nom: 'a', taux_actuel: 1, seuil: 2, message: '' }], avis: [], agenceId: null, cx: false })!;
+    expect(partiesSynthese(s)).toEqual({ titre: '1 situation à surveiller', detail: '1 alerte de seuil' });
+  });
 });

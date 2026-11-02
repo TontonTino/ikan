@@ -25,8 +25,9 @@ import {
   filtrerAlertes,
   messageForfait,
   nombreAvisVisibles,
+  decouperChiffres,
+  partiesSynthese,
   phraseAgencesConcernees,
-  phraseSynthese,
   syntheseAlertes,
   sousTitreAlertes,
   tonAvis,
@@ -57,6 +58,10 @@ const TYPES: Array<{ id: TypeAlerte; label: string }> = [
   { id: 'seuil', label: 'Satisfaction' },
   { id: 'avis', label: 'Avis clients' },
 ];
+
+/** Texte dont les nombres sont mis en valeur (<b>) : le texte lu, copié ou annoncé reste identique. */
+const avecChiffres = (texte: string) =>
+  decouperChiffres(texte).map((m, i) => (m.nombre ? <b key={i} className="alerte-synthese__n">{m.texte}</b> : <React.Fragment key={i}>{m.texte}</React.Fragment>));
 
 /** Défile jusqu'à l'alerte ciblée par l'URL (#alerte-…), la met en évidence et lui donne le focus. */
 function useHashTarget(ready: boolean, signature: string) {
@@ -163,9 +168,10 @@ export default function PilotageAlertesActionsTab(props: Props) {
     <div className="agence">
       {prete && incluses && synthese && (
         <p className="alerte-synthese">
-          <strong>{phraseSynthese(synthese)}</strong>
-          {phraseAgencesConcernees(synthese) && <span>{phraseAgencesConcernees(synthese)}</span>}
-          {synthese.avisLePlusAncien && <span>Avis le plus ancien : {relativeTime(synthese.avisLePlusAncien)}</span>}
+          <span className="alerte-synthese__titre">{avecChiffres(partiesSynthese(synthese).titre)} :</span>
+          <span className="alerte-synthese__detail">{avecChiffres(partiesSynthese(synthese).detail)}</span>
+          {phraseAgencesConcernees(synthese) && <span className="alerte-synthese__plus">{avecChiffres(phraseAgencesConcernees(synthese) ?? '')}</span>}
+          {synthese.avisLePlusAncien && <span className="alerte-synthese__plus">Avis le plus ancien : {relativeTime(synthese.avisLePlusAncien)}</span>}
         </p>
       )}
 

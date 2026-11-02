@@ -231,6 +231,13 @@ describe('page /alertes — recommandations (suggestions, pas des alertes)', () 
 });
 
 describe('page /alertes — synthèse, repli des avis par groupe de 5', () => {
+  it('synthèse : bande compacte, chiffres en <b>, deux lignes de texte (titre + détail), pas de carte KPI', () => {
+    const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ seuil: [seuil('a1')], avis: [avis(1)] }) });
+    expect(html).toContain('<span class="alerte-synthese__titre"><b class="alerte-synthese__n">2</b> situations à surveiller :</span>');
+    expect(html).toContain('<span class="alerte-synthese__detail"><b class="alerte-synthese__n">1</b> alerte de seuil, <b class="alerte-synthese__n">1</b> avis à risque</span>');
+    expect(html).not.toContain('ui-kpi');
+  });
+
   const lignes = (html: string) => (html.match(/id="alerte-feedback-/g) || []).length;
   const synthese = (html: string) => (html.match(/<p class="alerte-synthese">.*?<\/p>/) || [''])[0].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -275,7 +282,7 @@ describe('page /alertes — synthèse, repli des avis par groupe de 5', () => {
     expect(html).toContain('5 avis affichés sur 9');
     expect(html).toContain('Voir les 4 avis');
     expect(html).toContain('Avis clients (9)');
-    expect(html).toContain('9 situations à surveiller : 9 avis à risque');
+    expect(synthese(html)).toContain('9 situations à surveiller : 9 avis à risque');
     const petit = rendu({ isAgencyManager: false, selectedAgenceId: 'a2', alertes: etatAlertes({ avis: mix }) });
     expect(lignes(petit)).toBe(3);
     expect(petit).not.toContain('Voir les');
