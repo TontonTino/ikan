@@ -173,7 +173,7 @@ export default function PilotageAlertesActionsTab(props: Props) {
     <div className="agence">
       {prete && incluses && synthese && (
         <p className="alerte-synthese">
-          <span className="alerte-synthese__titre">{avecChiffres(partiesSynthese(synthese).titre)} :</span>
+          <span className="alerte-synthese__titre">{avecChiffres(partiesSynthese(synthese).titre)} :</span>{' '}
           <span className="alerte-synthese__detail">{avecChiffres(partiesSynthese(synthese).detail)}</span>
           {phraseAgencesConcernees(synthese) && <span className="alerte-synthese__plus">{avecChiffres(phraseAgencesConcernees(synthese) ?? '')}</span>}
           {synthese.avisLePlusAncien && <span className="alerte-synthese__plus">Avis le plus ancien : <time dateTime={synthese.avisLePlusAncien} title={fullDate(synthese.avisLePlusAncien)}>{dateRelativeOuAbsolue(synthese.avisLePlusAncien)}</time></span>}
