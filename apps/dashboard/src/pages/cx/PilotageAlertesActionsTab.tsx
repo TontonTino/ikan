@@ -25,6 +25,9 @@ import {
   filtrerAlertes,
   messageForfait,
   nombreAvisVisibles,
+  phraseAgencesConcernees,
+  phraseSynthese,
+  syntheseAlertes,
   sousTitreAlertes,
   tonAvis,
   type TypeAlerte,
@@ -139,6 +142,7 @@ export default function PilotageAlertesActionsTab(props: Props) {
   // Total sans filtre : sert à dire qu'un filtre masque des alertes existantes (jamais « aucune alerte » à tort).
   const totalGlobal = useMemo(() => compterAlertes(seuil, avis, null).total, [seuil, avis]);
   const filtrees = useMemo(() => filtrerAlertes({ seuil, avis, type, agenceId: selectedAgenceId }), [seuil, avis, type, selectedAgenceId]);
+  const synthese = useMemo(() => syntheseAlertes({ seuil, avis, agenceId: selectedAgenceId, cx: !isAgencyManager }), [seuil, avis, selectedAgenceId, isAgencyManager]);
   const nbAvisVisibles = nombreAvisVisibles(filtrees.avis, depliee, cibleId);
   const avisVisibles = filtrees.avis.slice(0, nbAvisVisibles);
   const nbAffichees = filtrees.seuil.length + filtrees.avis.length;
@@ -165,6 +169,14 @@ export default function PilotageAlertesActionsTab(props: Props) {
         </p>
       </details>
 
+      {prete && incluses && synthese && (
+        <p className="alerte-synthese">
+          <strong>{phraseSynthese(synthese)}</strong>
+          {phraseAgencesConcernees(synthese) && <span>{phraseAgencesConcernees(synthese)}</span>}
+          {synthese.avisLePlusAncien && <span>Avis le plus ancien : {relativeTime(synthese.avisLePlusAncien)}</span>}
+        </p>
+      )}
+
       <div className="alerte-toolbar">
         <div className="ui-segmented" role="group" aria-label="Type d'alerte">
           {TYPES.map((t) => (
@@ -179,6 +191,7 @@ export default function PilotageAlertesActionsTab(props: Props) {
 
       <Card
         title="Alertes actives"
+        className="alerte-carte"
         subtitle={sousTitre}
         tone={prete && incluses && filtrees.seuil.length + filtrees.avis.filter((a) => tonAvis(a.note) === 'critical').length > 0 ? 'critical' : 'default'}
         aria-busy={chargement || undefined}
@@ -236,7 +249,7 @@ export default function PilotageAlertesActionsTab(props: Props) {
                 </p>
                 {filtrees.avis.length > AVIS_VISIBLES && (
                   <Button className="agence-more" size="sm" variant="ghost" aria-expanded={nbAvisVisibles === filtrees.avis.length} onClick={() => setDepliee((v) => !v)}>
-                    {nbAvisVisibles === filtrees.avis.length ? 'Réduire la liste' : `Afficher les ${filtrees.avis.length - AVIS_VISIBLES} autres avis`}
+                    {nbAvisVisibles === filtrees.avis.length ? 'Réduire' : filtrees.avis.length - AVIS_VISIBLES > 1 ? `Voir les ${filtrees.avis.length - AVIS_VISIBLES} avis` : 'Voir l’avis restant'}
                   </Button>
                 )}
               </section>

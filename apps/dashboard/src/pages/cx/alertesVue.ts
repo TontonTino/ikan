@@ -1,4 +1,5 @@
 import type { Alerte, AlerteFeedback } from '../../types';
+import { formaterNombre } from '../../utils/formatNombre';
 
 /**
  * Règles de lecture de la page /alertes. Tout provient du serveur (GET /alertes/) : aucune catégorie d'alerte,
@@ -37,8 +38,8 @@ export type TonAlerte = 'critical' | 'warning';
 
 /** Règle existante (cf. vue d'ensemble de l'agence) : une note de 2 ou moins est critique. */
 export const NOTE_CRITIQUE_MAX = 2;
-/** Alertes sur avis affichées d'emblée ; les suivantes se déplient. */
-export const AVIS_VISIBLES = 10;
+/** Avis à risque affichés d'emblée (un groupe) ; les suivants se déplient d'un coup, sans rien masquer définitivement. */
+export const AVIS_VISIBLES = 5;
 
 export const tonAvis = (note: number): TonAlerte => (note <= NOTE_CRITIQUE_MAX ? 'critical' : 'warning');
 
@@ -88,6 +89,46 @@ export function sousTitreAlertes(c: { seuil: number; avis: number; critiques: nu
     parties.push(`${c.avis} avis à risque (${detail} : note ≤ ${NOTE_CRITIQUE_MAX})`);
   }
   return parties.join(' · ');
+}
+
+export interface SyntheseAlertes {
+  /** Alertes de seuil + avis à risque (les « situations à surveiller »). Jamais confondu avec les événements détectés. */
+  situations: number;
+  seuil: number;
+  avis: number;
+  /** Agences distinctes concernées : renseigné pour le CX Manager seulement (null sinon). */
+  agences: number | null;
+  /** Date (ISO) de l'avis à risque le plus ancien, si au moins une date est valide. Les alertes de seuil n'ont pas de date : elles ne comptent pas. */
+  avisLePlusAncien: string | null;
+}
+
+/** Synthèse calculée sur les alertes DÉJÀ chargées (aucun appel, aucun statut inventé), pour le périmètre d'agence choisi. Null s'il n'y a rien à surveiller. */
+export function syntheseAlertes(entrees: { seuil: Alerte[]; avis: AlerteFeedback[]; agenceId: string | null; cx: boolean }): SyntheseAlertes | null {
+  const { agenceId, cx } = entrees;
+  const seuil = entrees.seuil.filter((a) => !agenceId || a.agence_id === agenceId);
+  const avis = entrees.avis.filter((a) => !agenceId || a.agence_id === agenceId);
+  const situations = seuil.length + avis.length;
+  if (situations === 0) return null;
+  const agences = new Set([...seuil.map((a) => a.agence_id), ...avis.map((a) => a.agence_id)].filter(Boolean));
+  const dates = avis.map((a) => new Date(a.date_soumission).getTime()).filter((t) => Number.isFinite(t));
+  return {
+    situations, seuil: seuil.length, avis: avis.length,
+    agences: cx && agences.size > 0 ? agences.size : null,
+    avisLePlusAncien: dates.length > 0 ? new Date(Math.min(...dates)).toISOString() : null,
+  };
+}
+
+/** « 18 situations à surveiller : 2 alertes de seuil, 16 avis à risque » ; une partie à zéro est omise (jamais « 0 » par défaut). */
+export function phraseSynthese(s: SyntheseAlertes): string {
+  const detail: string[] = [];
+  if (s.seuil > 0) detail.push(`${formaterNombre(s.seuil, 0)} alerte${s.seuil > 1 ? 's' : ''} de seuil`);
+  if (s.avis > 0) detail.push(`${formaterNombre(s.avis, 0)} avis à risque`);
+  return `${formaterNombre(s.situations, 0)} situation${s.situations > 1 ? 's' : ''} à surveiller : ${detail.join(', ')}`;
+}
+
+/** Part complémentaire de la synthèse (CX Manager : agences concernées). Vide si l'information manque. */
+export function phraseAgencesConcernees(s: SyntheseAlertes): string | null {
+  return s.agences === null ? null : `${formaterNombre(s.agences, 0)} agence${s.agences > 1 ? 's' : ''} concernée${s.agences > 1 ? 's' : ''}`;
 }
 
 const PREFIXE_ANCRE_AVIS = 'alerte-feedback-';
