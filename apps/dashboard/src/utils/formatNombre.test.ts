@@ -57,6 +57,13 @@ describe('formaterDateAxe', () => {
     expect(formaterDateAxe('2026-01-05 10:00')).toBe('05/01');
   });
 
+  it('infobulle : avec l’année, « 06/10/2026 » (même formateur, pas de second format)', () => {
+    expect(formaterDateAxe('2026-10-06', true)).toBe('06/10/2026');
+    expect(formaterDateAxe('2026-12-31T08:00:00Z', true)).toBe('31/12/2026');
+    expect(formaterDateAxe('S41', true)).toBe('S41');
+    expect(formaterDateAxe('06/10', true)).toBe('06/10');
+  });
+
   it('toute autre valeur est rendue telle quelle (libellés déjà courts, semaines, etc.)', () => {
     expect(formaterDateAxe('06/10')).toBe('06/10');
     expect(formaterDateAxe('S41')).toBe('S41');
@@ -67,8 +74,13 @@ describe('formaterDateAxe', () => {
 
 describe('axes de graphique', () => {
   it('Agency Manager et Veille : dates d’axe au format jj/mm', () => {
-    expect(sourceAgence).toContain('<XAxis dataKey="date" tickFormatter={formaterDateAxe}');
-    expect(sourceVeille).toContain('<XAxis dataKey="date" tickFormatter={formaterDateAxe}');
+    expect(sourceAgence).toContain('<XAxis dataKey="date" tickFormatter={(v) => formaterDateAxe(v)}');
+    expect(sourceVeille).toContain('<XAxis dataKey="date" tickFormatter={(v) => formaterDateAxe(v)}');
+  });
+
+  it('infobulle du graphique de l’Agency Manager : date « jj/mm/aaaa » (plus la date brute)', () => {
+    expect(sourceAgence).toContain('labelFormatter={(l) => formaterDateAxe(l, true)}');
+    expect(sourceAgence).not.toContain('labelFormatter={(l) => String(l)}');
   });
 });
 
