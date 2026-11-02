@@ -3,6 +3,7 @@ import KpiCard from '../ui/KpiCard';
 import { MegaphoneIcon, ThumbsDownIcon, TagIcon } from '../common/Icons';
 import type { VeilleSyntheseResponse } from '../../types';
 import { themeLabel } from '../../utils/themeLabels';
+import { formaterPourcentage } from '../../utils/formatNombre';
 
 function mentionsLabel(count: number): string {
   return `${count} mention${count > 1 ? 's' : ''}`;
@@ -28,7 +29,7 @@ export default function VeilleKpiRow({ synthese }: { synthese: VeilleSyntheseRes
           compact
           icon={<ThumbsDownIcon />}
           label="Mentions négatives"
-          value={`${negatif?.pourcentage ?? 0}%`}
+          value={formaterPourcentage(negatif?.pourcentage ?? 0)}
           badgeColor="red"
           subtitle={mentionsLabel(negatif?.count ?? 0)}
         />

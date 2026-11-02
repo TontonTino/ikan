@@ -31,6 +31,7 @@ import {
   MegaphoneIcon,
   WifiHighIcon,
 } from '../components/common/Icons';
+import { formaterPourcentage } from './formatNombre';
 
 const ICONE_PAR_CODE: Record<string, ComponentType<IconProps>> = {
   // Communs prioritaires
@@ -102,7 +103,7 @@ export function kpiIconComponent(code: string): ComponentType<IconProps> {
 // pas la contredire en affichant un faux zéro.
 export function formatKpiValue(k: KPIResult): string {
   if (k.status === 'no_data' || k.value === null) return LIBELLES.aucuneDonneeCourt;
-  if (k.unit === 'percent') return `${k.value} %`;
+  if (k.unit === 'percent') return formaterPourcentage(k.value);
   // NPS : score en points (−100 à +100), jamais un pourcentage.
   if (k.unit === 'points') return `${k.value > 0 ? '+' : ''}${Math.round(k.value)} pts`;
   if (k.unit === 'hours') return `${k.value} h`;

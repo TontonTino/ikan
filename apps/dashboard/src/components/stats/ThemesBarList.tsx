@@ -5,6 +5,7 @@ import type { SentimentType } from '../../types';
 import { SENTIMENT_LABELS } from '../../utils/vocabulaire';
 import { themeLabel } from '../../utils/themeLabels';
 import { PartNegatifsTexte } from '../../utils/partNegatifs';
+import { formaterPourcentage } from '../../utils/formatNombre';
 
 interface ThemesBarListProps {
   themes: ThemeStatsDetail[];
@@ -81,7 +82,7 @@ export default function ThemesBarList({ themes, maxItems = 6, lienTheme, showSen
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                 <span style={{ color: '#64748B', fontSize: '0.74rem' }}>{item.count} avis</span>
                 <span style={{ fontWeight: 800, color: '#02302D', minWidth: '40px', textAlign: 'right' }}>
-                  {item.pourcentage}%
+                  {formaterPourcentage(item.pourcentage)}
                 </span>
               </div>
             </div>

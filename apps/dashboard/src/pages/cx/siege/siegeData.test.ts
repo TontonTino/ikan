@@ -8,11 +8,11 @@ const kpi = (valeur_num: number | null, valeur_precedente: number | null): StatK
 
 describe('CSAT du siège : texte affiché', () => {
   it("pourcentage au format français, « Pas d'avis » plutôt que 0 %", () => {
-    expect(satisfactionTexte(50, 8)).toBe('50 %');
-    expect(satisfactionTexte(66.7, 3)).toBe('66,7 %');
-    expect(satisfactionTexte(100, 1)).toBe('100 %');
-    expect(satisfactionTexte(0, 4)).toBe('0 %');               // 4 avis, aucun satisfait : 0 % est une vraie valeur
-    expect(satisfactionTexte(0, 0)).toBe("Pas d'avis");         // aucun avis : jamais « 0 % »
+    expect(satisfactionTexte(50, 8)).toBe('50 %');
+    expect(satisfactionTexte(66.7, 3)).toBe('66,7 %');
+    expect(satisfactionTexte(100, 1)).toBe('100 %');
+    expect(satisfactionTexte(0, 4)).toBe('0 %');               // 4 avis, aucun satisfait : 0 % est une vraie valeur
+    expect(satisfactionTexte(0, 0)).toBe("Pas d'avis");         // aucun avis : jamais « 0 % »
     expect(satisfactionTexte(null, 0)).toBe("Pas d'avis");
     expect(satisfactionTexte(null, 5)).toBe("Pas d'avis");
   });
@@ -38,12 +38,12 @@ describe('évolution du CSAT en points', () => {
 
 describe('évolution du nombre d’avis en pourcentage', () => {
   it('+100 % (4 → 8) et −33,3 % (3 → 2) ; la variation de volume n’est jamais rouge', () => {
-    expect(volumeDelta(kpi(8, 4))).toEqual({ text: '+100 %', direction: 'up', isPositive: true });
-    expect(volumeDelta(kpi(2, 3))).toEqual({ text: '−33,3 %', direction: 'down', isPositive: true });
-    expect(volumeDelta(kpi(5, 5))).toEqual({ text: '0 %', direction: 'flat', isPositive: true });
+    expect(volumeDelta(kpi(8, 4))).toEqual({ text: '+100 %', direction: 'up', isPositive: true });
+    expect(volumeDelta(kpi(2, 3))).toEqual({ text: '−33,3 %', direction: 'down', isPositive: true });
+    expect(volumeDelta(kpi(5, 5))).toEqual({ text: '0 %', direction: 'flat', isPositive: true });
   });
   it('grands nombres au format français et base nulle : pas de comparaison', () => {
-    expect(volumeDelta(kpi(1300, 100))?.text).toMatch(/^\+1[\s  ]200 %$/);
+    expect(volumeDelta(kpi(1300, 100))?.text).toMatch(/^\+1[\s  ]200 %$/);
     expect(volumeDelta(kpi(8, 0))).toBeNull();
     expect(volumeDelta(kpi(8, null))).toBeNull();
     expect(volumeDelta(undefined)).toBeNull();

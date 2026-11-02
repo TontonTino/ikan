@@ -5,6 +5,7 @@ import Chart, { ChartTooltip, DATAVIZ, chartAxisProps, chartGridProps } from '..
 import { FAIBLE_VOLUME_POINT } from '../../pages/cx/siege/siegeData';
 import { interpretationEvolution, resumeAccessibleEvolution } from './agenceVue';
 import YamNote from '../agent/YamNote';
+import { formaterDateAxe, formaterPourcentage } from '../../utils/formatNombre';
 
 /** Point plein si le volume est suffisant, creux sinon : l'information ne repose pas sur la couleur seule. */
 function Point(props: { cx?: number; cy?: number; payload?: TendanceSatisfaction }) {
@@ -30,7 +31,7 @@ export function TableauEvolution({ points }: { points: TendanceSatisfaction[] })
           {points.map((p) => (
             <tr key={p.date} style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
               <th scope="row" style={{ textAlign: 'left', padding: 'var(--space-2)', fontWeight: 600 }}>{p.date}</th>
-              <td style={{ textAlign: 'right', padding: 'var(--space-2)' }}>{p.taux} %</td>
+              <td style={{ textAlign: 'right', padding: 'var(--space-2)' }}>{formaterPourcentage(p.taux)}</td>
               <td style={{ textAlign: 'right', padding: 'var(--space-2)' }}>
                 {p.nombre_feedbacks}
                 {p.nombre_feedbacks < FAIBLE_VOLUME_POINT ? ' (faible volume)' : ''}
@@ -70,13 +71,13 @@ export default function AgencyEvolution({ points, periode }: { points: TendanceS
                 </linearGradient>
               </defs>
               <CartesianGrid {...chartGridProps} />
-              <XAxis dataKey="date" {...chartAxisProps} />
-              <YAxis domain={[0, 100]} tickFormatter={(v) => `${v} %`} width={48} {...chartAxisProps} />
+              <XAxis dataKey="date" tickFormatter={formaterDateAxe} {...chartAxisProps} />
+              <YAxis domain={[0, 100]} tickFormatter={(v) => formaterPourcentage(v, 0)} width={48} {...chartAxisProps} />
               <Tooltip
                 content={
                   <ChartTooltip
                     labelFormatter={(l) => String(l)}
-                    formatter={(v) => `${v} %`}
+                    formatter={(v) => formaterPourcentage(Number(v))}
                   />
                 }
               />

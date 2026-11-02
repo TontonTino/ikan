@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Alerte } from '../../types';
 import { AlertTriangleIcon } from '../common/Icons';
+import { formaterPourcentage } from '../../utils/formatNombre';
 
 /** Ligne d'une alerte de seuil (champs réels de GET /alertes → alertes_seuil). */
 export default function AlerteRow({ alerte }: { alerte: Alerte }) {
@@ -53,7 +54,7 @@ export default function AlerteRow({ alerte }: { alerte: Alerte }) {
           whiteSpace: 'nowrap',
         }}
       >
-        Taux actuel : {alerte.taux_actuel}% / Seuil {alerte.seuil}%
+        Taux actuel : {formaterPourcentage(alerte.taux_actuel)} / Seuil {formaterPourcentage(alerte.seuil)}
       </span>
     </div>
   );

@@ -41,8 +41,8 @@ describe('carte d’alerte de satisfaction', () => {
     const html = dansRouteur(<LigneSeuil alerte={alerte({ gravite: 'critique', ecart_seuil: 30 })} isAgencyManager cible={false} />);
     expect(html).toContain('Critique');
     expect(html).toContain('<svg');
-    expect(html).toContain('40 %');
-    expect(html).toContain('seuil de 70 %');
+    expect(html).toContain('40 %');
+    expect(html).toContain('seuil de 70 %');
     expect(html).toContain('30 points sous le seuil');
     expect(html).toContain('Satisfaction sous le seuil');
   });
@@ -71,12 +71,12 @@ describe('cloche de notifications', () => {
     expect(html).toContain('Critique');
     expect(html).toContain('Important');
     expect((html.match(/ui-badge__icon/g) || []).length).toBe(2);
-    expect(html).toContain('Satisfaction 40 % (seuil 70 %)');
+    expect(html).toContain('Satisfaction 40 % (seuil 70 %)');
   });
 
   it('sans gravité : l’alerte reste affichée comme avant', () => {
     const html = cloche([alerte()]);
-    expect(html).toContain('Satisfaction 40 % (seuil 70 %)');
+    expect(html).toContain('Satisfaction 40 % (seuil 70 %)');
     expect(html).not.toMatch(/Critique|Important/);
   });
 });

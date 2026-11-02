@@ -1,5 +1,6 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { formaterPourcentage } from '../../utils/formatNombre';
 
 export interface SentimentItem {
   sentiment: string;
@@ -161,7 +162,7 @@ export default function SentimentDonutChart({
 
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
                 <strong style={{ fontSize: '0.86rem', color: meta.color }}>
-                  {item.pourcentage}%
+                  {formaterPourcentage(item.pourcentage)}
                 </strong>
                 <span style={{ fontSize: '0.70rem', color: '#64748B' }}>
                   ({item.count})

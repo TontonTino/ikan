@@ -32,8 +32,8 @@ describe('liste « Agences sous leur seuil » (CX-06)', () => {
   it('une ligne par agence : nom, satisfaction, seuil, écart en points et lien vers le détail', () => {
     const html = liste([PERSISTANTE, RECENTE]);
     expect(html).toContain('Alpha persistante');
-    expect(html).toContain('25 %');
-    expect(html).toContain('70 %');
+    expect(html).toContain('25 %');
+    expect(html).toContain('70 %');
     expect(html).toContain('−45 pts');
     expect(html).toContain('−36.7 pts');
     expect(html).toContain('href="/agences/a1/apercu"');

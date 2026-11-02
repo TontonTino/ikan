@@ -5,6 +5,7 @@ import Card from '../ui/Card';
 import EmptyState from '../ui/EmptyState';
 import { themeLabel } from '../../utils/themeLabels';
 import { lienAvisReseau } from '../../utils/liensAgence';
+import { formaterPourcentage } from '../../utils/formatNombre';
 
 const TONS = [
   { key: 'positif', label: 'Positif', fill: 'positive' },
@@ -28,7 +29,7 @@ export function TonDesAvis({ sentiments }: { sentiments: DashboardAgence['sentim
               <li key={ton.key} className="agence-meter">
                 <div className="agence-meter__row">
                   <span className="agence-meter__label">{ton.label}</span>
-                  <span className="agence-meter__value">{s ? `${s.pourcentage} %` : 'Aucune donnée'}</span>
+                  <span className="agence-meter__value">{s ? formaterPourcentage(s.pourcentage) : 'Aucune donnée'}</span>
                 </div>
                 <div className="agence-meter__track" aria-hidden="true">
                   {s && <div className={`agence-meter__fill agence-meter__fill--${ton.fill}`} style={{ width: `${bornePct(s.pourcentage)}%` }} />}
@@ -60,11 +61,11 @@ export function ThemesDesAvis({ themes, jours }: { themes: DashboardAgence['them
                 <Link
                   to={lienAvisReseau({ theme: t.theme, jours })}
                   className="agence-meter"
-                  aria-label={`${themeLabel(t.theme)} : ${t.count} avis, ${t.pourcentage} %. Voir les avis de ce thème.`}
+                  aria-label={`${themeLabel(t.theme)} : ${t.count} avis, ${formaterPourcentage(t.pourcentage)}. Voir les avis de ce thème.`}
                 >
                   <span className="agence-meter__row">
                     <span className="agence-meter__label">{themeLabel(t.theme)}</span>
-                    <span className="agence-meter__value">{t.pourcentage} %</span>
+                    <span className="agence-meter__value">{formaterPourcentage(t.pourcentage)}</span>
                   </span>
                   <span className="agence-meter__track" aria-hidden="true">
                     <span className="agence-meter__fill agence-meter__fill--info" style={{ display: 'block', width: `${bornePct(t.pourcentage)}%` }} />

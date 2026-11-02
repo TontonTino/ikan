@@ -87,7 +87,7 @@ describe('page /alertes — les six états', () => {
     const html = rendu({ alertes: etatAlertes({ seuil: [seuil()], avis: [avis(1)] }) });
     expect(html).toContain('Satisfaction sous le seuil');
     expect(html).toContain('Note basse · 1/5');
-    expect(html).toContain('pour un seuil de 70 %');
+    expect(html).toContain('pour un seuil de 70 %');
   });
 });
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { PartNegatifs } from '../types';
+import { formaterPourcentage } from './formatNombre';
 
 /*
  * Affichage de la part d'avis négatifs et de son évolution (CX-05). « Négatif » = note de 2 ou moins, ou ton négatif (une seule
@@ -10,7 +11,7 @@ import type { PartNegatifs } from '../types';
 
 export const DEFINITION_NEGATIF = 'Avis négatif : note de 2 ou moins, ou ton négatif détecté dans le commentaire (chaque avis compté une fois).';
 
-const pourcent = (valeur: number) => `${valeur.toLocaleString('fr-FR')} %`;
+const pourcent = (valeur: number) => formaterPourcentage(valeur, 3);
 
 export function libellePartNegatifs(pn: PartNegatifs | null | undefined): string {
   if (!pn || pn.part == null) return 'Aucun avis';
