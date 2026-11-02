@@ -7,6 +7,7 @@ import PilotageActionsCorrectivesTab from './PilotageActionsCorrectivesTab';
 import AlertesView from './AlertesView';
 import type { Agence, Feedback, Issue, IssueDetail } from '../../types';
 import PageTitle from '../../components/ui/PageTitle';
+import AideAlertes from '../../components/alerts/AideAlertes';
 import { useToast } from '../../components/ui/Toast';
 import { userFacingError } from '../../utils/userFacingError';
 
@@ -295,7 +296,7 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)', width: '100%', maxWidth: '100%', minWidth: 0 }}>
-      <PageTitle title={header.title} description={isAgencyManager ? header.agency : header.cx} />
+      <PageTitle title={header.title} description={isAgencyManager ? header.agency : header.cx} meta={section === 'alertes' ? <AideAlertes /> : undefined} />
 
       {/* ── SECTION ALERTES & ACTIONS (fusion : alertes réseau + recommandations IA) ── */}
       {section === 'alertes' && <AlertesView />}

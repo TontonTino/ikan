@@ -189,12 +189,11 @@ describe('page /alertes — niveau écrit, aide repliée, aucun résultat, sous-
     expect(rendu({ alertes: etatAlertes({ seuil: [seuil('a1'), seuil('a2')] }) })).toContain('Chaque alerte disparaît quand la satisfaction des 7 derniers jours repasse au-dessus du seuil.');
   });
 
-  it('encadré d’aide replié par défaut, au clavier (élément natif), texte conservé', () => {
+  it('plus d’encadré d’aide dans la page : l’aide est un lien près du titre (AideAlertes)', () => {
     const html = rendu({ alertes: etatAlertes({ avis: [avis(1)] }) });
-    expect(html).toContain('<details class="alerte-aide">');
-    expect(html).not.toMatch(/<details[^>]*\sopen/);
-    expect(html).toContain('<summary>Comment lire cette page</summary>');
-    expect(html).toContain('Une alerte n’est pas un problème à traiter');
+    expect(html).not.toContain('<details');
+    expect(html).not.toContain('Comment lire cette page');
+    expect(html).not.toContain('ui-alert--info');
   });
 
   it('aucun résultat : icône neutre de filtre (pas la coche verte) et message qui dit que le filtre masque les alertes', () => {

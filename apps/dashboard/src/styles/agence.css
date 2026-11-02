@@ -72,12 +72,14 @@ a.agence-meter:hover { background: var(--color-bg-hover); }
 .agence-prio__item.ui-alert-item:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 
 /* Page Alertes : aide repliable (élément natif, clavier et lecteur d'écran) et icône neutre de « aucun résultat ». */
-.alerte-aide { background: var(--color-info-bg); border: 1px solid var(--color-info-border); border-radius: var(--radius-md); padding: var(--space-2) var(--space-3); }
-.alerte-aide > summary { cursor: pointer; font-weight: var(--weight-black); font-size: var(--text-sm); color: var(--color-info-text); min-height: var(--touch-target); display: flex; align-items: center; }
-.alerte-aide > summary::after { content: 'Afficher'; margin-left: auto; font-weight: var(--weight-bold); text-decoration: underline; }
-.alerte-aide[open] > summary::after { content: 'Masquer'; }
-.alerte-aide > summary:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; border-radius: var(--radius-sm); }
-.alerte-aide > p { margin: 0 0 var(--space-2); font-size: var(--text-sm); color: var(--color-text-body); }
+.alerte-aide { position: relative; display: inline-flex; }
+.alerte-aide__btn { background: none; border: 0; padding: 0 var(--space-1); min-height: var(--control-sm); font: inherit; font-size: var(--text-sm); font-weight: var(--weight-bold); color: var(--color-text-muted); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; border-radius: var(--radius-sm); }
+.alerte-aide__btn:hover { color: var(--color-text-main); }
+.alerte-aide__btn:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
+.alerte-aide__panneau { position: absolute; z-index: 20; top: calc(100% + var(--space-1)); left: 0; width: min(380px, 86vw); padding: var(--space-3) var(--space-4); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
+.alerte-aide__panneau p, .alerte-aide__corps p { margin: 0 0 var(--space-2); font-size: var(--text-sm); color: var(--color-text-body); line-height: var(--leading-normal); }
+.alerte-aide__panneau p:last-child, .alerte-aide__corps p:last-child { margin-bottom: 0; }
+@media (max-width: 640px), (pointer: coarse) { .alerte-aide__btn { min-height: var(--touch-target); } }
 .alerte-vide-filtre { display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: var(--color-bg-subtle); color: var(--color-text-muted); }
 
 /* Page Alertes : ligne de synthèse et filtres sur une rangée (défilement horizontal au besoin) sur petit écran. */

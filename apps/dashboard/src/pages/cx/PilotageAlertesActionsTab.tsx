@@ -161,14 +161,6 @@ export default function PilotageAlertesActionsTab(props: Props) {
 
   return (
     <div className="agence">
-      <details className="alerte-aide">
-        <summary>Comment lire cette page</summary>
-        <p>
-          Les alertes sont recalculées à chaque ouverture : elles n’ont pas d’état « lu » ou « traité » et disparaissent d’elles-mêmes quand la situation redevient
-          normale. Une alerte n’est pas un problème à traiter : c’est vous qui décidez d’en créer un.
-        </p>
-      </details>
-
       {prete && incluses && synthese && (
         <p className="alerte-synthese">
           <strong>{phraseSynthese(synthese)}</strong>
