@@ -387,3 +387,19 @@ describe('page /alertes — titres de groupe', () => {
     expect(rendu({ alertes: etatAlertes({ avis: [avis(1, 1), avis(2, 4)] }) })).toContain('Critiques d’abord, puis du plus récent au plus ancien.');
   });
 });
+
+describe('page /alertes — dates : une seule convention', () => {
+  const ancien = (jours: number): AlerteFeedback => ({ ...avis(1, 1), date_soumission: new Date(Date.now() - jours * 86_400_000 - 3_600_000).toISOString() });
+  it('avis de 3 jours : relatif ; avis de 45 jours : date absolue ; toujours un <time datetime> avec la date complète en infobulle', () => {
+    const recent = rendu({ alertes: etatAlertes({ avis: [ancien(3)] }) });
+    expect(recent).toMatch(/<time class="alerte-ligne__date" dateTime="[^"]+" title="\d+ \w+ 2\d{3} à \d{2}:\d{2}">il y a 3 jours<\/time>/);
+    const vieux = rendu({ alertes: etatAlertes({ avis: [ancien(45)] }) });
+    expect(vieux).toMatch(/<time class="alerte-ligne__date"[^>]*>\d{1,2} [^<]*\. \d{4}<\/time>|<time class="alerte-ligne__date"[^>]*>\d{1,2} (mai|juin|août|mars) \d{4}<\/time>/);
+    expect(vieux).not.toContain('il y a 1 mois');
+  });
+  it('« Avis le plus ancien » de la synthèse suit la même convention', () => {
+    const html = rendu({ alertes: etatAlertes({ avis: [ancien(3), { ...ancien(45), feedback_id: 'fx' }] }) });
+    expect(html).not.toContain('il y a 45 jours');
+    expect(html).toMatch(/Avis le plus ancien : <time dateTime="[^"]+" title="[^"]+">\d{1,2} [^<]+ \d{4}<\/time>/);
+  });
+});

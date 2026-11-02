@@ -12,7 +12,7 @@ import Card from '../../components/ui/Card';
 import EmptyState from '../../components/ui/EmptyState';
 import IconButton from '../../components/ui/IconButton';
 import Skeleton from '../../components/ui/Skeleton';
-import { fullDate, relativeTime } from '../../components/ui/format';
+import { dateRelativeOuAbsolue, fullDate } from '../../components/ui/format';
 import { ArrowUpRightIcon, FilterIcon, RefreshIcon } from '../../components/common/Icons';
 import { raisonLabel, alerteFeedbackAnchor, alerteSeuilAnchor } from '../../components/alerts/alerteLabels';
 import BadgeGraviteAlerte from '../../components/alerts/BadgeGraviteAlerte';
@@ -124,7 +124,7 @@ export function LigneAvis({ avis, isAgencyManager, cible }: { avis: AlerteFeedba
         <div className="alerte-ligne__qui">
           {!isAgencyManager && <strong className="alerte-ligne__agence">{avis.agence_nom}</strong>}
           <time className="alerte-ligne__date" dateTime={avis.date_soumission} title={fullDate(avis.date_soumission)}>
-            {relativeTime(avis.date_soumission)}
+            {dateRelativeOuAbsolue(avis.date_soumission)}
           </time>
         </div>
         <div className="alerte-ligne__niveau">
@@ -176,7 +176,7 @@ export default function PilotageAlertesActionsTab(props: Props) {
           <span className="alerte-synthese__titre">{avecChiffres(partiesSynthese(synthese).titre)} :</span>
           <span className="alerte-synthese__detail">{avecChiffres(partiesSynthese(synthese).detail)}</span>
           {phraseAgencesConcernees(synthese) && <span className="alerte-synthese__plus">{avecChiffres(phraseAgencesConcernees(synthese) ?? '')}</span>}
-          {synthese.avisLePlusAncien && <span className="alerte-synthese__plus">Avis le plus ancien : {relativeTime(synthese.avisLePlusAncien)}</span>}
+          {synthese.avisLePlusAncien && <span className="alerte-synthese__plus">Avis le plus ancien : <time dateTime={synthese.avisLePlusAncien} title={fullDate(synthese.avisLePlusAncien)}>{dateRelativeOuAbsolue(synthese.avisLePlusAncien)}</time></span>}
         </p>
       )}
 

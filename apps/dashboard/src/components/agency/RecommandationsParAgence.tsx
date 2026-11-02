@@ -5,6 +5,7 @@ import Alert from '../ui/Alert';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import EmptyState from '../ui/EmptyState';
+import { dateRelativeOuAbsolue, fullDate } from '../ui/format';
 import { texteRecommandationAffiche } from '../../utils/texteRecommandation';
 import { PRIORITE_RECO_LABEL, PRIORITE_RECO_TON } from './agenceVue';
 
@@ -13,7 +14,6 @@ import { PRIORITE_RECO_LABEL, PRIORITE_RECO_TON } from './agenceVue';
  * les recommandations. Le statut est réversible : « à traiter » ⇄ « traitée ». La vue à plat reste disponible (bascule).
  */
 
-const dateCourte = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 
 export const libelleNombre = (n: number, traitee: boolean) =>
   traitee ? `${n} traitée${n > 1 ? 's' : ''}` : `${n} à traiter`;
@@ -25,7 +25,7 @@ export function GroupeAgence({
   return (
     <details className="agence-reco-groupe">
       <summary>
-        <strong>{groupe.agence_nom}</strong> — {libelleNombre(groupe.nombre, traitee)} · la plus ancienne : {dateCourte(groupe.plus_ancienne)}
+        <strong>{groupe.agence_nom}</strong> — {libelleNombre(groupe.nombre, traitee)} · la plus ancienne : <time dateTime={groupe.plus_ancienne} title={fullDate(groupe.plus_ancienne)}>{dateRelativeOuAbsolue(groupe.plus_ancienne)}</time>
       </summary>
       <ul className="agence-reco-group">
         {groupe.recommandations.map((r) => (
@@ -33,7 +33,7 @@ export function GroupeAgence({
             <div className="agence-reco__main">
               <div className="agence-reco__meta">
                 <Badge variant={PRIORITE_RECO_TON[r.priorite] ?? 'neutral'} label={`Priorité ${(PRIORITE_RECO_LABEL[r.priorite] ?? String(r.priorite)).toLowerCase()}`} />
-                <time dateTime={r.date_generation}>{dateCourte(r.date_generation)}</time>
+                <time dateTime={r.date_generation} title={fullDate(r.date_generation)}>{dateRelativeOuAbsolue(r.date_generation)}</time>
                 <span>{traitee ? 'Traitée' : 'À traiter'}</span>
               </div>
               <p className="agence-reco__text">{texteRecommandationAffiche(r.contenu)}</p>
