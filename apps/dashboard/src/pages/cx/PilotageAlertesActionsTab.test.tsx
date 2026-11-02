@@ -92,12 +92,12 @@ describe('page /alertes — les six états', () => {
 });
 
 describe('page /alertes — hiérarchie, volume et filtres', () => {
-  it('au plus dix avis visibles, le total et le dépliage sont annoncés', () => {
+  it('au plus cinq avis visibles, le total et le dépliage sont annoncés', () => {
     const beaucoup = Array.from({ length: 25 }, (_, i) => avis(i, 3));
     const html = rendu({ alertes: etatAlertes({ avis: beaucoup }) });
     expect((html.match(/id="alerte-feedback-/g) || []).length).toBe(AVIS_VISIBLES);
     expect(html).toContain(`${AVIS_VISIBLES} avis affichés sur 25`);
-    expect(html).toContain('Afficher les 15 autres avis');
+    expect(html).toContain('Voir les 20 avis');
     expect(html).toContain('aria-expanded="false"');
   });
 
@@ -228,5 +228,57 @@ describe('page /alertes — recommandations (suggestions, pas des alertes)', () 
 
   it('précise qu’une recommandation n’est pas une action exécutée', () => {
     expect(rendu()).toContain('n’est pas une action exécutée');
+  });
+});
+
+describe('page /alertes — synthèse, repli des avis par groupe de 5', () => {
+  const lignes = (html: string) => (html.match(/id="alerte-feedback-/g) || []).length;
+  const synthese = (html: string) => (html.match(/<p class="alerte-synthese">.*?<\/p>/) || [''])[0].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
+  it('synthèse du CX Manager : situations, détail, agences concernées, avis le plus ancien', () => {
+    const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ seuil: [seuil('a1'), seuil('a2')], avis: [avis(1, 1, 'a1'), avis(5, 2, 'a3')] }) });
+    expect(synthese(html)).toBe('4 situations à surveiller : 2 alertes de seuil, 2 avis à risque 3 agences concernées Avis le plus ancien : il y a 5 heures');
+  });
+
+  it('Responsable d’agence : pas d’« agences concernées »', () => {
+    const html = rendu({ alertes: etatAlertes({ seuil: [seuil('a1')], avis: [avis(1)] }) });
+    expect(synthese(html)).toContain('2 situations à surveiller : 1 alerte de seuil, 1 avis à risque');
+    expect(html).not.toContain('agence concernée');
+    expect(html).not.toContain('agences concernées');
+  });
+
+  it('absente en chargement, en erreur, sans forfait et sans alerte (jamais de « 0 situation »)', () => {
+    expect(rendu()).not.toContain('alerte-synthese');
+    expect(rendu({ alertes: { statut: 'chargement', charge: false, donnees: { seuil: [], avis: [], incluses: true } } })).not.toContain('alerte-synthese');
+    expect(rendu({ alertes: { statut: 'erreur', charge: false, donnees: { seuil: [], avis: [], incluses: true } } })).not.toContain('alerte-synthese');
+    expect(rendu({ alertes: etatAlertes({ incluses: false }) })).not.toContain('alerte-synthese');
+  });
+
+  it('les alertes de seuil restent avant les avis ; 12 avis → 5 affichés puis « Voir les 7 avis »', () => {
+    const html = rendu({ alertes: etatAlertes({ seuil: [seuil()], avis: Array.from({ length: 12 }, (_, i) => avis(i, 1)) }) });
+    expect(html.indexOf('aria-label="Alertes de satisfaction"')).toBeLessThan(html.indexOf('aria-label="Avis à risque"'));
+    expect(lignes(html)).toBe(5);
+    expect(html).toContain('5 avis affichés sur 12');
+    expect(html).toContain('Voir les 7 avis');
+    expect(html).toContain('aria-expanded="false"');
+  });
+
+  it('exactement 5 avis : aucun bouton', () => {
+    const html = rendu({ alertes: etatAlertes({ avis: Array.from({ length: 5 }, (_, i) => avis(i, 1)) }) });
+    expect(lignes(html)).toBe(5);
+    expect(html).not.toContain('Voir les');
+  });
+
+  it('filtres + repli ensemble : le compteur et le bouton suivent le filtre d’agence', () => {
+    const mix = [...Array.from({ length: 9 }, (_, i) => avis(i, 1, 'a1')), ...Array.from({ length: 3 }, (_, i) => avis(20 + i, 1, 'a2'))];
+    const html = rendu({ isAgencyManager: false, selectedAgenceId: 'a1', alertes: etatAlertes({ avis: mix }) });
+    expect(lignes(html)).toBe(5);
+    expect(html).toContain('5 avis affichés sur 9');
+    expect(html).toContain('Voir les 4 avis');
+    expect(html).toContain('Avis clients (9)');
+    expect(html).toContain('9 situations à surveiller : 9 avis à risque');
+    const petit = rendu({ isAgencyManager: false, selectedAgenceId: 'a2', alertes: etatAlertes({ avis: mix }) });
+    expect(lignes(petit)).toBe(3);
+    expect(petit).not.toContain('Voir les');
   });
 });

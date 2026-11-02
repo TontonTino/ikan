@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Alerte, AlerteFeedback } from '../../types';
+import { formaterNombre } from '../../utils/formatNombre';
 import {
   AVIS_VISIBLES,
   avisCible,
@@ -9,7 +10,10 @@ import {
   nombreAvisVisibles,
   sourceInitiale,
   sourceReducer,
+  phraseAgencesConcernees,
+  phraseSynthese,
   sousTitreAlertes,
+  syntheseAlertes,
   tonAvis,
   trierAvis,
 } from './alertesVue';
@@ -143,4 +147,31 @@ describe('sousTitreAlertes', () => {
   it.each(cas)('%s', (_nom, c, attendu) => {
     expect(sousTitreAlertes({ ...c, total: c.seuil + c.avis })).toBe(attendu);
   });
+});
+
+describe('syntheseAlertes et phrases', () => {
+  const sd = (id: string): Alerte => ({ agence_id: id, agence_nom: id, taux_actuel: 50, seuil: 70, message: '' });
+  const av = (id: string, ag: string, note = 1, date = '2026-11-01T10:00:00Z'): AlerteFeedback =>
+    ({ feedback_id: id, agence_id: ag, agence_nom: ag, note, categorie_nom: '', raison: 'note_basse', commentaire: '', date_soumission: date });
+  const phrase = (seuil: Alerte[], avis: AlerteFeedback[], cx = true, agenceId: string | null = null) => {
+    const s = syntheseAlertes({ seuil, avis, agenceId, cx });
+    return s && [phraseSynthese(s), phraseAgencesConcernees(s)];
+  };
+
+  it('0 : pas de synthèse (jamais « 0 situation »)', () => expect(syntheseAlertes({ seuil: [], avis: [], agenceId: null, cx: true })).toBeNull());
+  it('1 alerte de seuil seule : singulier, partie « avis » omise', () => expect(phrase([sd('a')], [])).toEqual(['1 situation à surveiller : 1 alerte de seuil', '1 agence concernée']));
+  it('1 avis seul : partie « seuil » omise', () => expect(phrase([], [av('f', 'a')])).toEqual(['1 situation à surveiller : 1 avis à risque', '1 agence concernée']));
+  it('plusieurs : pluriels, agences distinctes', () => expect(phrase([sd('a'), sd('b')], [av('f1', 'a'), av('f2', 'c'), av('f3', 'c')])).toEqual(['5 situations à surveiller : 2 alertes de seuil, 3 avis à risque', '3 agences concernées']));
+  it('Responsable d’agence : jamais d’agences concernées', () => expect(phrase([sd('a')], [av('f', 'a')], false)).toEqual(['2 situations à surveiller : 1 alerte de seuil, 1 avis à risque', null]));
+  it('milliers : format français', () => {
+    const s = syntheseAlertes({ seuil: [], avis: Array.from({ length: 1234 }, (_, i) => av(`f${i}`, 'a')), agenceId: null, cx: false })!;
+    expect(phraseSynthese(s)).toBe(`${formaterNombre(1234, 0)} situations à surveiller : ${formaterNombre(1234, 0)} avis à risque`);
+  });
+  it('le filtre d’agence restreint la synthèse', () => expect(phrase([sd('a'), sd('b')], [av('f', 'b')], true, 'b')).toEqual(['2 situations à surveiller : 1 alerte de seuil, 1 avis à risque', '1 agence concernée']));
+  it('avis le plus ancien : date valide seulement ; absent sans avis ou sans date exploitable', () => {
+    expect(syntheseAlertes({ seuil: [], avis: [av('f1', 'a', 1, '2026-11-01T10:00:00Z'), av('f2', 'a', 1, '2026-10-20T08:00:00Z')], agenceId: null, cx: true })!.avisLePlusAncien).toBe('2026-10-20T08:00:00.000Z');
+    expect(syntheseAlertes({ seuil: [sd('a')], avis: [], agenceId: null, cx: true })!.avisLePlusAncien).toBeNull();
+    expect(syntheseAlertes({ seuil: [], avis: [av('f', 'a', 1, 'pas une date')], agenceId: null, cx: true })!.avisLePlusAncien).toBeNull();
+  });
+  it('champ agence manquant : agences concernées omises plutôt que 0', () => expect(phrase([], [av('f', '')])).toEqual(['1 situation à surveiller : 1 avis à risque', null]));
 });
