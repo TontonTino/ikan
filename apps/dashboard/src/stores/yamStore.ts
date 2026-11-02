@@ -26,6 +26,8 @@ interface YamState {
   close: () => void;
   /** Ouvre YAM avec une question pré-remplie. */
   ask: (question: string) => void;
+  /** Même effet que `ask` (ouvre le panneau, question PRÉREMPLIE, jamais envoyée) : nom utilisé par la bande de synthèse de la Vue réseau. */
+  ouvrirAvec: (question: string) => void;
 }
 
 export const useYamStore = create<YamState>((set) => ({
@@ -34,4 +36,5 @@ export const useYamStore = create<YamState>((set) => ({
   toggle: () => set((s) => ({ open: !s.open })),
   close: () => set({ open: false }),
   ask: (question) => set({ open: true, prefill: { text: question, nonce: Date.now() } }),
+  ouvrirAvec: (question) => set({ open: true, prefill: { text: question, nonce: Date.now() } }),
 }));

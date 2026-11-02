@@ -1,5 +1,7 @@
 import React, { Dispatch, SetStateAction, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import YamEtatVide from '../../components/agent/YamEtatVide';
+import { YAM_PRESENCE } from '../../config';
 import { lienAvis } from '../../utils/liensAgence';
 import type { Agence, Feedback } from '../../types';
 import EmptyState from '../../components/ui/EmptyState';
@@ -32,6 +34,7 @@ export default function PilotageActionsCorrectivesTab({ isAgencyManager, agences
   const enCours = actionsToggle === 'en_cours';
   const actionsAffichees = enCours ? actionsEnCours : actionsTerminees;
   const total = enCours ? actionsEnCoursTotal : actionsTermineesTotal;
+  const navigate = useNavigate();
   const [aConfirmer, setAConfirmer] = useState<string | null>(null);
   const [enregistrement, setEnregistrement] = useState<string | null>(null);
   const maintenant = Date.now();
@@ -84,6 +87,14 @@ export default function PilotageActionsCorrectivesTab({ isAgencyManager, agences
             <SkeletonBlock key={i} height={120} radius="var(--radius-xl)" />
           ))}
         </div>
+      ) : actionsAffichees.length === 0 && YAM_PRESENCE && enCours && !actionsAgenceId ? (
+        <Card tone="success" padding="none">
+          <YamEtatVide
+            titre="Aucune action en cours."
+            texte="Quand un problème revient dans une agence, vous pourrez le regrouper ici et lancer une action. Commencez par consulter vos alertes."
+            action={{ label: 'Voir les alertes', onClick: () => navigate('/alertes') }}
+          />
+        </Card>
       ) : actionsAffichees.length === 0 ? (
         <Card tone="success" padding="none">
           <EmptyState

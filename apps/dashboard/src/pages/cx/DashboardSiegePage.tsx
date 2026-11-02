@@ -22,6 +22,7 @@ import Drawer from '../../components/ui/Drawer';
 import IconButton from '../../components/ui/IconButton';
 import PageTitle from '../../components/ui/PageTitle';
 import { BentoGrid, BentoItem } from '../../components/ui/BentoGrid';
+import YamSynthese from '../../components/agent/YamSynthese';
 import { RefreshIcon } from '../../components/common/Icons';
 import { buildSurveillance, repartitionReseau } from './siege/siegeData';
 import { useSiegeData } from './siege/useSiegeData';
@@ -94,6 +95,19 @@ export default function DashboardSiegePage() {
           </>
         }
       />
+
+      {/* Synthèse de YAM : calculée depuis les données déjà chargées ci-dessus (aucun appel supplémentaire) ; CX Manager uniquement. */}
+      {stats.status === 'ok' && (
+        <YamSynthese
+          entrees={{
+            jours,
+            nbAvis: stats.data.kpis?.total_feedbacks?.valeur_num ?? null,
+            satisfaction: stats.data.kpis?.satisfaction?.valeur_num ?? null,
+            agencesSousSeuil: alertes.status === 'ok' && alertes.data.incluses ? alertes.data.sousSeuil.map((a) => a.agence_nom) : null,
+            agencesCritiques: ranking.map((a) => ({ nom: a.agence_nom, critiques: a.alertes_critiques })),
+          }}
+        />
+      )}
 
       <BentoGrid>
         {/* SITUATION */}

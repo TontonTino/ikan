@@ -49,6 +49,8 @@ import type { ActionsTotaux, IssuesOuvertes, Source } from './useSiegeData';
 import type { AlertesSiege } from './siegeData';
 import { AIDE_SCORE_FIABILISE, LIBELLE_SCORE_FIABILISE } from '../../../utils/scoreFiabilise';
 
+import YamNote from '../../../components/agent/YamNote';
+
 export type KpiKind = 'satisfaction' | 'volume' | 'critiques' | 'seuil';
 
 /** Période de YAM (services/agent.ts) : les questions pré-remplies l'annoncent explicitement. */
@@ -363,6 +365,7 @@ export function Evolution({ stats, jours, onRetry }: { stats: Source<StatsCXResp
   const faibles = points.filter((p) => p.feedbacks < FAIBLE_VOLUME_POINT).length;
 
   return (
+    <>
     <Chart
       title="Évolution de la satisfaction"
       subtitle={`${periodeLabel(jours)} · part des avis notés 4 ou 5${faibles ? ' · ○ point à faible volume (< ' + FAIBLE_VOLUME_POINT + ' avis)' : ''}`}
@@ -388,6 +391,8 @@ export function Evolution({ stats, jours, onRetry }: { stats: Source<StatsCXResp
         </ResponsiveContainer>
       )}
     </Chart>
+    <YamNote pointsFaibleVolume={faibles} />
+    </>
   );
 }
 

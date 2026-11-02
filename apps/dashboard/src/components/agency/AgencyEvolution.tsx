@@ -4,6 +4,7 @@ import type { TendanceSatisfaction } from '../../types';
 import Chart, { ChartTooltip, DATAVIZ, chartAxisProps, chartGridProps } from '../ui/Chart';
 import { FAIBLE_VOLUME_POINT } from '../../pages/cx/siege/siegeData';
 import { interpretationEvolution, resumeAccessibleEvolution } from './agenceVue';
+import YamNote from '../agent/YamNote';
 
 /** Point plein si le volume est suffisant, creux sinon : l'information ne repose pas sur la couleur seule. */
 function Point(props: { cx?: number; cy?: number; payload?: TendanceSatisfaction }) {
@@ -44,6 +45,7 @@ export function TableauEvolution({ points }: { points: TendanceSatisfaction[] })
 
 export default function AgencyEvolution({ points, periode }: { points: TendanceSatisfaction[]; periode: string }) {
   return (
+    <>
     <Chart
       title="Évolution de la satisfaction"
       subtitle={
@@ -84,5 +86,7 @@ export default function AgencyEvolution({ points, periode }: { points: TendanceS
         </div>
       )}
     </Chart>
+    <YamNote pointsFaibleVolume={points.filter((p) => p.nombre_feedbacks < FAIBLE_VOLUME_POINT).length} />
+    </>
   );
 }
