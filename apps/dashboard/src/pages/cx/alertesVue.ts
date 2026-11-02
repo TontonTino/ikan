@@ -153,6 +153,13 @@ export function nombreAvisVisibles(avis: AlerteFeedback[], depliee: boolean, cib
   return index >= limite ? avis.length : limite;
 }
 
+/** Libellé du bouton qui déplie ou replie les avis : « Voir les N avis » (N = avis encore masqués), « Voir l'avis restant » s'il n'en reste qu'un, « Réduire » une fois dépliée. */
+export function libelleVoirAvis(total: number, depliee: boolean, limite = AVIS_VISIBLES): string {
+  if (depliee) return 'Réduire';
+  const masques = total - limite;
+  return masques > 1 ? `Voir les ${masques} avis` : 'Voir l’avis restant';
+}
+
 /** Message de forfait : explicite, jamais confondu avec « aucune alerte ». */
 export function messageForfait(nomForfait: string | null, cx: boolean): { titre: string; detail: string } {
   return {

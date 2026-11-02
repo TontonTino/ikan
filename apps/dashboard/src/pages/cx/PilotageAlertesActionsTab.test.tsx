@@ -271,6 +271,8 @@ describe('page /alertes — synthèse, repli des avis par groupe de 5', () => {
     expect(lignes(html)).toBe(5);
     expect(html).toContain('5 avis affichés sur 12');
     expect(html).toContain('Voir les 7 avis');
+    expect(html).toMatch(/<button[^>]*class="ui-btn ui-btn--secondary alerte-voir-plus"[^>]*aria-expanded="false"[^>]*>Voir les 7 avis<\/button>/);
+    expect(html).not.toContain('ui-btn--ghost alerte-voir-plus');
     expect(html).toContain('aria-expanded="false"');
   });
 

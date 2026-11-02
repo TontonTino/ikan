@@ -111,3 +111,8 @@ a.agence-meter:hover { background: var(--color-bg-hover); }
 
 /* Titres de groupe de la page Alertes : casse normale (les majuscules intégrales fatiguent la lecture). */
 .alerte-groupe-titre { margin: var(--space-2) 0 0; font-size: var(--text-lg); font-weight: var(--weight-black); color: var(--color-text-main); }
+
+/* Pied de la liste d'avis : vrai bouton (états hover / focus / actif du design system) et compteur discret. */
+.alerte-pied { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-top: var(--space-2); }
+.alerte-pied .siege-note { margin: 0; }
+.alerte-voir-plus { min-height: var(--touch-target); }

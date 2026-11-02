@@ -23,6 +23,7 @@ import {
   avisCible,
   compterAlertes,
   filtrerAlertes,
+  libelleVoirAvis,
   messageForfait,
   noteTriAvis,
   nombreAvisVisibles,
@@ -244,14 +245,16 @@ export default function PilotageAlertesActionsTab(props: Props) {
                 <ul className="agence-prio alerte-liste">
                   {avisVisibles.map((a) => <LigneAvis key={a.feedback_id} avis={a} isAgencyManager={isAgencyManager} cible={target === alerteFeedbackAnchor(a.feedback_id)} />)}
                 </ul>
-                <p className="siege-note" role="status">
-                  {avisVisibles.length} avis affichés sur {filtrees.avis.length}.
-                </p>
-                {filtrees.avis.length > AVIS_VISIBLES && (
-                  <Button className="agence-more" size="sm" variant="ghost" aria-expanded={nbAvisVisibles === filtrees.avis.length} onClick={() => setDepliee((v) => !v)}>
-                    {nbAvisVisibles === filtrees.avis.length ? 'Réduire' : filtrees.avis.length - AVIS_VISIBLES > 1 ? `Voir les ${filtrees.avis.length - AVIS_VISIBLES} avis` : 'Voir l’avis restant'}
-                  </Button>
-                )}
+                <div className="alerte-pied">
+                  {filtrees.avis.length > AVIS_VISIBLES && (
+                    <Button className="alerte-voir-plus" variant="secondary" aria-expanded={nbAvisVisibles === filtrees.avis.length} onClick={() => setDepliee((v) => !v)}>
+                      {libelleVoirAvis(filtrees.avis.length, nbAvisVisibles === filtrees.avis.length)}
+                    </Button>
+                  )}
+                  <p className="siege-note" role="status">
+                    {avisVisibles.length} avis affichés sur {filtrees.avis.length}
+                  </p>
+                </div>
               </section>
             )}
           </>

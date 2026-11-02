@@ -6,6 +6,7 @@ import {
   avisCible,
   compterAlertes,
   filtrerAlertes,
+  libelleVoirAvis,
   messageForfait,
   nombreAvisVisibles,
   sourceInitiale,
@@ -174,5 +175,15 @@ describe('mise en valeur des chiffres', () => {
   it('parties de la synthèse : titre et détail séparés, sans « : »', () => {
     const s = syntheseAlertes({ seuil: [{ agence_id: 'a', agence_nom: 'a', taux_actuel: 1, seuil: 2, message: '' }], avis: [], agenceId: null, cx: false })!;
     expect(partiesSynthese(s)).toEqual({ titre: '1 situation à surveiller', detail: '1 alerte de seuil' });
+  });
+});
+
+describe('libellé du bouton « Voir les N avis »', () => {
+  it('N réel = avis encore masqués ; singulier ; Réduire une fois dépliée', () => {
+    expect(libelleVoirAvis(16, false)).toBe('Voir les 11 avis');
+    expect(libelleVoirAvis(7, false)).toBe('Voir les 2 avis');
+    expect(libelleVoirAvis(6, false)).toBe('Voir l’avis restant');
+    expect(libelleVoirAvis(16, true)).toBe('Réduire');
+    expect(libelleVoirAvis(30, false, 10)).toBe('Voir les 20 avis');
   });
 });
