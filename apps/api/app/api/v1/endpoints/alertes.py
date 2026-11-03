@@ -70,6 +70,9 @@ class AlerteFeedbackResponse(BaseModel):
     raison: str
     commentaire: str | None
     date_soumission: datetime
+    # Champ additif : statut de traitement de l'avis tel qu'en base (feedbacks.statut_traitement : « nouveau », « en_traitement »,
+    # « en_cours »; jamais « resolu », ces avis sont exclus de la liste). None si la colonne est vide. Aucune règle d'alerte ne l'utilise.
+    statut_traitement: str | None = None
 
 
 class AlertesResponse(BaseModel):
@@ -255,6 +258,7 @@ def _calculer_alertes_feedback(db: Session, current_user: Utilisateur) -> List[A
             raison=raison,
             commentaire=feedback.commentaire,
             date_soumission=feedback.date_soumission,
+            statut_traitement=feedback.statut_traitement,
         ))
 
     alertes.sort(key=lambda a: en_utc(a.date_soumission), reverse=True)
