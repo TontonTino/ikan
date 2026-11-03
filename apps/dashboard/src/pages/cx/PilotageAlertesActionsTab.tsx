@@ -17,6 +17,8 @@ import { ArrowUpRightIcon, CheckIcon, FilterIcon, RefreshIcon, TargetIcon } from
 import { raisonLabel, alerteFeedbackAnchor, alerteSeuilAnchor, libelleStatutAvis } from '../../components/alerts/alerteLabels';
 import BadgeGraviteAlerte from '../../components/alerts/BadgeGraviteAlerte';
 import BadgeNiveauAvis from '../../components/alerts/BadgeNiveauAvis';
+import SuiviEpisode, { PastilleEtatEpisode } from '../../components/alerts/EtatEpisode';
+import { episodeDeAlerte, peutPrendreEnCharge } from '../../utils/episodesAlertes';
 import { libelleRecommandations } from '../../utils/sourceAnalyse';
 import {
   AVIS_VISIBLES,
@@ -52,6 +54,10 @@ interface Props {
   onRetryRecos: () => void;
   onLoadMoreRecos: () => void;
   onMarquerRecoTraitee: (id: string) => void;
+  /** Agency Manager : ouvre la prise en charge d'une alerte détectée. Absent : aucun bouton (le CX Manager consulte seulement). */
+  onPrendreEnCharge?: (alerte: Alerte) => void;
+  /** « Historique des alertes » (repliée), affichée sous la liste des alertes actives. */
+  historique?: React.ReactNode;
 }
 
 const TYPES: Array<{ id: TypeAlerte; label: string }> = [
@@ -90,13 +96,16 @@ const CLASSE_ACTION = 'ui-btn ui-btn--secondary ui-btn--sm alerte-ligne__action'
  * Ordre de lecture (et du DOM, donc des lecteurs d'écran) : 1) agence (et date) ; 2) niveau ; 3) raison ; 4) informations complémentaires,
  * en discret ; 5) action. L'agence est comprise avant les indicateurs ; une seule pastille (le niveau), la raison est du texte.
  */
-export function LigneSeuil({ alerte, isAgencyManager, cible }: { alerte: Alerte; isAgencyManager: boolean; cible: boolean }) {
+export function LigneSeuil({ alerte, isAgencyManager, cible, onPrendreEnCharge }: { alerte: Alerte; isAgencyManager: boolean; cible: boolean; onPrendreEnCharge?: (alerte: Alerte) => void }) {
   const id = alerteSeuilAnchor(alerte.agence_id);
+  const episode = episodeDeAlerte(alerte);
+  const prendre = onPrendreEnCharge && peutPrendreEnCharge(alerte, isAgencyManager);
   return (
     <li id={id} tabIndex={-1} className={`alerte-ligne ui-alert-item${cible ? ' is-target' : ''}`}>
       <div className="alerte-ligne__corps">
         <div className="alerte-ligne__qui">
           <strong className="alerte-ligne__agence">{alerte.agence_nom}</strong>
+          {episode && <PastilleEtatEpisode statut={episode.statut} />}
         </div>
         <div className="alerte-ligne__niveau">
           <BadgeGraviteAlerte gravite={alerte.gravite} />
@@ -106,12 +115,20 @@ export function LigneSeuil({ alerte, isAgencyManager, cible }: { alerte: Alerte;
           <strong>{formaterPourcentage(alerte.taux_actuel)}</strong> sur les 7 derniers jours, pour un seuil de {formaterPourcentage(alerte.seuil)}
           {alerte.ecart_seuil != null && alerte.ecart_seuil > 0 ? ` (${alerte.ecart_seuil.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} points sous le seuil)` : ''}
         </p>
+        {episode && <SuiviEpisode episode={episode} />}
       </div>
-      {isAgencyManager ? (
-        <Link to="/statistiques" className={CLASSE_ACTION}>Analyser la tendance<ArrowUpRightIcon size={13} aria-hidden="true" /></Link>
-      ) : (
-        <Link to={lienApercuAgence(alerte.agence_id)} className={CLASSE_ACTION}>Voir l’agence<ArrowUpRightIcon size={13} aria-hidden="true" /></Link>
-      )}
+      <div className="alerte-ligne__actions">
+        {prendre && (
+          <Button variant="primary" size="sm" className="alerte-ligne__prendre" onClick={() => onPrendreEnCharge(alerte)} aria-label={`Prendre en charge l’alerte de ${alerte.agence_nom}`} aria-haspopup="dialog">
+            Prendre en charge
+          </Button>
+        )}
+        {isAgencyManager ? (
+          <Link to="/statistiques" className={CLASSE_ACTION}>Analyser la tendance<ArrowUpRightIcon size={13} aria-hidden="true" /></Link>
+        ) : (
+          <Link to={lienApercuAgence(alerte.agence_id)} className={CLASSE_ACTION}>Voir l’agence<ArrowUpRightIcon size={13} aria-hidden="true" /></Link>
+        )}
+      </div>
     </li>
   );
 }
@@ -154,7 +171,7 @@ export function LigneAvis({ avis, isAgencyManager, cible }: { avis: AlerteFeedba
 }
 
 export default function PilotageAlertesActionsTab(props: Props) {
-  const { isAgencyManager, alertes, recos, recosLoadingMore, nomForfait, agences, selectedAgenceId, onSelectAgence, onRefresh, onRetryRecos, onLoadMoreRecos, onMarquerRecoTraitee } = props;
+  const { isAgencyManager, alertes, recos, recosLoadingMore, nomForfait, agences, selectedAgenceId, onSelectAgence, onRefresh, onRetryRecos, onLoadMoreRecos, onMarquerRecoTraitee, onPrendreEnCharge, historique } = props;
   const [type, setType] = useState<TypeAlerte>('toutes');
   const [depliee, setDepliee] = useState(false);
   const { hash } = useLocation();
@@ -244,7 +261,7 @@ export default function PilotageAlertesActionsTab(props: Props) {
                     : 'Chaque alerte est affichée après 48 h sous le seuil ; elle disparaît quand la satisfaction des 7 derniers jours repasse au-dessus.'}
                 </p>
                 <ul className="agence-prio alerte-liste">
-                  {filtrees.seuil.map((a) => <LigneSeuil key={a.agence_id} alerte={a} isAgencyManager={isAgencyManager} cible={target === alerteSeuilAnchor(a.agence_id)} />)}
+                  {filtrees.seuil.map((a) => <LigneSeuil key={a.agence_id} alerte={a} isAgencyManager={isAgencyManager} cible={target === alerteSeuilAnchor(a.agence_id)} onPrendreEnCharge={onPrendreEnCharge} />)}
                 </ul>
               </section>
             )}
@@ -270,6 +287,8 @@ export default function PilotageAlertesActionsTab(props: Props) {
           </>
         )}
       </Card>
+
+      {historique}
 
       <AgencyRecommendations
         titre={libelleRecommandations(recos.donnees.items)}

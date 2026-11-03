@@ -158,6 +158,13 @@ export const alertesApi = {
   list: () => api.get<import('../types').AlertesResponse>('/alertes/'),
   updateSeuil: (agenceId: string, seuil: number) =>
     api.patch(`/alertes/agences/${agenceId}/seuil`, { seuil_alerte: seuil }),
+  /** Prise en charge d'une alerte de seuil par le Responsable d'agence (commentaire facultatif, 500 caractères au plus). */
+  prendreEnCharge: (episodeId: string, commentaire?: string) =>
+    api.post(`/alertes/episodes/${episodeId}/prendre-en-charge`, commentaire ? { commentaire } : {}),
+  /** Historique des épisodes, pagination par curseur. Paramètre `statut` unique ici. */
+  episodes: (params: import('../utils/episodesAlertes').ParametresHistorique) =>
+    api.get<import('../types').HistoriqueEpisodesResponse>('/alertes/episodes', { params }),
+  episode: (episodeId: string) => api.get<import('../types').EpisodeDetail>(`/alertes/episodes/${episodeId}`),
 };
 
 // ── Organisations ─────────────────────────────────────

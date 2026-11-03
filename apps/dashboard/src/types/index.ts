@@ -340,6 +340,70 @@ export interface Alerte {
   gravite?: 'critique' | 'important';
   /** Points de pourcentage sous le seuil. */
   ecart_seuil?: number;
+  /**
+   * Épisode de l'alerte (cycle de vie) : champs additifs, tous absents ou null sur un ancien serveur, sans épisode encore écrit ou quand l'interrupteur
+   * ALERTES_EPISODES est coupé. Une alerte prise en charge RESTE dans la liste avec son état.
+   */
+  episode_id?: string | null;
+  episode_statut?: 'detectee' | 'prise_en_charge' | null;
+  /** Première constatation par IKAN (date exacte). */
+  detecte_le?: string | null;
+  /** Début de la condition « sous le seuil », reconstitué d'après les avis : TOUJOURS approximatif. */
+  debut_condition?: string | null;
+  debut_approximatif?: boolean | null;
+  /** Vrai si la reconstitution du début a atteint sa limite (30 jours) : l'épisode est peut-être plus ancien (« au moins »). */
+  debut_remontee_limitee?: boolean | null;
+  pris_en_charge_le?: string | null;
+  pris_en_charge_par_nom?: string | null;
+  commentaire_prise_en_charge?: string | null;
+}
+
+export type StatutEpisode = 'detectee' | 'prise_en_charge' | 'terminee';
+export type CauseFinEpisode = 'retablie' | 'donnees_insuffisantes' | 'seuil_modifie' | 'agence_desactivee';
+
+/** Un épisode d'alerte de seuil (GET /alertes/episodes). Dates en UTC ; aucune durée n'est certaine (voir duree_*). */
+export interface EpisodeHistorique {
+  episode_id: string;
+  agence_id: string;
+  agence_nom: string;
+  type: string;
+  statut: StatutEpisode;
+  gravite_ouverture?: 'critique' | 'important' | null;
+  detecte_le: string;
+  debut_condition: string;
+  debut_approximatif: boolean;
+  debut_remontee_limitee: boolean;
+  fin_condition?: string | null;
+  terminee_le?: string | null;
+  fin_cause?: CauseFinEpisode | null;
+  duree_minutes: number;
+  duree_approximative: boolean;
+  duree_minimale: boolean;
+  duree_en_cours: boolean;
+  taux_ouverture: number;
+  seuil_ouverture: number;
+  taux_fermeture?: number | null;
+  seuil_fermeture?: number | null;
+  pris_en_charge_le?: string | null;
+  pris_en_charge_par_nom?: string | null;
+}
+
+/** GET /alertes/episodes/{id} : l'épisode, plus le commentaire de prise en charge et le délai (deux instants constatés : exact). */
+export interface EpisodeDetail extends EpisodeHistorique {
+  commentaire_prise_en_charge?: string | null;
+  delai_prise_en_charge_minutes?: number | null;
+  created_at: string;
+}
+
+export interface HistoriqueEpisodesResponse {
+  episodes: EpisodeHistorique[];
+  /** Pagination par curseur : à renvoyer dans `curseur` ; null = dernière page. */
+  curseur_suivant?: string | null;
+  limite: number;
+  /** false : l'interrupteur ALERTES_EPISODES est coupé (liste vide par indisponibilité). */
+  episodes_disponibles?: boolean;
+  /** false : forfait sans alertes. */
+  alertes_incluses?: boolean;
 }
 
 export interface AlerteFeedback {
