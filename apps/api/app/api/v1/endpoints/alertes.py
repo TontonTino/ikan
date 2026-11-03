@@ -5,12 +5,14 @@ from uuid import UUID
 from typing import List
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel, field_validator
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_cx_or_agency_manager, get_cx_or_admin, get_db
+from app.api.deps import get_agency_manager, get_cx_or_agency_manager, get_cx_or_admin, get_db
 from app.models.utilisateur import Utilisateur
 from app.models.agence import Agence
 from app.models.feedback import Feedback
@@ -30,7 +32,10 @@ from app.services.alertes_seuil import (
     satisfaction_a,
     sous_seuil_en_continu,
 )
-from app.services.alertes_episodes import reconcilier_episodes
+from app.services.alertes_episodes import (
+    EpisodeDejaPrisEnCharge, EpisodeIntrouvable, EpisodeTermine, LONGUEUR_MAX_COMMENTAIRE, episodes_ouverts_pour_lecture, nettoyer_commentaire,
+    prendre_en_charge_episode, reconcilier_episodes,
+)
 from app.services.plan_catalog import FEATURE_ALERTES
 from app.services.plan_service import organisation_a_la_fonctionnalite
 from app.services.dashboard_helpers import NOTE_FAIBLE_MAX
@@ -48,6 +53,18 @@ class AlerteResponse(BaseModel):
     # (constante ECART_SEUIL_CRITIQUE_POINTS, services/alertes_seuil.py). ecart_seuil = points sous le seuil.
     gravite: GraviteAlerte = "important"
     ecart_seuil: float = 0.0
+    # Épisode de l'alerte (cycle de vie, champs ADDITIFS : tous None si l'épisode n'existe pas encore ou si ALERTES_EPISODES=non). Une alerte prise en
+    # charge RESTE dans la liste avec son état ; elle ne se termine que lorsque les données le montrent. `detecte_le` (première constatation) et
+    # `debut_condition` (reconstitué d'après les avis, toujours approximatif) sont deux dates distinctes.
+    episode_id: Optional[UUID] = None
+    episode_statut: Optional[str] = None                     # « detectee » | « prise_en_charge »
+    detecte_le: Optional[datetime] = None
+    debut_condition: Optional[datetime] = None
+    debut_approximatif: Optional[bool] = None
+    debut_remontee_limitee: Optional[bool] = None
+    pris_en_charge_le: Optional[datetime] = None
+    pris_en_charge_par_nom: Optional[str] = None
+    commentaire_prise_en_charge: Optional[str] = None
 
 
 class AgenceSousSeuilResponse(BaseModel):
@@ -289,7 +306,88 @@ def list_alertes(
     # Épisodes d'alerte de seuil : écrits EN SILENCE, APRÈS le calcul de la réponse, qu'ils ne peuvent ni modifier ni casser (ne lève jamais ;
     # n'écrit que s'il y a une différence ; interrupteur ALERTES_EPISODES=non). Voir app/services/alertes_episodes.py.
     reconcilier_episodes(db, current_user)
+    # Informations d'épisode ajoutées à chaque alerte de seuil (additif ; sans épisode, les champs restent None et la réponse est celle d'avant).
+    episodes = episodes_ouverts_pour_lecture(db, [a.agence_id for a in reponse.alertes_seuil])
+    if episodes:
+        reponse.alertes_seuil = [_avec_episode(a, episodes.get(a.agence_id)) for a in reponse.alertes_seuil]
     return reponse
+
+
+def _avec_episode(alerte: AlerteResponse, episode) -> AlerteResponse:
+    if episode is None:
+        return alerte
+    return alerte.model_copy(update=dict(
+        episode_id=episode.id, episode_statut=episode.statut, detecte_le=en_utc(episode.detecte_le), debut_condition=en_utc(episode.debut_condition),
+        debut_approximatif=episode.debut_approximatif, debut_remontee_limitee=episode.debut_remontee_limitee,
+        pris_en_charge_le=en_utc(episode.pris_en_charge_le) if episode.pris_en_charge_le else None,
+        pris_en_charge_par_nom=episode.pris_en_charge_par_nom, commentaire_prise_en_charge=episode.commentaire_prise_en_charge,
+    ))
+
+
+class PriseEnChargeRequest(BaseModel):
+    """Corps (facultatif) de la prise en charge : un commentaire de 500 caractères au plus, espaces de début et de fin retirés ; vide = absent."""
+    commentaire: Optional[str] = None
+
+    @field_validator("commentaire", mode="before")
+    @classmethod
+    def _commentaire(cls, valeur):
+        if valeur is None:
+            return None
+        if not isinstance(valeur, str):
+            raise ValueError("Le commentaire doit être un texte.")
+        propre = nettoyer_commentaire(valeur)
+        if propre is not None and len(propre) > LONGUEUR_MAX_COMMENTAIRE:
+            raise ValueError(f"Le commentaire ne peut pas dépasser {LONGUEUR_MAX_COMMENTAIRE} caractères.")
+        return propre
+
+
+class EpisodeResponse(BaseModel):
+    episode_id: UUID
+    agence_id: UUID
+    statut: str
+    detecte_le: datetime
+    debut_condition: datetime
+    debut_approximatif: bool
+    debut_remontee_limitee: bool
+    pris_en_charge_le: Optional[datetime] = None
+    pris_en_charge_par_nom: Optional[str] = None
+    commentaire_prise_en_charge: Optional[str] = None
+
+
+@router.post("/episodes/{episode_id}/prendre-en-charge", response_model=EpisodeResponse)
+def prendre_en_charge(
+    episode_id: UUID,
+    request: Request,
+    data: Optional[PriseEnChargeRequest] = None,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_agency_manager),
+):
+    """
+    Prise en charge d'une alerte de seuil par le Responsable d'agence de SON agence (CX Manager : 403, il consulte ; Administrateur : refusé ; autre agence ou
+    autre organisation : 404, comme un identifiant inconnu, sans rien révéler). Valable seulement si l'épisode est « detectee » (409 sinon : déjà pris en
+    charge, ou terminé). Atomique : deux clics simultanés = une seule prise en charge, l'autre reçoit 409. L'alerte reste dans la liste avec son état.
+    """
+    if not organisation_a_la_fonctionnalite(current_user.organisation_id, FEATURE_ALERTES, db):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Les alertes ne sont pas incluses dans le forfait de votre organisation.")
+    try:
+        episode = prendre_en_charge_episode(db, episode_id, current_user, data.commentaire if data else None, requete=request)
+        db.commit()
+    except EpisodeIntrouvable:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alerte introuvable.")
+    except EpisodeTermine:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Cette alerte est terminée : les données ne montrent plus de dépassement du seuil. Il n'y a plus rien à prendre en charge.")
+    except EpisodeDejaPrisEnCharge:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Cette alerte est déjà prise en charge.")
+    db.refresh(episode)
+    return EpisodeResponse(
+        episode_id=episode.id, agence_id=episode.agence_id, statut=episode.statut, detecte_le=en_utc(episode.detecte_le),
+        debut_condition=en_utc(episode.debut_condition), debut_approximatif=episode.debut_approximatif, debut_remontee_limitee=episode.debut_remontee_limitee,
+        pris_en_charge_le=en_utc(episode.pris_en_charge_le) if episode.pris_en_charge_le else None,
+        pris_en_charge_par_nom=episode.pris_en_charge_par_nom, commentaire_prise_en_charge=episode.commentaire_prise_en_charge,
+    )
 
 
 @router.patch("/agences/{agence_id}/seuil")

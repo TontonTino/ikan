@@ -49,12 +49,14 @@ REFUS_DERNIER_ADMIN = "protection.dernier_admin_refuse"
 CONNEXION_ECHOUEE = "auth.connexion_echouee"
 CONNEXION_LIMITEE = "auth.connexion_limitee"
 ALERTE_EPISODE_OUVERT = "alerte_episode.ouvert"                            # événement SYSTÈME : un dépassement de seuil s'ouvre (acteur « systeme »)
+ALERTE_EPISODE_PRIS_EN_CHARGE = "alerte_episode.pris_en_charge"           # un Agency Manager prend une alerte de seuil en charge (acteur humain ; jamais son commentaire)
 ALERTE_EPISODE_TERMINE = "alerte_episode.termine"                          # événement SYSTÈME : les données montrent la fin du dépassement
 
 CODES_ACTION = (
     ORGANISATION_CREEE, ORGANISATION_MODIFIEE, ORGANISATION_DESACTIVEE, ORGANISATION_REACTIVEE, FORFAIT_MODIFIE, COMPTE_CREE, COMPTE_MODIFIE,
     COMPTE_SUSPENDU, COMPTE_ADMIN_CREE, COMPTE_MOT_DE_PASSE_REINITIALISE, COMPTE_MOT_DE_PASSE_MODIFIE, AGENCE_CREEE, AGENCE_MODIFIEE, AGENCE_SUPPRIMEE, QR_SUPPRIME, PARAMETRES_MODIFIES,
     REFUS_DERNIER_ADMIN, CONNEXION_ECHOUEE, CONNEXION_LIMITEE, ALERTE_EPISODE_OUVERT, ALERTE_EPISODE_TERMINE,
+    ALERTE_EPISODE_PRIS_EN_CHARGE,
 )
 
 ROLE_ANONYME = "anonyme"

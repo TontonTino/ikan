@@ -730,7 +730,7 @@ def prendre_en_charge_feedback(
             {
                 Feedback.statut_traitement: "en_traitement",
                 Feedback.assigne_a_id: current_user.id,
-                Feedback.date_assignation: datetime.now(),
+                Feedback.date_assignation: datetime.now(timezone.utc),      # colonne avec fuseau : toujours un instant UTC explicite, jamais naïf
             },
             synchronize_session=False,
         )
