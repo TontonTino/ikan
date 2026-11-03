@@ -26,6 +26,7 @@ from app.core.garde_production import est_base_de_production
 API_DIR = Path(__file__).resolve().parents[1]
 FICHIER = API_DIR / "alembic" / "versions" / "033_journal_audit.py"
 REV, REV_PRECEDENTE = "033_journal_audit", "032_demande_contact_traitement"
+TETE = "034_alerte_episodes"                 # migration suivante (épisodes d'alerte) : la 033 n'est plus la tête
 
 assert not est_base_de_production(TEST_DATABASE_URL), "TEST_DATABASE_URL vise la production : tests arrêtés"
 assert "localhost" in TEST_DATABASE_URL or "127.0.0.1" in TEST_DATABASE_URL, "TEST_DATABASE_URL doit être une base LOCALE jetable"
@@ -51,9 +52,10 @@ def ligne_sql(action="compte.cree", resultat="succes"):
         {"i": uuid.uuid4(), "a": action, "r": resultat, "d": '{"champs": ["role"]}'}
 
 
-def test_la_tete_alembic_est_unique_et_c_est_la_033():
+def test_la_tete_alembic_est_unique_et_la_033_reste_dans_la_chaine():
     scripts = ScriptDirectory.from_config(Config(str(API_DIR / "alembic.ini")))
-    assert scripts.get_heads() == [REV]
+    assert scripts.get_heads() == [TETE]
+    assert scripts.get_revision(TETE).down_revision == REV
     assert scripts.get_revision(REV).down_revision == REV_PRECEDENTE
 
 
@@ -179,9 +181,9 @@ def test_depuis_la_version_032_la_migration_n_ajoute_que_cette_table(pg):
     with pg.connect() as c:
         apres = c.execute(sa.text("SELECT table_name FROM information_schema.tables WHERE table_schema = current_schema() ORDER BY 1")).scalars().all()
         colonnes_apres = c.execute(sa.text("SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = current_schema() ORDER BY 1, 2")).all()
-        assert c.execute(sa.text("SELECT version_num FROM alembic_version")).scalar() == REV
-    assert sorted(set(apres) - set(avant)) == ["journal_audit"]                                 # une seule table nouvelle
-    assert [x for x in colonnes_apres if x[0] != "journal_audit"] == colonnes_avant              # aucune autre table modifiée
+        assert c.execute(sa.text("SELECT version_num FROM alembic_version")).scalar() == TETE
+    assert sorted(set(apres) - set(avant)) == ["alerte_episodes", "journal_audit"]              # les deux tables nouvelles de 033 et 034, rien d'autre
+    assert [x for x in colonnes_apres if x[0] not in ("journal_audit", "alerte_episodes")] == colonnes_avant              # aucune autre table modifiée
 
 
 def test_la_migration_pose_le_delai_de_verrou_de_5_secondes():

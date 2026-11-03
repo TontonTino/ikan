@@ -70,6 +70,10 @@ class Settings(BaseSettings):
     LOGIN_MAX_ECHECS_PAR_IP: int = 30
     LOGIN_FENETRE_SECONDES: int = 900
 
+    # Épisodes d'alerte de seuil (cycle de vie des alertes) : la réconciliation s'exécute à la lecture de GET /alertes/ et écrit en silence.
+    # Interrupteur d'urgence : ALERTES_EPISODES=non la désactive entièrement (aucune lecture ni écriture d'épisode). Actif par défaut.
+    ALERTES_EPISODES: str = "oui"
+
     # Agent IA YAM (optionnel — service séparé, port 8001). Vide = notification désactivée.
     # AGENT_WEBHOOK_URL = URL de BASE du service (ex. http://localhost:8001) ;
     # WEBHOOK_SECRET doit être IDENTIQUE à celui de apps/agent/.env.
