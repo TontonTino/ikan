@@ -2,6 +2,7 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { VeilleSyntheseJour } from '../../types';
 import { formaterDateAxe } from '../../utils/formatNombre';
+import { jourComplet, jourRelatifOuAbsolu } from '../../utils/dateJour';
 
 // Visuellement masqué mais accessible aux lecteurs d'écran (même donnée que le graphique).
 const srOnlyStyle: React.CSSProperties = {
@@ -15,6 +16,11 @@ const srOnlyStyle: React.CSSProperties = {
   whiteSpace: 'nowrap',
   border: 0,
 };
+
+/** Étiquette de l'infobulle : le jour selon la convention du dashboard (relative jusqu'à 30 jours, puis « 12 oct. 2026 »), date complète au survol. Jamais l'ISO brute. */
+export function EtiquetteJour({ jour }: { jour: string }) {
+  return <time dateTime={jour} title={jourComplet(jour)}>{jourRelatifOuAbsolu(jour)}</time>;
+}
 
 export default function VeilleDailyChart({ data }: { data: VeilleSyntheseJour[] }) {
   if (data.length === 0) {
@@ -39,6 +45,7 @@ export default function VeilleDailyChart({ data }: { data: VeilleSyntheseJour[] 
             <XAxis dataKey="date" tickFormatter={(v) => formaterDateAxe(v)} tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} />
             <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} />
             <Tooltip
+              labelFormatter={(jour) => <EtiquetteJour jour={String(jour)} />}
               contentStyle={{ background: 'var(--color-primary-dark)', borderRadius: '10px', border: 'none', color: '#FFFFFF', fontSize: '0.78rem' }}
             />
             <Legend wrapperStyle={{ fontSize: '0.78rem' }} />

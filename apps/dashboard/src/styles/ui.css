@@ -523,6 +523,13 @@
   .ui-bento__item .ui-kpi__spark { display: none; }
   .ui-bento__item .ui-kpi__icon { width: 28px; height: 28px; border-radius: var(--radius-sm); }
   .ui-bento__item .ui-kpi__label { font-size: var(--text-xs); }
+  /* Hauteurs égales : tous les KPI de la grille 2×2 atteignent la hauteur du plus haut (libellé sur deux lignes, variation), sans jamais rogner : c'est un minimum. */
+  .ui-bento__item--kpi .ui-kpi { min-height: 10.5rem; }
+}
+
+/* Bandeau de KPI empilés sur mobile (page Statistiques) : cartes de même hauteur, celle de la plus haute. */
+@media (max-width: 640px) {
+  .ui-kpi-band { grid-auto-rows: 1fr; }
 }
 
 /* Bouton d'information « ? » : discret visuellement, cible tactile 44×44 (zone invisible). */

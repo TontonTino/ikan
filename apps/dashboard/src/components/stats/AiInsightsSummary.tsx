@@ -2,6 +2,7 @@ import React from 'react';
 import type { InsightIADetail } from '../../types';
 import { FileTextIcon, CheckCircleIcon, AlertTriangleIcon, LightbulbIcon } from '../common/Icons';
 import { contientIA } from '../../utils/sourceAnalyse';
+import { texteRecommandationAffiche } from '../../utils/texteRecommandation';
 
 interface AiInsightsSummaryProps {
   insights: InsightIADetail[];
@@ -107,7 +108,8 @@ export default function AiInsightsSummary({ insights }: AiInsightsSummaryProps) 
                   margin: 0,
                 }}
               >
-                {item.description}
+                {/* Recommandation : le préfixe « URGENT — » n'est pas affiché (la priorité est dite ailleurs) ; la donnée reste intacte. */}
+                {item.type === 'recommandation' ? texteRecommandationAffiche(item.description) : item.description}
               </p>
             </div>
 

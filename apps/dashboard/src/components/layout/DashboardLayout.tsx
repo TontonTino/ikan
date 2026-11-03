@@ -340,10 +340,10 @@ export default function DashboardLayout() {
             {hideBreadcrumb ? (
               <div />
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', minWidth: 0, overflow: 'hidden' }}>
-                <span style={{ color: 'var(--color-text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>IKAN AI</span>
-                <span style={{ color: '#CBD5E1' }}>/</span>
-                <span style={{ color: '#02302D', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getBreadcrumb()}</span>
+              <div className="dashboard-fil" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', minWidth: 0, overflow: 'hidden' }}>
+                <span className="dashboard-fil__racine" style={{ color: 'var(--color-text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>IKAN AI</span>
+                <span className="dashboard-fil__sep" style={{ color: '#CBD5E1' }}>/</span>
+                <span className="dashboard-fil__page" title={getBreadcrumb()} style={{ color: '#02302D', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getBreadcrumb()}</span>
               </div>
             )}
           </div>

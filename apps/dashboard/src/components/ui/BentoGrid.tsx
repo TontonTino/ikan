@@ -75,7 +75,7 @@ export function BentoItem({ size = 'third', span, as = 'section', className, sty
   const Tag = as as React.ElementType;
   return (
     <Tag
-      className={['ui-bento__item', className].filter(Boolean).join(' ')}
+      className={['ui-bento__item', size === 'kpi' && 'ui-bento__item--kpi', className].filter(Boolean).join(' ')}
       style={{ '--bento-sm': s.sm ?? 12, '--bento-md': s.md, '--bento-lg': s.lg, '--bento-rows': s.rows ?? 1, ...style } as React.CSSProperties}
       {...rest}
     >
