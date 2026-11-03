@@ -420,13 +420,13 @@ describe('page /alertes — statut de traitement des avis à risque', () => {
     expect(meta.indexOf('alerte-ligne__statut')).toBeGreaterThan(meta.indexOf('Note 1/5'));
   });
 
-  it('en_cours → « Action définie »', () => expect(ligne(page([avecStatut(1, 'en_cours')]), 'f1')).toContain('Action définie</span>'));
+  it('en_cours → « Action en cours »', () => expect(ligne(page([avecStatut(1, 'en_cours')]), 'f1')).toContain('Action en cours</span>'));
 
   it('nouveau, null, absent, vide, valeur héritée : aucune mention', () => {
     const html = page([avecStatut(1, 'nouveau'), avecStatut(2, null), avecStatut(3, undefined), avecStatut(4, ''), avecStatut(5, 'recontacte')]);
     expect(html).not.toContain('alerte-ligne__statut');
     expect(html).not.toContain('Pris en charge');
-    expect(html).not.toContain('Action définie');
+    expect(html).not.toContain('Action en cours');
   });
 
   it('jamais de valeur brute à l’écran', () => {
