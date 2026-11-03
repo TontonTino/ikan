@@ -198,7 +198,7 @@ describe('synthèse : « dont N pris en charge »', () => {
     expect(p).not.toContain('dont');
   });
   it('N = 1', () => expect(phrase([], [av('f1', 'en_traitement'), av('f2', 'nouveau')])).toBe('2 situations à surveiller : 2 avis à risque, dont 1 pris en charge'));
-  it('N = plusieurs : « Pris en charge » et « Action définie » comptent tous deux', () => {
+  it('N = plusieurs : « Pris en charge » et « Action en cours » comptent tous deux', () => {
     expect(phrase([seuil('a')], [av('f1', 'en_traitement'), av('f2', 'en_cours'), av('f3', 'en_traitement'), av('f4')])).toBe('5 situations à surveiller : 1 alerte de seuil, 4 avis à risque, dont 3 pris en charge');
   });
   it('les totaux ne dépendent jamais du statut', () => {
