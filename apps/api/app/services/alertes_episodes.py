@@ -31,7 +31,7 @@ from app.core.config import settings
 from app.models.agence import Agence
 from app.models.alerte_episode import (
     AlerteEpisode, FIN_AGENCE_DESACTIVEE, FIN_DONNEES_INSUFFISANTES, FIN_RETABLIE, FIN_SEUIL_MODIFIE,
-    STATUT_DETECTEE, STATUT_TERMINEE, TYPE_SEUIL_SATISFACTION,
+    STATUT_DETECTEE, STATUT_PRISE_EN_CHARGE, STATUT_TERMINEE, TYPE_SEUIL_SATISFACTION,
 )
 from app.models.enums import UserRole
 from app.models.feedback import Feedback
@@ -298,3 +298,87 @@ def reconcilier_episodes(db: Session, current_user, maintenant: Optional[datetim
     except Exception as erreur:  # noqa: BLE001 — la lecture ne casse JAMAIS à cause des épisodes ; jamais le contenu de l'exception
         technique.error("Réconciliation des épisodes d'alerte impossible (%s)", type(erreur).__name__)
         return None
+
+
+# ── Lecture des épisodes pour enrichir GET /alertes/ (champs additifs) ────────────────────────────────────────────────────────────────
+
+def episodes_ouverts_pour_lecture(db: Session, agence_ids: Sequence) -> dict:
+    """Épisodes NON terminés des agences données, indexés par agence ; {} si l'interrupteur est coupé, s'il n'y a rien à chercher, ou en cas d'erreur
+    (jamais de levée : la lecture d'une alerte ne casse pas à cause des épisodes). Session propre, en lecture seule."""
+    if not reconciliation_activee() or not agence_ids:
+        return {}
+    try:
+        with Session(bind=db.get_bind(), expire_on_commit=False) as s:
+            if s.get_bind().dialect.name == "postgresql":
+                s.execute(text("SET LOCAL statement_timeout = 2000"))
+            lignes = s.query(AlerteEpisode).filter(
+                AlerteEpisode.agence_id.in_(list(agence_ids)), AlerteEpisode.type == TYPE_SEUIL_SATISFACTION, AlerteEpisode.statut != STATUT_TERMINEE,
+            ).all()
+            s.rollback()
+            return {e.agence_id: e for e in lignes}
+    except Exception as erreur:  # noqa: BLE001
+        technique.error("Lecture des épisodes d'alerte impossible (%s)", type(erreur).__name__)
+        return {}
+
+
+# ── Prise en charge d'un épisode (Agency Manager de l'agence concernée uniquement) ──────────────────────────────────────────────────────
+
+class EpisodeIntrouvable(Exception):
+    """Épisode inconnu OU hors du périmètre de l'appelant : les deux cas sont indiscernables (on ne révèle jamais l'existence d'un épisode)."""
+
+
+class EpisodeDejaPrisEnCharge(Exception):
+    pass
+
+
+class EpisodeTermine(Exception):
+    pass
+
+
+LONGUEUR_MAX_COMMENTAIRE = 500
+
+
+def nettoyer_commentaire(valeur: Optional[str]) -> Optional[str]:
+    """Espaces de début et de fin retirés ; vide ou composé d'espaces = absent (None)."""
+    if valeur is None:
+        return None
+    propre = valeur.strip()
+    return propre or None
+
+
+def prendre_en_charge_episode(db: Session, episode_id: uuid.UUID, current_user, commentaire: Optional[str] = None, requete=None) -> AlerteEpisode:
+    """
+    Passe un épisode de « detectee » à « prise_en_charge », atomiquement : UN UPDATE conditionnel `WHERE statut = 'detectee'`. Deux appels simultanés :
+    un seul réussit, l'autre reçoit EpisodeDejaPrisEnCharge. Ne COMMIT pas : l'appelant valide (le journal d'audit est dans la même transaction).
+    L'épisode doit appartenir à l'agence ET à l'organisation de l'appelant, sinon EpisodeIntrouvable (comme un identifiant inconnu).
+    """
+    episode = (
+        db.query(AlerteEpisode)
+        .filter(AlerteEpisode.id == episode_id, AlerteEpisode.agence_id == current_user.agence_id,
+                AlerteEpisode.organisation_id == current_user.organisation_id, AlerteEpisode.type == TYPE_SEUIL_SATISFACTION)
+        .first()
+    )
+    if episode is None:
+        raise EpisodeIntrouvable()
+    maintenant = datetime.now(timezone.utc)
+    nom = f"{(current_user.prenom or '').strip()} {(current_user.nom or '').strip()}".strip()[:200] or None
+    gagne = db.execute(
+        update(AlerteEpisode)
+        .where(AlerteEpisode.id == episode.id, AlerteEpisode.statut == STATUT_DETECTEE)
+        .values(statut=STATUT_PRISE_EN_CHARGE, pris_en_charge_le=maintenant, pris_en_charge_par_id=current_user.id, pris_en_charge_par_nom=nom,
+                commentaire_prise_en_charge=nettoyer_commentaire(commentaire), updated_at=maintenant)
+        .returning(AlerteEpisode.id)
+    ).first()
+    if gagne is None:
+        db.refresh(episode)
+        raise EpisodeTermine() if episode.statut == STATUT_TERMINEE else EpisodeDejaPrisEnCharge()
+    db.refresh(episode)
+    journal.journaliser(
+        db, action=journal.ALERTE_EPISODE_PRIS_EN_CHARGE, acteur=current_user, cible_type="alerte_episode", cible_id=episode.id,
+        cible_libelle=db.get(Agence, episode.agence_id).nom, organisation_id=episode.organisation_id,
+        # Jamais le commentaire, ni aucune clé contenant « avis », « message », « texte » ou « commentaire » (filtrées en silence par le journal).
+        details=_details(agence_id=episode.agence_id, type=TYPE_SEUIL_SATISFACTION, statut_avant=STATUT_DETECTEE, statut_apres=STATUT_PRISE_EN_CHARGE,
+                         delai_prise_en_charge_minutes=int((maintenant - en_utc(episode.detecte_le)).total_seconds() // 60)),
+        requete=requete,
+    )
+    return episode

@@ -24,6 +24,7 @@ export const LIBELLES_ACTION: Record<string, string> = {
   'auth.connexion_limitee': 'Connexion bloquée (trop de tentatives)',
   'alerte_episode.ouvert': 'Alerte de seuil ouverte',
   'alerte_episode.termine': 'Alerte de seuil terminée',
+  'alerte_episode.pris_en_charge': 'Alerte de seuil prise en charge',
 };
 
 export const LIBELLES_RESULTAT: Record<string, string> = { succes: 'Réussie', refus: 'Refusée' };

@@ -29,7 +29,10 @@ from app.core.rate_limit import limiteur
 from app.core.security import create_access_token, get_password_hash
 from app.db.session import Base, get_db
 from app.main import app as application
+from datetime import datetime, timedelta, timezone
+
 from app.models.action_corrective import ActionCorrective
+from app.models.alerte_episode import AlerteEpisode
 from app.models.agence import Agence
 from app.models.analyse_ia import AnalyseIA
 from app.models.categorie import Categorie
@@ -112,6 +115,7 @@ MATRICE: dict[tuple[str, str], object] = {
     ("GET", f"{V1}/dashboard/statistics/cx"): CX_, ("GET", f"{V1}/dashboard/statistics/agency"): CA,
     ("GET", f"{V1}/dashboard/statistics/admin"): AD_,
     ("GET", f"{V1}/alertes/"): CA, ("PATCH", f"{V1}/alertes/agences/{{agence_id}}/seuil"): CXAD,
+    ("POST", f"{V1}/alertes/episodes/{{episode_id}}/prendre-en-charge"): AM_,
     # --- Système, facturation ---
     ("GET", f"{V1}/system/settings"): TOUS, ("PATCH", f"{V1}/system/settings"): AD_, ("GET", f"{V1}/system/permissions"): TOUS,
     ("GET", f"{V1}/admin/facturation/vue-ensemble"): AD_, ("GET", f"{V1}/admin/facturation/paiements-echoues"): AD_,
@@ -186,7 +190,7 @@ HACHAGE = get_password_hash("Motdepasse-123")
 
 
 IDS = {n: uid(n) for n in (
-    "orgA", "orgB", "orgP", "A1", "A2", "B1", "qrA1", "qrA2", "qrB1", "catA1", "fbA1", "dcA1", "sugA1", "issA1", "actA1", "recA1",
+    "orgA", "orgB", "orgP", "A1", "A2", "B1", "qrA1", "qrA2", "qrB1", "catA1", "fbA1", "dcA1", "sugA1", "issA1", "actA1", "recA1", "epA1",
     "admin", "cxA", "amA1", "amA2", "cxB", "cible")}
 EMAILS = {n: f"{n}@secret-matrice.io" for n in ("admin", "cxA", "amA1", "amA2", "cxB", "cible")}
 MARQUEURS_SENSIBLES = (
@@ -199,7 +203,7 @@ JETONS = {
 PARAMETRES = {  # nom de paramètre de chemin -> objet réel de l'organisation A
     "agence_id": "A1", "categorie_id": "catA1", "user_id": "cible", "org_id": "orgA", "organisation_id": "orgA", "qr_id": "qrA1",
     "feedback_id": "fbA1", "contact_id": "dcA1", "suggestion_id": "sugA1", "recommandation_id": "recA1", "issue_id": "issA1",
-    "action_id": "actA1",
+    "action_id": "actA1", "episode_id": "epA1",
 }
 
 
@@ -240,6 +244,9 @@ def construire_contexte(monkeypatch=None):
     db.add(Categorie(id=IDS["catA1"], agence_id=IDS["A1"], nom="Categorie A1", active=True, cree_par_id=IDS["amA1"]))
     db.flush()
     db.add(Feedback(id=IDS["fbA1"], qr_code_id=IDS["qrA1"], categorie_id=IDS["catA1"], note=2, commentaire="SECRET-COMMENTAIRE-A"))
+    db.flush()
+    db.add(AlerteEpisode(id=IDS["epA1"], organisation_id=IDS["orgA"], agence_id=IDS["A1"], debut_condition=datetime.now(timezone.utc) - timedelta(hours=3),
+                         taux_ouverture=40.0, seuil_ouverture=70.0))           # épisode ouvert de l'agence A1 (prise en charge : AM de A1 seulement)
     db.flush()
     db.add(DemandeContact(id=IDS["dcA1"], feedback_id=IDS["fbA1"], nom="Client Secret", telephone="+22670123456", souhaite_etre_rappele=True))
     db.add(Suggestion(id=IDS["sugA1"], agence_id=IDS["A1"], contenu="Idee secrete de A"))
