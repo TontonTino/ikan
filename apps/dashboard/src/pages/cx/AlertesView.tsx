@@ -5,6 +5,9 @@ import type { Agence, Alerte, AlerteFeedback } from '../../types';
 import { useToast } from '../../components/ui/Toast';
 import type { RecoAffichee } from '../../components/agency/AgencyRecommendations';
 import PilotageAlertesActionsTab from './PilotageAlertesActionsTab';
+import HistoriqueAlertes from '../../components/alerts/HistoriqueAlertes';
+import PriseEnChargeDialog, { type IssuePriseEnCharge } from '../../components/alerts/PriseEnChargeDialog';
+import { alerteSeuilAnchor } from '../../components/alerts/alerteLabels';
 import { sourceInitiale, sourceReducer, type ActionSource, type EtatSource } from './alertesVue';
 
 export interface AlertesData {
@@ -38,6 +41,9 @@ export default function AlertesView() {
   const [nomForfait, setNomForfait] = useState<string | null>(null);
   const [agences, setAgences] = useState<Agence[]>([]);
   const [selectedAgenceId, setSelectedAgenceId] = useState<string | null>(null);
+  // Prise en charge d'une alerte (Agency Manager) : l'alerte dont la boîte de dialogue est ouverte ; le compteur recharge l'historique avec la liste.
+  const [aPrendreEnCharge, setAPrendreEnCharge] = useState<Alerte | null>(null);
+  const [rafraichissement, setRafraichissement] = useState(0);
   const requeteAlertes = useRef(0);
   const requeteRecos = useRef(0);
 
@@ -143,20 +149,43 @@ export default function AlertesView() {
     }
   };
 
+  const rafraichirAlertes = useCallback(() => {
+    chargerAlertes();
+    setRafraichissement((n) => n + 1);
+  }, [chargerAlertes]);
+
+  // Succès : l'alerte RESTE dans la liste avec l'état « Prise en charge » (liste et historique rechargés), le résultat est annoncé, le focus revient sur la ligne.
+  // 409 / 404 : même rafraîchissement, avec le message clair de la boîte de dialogue. Les compteurs de synthèse ne changent pas.
+  const apresPriseEnCharge = async (issue: IssuePriseEnCharge) => {
+    const agenceId = aPrendreEnCharge?.agence_id;
+    setAPrendreEnCharge(null);
+    toast.show(issue.type === 'succes'
+      ? { message: 'Alerte prise en charge : elle reste affichée avec son nouvel état.', tone: 'success' }
+      : { message: issue.message, tone: 'warning', duration: 8000 });
+    await chargerAlertes();
+    setRafraichissement((n) => n + 1);
+    if (agenceId) window.setTimeout(() => document.getElementById(alerteSeuilAnchor(agenceId))?.focus({ preventScroll: true }), 60);
+  };
+
   return (
-    <PilotageAlertesActionsTab
-      isAgencyManager={isAgencyManager}
-      alertes={alertes}
-      recos={recos}
-      recosLoadingMore={recosLoadingMore}
-      nomForfait={nomForfait}
-      agences={agences}
-      selectedAgenceId={selectedAgenceId}
-      onSelectAgence={setSelectedAgenceId}
-      onRefresh={chargerAlertes}
-      onRetryRecos={chargerRecos}
-      onLoadMoreRecos={chargerPlusRecos}
-      onMarquerRecoTraitee={marquerRecoTraitee}
-    />
+    <>
+      <PilotageAlertesActionsTab
+        isAgencyManager={isAgencyManager}
+        alertes={alertes}
+        recos={recos}
+        recosLoadingMore={recosLoadingMore}
+        nomForfait={nomForfait}
+        agences={agences}
+        selectedAgenceId={selectedAgenceId}
+        onSelectAgence={setSelectedAgenceId}
+        onRefresh={rafraichirAlertes}
+        onRetryRecos={chargerRecos}
+        onLoadMoreRecos={chargerPlusRecos}
+        onMarquerRecoTraitee={marquerRecoTraitee}
+        onPrendreEnCharge={isAgencyManager ? setAPrendreEnCharge : undefined}
+        historique={<HistoriqueAlertes isAgencyManager={isAgencyManager} agences={agences} rafraichissement={rafraichissement} />}
+      />
+      {isAgencyManager && <PriseEnChargeDialog alerte={aPrendreEnCharge} onFermer={() => setAPrendreEnCharge(null)} onTermine={apresPriseEnCharge} />}
+    </>
   );
 }
