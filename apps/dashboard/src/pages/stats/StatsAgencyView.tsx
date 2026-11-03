@@ -99,6 +99,7 @@ export default function StatsAgencyView() {
       {data && (
         <div
           data-testid="stats-agency-kpi-band"
+          className="ui-kpi-band"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
@@ -223,7 +224,7 @@ export default function StatsAgencyView() {
           {/* ── 3. ALERTES & CONSEILS IA ── */}
           {activeTab === 'alertes' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(400px, 100%), 1fr))', gap: '20px' }}>
                 <AlertesSyntheseCard alertes={data.alertes_synthese} />
                 <AiInsightsSummary insights={data.insights_ia} />
               </div>

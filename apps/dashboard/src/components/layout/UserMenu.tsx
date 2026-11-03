@@ -202,7 +202,7 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
         >
           {initials}
         </div>
-        <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#1E293B' }}>{fullName}</span>
+        <span className="user-menu__nom" style={{ fontSize: '0.84rem', fontWeight: 700, color: '#1E293B' }}>{fullName}</span>
         <ChevronDownIcon size={14} color="#64748B" />
       </button>
 
