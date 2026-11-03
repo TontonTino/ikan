@@ -109,7 +109,7 @@ def test_suppression_agence_dont_racine_est_referencee_renvoie_409_sans_suppress
 
     assert r.status_code == 409, r.text
     detail = r.json()["detail"].lower()
-    assert "occurrences" in detail and "autre agence" in detail
+    assert "problèmes récurrents" in detail and "autre agence" in detail
     # Aucune suppression partielle : agence, racine et occurrence sont toutes intactes.
     assert _existe(Agence, donnees.agence_x)
     assert _existe(Issue, donnees.racine)
