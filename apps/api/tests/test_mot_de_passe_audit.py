@@ -343,4 +343,4 @@ def test_la_creation_de_compte_n_est_pas_soumise_au_refus_d_identite(ctx):
 def test_codes_d_action_stables_et_uniques():
     assert journal.COMPTE_MOT_DE_PASSE_REINITIALISE == "compte.mot_de_passe_reinitialise"
     assert journal.COMPTE_MOT_DE_PASSE_MODIFIE == "compte.mot_de_passe_modifie"
-    assert len(journal.CODES_ACTION) == len(set(journal.CODES_ACTION)) == 19
+    assert len(journal.CODES_ACTION) == len(set(journal.CODES_ACTION)) == 21

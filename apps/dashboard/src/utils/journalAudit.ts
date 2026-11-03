@@ -22,6 +22,8 @@ export const LIBELLES_ACTION: Record<string, string> = {
   'protection.dernier_admin_refuse': 'Action refusée : dernier administrateur protégé',
   'auth.connexion_echouee': 'Connexion échouée',
   'auth.connexion_limitee': 'Connexion bloquée (trop de tentatives)',
+  'alerte_episode.ouvert': 'Alerte de seuil ouverte',
+  'alerte_episode.termine': 'Alerte de seuil terminée',
 };
 
 export const LIBELLES_RESULTAT: Record<string, string> = { succes: 'Réussie', refus: 'Refusée' };
@@ -39,6 +41,7 @@ export const LIBELLES_CIBLE: Record<string, string> = {
   utilisateur: 'Compte',
   agence: 'Agence',
   qr_code: 'QR code',
+  alerte_episode: 'Alerte de seuil',
   parametres: 'Paramètres',
 };
 

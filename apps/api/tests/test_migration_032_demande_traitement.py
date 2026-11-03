@@ -70,7 +70,8 @@ def _demande(conn, traitee=False):
 
 def test_la_tete_alembic_est_unique_et_la_032_precede_la_033():
     scripts = ScriptDirectory.from_config(Config(str(API_DIR / "alembic.ini")))
-    assert scripts.get_heads() == ["033_journal_audit"]           # la 033 (journal d'audit) a succédé à la 032
+    assert scripts.get_heads() == ["034_alerte_episodes"]          # la 033 (journal d'audit) a succédé à la 032, puis la 034 (épisodes d'alerte) à la 033
+    assert scripts.get_revision("034_alerte_episodes").down_revision == "033_journal_audit"
     assert scripts.get_revision("033_journal_audit").down_revision == REV_032
     assert scripts.get_revision(REV_032).down_revision == REV_031
 
