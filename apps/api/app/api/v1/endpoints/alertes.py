@@ -5,9 +5,9 @@ from uuid import UUID
 from typing import List
 from datetime import datetime, timedelta, timezone
 
-from typing import Optional
+from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, field_validator
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -33,8 +33,9 @@ from app.services.alertes_seuil import (
     sous_seuil_en_continu,
 )
 from app.services.alertes_episodes import (
-    EpisodeDejaPrisEnCharge, EpisodeIntrouvable, EpisodeTermine, LONGUEUR_MAX_COMMENTAIRE, episodes_ouverts_pour_lecture, nettoyer_commentaire,
-    prendre_en_charge_episode, reconcilier_episodes,
+    AgenceHorsPerimetre, CurseurInvalide, EpisodeDejaPrisEnCharge, EpisodeIntrouvable, EpisodeTermine, LIMITE_PAGE_DEFAUT, LIMITE_PAGE_MAX,
+    LONGUEUR_MAX_COMMENTAIRE, duree_episode, episodes_ouverts_pour_lecture, lire_episode, lister_historique, nettoyer_commentaire,
+    prendre_en_charge_episode, reconcilier_episodes, reconciliation_activee,
 )
 from app.services.plan_catalog import FEATURE_ALERTES
 from app.services.plan_service import organisation_a_la_fonctionnalite
@@ -388,6 +389,133 @@ def prendre_en_charge(
         pris_en_charge_le=en_utc(episode.pris_en_charge_le) if episode.pris_en_charge_le else None,
         pris_en_charge_par_nom=episode.pris_en_charge_par_nom, commentaire_prise_en_charge=episode.commentaire_prise_en_charge,
     )
+
+
+# ── Historique des épisodes (cycle de vie des alertes, PR 4/5) : LECTURE SEULE ────────────────────────────────────────────────────────────
+
+class EpisodeHistorique(BaseModel):
+    """Un épisode d'alerte de seuil. Les dates sont en UTC. AUCUNE durée n'est certaine : `debut_condition` est reconstitué d'après les avis
+    (`debut_approximatif`), éventuellement tronqué (`debut_remontee_limitee` : « depuis au moins … »), `duree_minutes` hérite de ces limites."""
+    episode_id: UUID
+    agence_id: UUID
+    agence_nom: str
+    type: str
+    statut: str                                       # « detectee » | « prise_en_charge » | « terminee »
+    gravite_ouverture: Optional[str] = None
+    detecte_le: datetime                              # première constatation par IKAN (date exacte, distincte du début)
+    debut_condition: datetime
+    debut_approximatif: bool
+    debut_remontee_limitee: bool
+    fin_condition: Optional[datetime] = None          # terminé seulement
+    terminee_le: Optional[datetime] = None
+    fin_cause: Optional[str] = None                   # « retablie » | « donnees_insuffisantes » | « seuil_modifie » | « agence_desactivee »
+    duree_minutes: int
+    duree_approximative: bool                         # vrai dès que le début est approximatif
+    duree_minimale: bool                              # vrai si le début est tronqué : la durée est un MINIMUM
+    duree_en_cours: bool                              # vrai si l'épisode n'est pas terminé : durée jusqu'à maintenant
+    taux_ouverture: float
+    seuil_ouverture: float
+    taux_fermeture: Optional[float] = None
+    seuil_fermeture: Optional[float] = None
+    pris_en_charge_le: Optional[datetime] = None
+    pris_en_charge_par_nom: Optional[str] = None
+
+
+class EpisodeDetail(EpisodeHistorique):
+    """Détail d'un épisode (tiroir de la PR 5) : tout l'historique, plus le commentaire de prise en charge et le délai (dates exactes d'IKAN)."""
+    commentaire_prise_en_charge: Optional[str] = None
+    delai_prise_en_charge_minutes: Optional[int] = None   # detecte_le -> pris_en_charge_le : deux instants constatés, donc exact
+    created_at: datetime
+
+
+class HistoriqueEpisodesResponse(BaseModel):
+    episodes: List[EpisodeHistorique]
+    # Pagination PAR CURSEUR : passer `curseur_suivant` dans `curseur` pour la page suivante ; None = dernière page (une page vide est une réponse normale).
+    curseur_suivant: Optional[str] = None
+    limite: int
+    # False (liste vide) quand le forfait n'inclut pas les alertes ou que l'interrupteur ALERTES_EPISODES=non est coupé.
+    episodes_disponibles: bool = True
+    alertes_incluses: bool = True
+
+
+def _historique(episode, agence_nom: str, maintenant: datetime) -> dict:
+    minutes, en_cours = duree_episode(episode, maintenant)
+    optionnel = lambda valeur: en_utc(valeur) if valeur else None  # noqa: E731
+    return dict(
+        episode_id=episode.id, agence_id=episode.agence_id, agence_nom=agence_nom, type=episode.type, statut=episode.statut,
+        gravite_ouverture=episode.gravite_ouverture, detecte_le=en_utc(episode.detecte_le), debut_condition=en_utc(episode.debut_condition),
+        debut_approximatif=episode.debut_approximatif, debut_remontee_limitee=episode.debut_remontee_limitee,
+        fin_condition=optionnel(episode.fin_condition), terminee_le=optionnel(episode.terminee_le), fin_cause=episode.fin_cause,
+        duree_minutes=minutes, duree_approximative=episode.debut_approximatif, duree_minimale=episode.debut_remontee_limitee, duree_en_cours=en_cours,
+        taux_ouverture=episode.taux_ouverture, seuil_ouverture=episode.seuil_ouverture, taux_fermeture=episode.taux_fermeture,
+        seuil_fermeture=episode.seuil_fermeture, pris_en_charge_le=optionnel(episode.pris_en_charge_le), pris_en_charge_par_nom=episode.pris_en_charge_par_nom,
+    )
+
+
+@router.get("/episodes", response_model=HistoriqueEpisodesResponse)
+def lister_episodes(
+    statut: Optional[List[Literal["detectee", "prise_en_charge", "terminee"]]] = Query(None, description="Un ou plusieurs statuts (paramètre répété)."),
+    agence_id: Optional[UUID] = Query(None),
+    du: Optional[datetime] = Query(None, description="Début de la condition à partir de cet instant (UTC si sans fuseau)."),
+    au: Optional[datetime] = Query(None, description="Début de la condition jusqu'à cet instant (UTC si sans fuseau)."),
+    limite: int = Query(LIMITE_PAGE_DEFAUT, ge=1, le=LIMITE_PAGE_MAX),
+    curseur: Optional[str] = Query(None, max_length=200),
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+):
+    """
+    Historique des épisodes d'alerte de seuil (actifs et terminés), du plus récent au plus ancien (début de la condition). Agency Manager : sa seule agence ;
+    CX Manager : son organisation, limité aux épisodes que son alerte aurait montrés (règle des 48 h, voir services/alertes_episodes.py) ; Administrateur : 403.
+    Pagination par curseur, `limite` de 1 à 100 (20 par défaut). LECTURE SEULE : ne déclenche ni écriture ni réconciliation (un épisode ouvert reflète donc
+    la dernière lecture de GET /alertes/).
+    """
+    if not organisation_a_la_fonctionnalite(current_user.organisation_id, FEATURE_ALERTES, db):
+        return HistoriqueEpisodesResponse(episodes=[], limite=limite, episodes_disponibles=False, alertes_incluses=False)
+    if not reconciliation_activee():
+        return HistoriqueEpisodesResponse(episodes=[], limite=limite, episodes_disponibles=False)
+    du, au = _en_utc_ou_none(du), _en_utc_ou_none(au)
+    if du is not None and au is not None and du > au:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="La période est invalide : « du » doit précéder « au ».")
+    maintenant = datetime.now(timezone.utc)
+    try:
+        lignes, suivant = lister_historique(db, current_user, statuts=statut, agence_id=agence_id, du=du, au=au, limite=limite, curseur=curseur, maintenant=maintenant)
+    except CurseurInvalide:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Le curseur de pagination est invalide.")
+    except AgenceHorsPerimetre:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agence introuvable.")
+    return HistoriqueEpisodesResponse(
+        episodes=[EpisodeHistorique(**_historique(e, nom, maintenant)) for e, nom in lignes], curseur_suivant=suivant, limite=limite,
+    )
+
+
+@router.get("/episodes/{episode_id}", response_model=EpisodeDetail)
+def detail_episode(
+    episode_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+):
+    """
+    Détail d'un épisode. Inconnu, d'une autre agence, d'une autre organisation, ou (CX Manager) pas encore visible selon la règle des 48 h : 404 identique,
+    sans rien révéler. Lecture seule.
+    """
+    if not organisation_a_la_fonctionnalite(current_user.organisation_id, FEATURE_ALERTES, db):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Les alertes ne sont pas incluses dans le forfait de votre organisation.")
+    if not reconciliation_activee():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alerte introuvable.")
+    maintenant = datetime.now(timezone.utc)
+    try:
+        episode, agence_nom = lire_episode(db, current_user, episode_id, maintenant)
+    except EpisodeIntrouvable:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alerte introuvable.")
+    delai = None
+    if episode.pris_en_charge_le is not None:
+        delai = max(0, int((en_utc(episode.pris_en_charge_le) - en_utc(episode.detecte_le)).total_seconds() // 60))
+    return EpisodeDetail(**_historique(episode, agence_nom, maintenant), commentaire_prise_en_charge=episode.commentaire_prise_en_charge,
+                         delai_prise_en_charge_minutes=delai, created_at=en_utc(episode.created_at))
+
+
+def _en_utc_ou_none(valeur: Optional[datetime]) -> Optional[datetime]:
+    return en_utc(valeur) if valeur is not None else None
 
 
 @router.patch("/agences/{agence_id}/seuil")

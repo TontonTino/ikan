@@ -18,13 +18,14 @@ l'ouverture et la fin ne dépendent pas du rôle de l'appelant (seul le périmè
 La lecture ne doit JAMAIS casser à cause des épisodes : `reconcilier_episodes` ne lève jamais, travaille dans sa propre session (annulée en cas d'erreur,
 seul le type de l'erreur est journalisé techniquement) et n'écrit RIEN s'il n'y a pas de différence. Interrupteur d'urgence : ALERTES_EPISODES=non.
 """
+import base64
 import logging
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Sequence
 
-from sqlalchemy import select, text, update
+from sqlalchemy import Integer, and_, cast, false, func, or_, select, text, update
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -38,7 +39,7 @@ from app.models.feedback import Feedback
 from app.models.qr_code import QRCode
 from app.services import journal_audit as journal
 from app.services.alertes_seuil import (
-    FENETRE_SATISFACTION, Avis, en_utc, gravite_alerte_seuil, historique_satisfaction, satisfaction_a,
+    DUREE_PERSISTANCE_SEUIL_CX, FENETRE_SATISFACTION, Avis, en_utc, gravite_alerte_seuil, historique_satisfaction, satisfaction_a,
 )
 
 technique = logging.getLogger("ikan.alertes_episodes")
@@ -382,3 +383,134 @@ def prendre_en_charge_episode(db: Session, episode_id: uuid.UUID, current_user, 
         requete=requete,
     )
     return episode
+
+
+# ── Historique des épisodes (LECTURE SEULE : aucune écriture, aucun appel à la réconciliation) ────────────────────────────────────────
+
+LIMITE_PAGE_DEFAUT = 20
+LIMITE_PAGE_MAX = 100
+
+
+class CurseurInvalide(Exception):
+    pass
+
+
+class AgenceHorsPerimetre(Exception):
+    """Agence inconnue OU hors du périmètre de l'appelant : indiscernables (comme pour un épisode)."""
+
+
+def encoder_curseur(debut_condition: datetime, episode_id: uuid.UUID) -> str:
+    brut = f"{en_utc(debut_condition).isoformat()}|{episode_id}"
+    return base64.urlsafe_b64encode(brut.encode("ascii")).decode("ascii").rstrip("=")
+
+
+def decoder_curseur(curseur: str) -> "tuple[datetime, uuid.UUID]":
+    try:
+        brut = base64.urlsafe_b64decode(curseur + "=" * (-len(curseur) % 4)).decode("ascii")
+        debut, identifiant = brut.split("|", 1)
+        instant = datetime.fromisoformat(debut)
+        if instant.tzinfo is None:
+            raise ValueError("fuseau absent")
+        return instant, uuid.UUID(identifiant)
+    except Exception as erreur:  # noqa: BLE001 — tout curseur illisible est refusé de la même façon, sans détail
+        raise CurseurInvalide() from erreur
+
+
+def duree_episode(episode: AlerteEpisode, maintenant: datetime) -> "tuple[int, bool]":
+    """(durée en minutes, en_cours). Épisode terminé : de `debut_condition` à `fin_condition` ; sinon : jusqu'à `maintenant`. JAMAIS certaine : le début est
+    reconstitué (`debut_approximatif`) et peut être tronqué (`debut_remontee_limitee` : la durée est alors un minimum). À afficher avec ces deux indicateurs."""
+    debut = en_utc(episode.debut_condition)
+    termine = episode.statut == STATUT_TERMINEE and episode.fin_condition is not None
+    fin = en_utc(episode.fin_condition) if termine else maintenant
+    return max(0, int((fin - debut).total_seconds() // 60)), not termine
+
+
+def _a_dure_au_moins(db: Session, duree: timedelta):
+    """Expression SQL : l'épisode TERMINÉ a duré au moins `duree` (fin_condition - debut_condition), sur PostgreSQL comme sur SQLite (tests)."""
+    if db.get_bind().dialect.name == "postgresql":
+        return AlerteEpisode.fin_condition >= AlerteEpisode.debut_condition + duree
+    secondes = lambda colonne: cast(func.strftime("%s", colonne), Integer)  # noqa: E731
+    return secondes(AlerteEpisode.fin_condition) - secondes(AlerteEpisode.debut_condition) >= int(duree.total_seconds())
+
+
+def _perimetre(db: Session, current_user, maintenant: datetime):
+    """Filtre de portée ET de visibilité. Agency Manager : sa seule agence, tout l'historique (son alerte est immédiate). CX Manager : son organisation,
+    et seulement les épisodes que son alerte aurait montrés, c'est-à-dire la MÊME règle des 48 h que GET /alertes/ (DUREE_PERSISTANCE_SEUIL_CX) :
+     - épisode non terminé : sous le seuil depuis au moins 48 h (debut_condition <= maintenant - 48 h) ;
+     - épisode terminé : la condition a duré au moins 48 h (fin_condition - debut_condition >= 48 h) ; sinon le CX Manager n'aurait jamais vu l'alerte.
+    Tout autre rôle : rien."""
+    if current_user.role == UserRole.AGENCY_MANAGER:
+        if current_user.agence_id is None:
+            return false()
+        return and_(AlerteEpisode.agence_id == current_user.agence_id, AlerteEpisode.organisation_id == current_user.organisation_id)
+    if current_user.role != UserRole.CX_MANAGER:
+        return false()
+    return and_(
+        AlerteEpisode.organisation_id == current_user.organisation_id,
+        or_(
+            and_(AlerteEpisode.statut != STATUT_TERMINEE, AlerteEpisode.debut_condition <= maintenant - DUREE_PERSISTANCE_SEUIL_CX),
+            and_(AlerteEpisode.statut == STATUT_TERMINEE, _a_dure_au_moins(db, DUREE_PERSISTANCE_SEUIL_CX)),
+        ),
+    )
+
+
+def _requete_base(db: Session, current_user, maintenant: datetime):
+    return (
+        db.query(AlerteEpisode, Agence.nom)
+        .join(Agence, and_(Agence.id == AlerteEpisode.agence_id, Agence.organisation_id == AlerteEpisode.organisation_id))
+        .filter(AlerteEpisode.type == TYPE_SEUIL_SATISFACTION, _perimetre(db, current_user, maintenant))
+    )
+
+
+def _verifier_agence(db: Session, current_user, agence_id: uuid.UUID) -> None:
+    """Filtre par agence : l'agence doit être dans le périmètre (Agency Manager : la sienne ; CX Manager : de son organisation), sinon AgenceHorsPerimetre."""
+    if current_user.role == UserRole.AGENCY_MANAGER:
+        dans_le_perimetre = agence_id == current_user.agence_id
+    else:
+        dans_le_perimetre = db.query(Agence.id).filter(Agence.id == agence_id, Agence.organisation_id == current_user.organisation_id).first() is not None
+    if not dans_le_perimetre:
+        raise AgenceHorsPerimetre()
+
+
+def lister_historique(
+    db: Session, current_user, *, statuts: Optional[Sequence[str]] = None, agence_id: Optional[uuid.UUID] = None,
+    du: Optional[datetime] = None, au: Optional[datetime] = None, limite: int = LIMITE_PAGE_DEFAUT, curseur: Optional[str] = None,
+    maintenant: Optional[datetime] = None,
+) -> "tuple[list, Optional[str]]":
+    """
+    Épisodes du périmètre, du plus récent au plus ancien (début de la condition, puis identifiant), pagination par CURSEUR (keyset : stable si des
+    épisodes apparaissent pendant la lecture, appuyée sur l'index (organisation_id | agence_id, debut_condition DESC)). `limite` est bornée à
+    [1, LIMITE_PAGE_MAX]. Filtres : statuts, agence (AgenceHorsPerimetre si hors périmètre ou inconnue), période sur le DÉBUT de la condition
+    (du <= début <= au). Retourne ([(épisode, nom d'agence)], curseur de la page suivante ou None). Lecture seule.
+    """
+    maintenant = maintenant or datetime.now(timezone.utc)
+    limite = max(1, min(int(limite), LIMITE_PAGE_MAX))
+    requete = _requete_base(db, current_user, maintenant)
+    if agence_id is not None:
+        _verifier_agence(db, current_user, agence_id)
+        requete = requete.filter(AlerteEpisode.agence_id == agence_id)
+    if statuts:
+        requete = requete.filter(AlerteEpisode.statut.in_(list(statuts)))
+    if du is not None:
+        requete = requete.filter(AlerteEpisode.debut_condition >= du)
+    if au is not None:
+        requete = requete.filter(AlerteEpisode.debut_condition <= au)
+    if curseur:
+        debut_curseur, id_curseur = decoder_curseur(curseur)
+        requete = requete.filter(or_(
+            AlerteEpisode.debut_condition < debut_curseur,
+            and_(AlerteEpisode.debut_condition == debut_curseur, AlerteEpisode.id < id_curseur),
+        ))
+    lignes = requete.order_by(AlerteEpisode.debut_condition.desc(), AlerteEpisode.id.desc()).limit(limite + 1).all()
+    page = lignes[:limite]
+    suivant = encoder_curseur(page[-1][0].debut_condition, page[-1][0].id) if len(lignes) > limite else None
+    return [(e, nom) for e, nom in page], suivant
+
+
+def lire_episode(db: Session, current_user, episode_id: uuid.UUID, maintenant: Optional[datetime] = None):
+    """(épisode, nom d'agence) si l'épisode est dans le périmètre ET visible pour l'appelant (règle des 48 h du CX Manager), sinon EpisodeIntrouvable :
+    identifiant inconnu, autre agence, autre organisation et épisode encore invisible du CX Manager sont indiscernables. Lecture seule."""
+    ligne = _requete_base(db, current_user, maintenant or datetime.now(timezone.utc)).filter(AlerteEpisode.id == episode_id).first()
+    if ligne is None:
+        raise EpisodeIntrouvable()
+    return ligne[0], ligne[1]
