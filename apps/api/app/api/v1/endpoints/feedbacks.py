@@ -810,7 +810,7 @@ def envoyer_suggestion_agence(
 
     _check_feedback_access(feedback, current_user)
 
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     auteur = f"{current_user.prenom} {current_user.nom}"
     feedback.suggestion_agence = data.suggestion.strip()
     feedback.suggestion_agence_auteur = auteur
@@ -915,7 +915,7 @@ def confirmer_action_realisee(
     if _transitionner(db, feedback.id, "en_cours", {
         Feedback.action_realisee: True,
         Feedback.statut_traitement: "resolu",
-        Feedback.date_resolution: datetime.now(),
+        Feedback.date_resolution: datetime.now(timezone.utc),
     }):
         _evenement(db, feedback, current_user, "action_realisee", "en_cours", "resolu", feedback.action_a_prendre or "Action réalisée sur le terrain")
         db.commit()
