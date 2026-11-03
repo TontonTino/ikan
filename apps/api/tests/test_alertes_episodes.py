@@ -247,9 +247,17 @@ def test_la_reponse_de_get_alertes_est_identique_avec_et_sans_episodes(ctx, monk
     assert ctx.episodes() == []
     monkeypatch.setattr(ep.settings, "ALERTES_EPISODES", "oui")
     avec = {a: ctx.lire(a) for a in ("am_a1", "cx_a", "cx_b")}
-    assert avec == sans
+    CHAMPS_EPISODE = {"episode_id", "episode_statut", "detecte_le", "debut_condition", "debut_approximatif", "debut_remontee_limitee", "pris_en_charge_le",
+                      "pris_en_charge_par_nom", "commentaire_prise_en_charge"}      # champs ADDITIFS de la PR 3 (prise en charge) : tous None sans épisode
+
+    def sans_champs_episode(reponse):
+        return {**reponse, "alertes_seuil": [{k: v for k, v in a.items() if k not in CHAMPS_EPISODE} for a in reponse["alertes_seuil"]]}
+
+    assert {a: sans_champs_episode(r) for a, r in avec.items()} == {a: sans_champs_episode(r) for a, r in sans.items()}      # anciens champs identiques
+    assert all(a[k] is None for a in sans["am_a1"]["alertes_seuil"] for k in CHAMPS_EPISODE)                              # interrupteur coupé : champs None
+    assert all(a["episode_id"] is not None and a["episode_statut"] == "detectee" for a in avec["am_a1"]["alertes_seuil"])
     assert len(ctx.episodes()) == 3 - 1                       # A1 et B1 (A2 n'a aucun avis) : la réponse n'a pas bougé, les épisodes existent
-    assert set(avec["am_a1"]) == {"alertes_seuil", "alertes_feedback", "agences_sous_seuil", "alertes_incluses"}     # aucun champ ajouté
+    assert set(avec["am_a1"]) == {"alertes_seuil", "alertes_feedback", "agences_sous_seuil", "alertes_incluses"}     # aucun champ de premier niveau ajouté
 
 
 def test_idempotence_deux_lectures_aucun_changement_et_regime_stable_sans_ecriture(ctx):

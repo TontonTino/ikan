@@ -7,12 +7,12 @@ import { LIBELLES_ACTION, libelleAction, resumeDetails } from '../../utils/journ
 import { JournalVue } from './AdminJournalPage';
 import source from './AdminJournalPage.tsx?raw';
 
-// Les 21 codes émis par l'API (app/services/journal_audit.py : CODES_ACTION).
+// Les 22 codes émis par l'API (app/services/journal_audit.py : CODES_ACTION).
 const CODES_API = [
   'organisation.creee', 'organisation.modifiee', 'organisation.desactivee', 'organisation.reactivee', 'forfait.modifie', 'compte.cree',
   'compte.modifie', 'compte.suspendu', 'compte.admin_cree', 'compte.mot_de_passe_reinitialise', 'compte.mot_de_passe_modifie', 'agence.creee', 'agence.modifiee', 'agence.supprimee', 'qr_code.supprime',
   'parametres.modifies', 'protection.dernier_admin_refuse', 'auth.connexion_echouee', 'auth.connexion_limitee',
-  'alerte_episode.ouvert', 'alerte_episode.termine',
+  'alerte_episode.ouvert', 'alerte_episode.termine', 'alerte_episode.pris_en_charge',
 ];
 
 const ligne = (action: string, extra: Partial<JournalAuditEntree> = {}): JournalAuditEntree => ({
