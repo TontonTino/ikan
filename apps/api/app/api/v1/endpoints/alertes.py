@@ -30,6 +30,7 @@ from app.services.alertes_seuil import (
     satisfaction_a,
     sous_seuil_en_continu,
 )
+from app.services.alertes_episodes import reconcilier_episodes
 from app.services.plan_catalog import FEATURE_ALERTES
 from app.services.plan_service import organisation_a_la_fonctionnalite
 from app.services.dashboard_helpers import NOTE_FAIBLE_MAX
@@ -280,11 +281,15 @@ def list_alertes(
     if not organisation_a_la_fonctionnalite(current_user.organisation_id, FEATURE_ALERTES, db):
         return AlertesResponse(alertes_seuil=[], alertes_feedback=[], alertes_incluses=False)
 
-    return AlertesResponse(
+    reponse = AlertesResponse(
         alertes_seuil=_calculer_alertes_seuil(db, current_user),
         alertes_feedback=_calculer_alertes_feedback(db, current_user),
         agences_sous_seuil=_calculer_agences_sous_seuil(db, current_user),
     )
+    # Épisodes d'alerte de seuil : écrits EN SILENCE, APRÈS le calcul de la réponse, qu'ils ne peuvent ni modifier ni casser (ne lève jamais ;
+    # n'écrit que s'il y a une différence ; interrupteur ALERTES_EPISODES=non). Voir app/services/alertes_episodes.py.
+    reconcilier_episodes(db, current_user)
+    return reponse
 
 
 @router.patch("/agences/{agence_id}/seuil")

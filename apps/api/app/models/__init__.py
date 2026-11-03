@@ -21,6 +21,7 @@ from app.models.analyse_ia import AnalyseIA
 from app.models.recommandation import Recommandation
 from app.models.historique_action import HistoriqueAction
 from app.models.journal_audit import JournalAudit
+from app.models.alerte_episode import AlerteEpisode
 from app.models.demande_contact import DemandeContact
 from app.models.system_settings import SystemSettings
 from app.models.historique_feedback import HistoriqueFeedback
@@ -57,6 +58,7 @@ __all__ = [
     "Recommandation",
     "HistoriqueAction",
     "JournalAudit",
+    "AlerteEpisode",
     "DemandeContact",
     "SystemSettings",
     "HistoriqueFeedback",
