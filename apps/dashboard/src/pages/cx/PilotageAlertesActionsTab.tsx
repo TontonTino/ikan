@@ -13,8 +13,8 @@ import EmptyState from '../../components/ui/EmptyState';
 import IconButton from '../../components/ui/IconButton';
 import Skeleton from '../../components/ui/Skeleton';
 import { dateRelativeOuAbsolue, fullDate } from '../../components/ui/format';
-import { ArrowUpRightIcon, FilterIcon, RefreshIcon } from '../../components/common/Icons';
-import { raisonLabel, alerteFeedbackAnchor, alerteSeuilAnchor } from '../../components/alerts/alerteLabels';
+import { ArrowUpRightIcon, CheckIcon, FilterIcon, RefreshIcon, TargetIcon } from '../../components/common/Icons';
+import { raisonLabel, alerteFeedbackAnchor, alerteSeuilAnchor, libelleStatutAvis } from '../../components/alerts/alerteLabels';
 import BadgeGraviteAlerte from '../../components/alerts/BadgeGraviteAlerte';
 import BadgeNiveauAvis from '../../components/alerts/BadgeNiveauAvis';
 import { libelleRecommandations } from '../../utils/sourceAnalyse';
@@ -118,6 +118,7 @@ export function LigneSeuil({ alerte, isAgencyManager, cible }: { alerte: Alerte;
 
 export function LigneAvis({ avis, isAgencyManager, cible }: { avis: AlerteFeedback; isAgencyManager: boolean; cible: boolean }) {
   const id = alerteFeedbackAnchor(avis.feedback_id);
+  const statut = libelleStatutAvis(avis.statut_traitement);
   return (
     <li id={id} tabIndex={-1} className={`alerte-ligne ui-alert-item${cible ? ' is-target' : ''}`}>
       <div className="alerte-ligne__corps">
@@ -133,6 +134,15 @@ export function LigneAvis({ avis, isAgencyManager, cible }: { avis: AlerteFeedba
         </div>
         <p className="alerte-ligne__meta">
           {avis.categorie_nom ? `Catégorie « ${avis.categorie_nom} » · ` : ''}Note {avis.note}/5
+          {statut && (
+            <>
+              {' · '}
+              <span className="alerte-ligne__statut">
+                {avis.statut_traitement === 'en_cours' ? <TargetIcon size={13} aria-hidden="true" /> : <CheckIcon size={13} aria-hidden="true" />}
+                {statut}
+              </span>
+            </>
+          )}
         </p>
         <p className={`alerte-ligne__detail alerte-ligne__detail--clamp${avis.commentaire ? '' : ' ui-item__text--empty'}`}>{avis.commentaire || 'Aucun commentaire.'}</p>
       </div>

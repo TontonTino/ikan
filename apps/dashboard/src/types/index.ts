@@ -352,6 +352,8 @@ export interface AlerteFeedback {
   raison: string;
   commentaire?: string | null;
   date_soumission: string;
+  /** Statut de traitement tel qu'en base (« nouveau », « en_traitement », « en_cours »). Absent d'un ancien serveur ; une valeur inconnue n'est jamais affichée. */
+  statut_traitement?: string | null;
 }
 
 /** Agence ACTUELLEMENT sous son seuil (CX Manager) : satisfaction glissante de 7 jours, au moins 3 avis. */

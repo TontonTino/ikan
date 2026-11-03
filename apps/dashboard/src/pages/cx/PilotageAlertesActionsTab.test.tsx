@@ -403,3 +403,65 @@ describe('page /alertes — dates : une seule convention', () => {
     expect(html).toMatch(/Avis le plus ancien : <time dateTime="[^"]+" title="[^"]+">\d{1,2} [^<]+ \d{4}<\/time>/);
   });
 });
+
+describe('page /alertes — statut de traitement des avis à risque', () => {
+  const avecStatut = (i: number, statut: string | null | undefined, note = 1): AlerteFeedback => ({ ...avis(i, note), statut_traitement: statut });
+  const ligne = (html: string, feedbackId: string) => (html.match(new RegExp(`<li id="alerte-feedback-${feedbackId}".*?</li>`)) || [''])[0];
+  const page = (liste: AlerteFeedback[], surcharge: Partial<React.ComponentProps<typeof PilotageAlertesActionsTab>> = {}) => rendu({ alertes: etatAlertes({ avis: liste }), ...surcharge });
+
+  const synthese = (html: string) => (html.match(/<p class="alerte-synthese">.*?<\/p>/) || [''])[0].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
+  it('en_traitement → « Pris en charge », dans la ligne discrète (celle de la note), après la note', () => {
+    const l = ligne(page([avecStatut(1, 'en_traitement')]), 'f1');
+    expect(l).toContain('<span class="alerte-ligne__statut">');
+    expect(l).toContain('Pris en charge</span>');
+    const meta = (l.match(/<p class="alerte-ligne__meta">.*?<\/p>/) || [''])[0];
+    expect(meta.indexOf('Note 1/5')).toBeGreaterThanOrEqual(0);
+    expect(meta.indexOf('alerte-ligne__statut')).toBeGreaterThan(meta.indexOf('Note 1/5'));
+  });
+
+  it('en_cours → « Action définie »', () => expect(ligne(page([avecStatut(1, 'en_cours')]), 'f1')).toContain('Action définie</span>'));
+
+  it('nouveau, null, absent, vide, valeur héritée : aucune mention', () => {
+    const html = page([avecStatut(1, 'nouveau'), avecStatut(2, null), avecStatut(3, undefined), avecStatut(4, ''), avecStatut(5, 'recontacte')]);
+    expect(html).not.toContain('alerte-ligne__statut');
+    expect(html).not.toContain('Pris en charge');
+    expect(html).not.toContain('Action définie');
+  });
+
+  it('jamais de valeur brute à l’écran', () => {
+    const html = page([avecStatut(1, 'en_traitement'), avecStatut(2, 'en_cours'), avecStatut(3, 'nouveau'), avecStatut(4, 'recontacte')]);
+    for (const brut of ['en_traitement', 'en_cours', 'recontacte', '>nouveau<']) expect(html).not.toContain(brut);
+  });
+
+  it('ligne sans statut inchangée : identique pour nouveau, null et absent ; aucune pastille ajoutée au niveau', () => {
+    const base = avis(1); // même instant pour les trois lignes
+    const [a, b, c] = [{ ...base, statut_traitement: 'nouveau' }, { ...base, statut_traitement: null }, base].map((x) => ligne(page([x]), 'f1'));
+    expect(a).toBe(c);
+    expect(b).toBe(c);
+    const pris = ligne(page([{ ...base, statut_traitement: 'en_traitement' }]), 'f1');
+    expect((pris.match(/class="ui-badge /g) || []).length).toBe(1);
+    expect(pris.replace(/ · <span class="alerte-ligne__statut">.*?<\/span>/, '')).toBe(c);
+  });
+
+  it('mêmes libellés pour l’Agency Manager et le CX Manager', () => {
+    for (const isAgencyManager of [true, false]) {
+      const l = ligne(page([avecStatut(1, 'en_traitement'), avecStatut(2, 'en_cours')], { isAgencyManager }), 'f1');
+      expect(l).toContain('Pris en charge</span>');
+    }
+  });
+
+  it('synthèse : « dont N pris en charge » seulement si N > 0 ; titres de groupe et ordre inchangés', () => {
+    const base = [avecStatut(1, 'nouveau'), avecStatut(2, 'nouveau', 3), avecStatut(3, 'nouveau')];
+    const pris = [avecStatut(1, 'en_traitement'), avecStatut(2, 'en_cours', 3), avecStatut(3, 'nouveau')];
+    const sans = page(base);
+    const avec = page(pris);
+    expect(synthese(sans)).not.toContain('dont');
+    expect(synthese(avec)).toContain('3 avis à risque, dont 2 pris en charge');
+    expect(synthese(page([avecStatut(1, 'en_traitement'), avecStatut(2, 'nouveau')]))).toContain('2 avis à risque, dont 1 pris en charge');
+    const comptes = (h: string) => (h.match(/Avis à risque \(\d+\)/g) || []).join('|');
+    expect(comptes(avec)).toBe(comptes(sans));
+    const ordre = (h: string) => (h.match(/id="alerte-feedback-f\d"/g) || []).join('|');
+    expect(ordre(avec)).toBe(ordre(sans));
+  });
+});

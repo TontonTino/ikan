@@ -1,5 +1,6 @@
 import type { Alerte, AlerteFeedback } from '../../types';
 import { formaterNombre } from '../../utils/formatNombre';
+import { estAvisPrisEnCharge } from '../../components/alerts/alerteLabels';
 
 /**
  * Règles de lecture de la page /alertes. Tout provient du serveur (GET /alertes/) : aucune catégorie d'alerte,
@@ -86,6 +87,8 @@ export interface SyntheseAlertes {
   situations: number;
   seuil: number;
   avis: number;
+  /** Parmi ces avis à risque, ceux déjà pris en charge (statut « en_traitement » ou « en_cours »). Information seule : n'entre dans aucun total. */
+  avisPrisEnCharge: number;
   /** Agences distinctes concernées : renseigné pour le CX Manager seulement (null sinon). */
   agences: number | null;
   /** Date (ISO) de l'avis à risque le plus ancien, si au moins une date est valide. Les alertes de seuil n'ont pas de date : elles ne comptent pas. */
@@ -102,7 +105,7 @@ export function syntheseAlertes(entrees: { seuil: Alerte[]; avis: AlerteFeedback
   const agences = new Set([...seuil.map((a) => a.agence_id), ...avis.map((a) => a.agence_id)].filter(Boolean));
   const dates = avis.map((a) => new Date(a.date_soumission).getTime()).filter((t) => Number.isFinite(t));
   return {
-    situations, seuil: seuil.length, avis: avis.length,
+    situations, seuil: seuil.length, avis: avis.length, avisPrisEnCharge: avis.filter((a) => estAvisPrisEnCharge(a.statut_traitement)).length,
     agences: cx && agences.size > 0 ? agences.size : null,
     avisLePlusAncien: dates.length > 0 ? new Date(Math.min(...dates)).toISOString() : null,
   };
@@ -112,7 +115,7 @@ export function syntheseAlertes(entrees: { seuil: Alerte[]; avis: AlerteFeedback
 export function partiesSynthese(s: SyntheseAlertes): { titre: string; detail: string } {
   const detail: string[] = [];
   if (s.seuil > 0) detail.push(`${formaterNombre(s.seuil, 0)} alerte${s.seuil > 1 ? 's' : ''} de seuil`);
-  if (s.avis > 0) detail.push(`${formaterNombre(s.avis, 0)} avis à risque`);
+  if (s.avis > 0) detail.push(`${formaterNombre(s.avis, 0)} avis à risque${s.avisPrisEnCharge > 0 ? `, dont ${formaterNombre(s.avisPrisEnCharge, 0)} pris en charge` : ''}`);
   return { titre: `${formaterNombre(s.situations, 0)} situation${s.situations > 1 ? 's' : ''} à surveiller`, detail: detail.join(', ') };
 }
 
