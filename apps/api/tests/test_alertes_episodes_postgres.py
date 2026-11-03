@@ -389,3 +389,94 @@ def test_les_dates_lues_depuis_postgres_ont_un_fuseau(pg, donnees, application):
     for nom in ("debut_condition", "detecte_le", "created_at", "updated_at"):
         assert getattr(e, nom).tzinfo is not None and getattr(e, nom).utcoffset() == timedelta(0), nom
     assert e.debut_condition < e.detecte_le and e.debut_approximatif is True
+
+
+# ── Suppression d'agence (vrai service DELETE /agences/{id}) : les épisodes suivent leur agence, jamais ceux des autres ──────────────────
+
+@pytest.fixture()
+def suppression(pg, donnees):
+    """Le vrai routeur de suppression d'agence (app.main), authentifié en CX Manager de l'organisation A, sur la base jetable."""
+    from app.api.deps import get_cx_or_admin
+    from app.main import app as app_reelle
+
+    cx = type("CX", (), {})()
+    cx.id, cx.role, cx.active, cx.agence_id, cx.organisation_id, cx.email = uuid.uuid4(), UserRole.CX_MANAGER, True, None, donnees["org_a"], "cx@test.io"
+
+    def override_db():
+        db = Session(pg)
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app_reelle.dependency_overrides[get_db] = override_db
+    app_reelle.dependency_overrides[get_cx_or_admin] = lambda: cx
+    try:
+        yield lambda agence_id: TestClient(app_reelle, raise_server_exceptions=False).delete(f"/api/v1/agences/{agence_id}")
+    finally:
+        app_reelle.dependency_overrides.pop(get_db, None)
+        app_reelle.dependency_overrides.pop(get_cx_or_admin, None)
+
+
+def _purger_les_avis(pg, agence_id):
+    """Retire les avis d'une agence (une agence qui a des avis ne peut pas être supprimée : règle existante, MESSAGE_AGENCE_AVEC_AVIS)."""
+    with Session(pg) as s:
+        qr_ids = [q.id for q in s.query(QRCode).filter(QRCode.agence_id == agence_id).all()]
+        s.query(Feedback).filter(Feedback.qr_code_id.in_(qr_ids)).delete(synchronize_session=False)
+        s.commit()
+
+
+def _episodes_de(pg, agence_id):
+    with Session(pg) as s:
+        return sorted((e.statut, e.fin_cause) for e in s.query(AlerteEpisode).filter(AlerteEpisode.agence_id == agence_id).all())
+
+
+def test_suppression_d_agence_avec_episode_ouvert_ou_termine_les_episodes_disparaissent_avec_elle(pg, donnees, application, suppression, caplog):
+    a_ouvert, a_termine, a_avec_avis, a_autre = donnees["agences_a"][0], donnees["agences_a"][1], donnees["agences_a"][2], donnees["agences_a"][3]
+    cx = donnees["users"]["cx_a"]
+    assert lire(application, cx).status_code == 200                          # les 5 agences de A ouvrent leur épisode (vraie réconciliation)
+    assert all(len(ouverts(pg, [a])) == 1 for a in donnees["agences_a"])
+    with Session(pg) as s:                                                   # a_termine : ses données remontent, son épisode se termine (retablie)
+        qr = s.query(QRCode).filter(QRCode.agence_id == a_termine).one().id
+        for i in range(12):
+            s.add(Feedback(id=uuid.uuid4(), qr_code_id=qr, note=5, statut_traitement="nouveau", date_soumission=datetime.now(UTC) - timedelta(hours=1 + i / 100)))
+        s.commit()
+    assert lire(application, cx).status_code == 200
+    assert _episodes_de(pg, a_termine) == [("terminee", "retablie")] and len(ouverts(pg, [a_ouvert])) == 1
+
+    avant_autres = {a: _episodes_de(pg, a) for a in (a_avec_avis, a_autre, donnees["agences_a"][4], donnees["agence_b"])}
+
+    # 1. Agence AVEC avis (cas réel d'un épisode ouvert : ≥ 3 avis) : refus 409 comme avant cette PR, rien n'est supprimé, l'épisode reste.
+    r = suppression(a_avec_avis)
+    assert r.status_code == 409, r.text
+    with Session(pg) as s:
+        assert s.get(Agence, a_avec_avis) is not None
+    assert _episodes_de(pg, a_avec_avis) == avant_autres[a_avec_avis]
+
+    # 2. Agence SANS avis (purgés), épisode OUVERT : suppression réussie, son épisode disparaît.
+    _purger_les_avis(pg, a_ouvert)
+    assert _episodes_de(pg, a_ouvert) == [("detectee", None)]
+    with caplog.at_level(logging.ERROR):
+        r = suppression(a_ouvert)
+    assert r.status_code == 204, r.text
+    with Session(pg) as s:
+        assert s.get(Agence, a_ouvert) is None
+    assert _episodes_de(pg, a_ouvert) == []
+
+    # 3. Agence SANS avis, épisode TERMINÉ (+ un épisode ouvert plus récent) : suppression réussie, tous ses épisodes disparaissent.
+    _purger_les_avis(pg, a_termine)
+    with Session(pg) as s:
+        s.add(_nouvel_episode(donnees, 1))                                   # un second épisode, ouvert, sur la même agence (après la fin du premier)
+        s.commit()
+    assert _episodes_de(pg, a_termine) == [("detectee", None), ("terminee", "retablie")]
+    with caplog.at_level(logging.ERROR):
+        r = suppression(a_termine)
+    assert r.status_code == 204, r.text
+    assert _episodes_de(pg, a_termine) == []
+
+    # 4. Les épisodes des autres agences (même organisation ou autre organisation) sont intacts ; aucune erreur technique.
+    assert {a: _episodes_de(pg, a) for a in avant_autres} == avant_autres
+    assert "impossible" not in caplog.text and "Error" not in caplog.text
+    with Session(pg) as s:
+        suppressions = s.query(JournalAudit).filter(JournalAudit.action == journal.AGENCE_SUPPRIMEE, JournalAudit.organisation_id == donnees["org_a"]).count()
+    assert suppressions == 2                                                 # le service de suppression a bien journalisé les deux suppressions
