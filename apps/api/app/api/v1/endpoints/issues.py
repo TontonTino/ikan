@@ -635,7 +635,10 @@ def terminer_action_corrective(
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ):
-    """action.statut='terminee', date_completion=now() (UTC). Si plus AUCUNE action de l'Issue n'est à faire (terminée ou annulée) : issue.statut='resolue', issue.date_resolution=now().
+    """Réservé au CX Manager et au RESPONSABLE de l'action (un autre Agency Manager, même de la même agence, est refusé en 403 ; une action sans responsable ne peut être
+    terminée que par le CX Manager ; l'administrateur est refusé par la dépendance). Le contrôle précède l'idempotence : un refus ne révèle rien de l'état de l'action.
+
+    action.statut='terminee', date_completion=now() (UTC). Si plus AUCUNE action de l'Issue n'est à faire (terminée ou annulée) : issue.statut='resolue', issue.date_resolution=now().
 
     IDEMPOTENT : une action déjà terminée est renvoyée telle quelle (200), sans réécrire sa date, sans nouvel événement d'historique ni nouvelle résolution. Le verrou de
     ligne pris sur l'Issue fait attendre les appels simultanés : le premier termine, les suivants voient « terminee ». Une action annulée ne peut pas être terminée (409)."""
@@ -647,6 +650,9 @@ def terminer_action_corrective(
     ).with_for_update().first()
     if not action:
         raise HTTPException(status_code=404, detail="Action corrective introuvable pour cette Issue")
+
+    if current_user.role == UserRole.AGENCY_MANAGER and action.responsable_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Seul le responsable de l'action ou le CX Manager peut la terminer")
 
     if action.statut == "terminee":
         return _formater_action(db, action)

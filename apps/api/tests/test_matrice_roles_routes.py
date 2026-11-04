@@ -258,7 +258,7 @@ def construire_contexte(monkeypatch=None):
     db.add(Recommandation(id=IDS["recA1"], analyse_ia_id=analyse.id, contenu="Secret-Contenu-Reco", priorite=PriorityLevel.HIGH))
     db.add(Issue(id=IDS["issA1"], organisation_id=IDS["orgA"], agence_id=IDS["A1"], titre="Issue A1"))
     db.flush()
-    db.add(ActionCorrective(id=IDS["actA1"], issue_id=IDS["issA1"], titre="Action A1"))
+    db.add(ActionCorrective(id=IDS["actA1"], issue_id=IDS["issA1"], titre="Action A1", responsable_id=IDS["amA1"]))      # PR 6b : terminer = responsable ou CX Manager
     db.commit()
     db.close()
 
