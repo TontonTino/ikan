@@ -63,6 +63,29 @@ class IssueListeResponse(IssueResponse):
     en_retard: Optional[bool] = None
 
 
+class ActionProblemeListeResponse(BaseModel):
+    """Ligne de `GET /issues/actions` : une action d'un problème, avec son problème d'origine. Tout est lu à la demande, rien n'est stocké.
+
+    - `en_retard` : `True` / `False` seulement si l'action reste à faire ET a une échéance ; sinon `None` (jamais « à l'heure » faute d'échéance).
+    - `derniere_a_faire` : vrai si c'est la seule action à faire du problème (la terminer le fera passer à « Résolu »)."""
+
+    id: uuid.UUID
+    issue_id: uuid.UUID
+    titre: str
+    description: Optional[str] = None
+    statut: str
+    responsable_id: Optional[uuid.UUID] = None
+    responsable_nom: Optional[str] = None
+    echeance: Optional[datetime] = None
+    date_completion: Optional[datetime] = None
+    created_at: datetime
+    en_retard: Optional[bool] = None
+    derniere_a_faire: bool = False
+    issue_titre: str
+    agence_id: uuid.UUID
+    agence_nom: Optional[str] = None
+
+
 class ActionCorrectiveCreate(BaseModel):
     titre: str = Field(..., min_length=3, max_length=200)
     description: Optional[str] = None

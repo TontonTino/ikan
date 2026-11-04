@@ -859,6 +859,26 @@ export interface ActionCorrective {
   updated_at: string;
 }
 
+/** Ligne de `GET /issues/actions` : une action d'un problème, avec son problème d'origine. `en_retard` : null sans échéance ou si l'action est faite. */
+export interface ActionProbleme {
+  id: string;
+  issue_id: string;
+  titre: string;
+  description?: string | null;
+  statut: string;
+  responsable_id?: string | null;
+  responsable_nom?: string | null;
+  echeance?: string | null;
+  date_completion?: string | null;
+  created_at: string;
+  en_retard: boolean | null;
+  /** Seule action à faire de son problème : la terminer le fait passer à « Résolu ». */
+  derniere_a_faire: boolean;
+  issue_titre: string;
+  agence_id: string;
+  agence_nom?: string | null;
+}
+
 export interface IssueDetail extends Issue {
   feedbacks: Feedback[];
   actions: ActionCorrective[];

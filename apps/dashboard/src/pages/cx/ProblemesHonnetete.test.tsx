@@ -3,7 +3,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Issue, KPIResult } from '../../types';
-import PilotageActionsCorrectivesTab, { TEXTE_VIDE_EN_COURS_AGENCE, TEXTE_VIDE_EN_COURS_RESEAU } from './PilotageActionsCorrectivesTab';
+import PilotageActionsTab from './PilotageActionsTab';
+import { FILTRES_ACTIONS_PAR_DEFAUT, TEXTE_VIDE_EN_COURS_AGENCE, TEXTE_VIDE_EN_COURS_RESEAU } from '../../utils/actionsUnifiees';
 import PilotageIssuesTab from './PilotageIssuesTab';
 import { FILTRES_PAR_DEFAUT } from '../../utils/problemesListe';
 import KpiCoreGrid, { CODES_BANDEAU, LigneBandeau } from '../../components/kpi/KpiCoreGrid';
@@ -196,24 +197,23 @@ describe('onglet « Problèmes à traiter » : la liste passe avant les indicate
 // ── 4. « Actions à mener » : l'état vide dit ce que fait la page ───────────────────────────────────────
 
 describe('« Actions à mener » : état vide exact', () => {
-  const props = (surcharge: Record<string, unknown> = {}) => ({
-    isAgencyManager: false, agencesList: [], actionsToggle: 'en_cours' as const, setActionsToggle: () => undefined, actionsEnCours: [], actionsTerminees: [],
-    actionsEnCoursTotal: 0, actionsTermineesTotal: 0, actionsLoading: false, actionsError: false, refetchActions: () => undefined, actionsFirstLoadDone: true,
-    actionsLoadingMore: false, loadMoreActions: () => undefined, actionsAgenceId: null, setActionsAgenceId: () => undefined, marquerActionRealisee: async () => undefined, ...surcharge,
+  const props = (surcharge: Record<string, unknown> = {}) => ({ isAgencyManager: false, agencesList: [], filtres: FILTRES_ACTIONS_PAR_DEFAUT, setFiltres: () => undefined, lignes: [], total: 0, autreTotal: 0, chargement: false, premierChargement: true, erreur: false, chargementSuite: false, partiel: false, recharger: () => undefined, chargerSuite: () => undefined, confirmerAvis: async () => undefined, apresTerminaison: async () => undefined, openIssueDetail: async () => undefined, selectedIssueId: null, issueDetail: null, issueDetailLoading: false, closeIssueDetail: () => undefined, apresActionIssue: async () => undefined, verifierIssue: async () => undefined, ...surcharge,
   });
   const rendre = (surcharge?: Record<string, unknown>) =>
-    renderToStaticMarkup(<MemoryRouter><PilotageActionsCorrectivesTab {...(props(surcharge) as unknown as React.ComponentProps<typeof PilotageActionsCorrectivesTab>)} /></MemoryRouter>);
+    renderToStaticMarkup(<MemoryRouter><PilotageActionsTab {...(props(surcharge) as unknown as React.ComponentProps<typeof PilotageActionsTab>)} /></MemoryRouter>);
 
-  it('CX Manager : action définie sur un avis déjà pris en charge, puis confirmée réalisée', () => {
+  it('CX Manager : une action apparaît quand il la définit sur un problème ou sur un avis déjà pris en charge', () => {
     const html = rendre();
     expect(html).toContain(TEXTE_VIDE_EN_COURS_RESEAU);
-    expect(TEXTE_VIDE_EN_COURS_RESEAU).toContain('vous la définissez sur un avis déjà pris en charge par le Responsable d’agence');
+    expect(TEXTE_VIDE_EN_COURS_RESEAU).toContain('vous la définissez sur un problème');
+    expect(TEXTE_VIDE_EN_COURS_RESEAU).toContain('sur un avis déjà pris en charge par le Responsable d’agence');
   });
 
-  it('Agency Manager : son CX Manager définit l’action sur un avis qu’il a pris en charge', () => {
+  it('Agency Manager : son CX Manager définit l’action sur un problème de l’agence ou sur un avis qu’il a pris en charge', () => {
     const html = rendre({ isAgencyManager: true });
     expect(html).toContain(TEXTE_VIDE_EN_COURS_AGENCE);
-    expect(TEXTE_VIDE_EN_COURS_AGENCE).toContain('votre CX Manager la définit sur un avis que vous avez pris en charge');
+    expect(TEXTE_VIDE_EN_COURS_AGENCE).toContain('votre CX Manager la définit sur un problème de votre agence');
+    expect(TEXTE_VIDE_EN_COURS_AGENCE).toContain('sur un avis que vous avez pris en charge');
   });
 
   it('plus aucune promesse de « regrouper » ou de « lancer » une action', () => {
@@ -225,9 +225,9 @@ describe('« Actions à mener » : état vide exact', () => {
     expect(`${TEXTE_VIDE_EN_COURS_RESEAU}${TEXTE_VIDE_EN_COURS_AGENCE}`).not.toMatch(/regrouper|lancer/);
   });
 
-  it('le reste de l’état vide est conservé : titre, bouton « Voir les alertes », liste « Terminées » et filtre d’agence', () => {
-    expect(rendre()).toContain('Aucune action en cours.');
-    expect(rendre({ actionsToggle: 'terminees' })).toContain('Aucune action terminée pour l’instant');
-    expect(rendre({ actionsAgenceId: 'a1' })).toContain('Aucune action pour cette agence');
+  it('le reste de l’état vide : titre, liste « Terminées » et filtres', () => {
+    expect(rendre()).toContain('Aucune action en cours');
+    expect(rendre({ filtres: { ...FILTRES_ACTIONS_PAR_DEFAUT, segment: 'terminees' } })).toContain('Aucune action terminée pour l’instant');
+    expect(rendre({ filtres: { ...FILTRES_ACTIONS_PAR_DEFAUT, agenceId: 'a1' } })).toContain('Aucune action pour ces filtres');
   });
 });

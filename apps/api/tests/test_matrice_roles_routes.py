@@ -128,7 +128,7 @@ MATRICE: dict[tuple[str, str], object] = {
     ("POST", f"{V1}/veille/facebook/scrape"): CX_, ("POST", f"{V1}/veille/ingest"): CX_, ("GET", f"{V1}/veille/mentions"): CX_,
     ("GET", f"{V1}/veille/synthese"): CX_,
     # --- Issues ---
-    ("POST", f"{V1}/issues/"): CA, ("GET", f"{V1}/issues/"): CA, ("GET", f"{V1}/issues/{{issue_id}}"): CA,
+    ("POST", f"{V1}/issues/"): CA, ("GET", f"{V1}/issues/"): CA, ("GET", f"{V1}/issues/actions"): CA, ("GET", f"{V1}/issues/{{issue_id}}"): CA,   # PR 6 : GET /issues/actions ajoutée (liste des actions de problème)
     ("POST", f"{V1}/issues/{{issue_id}}/escalations"): CA, ("GET", f"{V1}/issues/{{issue_id}}/escalations"): CA,
     ("PATCH", f"{V1}/issues/{{issue_id}}/rattacher-feedback/{{feedback_id}}"): CA,
     ("PATCH", f"{V1}/issues/{{issue_id}}/detacher-feedback/{{feedback_id}}"): CA,

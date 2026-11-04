@@ -7,9 +7,10 @@ import { useYamStore } from '../../stores/yamStore';
 import { FAIBLE_VOLUME_POINT } from '../../pages/cx/siege/siegeData';
 import AgencyEvolution from '../agency/AgencyEvolution';
 import { Evolution } from '../../pages/cx/siege/SiegeBlocks';
-import PilotageActionsCorrectivesTab from '../../pages/cx/PilotageActionsCorrectivesTab';
+import PilotageActionsTab from '../../pages/cx/PilotageActionsTab';
+import { FILTRES_ACTIONS_PAR_DEFAUT, TEXTE_VIDE_EN_COURS_RESEAU, TEXTE_VIDE_TERMINEES } from '../../utils/actionsUnifiees';
 
-type PropsActions = React.ComponentProps<typeof PilotageActionsCorrectivesTab>;
+type PropsActions = React.ComponentProps<typeof PilotageActionsTab>;
 import type { EntreesSynthese } from './construireSynthese';
 import YamEtatVide from './YamEtatVide';
 import YamNote from './YamNote';
@@ -176,37 +177,35 @@ describe('YamEtatVide', () => {
 });
 
 describe('page Actions : état vide', () => {
-  const props = (surcharge: Record<string, unknown> = {}) => ({
-    isAgencyManager: false, agencesList: [], actionsToggle: 'en_cours' as const, setActionsToggle: () => undefined, actionsEnCours: [], actionsTerminees: [],
-    actionsEnCoursTotal: 0, actionsTermineesTotal: 0, actionsLoading: false, actionsError: false, refetchActions: () => undefined, actionsFirstLoadDone: true,
-    actionsLoadingMore: false, loadMoreActions: () => undefined, actionsAgenceId: null, setActionsAgenceId: () => undefined, marquerActionRealisee: async () => undefined,
+  const props = (surcharge: Record<string, unknown> = {}) => ({ isAgencyManager: false, agencesList: [], filtres: FILTRES_ACTIONS_PAR_DEFAUT, setFiltres: () => undefined, lignes: [], total: 0, autreTotal: 0, chargement: false, premierChargement: true, erreur: false, chargementSuite: false, partiel: false, recharger: () => undefined, chargerSuite: () => undefined, confirmerAvis: async () => undefined, apresTerminaison: async () => undefined, openIssueDetail: async () => undefined, selectedIssueId: null, issueDetail: null, issueDetailLoading: false, closeIssueDetail: () => undefined, apresActionIssue: async () => undefined, verifierIssue: async () => undefined,
     ...surcharge,
   });
   const rendre = (surcharge?: Record<string, unknown>) =>
-    renderToStaticMarkup(<MemoryRouter><PilotageActionsCorrectivesTab {...(props(surcharge) as unknown as PropsActions)} /></MemoryRouter>);
+    renderToStaticMarkup(<MemoryRouter><PilotageActionsTab {...(props(surcharge) as unknown as PropsActions)} /></MemoryRouter>);
 
-  it('liste « en cours » vide : YAM, titre, texte et bouton « Voir les alertes »', () => {
+  it('liste « en cours » vide : YAM, titre, texte et bouton « Voir les problèmes à traiter »', () => {
     boutons.liste = [];
     const html = rendre();
     expect(html).toContain('Aucune action en cours.');
-    expect(html).toContain('Aucune action n’est en cours sur un avis client. Une action apparaît ici quand vous la définissez sur un avis déjà pris en charge par le Responsable d’agence, puis passe dans « Terminées » une fois confirmée réalisée.');
+    expect(html).toContain(TEXTE_VIDE_EN_COURS_RESEAU);
     expect(html).toContain('/yam/yam-3d-face.webp');
-    const bouton = boutons.liste.find((b) => b.label === 'Voir les alertes');
+    const bouton = boutons.liste.find((b) => b.label === 'Voir les problèmes à traiter');
     expect(bouton?.onClick).toBeTypeOf('function');
   });
 
   it('conservé tel quel : filtre d’agence (avec son bouton) et liste « terminées »', () => {
-    const filtre = rendre({ actionsAgenceId: 'a1' });
-    expect(filtre).toContain('Aucune action pour cette agence');
+    const filtre = rendre({ filtres: { ...FILTRES_ACTIONS_PAR_DEFAUT, agenceId: 'a1' } });
+    expect(filtre).toContain('Aucune action pour ces filtres');
     expect(filtre).not.toContain('/yam/yam-3d-face');
-    const terminees = rendre({ actionsToggle: 'terminees' });
+    const terminees = rendre({ filtres: { ...FILTRES_ACTIONS_PAR_DEFAUT, segment: 'terminees' } });
     expect(terminees).toContain('Aucune action terminée pour l’instant');
+    expect(terminees).toContain(TEXTE_VIDE_TERMINEES);
     expect(terminees).not.toContain('/yam/yam-3d-face');
   });
 
-  it('les éléments de la page (encadré, filtres de l’état) restent affichés', () => {
+  it('les segments de l’état restent affichés ; l’encadré « Deux sortes d’actions » est remplacé par la liste unique', () => {
     const html = rendre();
-    expect(html).toContain('Deux sortes d’actions');
+    expect(html).not.toContain('Deux sortes d’actions');
     expect(html).toContain('aria-label="État des actions"');
   });
 });

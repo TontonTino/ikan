@@ -3,9 +3,11 @@ import { useAuthStore } from '../../stores/authStore';
 import { agencesApi, feedbacksApi, issuesApi } from '../../services/api';
 import PilotageIssuesTab from './PilotageIssuesTab';
 import SuggestionsView from './SuggestionsView';
-import PilotageActionsCorrectivesTab from './PilotageActionsCorrectivesTab';
+import PilotageActionsTab from './PilotageActionsTab';
+import { useActionsUnifiees } from './useActionsUnifiees';
+import { FILTRES_ACTIONS_PAR_DEFAUT, type FiltresActions } from '../../utils/actionsUnifiees';
 import AlertesView from './AlertesView';
-import type { Agence, Feedback, Issue, IssueDetail } from '../../types';
+import type { Agence, Issue, IssueDetail } from '../../types';
 import PageTitle from '../../components/ui/PageTitle';
 import AideAlertes from '../../components/alerts/AideAlertes';
 import { useToast } from '../../components/ui/Toast';
@@ -28,8 +30,8 @@ const SECTION_HEADER: Record<PilotageSection, { title: string; cx: string; agenc
   },
   actions: {
     title: 'Actions à mener',
-    cx: 'Actions décidées sur les avis clients du réseau, en cours ou terminées. Celles d’un problème à traiter se suivent dans son détail.',
-    agency: 'Actions décidées sur les avis clients de votre agence, en cours ou terminées. Celles d’un problème à traiter se suivent dans son détail.',
+    cx: 'Ce qui reste à faire sur vos problèmes et sur vos avis, au même endroit : qui s’en occupe, pour quand, et ce qui est en retard.',
+    agency: 'Ce qui reste à faire dans votre agence, sur les problèmes et sur les avis : qui s’en occupe et pour quand.',
   },
   issues: {
     title: 'Problèmes à traiter',
@@ -66,85 +68,21 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
       .catch(() => setAgencesList([]));
   }, []);
 
-  // ── Actions correctives (suivi + confirmation, pas de création ici) ──
-  const [actionsToggle, setActionsToggle] = useState<'en_cours' | 'terminees'>('en_cours');
-  const [actionsEnCours, setActionsEnCours] = useState<Feedback[]>([]);
-  const [actionsTerminees, setActionsTerminees] = useState<Feedback[]>([]);
-  const [actionsEnCoursTotal, setActionsEnCoursTotal] = useState(0);
-  const [actionsTermineesTotal, setActionsTermineesTotal] = useState(0);
-  const [actionsLoadingMore, setActionsLoadingMore] = useState(false);
-  const [actionsLoading, setActionsLoading] = useState(true);
-  const [actionsFirstLoadDone, setActionsFirstLoadDone] = useState(false);
-  const [actionsError, setActionsError] = useState(false);
-  const [actionsAgenceId, setActionsAgenceId] = useState<string | null>(null);
+  // ── Actions à mener : liste unique (actions sur avis + actions de problème), filtres envoyés au serveur ──
+  const [filtresActions, setFiltresActions] = useState<FiltresActions>(FILTRES_ACTIONS_PAR_DEFAUT);
+  const changerFiltresActions = useCallback((suite: Partial<FiltresActions>) => setFiltresActions((f) => ({ ...f, ...suite })), []);
+  const actions = useActionsUnifiees(section === 'actions', filtresActions, currentUser?.id);
 
-  const fetchActions = useCallback(async () => {
-    setActionsLoading(true);
-    setActionsError(false);
-    try {
-      const agenceParam = actionsAgenceId ? { agence_id: actionsAgenceId } : {};
-      const [enCoursRes, termineesRes] = await Promise.all([
-        feedbacksApi.list({ avec_action: true, action_realisee: false, limit: 50, offset: 0, ...agenceParam }),
-        feedbacksApi.list({ avec_action: true, action_realisee: true, limit: 50, offset: 0, ...agenceParam }),
-      ]);
-      setActionsEnCours(enCoursRes?.data || []);
-      setActionsTerminees(termineesRes?.data || []);
-      setActionsEnCoursTotal(Number(enCoursRes?.headers?.['x-total-count'] || 0));
-      setActionsTermineesTotal(Number(termineesRes?.headers?.['x-total-count'] || 0));
-    } catch (err) {
-      // Un échec de chargement n'est jamais présenté comme « aucune action ».
-      console.error('Erreur chargement des actions:', err);
-      setActionsEnCours([]);
-      setActionsTerminees([]);
-      setActionsError(true);
-    } finally {
-      setActionsLoading(false);
-      setActionsFirstLoadDone(true);
-    }
-  }, [actionsAgenceId]);
-
-  useEffect(() => {
-    if (section !== 'actions') return;
-    fetchActions();
-  }, [fetchActions, section]);
-
-  const loadMoreActions = async () => {
-    const current = actionsToggle === 'en_cours' ? actionsEnCours : actionsTerminees;
-    const total = actionsToggle === 'en_cours' ? actionsEnCoursTotal : actionsTermineesTotal;
-    if (actionsLoadingMore || current.length >= total) return;
-    setActionsLoadingMore(true);
-    try {
-      const res = await feedbacksApi.list({
-        avec_action: true,
-        action_realisee: actionsToggle === 'terminees',
-        limit: 50,
-        offset: current.length,
-        ...(actionsAgenceId ? { agence_id: actionsAgenceId } : {}),
-      });
-      if (actionsToggle === 'en_cours') setActionsEnCours((items) => [...items, ...(res.data || [])]);
-      else setActionsTerminees((items) => [...items, ...(res.data || [])]);
-    } catch {
-      showToast('Impossible de charger les actions suivantes');
-    } finally {
-      setActionsLoadingMore(false);
-    }
-  };
-
-  const marquerActionRealisee = async (feedbackId: string) => {
+  const confirmerAvis = async (feedbackId: string) => {
     try {
       await feedbacksApi.confirmerActionRealisee(feedbackId);
-      setActionsEnCours((prev) => prev.filter((f) => f.id !== feedbackId));
-      setActionsEnCoursTotal((total) => Math.max(0, total - 1));
-      setActionsTermineesTotal((total) => total + 1);
       showToast('Action marquée comme réalisée. L’avis est passé à « Résolu ».');
-      // La liste « Terminées » doit refléter la confirmation : rechargement des listes.
-      fetchActions();
+      await actions.recharger();
     } catch (err) {
       console.error('Erreur confirmation de l’action:', err);
       showToast(userFacingError(err, 'Impossible de confirmer l’action. Veuillez réessayer.'));
     }
   };
-
 
   // ── Issues (KPI P0 + liste + détail) ──────────────────
   const [issuesJours, setIssuesJours] = useState(30);
@@ -222,15 +160,17 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
   };
 
   const rafraichirApresActionIssue = useCallback(async (issueId: string) => {
-    await fetchIssuesList();
+    if (section === 'issues') await fetchIssuesList();
+    if (section === 'actions') await actions.recharger();
     setIssuesKpisRefreshToken((t) => t + 1);
+    if (selectedIssueId !== issueId) return;                    // le détail n'est rechargé que s'il est ouvert
     try {
       const res = await issuesApi.get(issueId);
       setIssueDetail(res.data);
     } catch {
       // Le détail reste tel quel si le refetch échoue ; liste et KPI sont déjà à jour.
     }
-  }, [fetchIssuesList]);
+  }, [fetchIssuesList, section, actions.recharger, selectedIssueId]);
 
   // L'appel (créer / terminer une action) est fait par les boîtes de dialogue, qui gèrent leurs erreurs ; la page annonce le résultat et rafraîchit liste, indicateurs et détail.
   const apresActionIssue = async (issueId: string, message: string) => {
@@ -263,7 +203,7 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
 
 
       {/* ── SECTION ACTIONS CORRECTIVES (suivi + confirmation uniquement — la définition d'une action reste dans FeedbackTreatmentModal) ── */}
-      {section === 'actions' && <PilotageActionsCorrectivesTab isAgencyManager={isAgencyManager} agencesList={agencesList} actionsToggle={actionsToggle} setActionsToggle={setActionsToggle} actionsEnCours={actionsEnCours} actionsTerminees={actionsTerminees} actionsEnCoursTotal={actionsEnCoursTotal} actionsTermineesTotal={actionsTermineesTotal} actionsLoading={actionsLoading} actionsError={actionsError} refetchActions={fetchActions} actionsFirstLoadDone={actionsFirstLoadDone} actionsLoadingMore={actionsLoadingMore} loadMoreActions={loadMoreActions} actionsAgenceId={actionsAgenceId} setActionsAgenceId={setActionsAgenceId} marquerActionRealisee={marquerActionRealisee} />}
+      {section === 'actions' && <PilotageActionsTab isAgencyManager={isAgencyManager} agencesList={agencesList} filtres={filtresActions} setFiltres={changerFiltresActions} lignes={actions.lignes} total={actions.total} autreTotal={actions.autreTotal} chargement={actions.chargement} premierChargement={actions.premierChargement} erreur={actions.erreur} chargementSuite={actions.chargementSuite} partiel={actions.partiel} recharger={actions.recharger} chargerSuite={async () => { if ((await actions.chargerSuite()) === 'echec') showToast('Impossible de charger les actions suivantes'); }} confirmerAvis={confirmerAvis} apresTerminaison={apresActionIssue} openIssueDetail={openIssueDetail} selectedIssueId={selectedIssueId} issueDetail={issueDetail} issueDetailLoading={issueDetailLoading} closeIssueDetail={closeIssueDetail} apresActionIssue={apresActionIssue} verifierIssue={verifierIssue} />}
 
 
 
