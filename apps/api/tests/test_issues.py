@@ -112,6 +112,7 @@ def ctx():
         "cx_a": SimpleNamespace(id=ids.cx_a, role=UserRole.CX_MANAGER, active=True, agence_id=None, organisation_id=ids.org_a, nom="A", prenom="CX"),
         "am_a": SimpleNamespace(id=ids.am_a, role=UserRole.AGENCY_MANAGER, active=True, agence_id=ids.agence_a, organisation_id=ids.org_a, nom="A", prenom="AM"),
         "am_a2": SimpleNamespace(id=ids.am_a2, role=UserRole.AGENCY_MANAGER, active=True, agence_id=ids.agence_a2, organisation_id=ids.org_a, nom="A2", prenom="AM"),
+        "admin": SimpleNamespace(id=uuid4(), role=UserRole.ADMIN, active=True, agence_id=None, organisation_id=None, nom="Sys", prenom="Admin"),
         "cx_b": SimpleNamespace(id=ids.cx_b, role=UserRole.CX_MANAGER, active=True, agence_id=None, organisation_id=ids.org_b, nom="B", prenom="CX"),
         "am_b": SimpleNamespace(id=ids.am_b, role=UserRole.AGENCY_MANAGER, active=True, agence_id=ids.agence_b, organisation_id=ids.org_b, nom="B", prenom="AM"),
     }

@@ -132,8 +132,8 @@ MATRICE: dict[tuple[str, str], object] = {
     ("POST", f"{V1}/issues/{{issue_id}}/escalations"): CA, ("GET", f"{V1}/issues/{{issue_id}}/escalations"): CA,
     ("PATCH", f"{V1}/issues/{{issue_id}}/rattacher-feedback/{{feedback_id}}"): CA,
     ("PATCH", f"{V1}/issues/{{issue_id}}/detacher-feedback/{{feedback_id}}"): CA,
-    ("POST", f"{V1}/issues/{{issue_id}}/actions"): CA, ("POST", f"{V1}/issues/{{issue_id}}/actions/{{action_id}}/terminer"): CA,
-    ("POST", f"{V1}/issues/{{issue_id}}/verifier"): CA,
+    ("POST", f"{V1}/issues/{{issue_id}}/actions"): CX_, ("POST", f"{V1}/issues/{{issue_id}}/actions/{{action_id}}/terminer"): CA,   # PR 3 : le CX Manager décide et crée l'action
+    ("POST", f"{V1}/issues/{{issue_id}}/verifier"): CX_,                                                                              # PR 3 : seul le CX Manager confirme la résolution
     # --- KPI, secteurs ---
     ("GET", f"{V1}/kpis/"): CA, ("GET", f"{V1}/kpis/{{code}}"): CA, ("GET", f"{V1}/secteurs/"): TOUS,
 }
