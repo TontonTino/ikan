@@ -107,7 +107,9 @@ def test_creer_une_action_sur_le_probleme_d_une_autre_agence_est_refuse(ctx, act
     assert _empreinte(ctx) == avant
 
 
-def test_creer_une_action_sur_son_propre_probleme_fonctionne(ctx):
+def test_creer_une_action_sur_son_propre_probleme_est_reserve_au_cx_manager(ctx):
+    # PR 3 : avant, un Agency Manager créait l'action de son propre problème (201) ; désormais le CX Manager décide et crée (403, rien n'est écrit).
+    avant = _empreinte(ctx)
     r = ctx.client.post(f"/issues/{ctx.issue_a1}/actions", headers=ctx.H(ctx.am_a1), json={"titre": "Action légitime"})
-    assert r.status_code == 201
-    assert _empreinte(ctx)[1] == 1
+    assert r.status_code == 403
+    assert _empreinte(ctx) == avant

@@ -62,6 +62,8 @@ class ActionCorrectiveResponse(BaseModel):
     description: Optional[str] = None
     statut: str
     responsable_id: Optional[uuid.UUID] = None
+    # Prénom et nom du responsable (lus dans `utilisateurs`, aucune colonne ajoutée) : permet à l'Agency Manager, qui ne peut pas lister les utilisateurs, d'afficher un nom.
+    responsable_nom: Optional[str] = None
     echeance: Optional[datetime] = None
     date_completion: Optional[datetime] = None
     created_at: datetime

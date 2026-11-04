@@ -10,7 +10,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session, joinedload
 
-from app.api.deps import get_cx_or_agency_manager, get_db
+from app.api.deps import get_cx_manager, get_cx_or_agency_manager, get_db
 from app.models.agence import Agence
 from app.models.action_corrective import ActionCorrective
 from app.models.categorie import Categorie
@@ -95,11 +95,41 @@ def _log_issue_event(
     ))
 
 
-def _get_issue_or_404(db: Session, issue_id: UUID) -> Issue:
-    issue = db.query(Issue).filter(Issue.id == issue_id).first()
+def _get_issue_or_404(db: Session, issue_id: UUID, verrou: bool = False) -> Issue:
+    """`verrou=True` : verrou de ligne (SELECT … FOR UPDATE sur PostgreSQL) tenu jusqu'à la fin de la transaction. Toute écriture qui change l'état d'une action
+    prend d'abord ce verrou sur l'Issue : les écritures concurrentes d'un même problème s'exécutent l'une après l'autre (SQLite l'ignore : une seule écriture à la fois)."""
+    requete = db.query(Issue).filter(Issue.id == issue_id)
+    if verrou:
+        requete = requete.with_for_update()
+    issue = requete.first()
     if not issue:
         raise HTTPException(status_code=404, detail="Issue introuvable")
     return issue
+
+
+def _formater_action(db: Session, action: ActionCorrective) -> ActionCorrectiveResponse:
+    res = ActionCorrectiveResponse.model_validate(action)
+    if action.responsable_id:
+        responsable = db.get(Utilisateur, action.responsable_id)
+        if responsable:
+            res.responsable_nom = f"{responsable.prenom} {responsable.nom}".strip()
+    return res
+
+
+def _verifier_responsable(db: Session, responsable_id: UUID, issue: Issue) -> None:
+    """Le responsable d'une action doit pouvoir ouvrir le problème : même organisation, actif, CX Manager ou Agency Manager DE L'AGENCE du problème.
+    Refus en 400 avec un message qui nomme la règle (jamais un 201 suivi d'un 403 à l'ouverture)."""
+    responsable = db.query(Utilisateur).filter(Utilisateur.id == responsable_id).first()
+    if not responsable:
+        raise HTTPException(status_code=400, detail="responsable_id invalide : utilisateur introuvable")
+    if responsable.organisation_id != issue.organisation_id:
+        raise HTTPException(status_code=400, detail="responsable_id invalide : cet utilisateur n'appartient pas à la même organisation que l'Issue")
+    if responsable.role not in (UserRole.CX_MANAGER, UserRole.AGENCY_MANAGER):
+        raise HTTPException(status_code=400, detail="responsable_id invalide : seul un CX Manager ou un Agency Manager peut être responsable d'une action")
+    if not responsable.active:
+        raise HTTPException(status_code=400, detail="responsable_id invalide : cet utilisateur est désactivé")
+    if responsable.role == UserRole.AGENCY_MANAGER and responsable.agence_id != issue.agence_id:
+        raise HTTPException(status_code=400, detail="responsable_id invalide : cet Agency Manager n'appartient pas à l'agence de l'Issue")
 
 
 def _as_utc(value: datetime) -> datetime:
@@ -183,7 +213,7 @@ def creer_issue(
             _check_feedback_access_scope(fb, current_user, db)
             fb.issue_id = issue.id
             _log_issue_event(db, issue, current_user, "feedback_rattache", feedback_id=fb.id)
-        issue.derniere_detection = datetime.now()
+        issue.derniere_detection = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(issue)
@@ -259,7 +289,7 @@ def detail_issue(
     return IssueDetailResponse(
         **base.model_dump(),
         feedbacks=[_format_feedback_summary(fb) for fb in feedbacks],
-        actions=[ActionCorrectiveResponse.model_validate(a) for a in actions],
+        actions=[_formater_action(db, a) for a in actions],
     )
 
 
@@ -342,7 +372,7 @@ def rattacher_feedback(
             _check_issue_access(ancienne_issue, current_user)
 
     feedback.issue_id = issue.id
-    issue.derniere_detection = datetime.now()
+    issue.derniere_detection = datetime.now(timezone.utc)
 
     ancien_statut = issue.statut
     if issue.statut == "verifiee":
@@ -406,9 +436,10 @@ def creer_action_corrective(
     issue_id: UUID,
     data: ActionCorrectiveCreate,
     db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+    current_user: Utilisateur = Depends(get_cx_manager),
 ):
-    """Crée l'ActionCorrective (statut='creee'), passe issue.statut à 'action_en_cours' et
+    """Réservé au CX Manager (il décide et crée l'action ; l'Agency Manager l'exécute). Le responsable doit appartenir au périmètre du problème.
+    Crée l'ActionCorrective (statut='creee'), passe issue.statut à 'action_en_cours' et
     issue.necessite_action à True si ce n'était pas déjà fait.
 
     Si l'Issue était 'verifiee' : une nouvelle action la remet en cause, comme un
@@ -417,17 +448,11 @@ def creer_action_corrective(
     que le statut n'est plus 'verifiee', ce qui fausserait un futur calcul de Loop
     Closure Rate basé sur cette date), avant la transition normale vers 'action_en_cours'.
     Si l'Issue était 'resolue' (mais pas 'verifiee') : comportement inchangé."""
-    issue = _get_issue_or_404(db, issue_id)
+    issue = _get_issue_or_404(db, issue_id, verrou=True)
     _check_issue_access(issue, current_user)
 
     if data.responsable_id:
-        responsable = db.query(Utilisateur).filter(Utilisateur.id == data.responsable_id).first()
-        if not responsable:
-            raise HTTPException(status_code=400, detail="responsable_id invalide : utilisateur introuvable")
-        if responsable.organisation_id != issue.organisation_id:
-            raise HTTPException(status_code=400, detail="responsable_id invalide : cet utilisateur n'appartient pas à la même organisation que l'Issue")
-        if responsable.role not in (UserRole.CX_MANAGER, UserRole.AGENCY_MANAGER):
-            raise HTTPException(status_code=400, detail="responsable_id invalide : seul un CX Manager ou un Agency Manager peut être responsable d'une action")
+        _verifier_responsable(db, data.responsable_id, issue)
 
     action = ActionCorrective(
         issue_id=issue.id,
@@ -462,7 +487,7 @@ def creer_action_corrective(
 
     db.commit()
     db.refresh(action)
-    return ActionCorrectiveResponse.model_validate(action)
+    return _formater_action(db, action)
 
 
 @router.post("/{issue_id}/actions/{action_id}/terminer", response_model=ActionCorrectiveResponse)
@@ -472,44 +497,52 @@ def terminer_action_corrective(
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ):
-    """action.statut='terminee', date_completion=now(). Si TOUTES les actions de l'Issue
-    sont 'terminee' : issue.statut='resolue', issue.date_resolution=now()."""
-    issue = _get_issue_or_404(db, issue_id)
+    """action.statut='terminee', date_completion=now() (UTC). Si plus AUCUNE action de l'Issue n'est à faire (terminée ou annulée) : issue.statut='resolue', issue.date_resolution=now().
+
+    IDEMPOTENT : une action déjà terminée est renvoyée telle quelle (200), sans réécrire sa date, sans nouvel événement d'historique ni nouvelle résolution. Le verrou de
+    ligne pris sur l'Issue fait attendre les appels simultanés : le premier termine, les suivants voient « terminee ». Une action annulée ne peut pas être terminée (409)."""
+    issue = _get_issue_or_404(db, issue_id, verrou=True)
     _check_issue_access(issue, current_user)
 
     action = db.query(ActionCorrective).filter(
         ActionCorrective.id == action_id, ActionCorrective.issue_id == issue.id
-    ).first()
+    ).with_for_update().first()
     if not action:
         raise HTTPException(status_code=404, detail="Action corrective introuvable pour cette Issue")
 
+    if action.statut == "terminee":
+        return _formater_action(db, action)
+    if action.statut == "annulee":
+        raise HTTPException(status_code=409, detail="Cette action est annulée : elle ne peut pas être terminée")
+
     action.statut = "terminee"
-    action.date_completion = datetime.now()
+    action.date_completion = datetime.now(timezone.utc)
     db.flush()
     _log_issue_event(db, issue, current_user, "action_terminee", details=action.titre)
 
+    # Une action annulée ne bloque pas la résolution : seules comptent celles qui restent à faire.
     reste_a_faire = db.query(ActionCorrective).filter(
-        ActionCorrective.issue_id == issue.id, ActionCorrective.statut != "terminee"
+        ActionCorrective.issue_id == issue.id, ActionCorrective.statut.notin_(("terminee", "annulee"))
     ).count()
     if reste_a_faire == 0:
         ancien_statut = issue.statut
         issue.statut = "resolue"
-        issue.date_resolution = datetime.now()
+        issue.date_resolution = datetime.now(timezone.utc)
         _log_issue_event(db, issue, current_user, "issue_resolue", ancien_statut=ancien_statut, nouveau_statut="resolue")
 
     db.commit()
     db.refresh(action)
-    return ActionCorrectiveResponse.model_validate(action)
+    return _formater_action(db, action)
 
 
 @router.post("/{issue_id}/verifier", response_model=IssueResponse)
 def verifier_issue(
     issue_id: UUID,
     db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+    current_user: Utilisateur = Depends(get_cx_manager),
 ):
-    """Refuse (400) si issue.statut != 'resolue'. Sinon : statut='verifiee', date_verification=now()."""
-    issue = _get_issue_or_404(db, issue_id)
+    """Réservé au CX Manager. Refuse (400) si issue.statut != 'resolue'. Sinon : statut='verifiee', date_verification=now() (UTC)."""
+    issue = _get_issue_or_404(db, issue_id, verrou=True)
     _check_issue_access(issue, current_user)
 
     if issue.statut != "resolue":
@@ -517,7 +550,7 @@ def verifier_issue(
 
     ancien_statut = issue.statut
     issue.statut = "verifiee"
-    issue.date_verification = datetime.now()
+    issue.date_verification = datetime.now(timezone.utc)
     _log_issue_event(db, issue, current_user, "issue_verifiee", ancien_statut=ancien_statut, nouveau_statut="verifiee")
 
     db.commit()
