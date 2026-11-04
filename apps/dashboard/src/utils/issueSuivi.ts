@@ -4,6 +4,7 @@
  * Rien n'est déduit des actions : la liste des problèmes ne les contient pas.
  */
 import type { CriticiteType, Issue, IssueStatut } from '../types';
+import { LIMITE_DATE_RELATIVE_JOURS, shortDate } from '../components/ui/format';
 
 const JOUR_MS = 86_400_000;
 
@@ -11,6 +12,13 @@ export type SuiviIssue = Pick<Issue, 'statut' | 'severite' | 'premiere_detection
 
 /** Problème encore à traiter : ni résolu, ni vérifié. */
 export const estEnAttente = (statut: IssueStatut) => statut !== 'resolue' && statut !== 'verifiee';
+
+/**
+ * Problème ouvert SANS action en cours : « ouverte » (aucune action décidée) ou « reouverte » (rouvert, plus d'action en cours). Par le code (`issues.py`) :
+ * créer une action passe le problème à « action_en_cours » et il y reste tant qu'une action n'est pas terminée. Ces problèmes attendent une décision.
+ * À préférer au drapeau `necessite_action`, qui est posé à la création d'une action et ne retombe jamais : il désigne les problèmes qui ONT une action.
+ */
+export const estSansActionEnCours = (statut: IssueStatut) => statut === 'ouverte' || statut === 'reouverte';
 
 export function joursDepuis(iso: string, maintenant: number): number {
   const t = new Date(iso).getTime();
@@ -21,6 +29,19 @@ export function joursDepuis(iso: string, maintenant: number): number {
 export function libelleJours(jours: number): string {
   if (jours <= 0) return 'aujourd’hui';
   return `${jours} jour${jours > 1 ? 's' : ''}`;
+}
+
+/** « aujourd’hui » ou « il y a 3 jours » : jamais « il y a aujourd’hui ». */
+export const ilYA = (jours: number): string => (jours <= 0 ? 'aujourd’hui' : `il y a ${libelleJours(jours)}`);
+
+/**
+ * Date d'enregistrement à la convention du dashboard : relative jusqu'à 30 jours (« aujourd’hui », « il y a 5 jours »), puis « le 24 oct. 2026 ».
+ * Vide si la date est invalide. À rendre dans <time> avec la date complète en `title`.
+ */
+export function libelleEnregistre(iso: string, maintenant: number): string {
+  if (Number.isNaN(new Date(iso).getTime())) return '';
+  const jours = joursDepuis(iso, maintenant);
+  return jours <= LIMITE_DATE_RELATIVE_JOURS ? ilYA(jours) : `le ${shortDate(iso)}`;
 }
 
 export type EtatDelai = { etat: 'depasse' | 'a_venir'; jours: number; date: string };

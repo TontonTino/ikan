@@ -240,7 +240,7 @@ export function Surveillance({
       <br />1. sous son seuil configuré (alerte active)
       <br />2. avis critiques sur la période
       <br />3. baisse ≥ {SURVEILLANCE.BAISSE_MIN_PTS} pts vs période précédente (≥ {SURVEILLANCE.BAISSE_MIN_AVIS} avis)
-      <br />4. problèmes de gravité critique ou élevée nécessitant une action
+      <br />4. problèmes de gravité critique ou élevée, ouverts ou rouverts, sans action en cours
       <br />Les critères 3 et 4 sont provisoires. Aucune note globale n’est calculée.
     </span>
   );

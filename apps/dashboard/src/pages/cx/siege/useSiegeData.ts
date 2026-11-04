@@ -31,6 +31,9 @@ export interface ActionsTotaux {
 
 const ISSUES_LIMIT = 200; // maximum accepté par GET /issues/
 
+/** Vrai si la liste des problèmes ouverts ne contient pas tous les problèmes (limite par statut, ou total illisible) : les nombres par agence sont des minimums. */
+export const issuesIncompletes = (i: IssuesOuvertes): boolean => i.tronquee || Object.values(i.parStatut).some((c) => !c.fiable);
+
 /** Issues ouvertes (3 statuts), éventuellement pour une seule agence. */
 export async function fetchIssuesOuvertes(agenceId?: string): Promise<IssuesOuvertes> {
   const res = await Promise.all(

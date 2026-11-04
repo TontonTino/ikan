@@ -13,14 +13,14 @@ import IssueDetailModal from '../../components/issues/IssueDetailModal';
 import KpiCoreGrid from '../../components/kpi/KpiCoreGrid';
 import { ClockIcon } from '../../components/common/Icons';
 import { ISSUE_STATUT_LABELS, ISSUE_STATUT_BADGE_VARIANT, ISSUE_SEVERITE_LABELS } from './pilotageConstants';
-import { extraitCommentaire, formatDate } from './pilotageFormatters';
+import { extraitCommentaire } from './pilotageFormatters';
+import { fullDate, shortDate } from '../../components/ui/format';
 import {
   GROUPES_STATUT,
   correspondAuGroupe,
-  estEnAttente,
   estUrgent,
   etatDelai,
-  joursDepuis,
+  libelleEnregistre,
   libelleJours,
   prochainGeste,
   trierParUrgence,
@@ -189,7 +189,6 @@ export default function PilotageIssuesTab(props: Props) {
             {visibles.map((issue) => {
               const urgent = estUrgent(issue, maintenant);
               const delai = etatDelai(issue, maintenant);
-              const age = joursDepuis(issue.premiere_detection, maintenant);
               return (
                 // <li> neutre : le rôle « bouton » de la carte cliquable ne doit pas remplacer le rôle « listitem ».
                 <li key={issue.id} style={{ listStyle: 'none' }}>
@@ -221,9 +220,7 @@ export default function PilotageIssuesTab(props: Props) {
 
                   <div className="ui-item__meta" style={{ borderTop: '1px solid var(--color-border)', paddingTop: '10px' }}>
                     <span>
-                      {estEnAttente(issue.statut)
-                        ? `Enregistré il y a ${libelleJours(age)}`
-                        : `Enregistré le ${formatDate(issue.premiere_detection)}`}
+                      Enregistré <time dateTime={issue.premiere_detection} title={fullDate(issue.premiere_detection)}>{libelleEnregistre(issue.premiere_detection, maintenant)}</time>
                     </span>
                     {delai && (
                       <>
@@ -231,7 +228,7 @@ export default function PilotageIssuesTab(props: Props) {
                         <span style={{ color: delai.etat === 'depasse' ? 'var(--color-critical-text)' : undefined, fontWeight: delai.etat === 'depasse' ? 800 : undefined }}>
                           {delai.etat === 'depasse'
                             ? `Délai dépassé${delai.jours > 0 ? ` depuis ${libelleJours(delai.jours)}` : ' aujourd’hui'}`
-                            : `À traiter avant le ${formatDate(delai.date)}`}
+                            : <>À traiter avant le <time dateTime={delai.date} title={fullDate(delai.date)}>{shortDate(delai.date)}</time></>}
                         </span>
                       </>
                     )}
