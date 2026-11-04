@@ -814,6 +814,17 @@ export interface Issue {
   date_verification?: string;
   /** Délai de traitement fixé pour ce problème (GET /issues) ; absent si aucun délai n'a été défini. */
   date_limite_sla?: string | null;
+  /** Problème d'origine si celui-ci est une récidive (GET /issues). */
+  issue_origine_id?: string | null;
+  // Chiffres calculés à la lecture par `GET /issues/` (liste seulement ; absents du détail et d'un serveur plus ancien : on n'affiche alors rien).
+  nb_avis?: number;
+  nb_actions?: number;
+  /** Actions ni terminées ni annulées. */
+  nb_actions_a_faire?: number;
+  /** Plus proche échéance parmi les actions à faire ; null si aucune. */
+  prochaine_echeance?: string | null;
+  /** true / false seulement si un délai est fixé ET que le problème reste à traiter ; null sinon (on n'affiche alors rien). */
+  en_retard?: boolean | null;
   created_at: string;
   updated_at: string;
 }
@@ -840,6 +851,8 @@ export interface ActionCorrective {
   description?: string;
   statut: string;
   responsable_id?: string;
+  /** Prénom et nom du responsable, fournis par l'API (lisibles aussi par l'Agency Manager). */
+  responsable_nom?: string | null;
   echeance?: string;
   date_completion?: string;
   created_at: string;

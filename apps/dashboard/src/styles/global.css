@@ -5,6 +5,7 @@
 @import './layout.css';
 @import './siege.css';
 @import './agence.css';
+@import './problemes.css';
 
 /* Les variables (couleurs, espacements, rayons, motion, z-index…) vivent
    dans ./tokens.css — source unique de vérité du design system. */

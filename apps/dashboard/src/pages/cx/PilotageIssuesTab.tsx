@@ -1,86 +1,151 @@
-import React, { useMemo, useState } from 'react';
-import type { Agence, CriticiteType, Issue, IssueDetail } from '../../types';
+import React, { useEffect, useMemo, useRef } from 'react';
+import type { Agence, Issue, IssueDetail } from '../../types';
 import AgenceFilterSelect from '../../components/stats/AgenceFilterSelect';
 import PeriodSelector from '../../components/stats/PeriodSelector';
 import { StatsErrorState } from '../../components/stats/StatsStates';
 import EmptyState from '../../components/ui/EmptyState';
 import SkeletonBlock from '../../components/ui/SkeletonBlock';
 import SectionHeading from '../../components/ui/SectionHeading';
-import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
-import IssueDetailModal from '../../components/issues/IssueDetailModal';
+import PanneauProbleme from '../../components/issues/PanneauProbleme';
+import ProblemesFiltres from '../../components/issues/ProblemesFiltres';
+import { ProblemesCartes, ProblemesTableau, idLigneProbleme } from '../../components/issues/ProblemesTableau';
 import KpiCoreGrid from '../../components/kpi/KpiCoreGrid';
-import { ClockIcon } from '../../components/common/Icons';
-import { ISSUE_STATUT_LABELS, ISSUE_STATUT_BADGE_VARIANT, ISSUE_SEVERITE_LABELS } from './pilotageConstants';
-import { extraitCommentaire } from './pilotageFormatters';
-import { fullDate, shortDate } from '../../components/ui/format';
-import {
-  GROUPES_STATUT,
-  correspondAuGroupe,
-  estUrgent,
-  etatDelai,
-  libelleEnregistre,
-  libelleJours,
-  prochainGeste,
-  trierParUrgence,
-  type GroupeStatut,
-} from '../../utils/issueSuivi';
+import { useMediaQuery } from '../../components/ui/useMediaQuery';
+import { aDesFiltresActifs, annonceListe, FILTRES_PAR_DEFAUT, type FiltresProblemes } from '../../utils/problemesListe';
+
+/** Liste en tableau à partir de cette largeur ; en dessous, des cartes. */
+export const REQUETE_TABLEAU = '(min-width: 1024px)';
+/** Le panneau se pose À CÔTÉ de la liste à partir de cette largeur (sinon : vue plein écran avec retour). Plus étroit, le tableau n'aurait plus la place de ses colonnes. */
+export const REQUETE_PANNEAU_ANCRE = '(min-width: 1360px)';
 
 interface Props {
   isAgencyManager: boolean; agencesList: Agence[]; issuesJours: number; setIssuesJours: React.Dispatch<React.SetStateAction<number>>;
   issuesAgenceId: string | null; setIssuesAgenceId: React.Dispatch<React.SetStateAction<string | null>>;
-  backlogActif: boolean; setBacklogActif: React.Dispatch<React.SetStateAction<boolean>>; issuesKpisRefreshToken: number;
-  issuesFirstLoadDone: boolean; issuesAffichees: Issue[]; issuesListRaw: Issue[]; issuesTotal: number;
-  ancienneteTexte: string | null; issuesListError: boolean; issuesListLoading: boolean; fetchIssuesList: () => Promise<void>;
+  /** Filtres de la liste (serveur). L'agence est choisie à part, en tête de page. */
+  filtres: FiltresProblemes; setFiltres: (suite: Partial<FiltresProblemes>) => void;
+  issuesKpisRefreshToken: number;
+  issuesFirstLoadDone: boolean; issuesListRaw: Issue[]; issuesTotal: number;
+  issuesListError: boolean; issuesListLoading: boolean; fetchIssuesList: () => Promise<void>;
   openIssueDetail: (id: string) => Promise<void>; issuesLoadingMore: boolean; loadMoreIssues: () => Promise<void>;
   selectedIssueId: string | null; issueDetail: IssueDetail | null; issueDetailLoading: boolean;
   closeIssueDetail: () => void; apresActionIssue: (issueId: string, message: string) => Promise<void>;
   verifierIssue: (issueId: string) => Promise<void>;
 }
 
-const GRAVITES: { id: CriticiteType; label: string }[] = [
-  { id: 'critique', label: 'Critique' },
-  { id: 'elevee', label: 'Élevée' },
-  { id: 'moyenne', label: 'Moyenne' },
-  { id: 'faible', label: 'Faible' },
-];
-
 export default function PilotageIssuesTab(props: Props) {
-  const { isAgencyManager, agencesList, issuesJours, setIssuesJours, issuesAgenceId, setIssuesAgenceId,
-    backlogActif, setBacklogActif, issuesKpisRefreshToken, issuesFirstLoadDone, issuesAffichees,
-    issuesListRaw, issuesTotal, ancienneteTexte, issuesListError, issuesListLoading, fetchIssuesList,
+  const { isAgencyManager, agencesList, issuesJours, setIssuesJours, issuesAgenceId, setIssuesAgenceId, filtres, setFiltres,
+    issuesKpisRefreshToken, issuesFirstLoadDone, issuesListRaw, issuesTotal, issuesListError, issuesListLoading, fetchIssuesList,
     openIssueDetail, issuesLoadingMore, loadMoreIssues, selectedIssueId, issueDetail,
     issueDetailLoading, closeIssueDetail, apresActionIssue, verifierIssue } = props;
 
-  // Filtres de lecture, appliqués côté client aux problèmes déjà chargés.
-  const [groupe, setGroupe] = useState<GroupeStatut>('tous');
-  const [gravite, setGravite] = useState<CriticiteType | 'toutes'>('toutes');
-  const [urgentsDabord, setUrgentsDabord] = useState(false);
-  const maintenant = useMemo(() => Date.now(), [issuesAffichees]);
-
-  const compteurs = useMemo(() => {
-    const parGravite = issuesAffichees.filter((i) => gravite === 'toutes' || i.severite === gravite);
-    return Object.fromEntries(GROUPES_STATUT.map((g) => [g.id, parGravite.filter((i) => correspondAuGroupe(i.statut, g.id)).length])) as Record<GroupeStatut, number>;
-  }, [issuesAffichees, gravite]);
-
-  const visibles = useMemo(() => {
-    const filtres = issuesAffichees.filter(
-      (i) => correspondAuGroupe(i.statut, groupe) && (gravite === 'toutes' || i.severite === gravite),
-    );
-    return urgentsDabord ? trierParUrgence(filtres, maintenant) : filtres;
-  }, [issuesAffichees, groupe, gravite, urgentsDabord, maintenant]);
-
-  const filtreLectureActif = groupe !== 'tous' || gravite !== 'toutes';
-  const reinitialiserLecture = () => {
-    setGroupe('tous');
-    setGravite('toutes');
-  };
+  const enTableau = useMediaQuery(REQUETE_TABLEAU);
+  const panneauAncre = useMediaQuery(REQUETE_PANNEAU_ANCRE);
+  const maintenant = useMemo(() => Date.now(), [issuesListRaw]);
+  const filtresActifs = aDesFiltresActifs(filtres);
   const partiel = issuesListRaw.length < issuesTotal;
+  const ligneOuverte = issuesListRaw.find((i) => i.id === selectedIssueId) ?? null;
+
+  const ouvrir = (issue: Issue) => { void openIssueDetail(issue.id); };
+  // Fermer rend le focus à la ligne d'où l'on venait (le panneau plein écran le fait déjà seul, par son piège de focus).
+  const ancienne = useRef<string | null>(null);
+  const fermer = () => {
+    ancienne.current = selectedIssueId;
+    closeIssueDetail();
+  };
+  useEffect(() => {
+    if (selectedIssueId === null && ancienne.current) {
+      document.getElementById(idLigneProbleme(ancienne.current))?.focus();
+      ancienne.current = null;
+    }
+  }, [selectedIssueId]);
+
+  const Liste = enTableau ? ProblemesTableau : ProblemesCartes;
+  const ouvert = selectedIssueId !== null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+      {!isAgencyManager && (
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <AgenceFilterSelect agences={agencesList} selectedId={issuesAgenceId} onChange={setIssuesAgenceId} />
+        </div>
+      )}
+
+      <div className={`pb-mise-en-page${ouvert && panneauAncre ? ' pb-mise-en-page--panneau' : ''}`}>
+        {/* Liste des problèmes : d'abord (le travail), les indicateurs ensuite en bandeau court */}
+        <section aria-labelledby="issues-liste" className="pb-liste">
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', flexWrap: 'wrap' }}>
+            <SectionHeading id="issues-liste">
+              Problèmes à traiter ({issuesFirstLoadDone && !issuesListError ? issuesTotal : '…'})
+            </SectionHeading>
+          </div>
+          <p role="status" className="ui-sr-only">
+            {issuesFirstLoadDone && !issuesListError && !issuesListLoading ? annonceListe(issuesListRaw.length, issuesTotal, filtresActifs) : ''}
+          </p>
+
+          {!issuesListError && issuesFirstLoadDone && (issuesListRaw.length > 0 || filtresActifs) && (
+            <ProblemesFiltres filtres={filtres} onChange={setFiltres} />
+          )}
+          {!issuesListError && issuesFirstLoadDone && partiel && (
+            <p className="pb-note">{issuesListRaw.length} problèmes chargés sur {issuesTotal}. Les filtres portent sur l’ensemble des problèmes.</p>
+          )}
+
+          {issuesListError ? (
+            <StatsErrorState message="Impossible de charger la liste des problèmes. Cela ne signifie pas qu’il n’y en a pas." onRetry={fetchIssuesList} />
+          ) : issuesListLoading ? (
+            <div aria-busy="true" aria-label="Chargement des problèmes" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {[0, 1, 2, 3].map((i) => (
+                <SkeletonBlock key={i} height={enTableau ? 56 : 96} radius="var(--radius-xl)" />
+              ))}
+            </div>
+          ) : issuesListRaw.length === 0 ? (
+            filtresActifs ? (
+              <Card padding="none">
+                <EmptyState
+                  illustration="no-alert"
+                  title="Aucun problème pour ces filtres"
+                  message="Élargissez l’état ou la gravité, ou retirez « En retard », pour voir les autres problèmes."
+                  action={{ label: 'Effacer les filtres', onClick: () => setFiltres({ statut: FILTRES_PAR_DEFAUT.statut, gravite: FILTRES_PAR_DEFAUT.gravite, enRetard: FILTRES_PAR_DEFAUT.enRetard }) }}
+                />
+              </Card>
+            ) : (
+              <Card tone="success" padding="none">
+                <EmptyState
+                  illustration="no-alert"
+                  title="Aucun problème suivi"
+                  message="Quand plusieurs avis parlent de la même chose, créez un problème depuis la fiche d’un avis."
+                />
+              </Card>
+            )
+          ) : (
+            <Liste issues={issuesListRaw} afficherAgence={!isAgencyManager} ouvertId={selectedIssueId} onOuvrir={ouvrir} maintenant={maintenant} />
+          )}
+          {!issuesListLoading && !issuesListError && partiel && (
+            <Button variant="secondary" onClick={loadMoreIssues} loading={issuesLoadingMore} style={{ alignSelf: 'center' }}>
+              {issuesLoadingMore ? 'Chargement…' : `Charger plus (${issuesListRaw.length}/${issuesTotal})`}
+            </Button>
+          )}
+        </section>
+
+        {ouvert && (
+          <PanneauProbleme
+            issue={issueDetail}
+            loading={issueDetailLoading}
+            titreProvisoire={ligneOuverte?.titre}
+            agenceProvisoire={ligneOuverte?.agence_nom}
+            mode={panneauAncre ? 'ancre' : 'plein'}
+            onClose={fermer}
+            onActionsChange={apresActionIssue}
+            onVerifier={verifierIssue}
+            onOuvrirOrigine={(id) => { void openIssueDetail(id); }}
+          />
+        )}
+      </div>
+
+      {/* Indicateurs : bandeau court sous la liste ; « Non renseigné » plutôt qu'un chiffre trompeur quand la donnée manque */}
+      <div className="pb-indicateurs-tete">
+        <span>Indicateurs de la période</span>
         <PeriodSelector
           value={issuesJours}
           onChange={setIssuesJours}
@@ -90,176 +155,8 @@ export default function PilotageIssuesTab(props: Props) {
             { label: '90 jours', jours: 90 },
           ]}
         />
-        {!isAgencyManager && (
-          <AgenceFilterSelect agences={agencesList} selectedId={issuesAgenceId} onChange={setIssuesAgenceId} />
-        )}
-        <Button
-          variant={backlogActif ? 'secondary' : 'ghost'}
-          icon={<ClockIcon size={14} />}
-          aria-pressed={backlogActif}
-          onClick={() => setBacklogActif((v) => !v)}
-          title="Affiche les problèmes pas encore résolus, du plus ancien au plus récent"
-        >
-          Problèmes en attente
-        </Button>
       </div>
-
-      {/* Liste des problèmes : d'abord (le travail), les indicateurs ensuite en bandeau court */}
-      <section aria-labelledby="issues-liste" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', flexWrap: 'wrap' }}>
-          <SectionHeading id="issues-liste">
-            Problèmes à traiter ({issuesFirstLoadDone && !issuesListError ? visibles.length : '…'})
-          </SectionHeading>
-          {ancienneteTexte && (
-            <span style={{ fontSize: '0.78rem', color: 'var(--color-warning-text)', fontWeight: 700 }}>{ancienneteTexte}</span>
-          )}
-        </div>
-
-        {!issuesListError && issuesFirstLoadDone && issuesAffichees.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            <div className="ui-segmented" role="group" aria-label="Statut des problèmes">
-              {GROUPES_STATUT.map((g) => (
-                <button
-                  key={g.id}
-                  type="button"
-                  className="ui-segmented__item"
-                  aria-pressed={groupe === g.id}
-                  onClick={() => setGroupe(g.id)}
-                  style={{ minHeight: 44 }}
-                >
-                  {g.label} ({compteurs[g.id]})
-                </button>
-              ))}
-            </div>
-            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-text-muted)' }}>
-              Gravité
-              <select
-                value={gravite}
-                onChange={(e) => setGravite(e.target.value as CriticiteType | 'toutes')}
-                style={{ minHeight: 44, padding: '0 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text-main)', fontFamily: 'inherit', fontWeight: 600 }}
-              >
-                <option value="toutes">Toutes</option>
-                {GRAVITES.map((g) => <option key={g.id} value={g.id}>{g.label}</option>)}
-              </select>
-            </label>
-            <Button
-              variant={urgentsDabord ? 'secondary' : 'ghost'}
-              aria-pressed={urgentsDabord}
-              onClick={() => setUrgentsDabord((v) => !v)}
-              title="Trie d’abord les délais dépassés, puis les gravités les plus élevées, puis les rouverts, du plus ancien au plus récent"
-            >
-              Urgents d’abord
-            </Button>
-            {filtreLectureActif && <Button variant="ghost" onClick={reinitialiserLecture}>Effacer les filtres</Button>}
-          </div>
-        )}
-        {!issuesListError && issuesFirstLoadDone && partiel && (
-          <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
-            {issuesListRaw.length} problèmes chargés sur {issuesTotal}. Les filtres s’appliquent aux problèmes chargés ; chargez la suite pour voir les autres.
-          </p>
-        )}
-
-        {issuesListError ? (
-          <StatsErrorState message="Impossible de charger la liste des problèmes." onRetry={fetchIssuesList} />
-        ) : issuesListLoading ? (
-          <div aria-busy="true" aria-label="Chargement des problèmes" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {[0, 1, 2].map((i) => (
-              <SkeletonBlock key={i} height={100} radius="var(--radius-2xl)" />
-            ))}
-          </div>
-        ) : issuesAffichees.length === 0 ? (
-          <Card tone="success" padding="none">
-            <EmptyState
-              illustration="no-alert"
-              title="Aucun problème sur cette période"
-              message="Aucun problème à traiter n’a été enregistré pour les filtres sélectionnés."
-            />
-          </Card>
-        ) : visibles.length === 0 ? (
-          <Card padding="none">
-            <EmptyState
-              illustration="no-alert"
-              title="Aucun problème ne correspond à ces filtres"
-              message="Élargissez le statut ou la gravité pour voir les autres problèmes."
-              action={{ label: 'Effacer les filtres', onClick: reinitialiserLecture }}
-            />
-          </Card>
-        ) : (
-          <ul style={{ display: 'flex', flexDirection: 'column', gap: '14px', margin: 0, padding: 0, listStyle: 'none' }}>
-            {visibles.map((issue) => {
-              const urgent = estUrgent(issue, maintenant);
-              const delai = etatDelai(issue, maintenant);
-              return (
-                // <li> neutre : le rôle « bouton » de la carte cliquable ne doit pas remplacer le rôle « listitem ».
-                <li key={issue.id} style={{ listStyle: 'none' }}>
-                <Card
-                  padding="sm"
-                  tone={urgent ? 'critical' : 'default'}
-                  onClick={() => openIssueDetail(issue.id)}
-                  aria-label={`Ouvrir le problème : ${issue.titre}`}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, flex: '1 1 260px' }}>
-                      {!isAgencyManager && issue.agence_nom && (
-                        <span style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--color-primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          {issue.agence_nom}
-                        </span>
-                      )}
-                      <h3 style={{ margin: 0, fontSize: '0.96rem', fontWeight: 800, color: 'var(--color-text-main)' }}>{issue.titre}</h3>
-                      {issue.description && (
-                        <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
-                          {extraitCommentaire(issue.description, 160)}
-                        </p>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', flexShrink: 0 }}>
-                      <Badge label={ISSUE_SEVERITE_LABELS[issue.severite]} value={issue.severite} />
-                      <Badge label={ISSUE_STATUT_LABELS[issue.statut]} variant={ISSUE_STATUT_BADGE_VARIANT[issue.statut]} />
-                    </div>
-                  </div>
-
-                  <div className="ui-item__meta" style={{ borderTop: '1px solid var(--color-border)', paddingTop: '10px' }}>
-                    <span>
-                      Enregistré <time dateTime={issue.premiere_detection} title={fullDate(issue.premiere_detection)}>{libelleEnregistre(issue.premiere_detection, maintenant)}</time>
-                    </span>
-                    {delai && (
-                      <>
-                        <span className="ui-item__meta-sep" aria-hidden="true" />
-                        <span style={{ color: delai.etat === 'depasse' ? 'var(--color-critical-text)' : undefined, fontWeight: delai.etat === 'depasse' ? 800 : undefined }}>
-                          {delai.etat === 'depasse'
-                            ? `Délai dépassé${delai.jours > 0 ? ` depuis ${libelleJours(delai.jours)}` : ' aujourd’hui'}`
-                            : <>À traiter avant le <time dateTime={delai.date} title={fullDate(delai.date)}>{shortDate(delai.date)}</time></>}
-                        </span>
-                      </>
-                    )}
-                    <span className="ui-item__spacer" />
-                    <strong style={{ color: 'var(--color-text-main)' }}>{prochainGeste(issue.statut)}</strong>
-                  </div>
-                </Card>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        {!issuesListLoading && !issuesListError && partiel && (
-          <Button variant="secondary" onClick={loadMoreIssues} loading={issuesLoadingMore} style={{ alignSelf: 'center' }}>
-            {issuesLoadingMore ? 'Chargement…' : `Charger plus (${issuesListRaw.length}/${issuesTotal})`}
-          </Button>
-        )}
-      </section>
-
-      {/* Indicateurs : bandeau court sous la liste ; « Non renseigné » plutôt qu'un chiffre trompeur quand la donnée manque */}
       <KpiCoreGrid mode="bandeau" jours={issuesJours} agenceId={issuesAgenceId} refreshToken={issuesKpisRefreshToken} />
-
-      {selectedIssueId && (
-        <IssueDetailModal
-          issue={issueDetail}
-          loading={issueDetailLoading}
-          onClose={closeIssueDetail}
-          onActionsChange={apresActionIssue}
-          onVerifier={verifierIssue}
-        />
-      )}
     </div>
   );
 }

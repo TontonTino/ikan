@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { agencesApi, feedbacksApi, issuesApi } from '../../services/api';
 import PilotageIssuesTab from './PilotageIssuesTab';
@@ -10,6 +10,7 @@ import PageTitle from '../../components/ui/PageTitle';
 import AideAlertes from '../../components/alerts/AideAlertes';
 import { useToast } from '../../components/ui/Toast';
 import { userFacingError } from '../../utils/userFacingError';
+import { FILTRES_PAR_DEFAUT, parametresListe, type FiltresProblemes } from '../../utils/problemesListe';
 
 /** Une section = une page de la navigation (une destination = une fonction). */
 export type PilotageSection = 'alertes' | 'suggestions' | 'actions' | 'issues';
@@ -148,9 +149,9 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
   // ── Issues (KPI P0 + liste + détail) ──────────────────
   const [issuesJours, setIssuesJours] = useState(30);
   const [issuesAgenceId, setIssuesAgenceId] = useState<string | null>(null);
-  // Vue Backlog : tri par ancienneté (premiere_detection croissant) + Issues non closes
-  // uniquement. Désactivée par défaut, pour un comportement strictement inchangé.
-  const [backlogActif, setBacklogActif] = useState(false);
+  // Filtres de la liste (état, gravité, en retard, tri) : envoyés au serveur, donc vrais sur l'ensemble des problèmes. La période (issuesJours) ne concerne que les indicateurs.
+  const [filtresIssues, setFiltresIssues] = useState<FiltresProblemes>(FILTRES_PAR_DEFAUT);
+  const changerFiltresIssues = useCallback((suite: Partial<FiltresProblemes>) => setFiltresIssues((f) => ({ ...f, ...suite })), []);
 
   // KpiCoreGrid gère son propre fetch ; ce compteur ne sert qu'à lui demander de
   // rafraîchir après une action qui modifie les Issues sous-jacentes (terminer/vérifier).
@@ -171,10 +172,7 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
     setIssuesListLoading(true);
     setIssuesListError(false);
     try {
-      const params: { agence_id?: string; tri?: string; limit: number; offset: number } = { limit: 50, offset: 0 };
-      if (issuesAgenceId) params.agence_id = issuesAgenceId;
-      if (backlogActif) params.tri = 'ancien';
-      const res = await issuesApi.list(params);
+      const res = await issuesApi.list(parametresListe({ ...filtresIssues, agenceId: issuesAgenceId }));
       setIssuesListRaw(res.data || []);
       setIssuesTotal(Number(res.headers?.['x-total-count'] || 0));
     } catch {
@@ -183,18 +181,13 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
       setIssuesListLoading(false);
       setIssuesFirstLoadDone(true);
     }
-  }, [issuesAgenceId, backlogActif]);
+  }, [issuesAgenceId, filtresIssues]);
 
   const loadMoreIssues = async () => {
     if (issuesLoadingMore || issuesListRaw.length >= issuesTotal) return;
     setIssuesLoadingMore(true);
     try {
-      const params: { agence_id?: string; tri?: string; limit: number; offset: number } = {
-        limit: 50, offset: issuesListRaw.length,
-      };
-      if (issuesAgenceId) params.agence_id = issuesAgenceId;
-      if (backlogActif) params.tri = 'ancien';
-      const response = await issuesApi.list(params);
+      const response = await issuesApi.list(parametresListe({ ...filtresIssues, agenceId: issuesAgenceId }, issuesListRaw.length));
       setIssuesListRaw((current) => [...current, ...(response.data || [])]);
     } catch {
       showToast('Impossible de charger les problèmes suivants');
@@ -207,39 +200,6 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
     if (section !== 'issues') return;
     fetchIssuesList();
   }, [fetchIssuesList, section]);
-
-  // GET /issues/ ne prend pas de paramètre de période (contrairement à GET /kpis) : le
-  // filtre "jours" de cet onglet s'applique donc côté client sur premiere_detection,
-  // pour rester cohérent avec la définition du KPI Engine (même champ de référence).
-  // La vue Backlog ajoute un filtre statut "non closes" côté client également (le
-  // paramètre `statut` de l'API ne fait qu'une égalité exacte, pas une exclusion).
-  const issuesAffichees = useMemo(() => {
-    const seuil = Date.now() - issuesJours * 24 * 60 * 60 * 1000;
-    let resultat = issuesListRaw.filter((i) => new Date(i.premiere_detection).getTime() >= seuil);
-    if (backlogActif) {
-      resultat = resultat.filter((i) => i.statut !== 'resolue' && i.statut !== 'verifiee');
-    }
-    return resultat;
-  }, [issuesListRaw, issuesJours, backlogActif]);
-
-  const issuePlusAncienne = useMemo(() => {
-    if (!backlogActif || issuesAffichees.length === 0) return null;
-    return issuesAffichees.reduce((plusAncienne, i) =>
-      new Date(i.premiere_detection).getTime() < new Date(plusAncienne.premiere_detection).getTime() ? i : plusAncienne
-    );
-  }, [issuesAffichees, backlogActif]);
-
-  const ancienneteTexte = useMemo(() => {
-    if (!issuePlusAncienne) return null;
-    const jours = Math.floor((Date.now() - new Date(issuePlusAncienne.premiere_detection).getTime()) / (24 * 60 * 60 * 1000));
-    if (jours <= 0) return "la plus ancienne : aujourd'hui";
-    return `la plus ancienne : il y a ${jours} jour${jours > 1 ? 's' : ''}`;
-  }, [issuePlusAncienne]);
-
-  const issuesOuvertesCount = useMemo(
-    () => issuesAffichees.filter((i) => i.statut !== 'verifiee').length,
-    [issuesAffichees]
-  );
 
   const openIssueDetail = useCallback(async (issueId: string) => {
     setSelectedIssueId(issueId);
@@ -308,7 +268,7 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
 
 
       {/* ── SECTION ISSUES (KPI P0 + liste + détail — pas de création ici, voir rapport) ── */}
-      {section === 'issues' && <PilotageIssuesTab isAgencyManager={isAgencyManager} agencesList={agencesList} issuesJours={issuesJours} setIssuesJours={setIssuesJours} issuesAgenceId={issuesAgenceId} setIssuesAgenceId={setIssuesAgenceId} backlogActif={backlogActif} setBacklogActif={setBacklogActif} issuesKpisRefreshToken={issuesKpisRefreshToken} issuesFirstLoadDone={issuesFirstLoadDone} issuesAffichees={issuesAffichees} issuesListRaw={issuesListRaw} issuesTotal={issuesTotal} ancienneteTexte={ancienneteTexte} issuesListError={issuesListError} issuesListLoading={issuesListLoading} fetchIssuesList={fetchIssuesList} openIssueDetail={openIssueDetail} issuesLoadingMore={issuesLoadingMore} loadMoreIssues={loadMoreIssues} selectedIssueId={selectedIssueId} issueDetail={issueDetail} issueDetailLoading={issueDetailLoading} closeIssueDetail={closeIssueDetail} apresActionIssue={apresActionIssue} verifierIssue={verifierIssue} />}
+      {section === 'issues' && <PilotageIssuesTab isAgencyManager={isAgencyManager} agencesList={agencesList} issuesJours={issuesJours} setIssuesJours={setIssuesJours} issuesAgenceId={issuesAgenceId} setIssuesAgenceId={setIssuesAgenceId} filtres={filtresIssues} setFiltres={changerFiltresIssues} issuesKpisRefreshToken={issuesKpisRefreshToken} issuesFirstLoadDone={issuesFirstLoadDone} issuesListRaw={issuesListRaw} issuesTotal={issuesTotal} issuesListError={issuesListError} issuesListLoading={issuesListLoading} fetchIssuesList={fetchIssuesList} openIssueDetail={openIssueDetail} issuesLoadingMore={issuesLoadingMore} loadMoreIssues={loadMoreIssues} selectedIssueId={selectedIssueId} issueDetail={issueDetail} issueDetailLoading={issueDetailLoading} closeIssueDetail={closeIssueDetail} apresActionIssue={apresActionIssue} verifierIssue={verifierIssue} />}
     </div>
   );
 }

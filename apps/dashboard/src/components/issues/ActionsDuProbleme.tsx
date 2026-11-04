@@ -67,7 +67,7 @@ export default function ActionsDuProbleme({ issue, role, utilisateurs, moiId, no
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '6px', fontSize: '0.74rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
                   {/* responsable_id existe mais l'API n'expose aucun nom : seul le CX Manager peut résoudre un id en nom (GET /utilisateurs/,
                       Agency Managers). Sinon « Vous » ou « Assigné » : jamais un nom inventé. */}
-                  <span>Responsable : {libelleResponsable(action.responsable_id, utilisateurs, moiId)}</span>
+                  <span>Responsable : {libelleResponsable(action.responsable_id, utilisateurs, moiId, action.responsable_nom)}</span>
                   {action.echeance
                     ? <span>Échéance <time dateTime={action.echeance} title={fullDate(action.echeance)}>{shortDate(action.echeance)}</time></span>
                     : <span>Sans échéance</span>}
