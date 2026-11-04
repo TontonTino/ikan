@@ -1,6 +1,7 @@
 import type { Alerte, AlerteFeedback, Issue, IssueStatut, PriorityLevel, Recommandation, TendanceSatisfaction } from '../../types';
 import { GRAVITE_LABELS, PROBLEME_STATUT_LABELS, libelleRaisonAlerte } from '../../utils/vocabulaire';
 import { formaterPourcentage } from '../../utils/formatNombre';
+import { estSansActionEnCours } from '../../utils/issueSuivi';
 
 /**
  * Règles de lecture de la vue d'ensemble du Responsable d'agence (/agence).
@@ -31,9 +32,13 @@ const ORDRE_GRAVITE: Record<string, number> = { critique: 0, elevee: 1 };
 
 const extrait = (texte: string, max = 110) => (texte.length > max ? `${texte.slice(0, max).trimEnd()}…` : texte);
 
-/** Un problème est prioritaire s'il est ouvert ET (grave OU marqué « nécessite une action »). Règle déjà en place sur la page. */
+/**
+ * Un problème est prioritaire s'il est ouvert ET (grave OU sans action en cours). « Sans action en cours » = « ouverte » ou « reouverte » : il attend une
+ * décision. L'ancienne règle utilisait le drapeau `necessite_action`, posé à la création d'une action et jamais retiré : il retenait des problèmes
+ * peu graves DÉJÀ pris en charge et ratait ceux qui attendent. Les problèmes graves restent prioritaires, avec ou sans action.
+ */
 export const estProblemePrioritaire = (issue: Issue) =>
-  PROBLEMES_OUVERTS.includes(issue.statut) && (issue.severite === 'critique' || issue.severite === 'elevee' || issue.necessite_action);
+  PROBLEMES_OUVERTS.includes(issue.statut) && (issue.severite === 'critique' || issue.severite === 'elevee' || estSansActionEnCours(issue.statut));
 
 export function construirePriorites(entrees: { alertes: Alerte[]; avis: AlerteFeedback[]; problemes: Issue[] }): Priorite[] {
   const seuils: Priorite[] = entrees.alertes.map((a) => ({

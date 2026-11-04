@@ -25,7 +25,7 @@ import { BentoGrid, BentoItem } from '../../components/ui/BentoGrid';
 import YamSynthese from '../../components/agent/YamSynthese';
 import { RefreshIcon } from '../../components/common/Icons';
 import { buildSurveillance, repartitionReseau } from './siege/siegeData';
-import { useSiegeData } from './siege/useSiegeData';
+import { issuesIncompletes, useSiegeData } from './siege/useSiegeData';
 import { Action, Evolution, Pourquoi, Reseau, SiegeKpis, Surveillance, type KpiKind } from './siege/SiegeBlocks';
 import { AgenceDetail, KPI_TITRE, KpiDetail } from './siege/SiegeDrawers';
 
@@ -61,6 +61,7 @@ export default function DashboardSiegePage() {
         ranking,
         alertesSeuil: alertes.status === 'ok' ? alertes.data.items : [],
         issuesOuvertes: issues.status === 'ok' ? issues.data.items : [],
+        issuesIncompletes: issues.status === 'ok' ? issuesIncompletes(issues.data) : false,
         jours,
       }),
     [ranking, alertes, issues, jours],
