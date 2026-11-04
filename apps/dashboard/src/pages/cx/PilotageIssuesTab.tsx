@@ -104,10 +104,7 @@ export default function PilotageIssuesTab(props: Props) {
         </Button>
       </div>
 
-      {/* Indicateurs */}
-      <KpiCoreGrid jours={issuesJours} agenceId={issuesAgenceId} refreshToken={issuesKpisRefreshToken} />
-
-      {/* Liste des problèmes */}
+      {/* Liste des problèmes : d'abord (le travail), les indicateurs ensuite en bandeau court */}
       <section aria-labelledby="issues-liste" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', flexWrap: 'wrap' }}>
           <SectionHeading id="issues-liste">
@@ -253,6 +250,9 @@ export default function PilotageIssuesTab(props: Props) {
           </Button>
         )}
       </section>
+
+      {/* Indicateurs : bandeau court sous la liste ; « Non renseigné » plutôt qu'un chiffre trompeur quand la donnée manque */}
+      <KpiCoreGrid mode="bandeau" jours={issuesJours} agenceId={issuesAgenceId} refreshToken={issuesKpisRefreshToken} />
 
       {selectedIssueId && (
         <IssueDetailModal

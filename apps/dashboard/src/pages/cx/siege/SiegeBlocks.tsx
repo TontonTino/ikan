@@ -33,6 +33,7 @@ import {
   aggregateWeekly,
   compteDefavorableDelta,
   messageComparaison,
+  bilanProblemesOuverts,
   extremesWilson,
   granularitesDisponibles,
   isDailyPoint,
@@ -536,7 +537,7 @@ export function Pourquoi({ stats, jours, onRetry }: { stats: Source<StatsCXRespo
 // ════════════════════════════════════════════════════════════════════
 
 export function Action({ actions, issues, onRetryActions, onRetryIssues }: { actions: Source<ActionsTotaux>; issues: Source<IssuesOuvertes>; onRetryActions: () => void; onRetryIssues: () => void }) {
-  const issuesAction = issues.status === 'ok' ? issues.data.items.filter((i) => i.necessite_action).length : null;
+  const bilanProblemes = issues.status === 'ok' ? bilanProblemesOuverts(issues.data.parStatut) : null;
   const stat = (label: string, value: React.ReactNode, link?: React.ReactNode) => (
     <div className="siege-stat">
       <span className="siege-stat__value">{value}</span>
@@ -566,11 +567,16 @@ export function Action({ actions, issues, onRetryActions, onRetryIssues }: { act
           ? <Skeleton height={72} />
           : issues.status === 'error'
             ? <BlockError message="Les problèmes à traiter sont indisponibles pour le moment." onRetry={onRetryIssues} />
-            : stat(
-                'Problèmes en cours nécessitant une action',
-                `${issues.data.tronquee ? '≥ ' : ''}${issuesAction?.toLocaleString('fr-FR')}`,
-                <BlockLink to="/issues">Voir les problèmes</BlockLink>,
-              )}
+            : (
+              <>
+                {stat(
+                  'Problèmes sans action en cours',
+                  `${bilanProblemes?.approximatif ? '≥ ' : ''}${bilanProblemes?.sansAction.toLocaleString('fr-FR')}`,
+                  <BlockLink to="/issues">Voir les problèmes</BlockLink>,
+                )}
+                {stat('Problèmes avec une action en cours', `${bilanProblemes?.approximatif ? '≥ ' : ''}${bilanProblemes?.avecAction.toLocaleString('fr-FR')}`)}
+              </>
+            )}
       </div>
     </Card>
   );

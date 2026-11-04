@@ -71,6 +71,29 @@ export const regleAlerteSeuilTexte = () =>
 /** Statuts d'Issue considérés comme ouverts (IssueStatut). */
 export const ISSUE_STATUTS_OUVERTS = ['ouverte', 'action_en_cours', 'reouverte'] as const;
 
+export interface BilanProblemesOuverts {
+  /** Ouverts SANS action en cours : « ouverte » (aucune action décidée) + « reouverte » (rouvert, plus d'action en cours). Ils attendent une décision. */
+  sansAction: number;
+  /** Ouverts AVEC une action en cours : statut « action_en_cours » (au moins une action non terminée). */
+  avecAction: number;
+  /** Vrai si un des totaux n'a pas pu être lu exactement : afficher « ≥ ». */
+  approximatif: boolean;
+}
+
+/**
+ * Bilan des problèmes ouverts à partir des totaux par STATUT (X-Total-Count), jamais du drapeau `necessite_action` : ce drapeau est posé quand une action est
+ * créée et ne retombe jamais, il désigne donc les problèmes qui ONT une action, pas ceux qui en ont besoin. Par le code (`issues.py`) : « ouverte » = aucune
+ * action décidée ; « action_en_cours » = au moins une action non terminée ; « reouverte » = rouvert sans action en cours ; toute création d'action fait passer
+ * le problème à « action_en_cours ».
+ */
+export function bilanProblemesOuverts(parStatut: Record<(typeof ISSUE_STATUTS_OUVERTS)[number], { total: number; fiable: boolean }>): BilanProblemesOuverts {
+  return {
+    sansAction: parStatut.ouverte.total + parStatut.reouverte.total,
+    avecAction: parStatut.action_en_cours.total,
+    approximatif: ISSUE_STATUTS_OUVERTS.some((s) => !parStatut[s].fiable),
+  };
+}
+
 // ────────────────────────────────────────────────────────────────────
 // Deltas des KPI (calculés ici, pas repris des chaînes de l'API)
 // ────────────────────────────────────────────────────────────────────

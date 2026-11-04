@@ -12,6 +12,7 @@ import Skeleton from '../../../components/ui/Skeleton';
 import { AlertTriangleIcon, SmileIcon } from '../../../components/common/Icons';
 import {
   STATUT_SEUIL_LABEL,
+  bilanProblemesOuverts,
   RANG_CRITIQUE_MAX,
   regleSousSeuilTexte,
   serieSparkline,
@@ -220,7 +221,7 @@ export function AgenceDetail({
     return serieSparkline(stats.data.evolution_satisfaction);
   }, [stats]);
   const periode = jours === 365 ? '12 derniers mois' : `${jours} derniers jours`;
-  const issuesAction = issues.status === 'ok' ? issues.data.items.filter((i) => i.necessite_action).length : null;
+  const bilanProblemes = issues.status === 'ok' ? bilanProblemesOuverts(issues.data.parStatut) : null;
 
   return (
     <div className="siege-drawer">
@@ -289,7 +290,8 @@ export function AgenceDetail({
         <ul className="siege-drawer__list">
           <li>
             {issues.status === 'loading' ? <Skeleton variant="text" width={180} /> : issues.status === 'error' ? 'Problèmes à traiter indisponibles' : (
-              <><strong>{issues.data.tronquee ? '≥ ' : ''}{issuesAction}</strong> problème{issuesAction !== 1 ? 's' : ''} en cours nécessitant une action</>
+              <><strong>{bilanProblemes?.approximatif ? '≥ ' : ''}{bilanProblemes?.sansAction}</strong> problème{bilanProblemes?.sansAction !== 1 ? 's' : ''} sans action en cours,{' '}
+                <strong>{bilanProblemes?.approximatif ? '≥ ' : ''}{bilanProblemes?.avecAction}</strong> avec une action en cours</>
             )}
           </li>
           <li>

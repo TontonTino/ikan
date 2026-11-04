@@ -12,13 +12,14 @@
  * d'une section vide. Avec PACKS vide pour tous les secteurs (comme aujourd'hui), il n'y
  * a jamais de section sectorielle et jamais plus de 14 cartes : aucun changement visible.
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useId, useState } from 'react';
 import { kpisApi } from '../../services/api';
 import type { KPIResult } from '../../types';
 import KpiCard from '../ui/KpiCard';
 import SkeletonBlock from '../ui/SkeletonBlock';
 import { StatsErrorState } from '../stats/StatsStates';
-import { kpiIconComponent, kpiLibelle, formatKpiValue, formatKpiSubtitle, kpiAide } from '../../utils/kpiFormat';
+import Button from '../ui/Button';
+import { kpiIconComponent, kpiLibelle, formatKpiValue, formatKpiSubtitle, kpiAide, etatNonRenseigne } from '../../utils/kpiFormat';
 
 export interface KpiCoreGridProps {
   jours: number;
@@ -26,7 +27,15 @@ export interface KpiCoreGridProps {
   /** Incrémenter pour forcer un nouveau fetch sans changer jours/agenceId (ex. après une
       action qui modifie les Issues sous-jacentes, côté appelant). */
   refreshToken?: number;
+  /**
+   * « complet » (défaut) : toutes les cartes. « bandeau » : une ligne courte de quelques indicateurs sur les problèmes, et un bouton pour déplier les
+   * autres ; c'est ce que l'onglet « Problèmes à traiter » affiche APRÈS la liste.
+   */
+  mode?: 'complet' | 'bandeau';
 }
+
+/** Indicateurs du bandeau court (problèmes), dans cet ordre. */
+export const CODES_BANDEAU = ['ISSUE_VOLUME', 'CRITICAL_ISSUE_RATE', 'ISSUE_RESOLUTION_RATE', 'LOOP_CLOSURE_RATE'] as const;
 
 const GRILLE_STYLE: React.CSSProperties = {
   display: 'grid',
@@ -47,15 +56,17 @@ function Grille({ kpis, jours }: { kpis: KPIResult[]; jours: number }) {
     <div style={GRILLE_STYLE}>
       {kpis.map((k) => {
         const Icon = kpiIconComponent(k.code);
+        const nonRenseigne = etatNonRenseigne(k);
         return (
           <KpiCard
             key={k.code}
             compact
             icon={<Icon size={16} />}
             label={kpiLibelle(k)}
-            value={formatKpiValue(k)}
-            subtitle={formatKpiSubtitle(k, jours)}
+            value={nonRenseigne ? nonRenseigne.valeur : formatKpiValue(k)}
+            subtitle={nonRenseigne ? nonRenseigne.sousTitre : formatKpiSubtitle(k, jours)}
             hint={kpiAide(k.code)}
+            {...(nonRenseigne ? { tone: 'neutral' as const } : {})}
           />
         );
       })}
@@ -63,12 +74,33 @@ function Grille({ kpis, jours }: { kpis: KPIResult[]; jours: number }) {
   );
 }
 
-export default function KpiCoreGrid({ jours, agenceId, refreshToken }: KpiCoreGridProps) {
+/** Ligne courte d'indicateurs : libellé, valeur, et pour un indicateur non renseigné la phrase qui explique pourquoi. */
+export function LigneBandeau({ kpis, jours }: { kpis: KPIResult[]; jours: number }) {
+  const choisis = CODES_BANDEAU.map((code) => kpis.find((k) => k.code === code)).filter((k): k is KPIResult => !!k);
+  return (
+    <ul className="kpi-bandeau__liste">
+      {choisis.map((k) => {
+        const nonRenseigne = etatNonRenseigne(k);
+        return (
+          <li key={k.code} className={`kpi-bandeau__item${nonRenseigne ? ' is-non-renseigne' : ''}`}>
+            <span className="kpi-bandeau__label">{kpiLibelle(k)}</span>
+            <strong className="kpi-bandeau__valeur">{nonRenseigne ? nonRenseigne.valeur : formatKpiValue(k)}</strong>
+            <span className="kpi-bandeau__precision">{nonRenseigne ? nonRenseigne.sousTitre : formatKpiSubtitle(k, jours)}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+export default function KpiCoreGrid({ jours, agenceId, refreshToken, mode = 'complet' }: KpiCoreGridProps) {
   const [kpis, setKpis] = useState<KPIResult[]>([]);
   const [secteurCode, setSecteurCode] = useState<string | null>(null);
   const [packDisponible, setPackDisponible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [deplie, setDeplie] = useState(false);
+  const idBandeau = useId();
 
   const fetchKpis = useCallback(async () => {
     setLoading(true);
@@ -99,8 +131,8 @@ export default function KpiCoreGrid({ jours, agenceId, refreshToken }: KpiCoreGr
   if (loading) {
     return (
       <div aria-busy="true" aria-label="Chargement des indicateurs" style={GRILLE_STYLE}>
-        {Array.from({ length: 8 }).map((_, i) => (
-          <SkeletonBlock key={i} height={90} radius="16px" />
+        {Array.from({ length: mode === 'bandeau' ? CODES_BANDEAU.length : 8 }).map((_, i) => (
+          <SkeletonBlock key={i} height={mode === 'bandeau' ? 64 : 90} radius="16px" />
         ))}
       </div>
     );
@@ -111,8 +143,8 @@ export default function KpiCoreGrid({ jours, agenceId, refreshToken }: KpiCoreGr
   const sectoriels = kpis.filter((k) => k.famille === 'sectoriel');
   const secteurSansPack = !packDisponible && !!secteurCode && secteurCode !== 'autre';
 
-  return (
-    <div>
+  const grilleComplete = (
+    <>
       <Grille kpis={prioritaires} jours={jours} />
 
       {operationnels.length > 0 && (
@@ -134,6 +166,23 @@ export default function KpiCoreGrid({ jours, agenceId, refreshToken }: KpiCoreGr
           Les indicateurs propres à votre secteur seront bientôt disponibles.
         </div>
       )}
-    </div>
+    </>
   );
+
+  if (mode === 'bandeau') {
+    return (
+      <section className="kpi-bandeau" aria-labelledby={`${idBandeau}-titre`}>
+        <div className="kpi-bandeau__tete">
+          <h2 id={`${idBandeau}-titre`} className="kpi-bandeau__titre">Indicateurs</h2>
+          <Button size="sm" variant="secondary" aria-expanded={deplie} aria-controls={`${idBandeau}-tout`} onClick={() => setDeplie((v) => !v)}>
+            {deplie ? 'Masquer les indicateurs' : `Voir tous les indicateurs (${kpis.length})`}
+          </Button>
+        </div>
+        <LigneBandeau kpis={kpis} jours={jours} />
+        {deplie && <div id={`${idBandeau}-tout`} className="kpi-bandeau__tout">{grilleComplete}</div>}
+      </section>
+    );
+  }
+
+  return <div>{grilleComplete}</div>;
 }

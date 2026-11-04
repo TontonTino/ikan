@@ -8,7 +8,15 @@ export type Source<T> = { status: 'loading' } | { status: 'error' } | { status: 
 
 const total = (headers: Record<string, unknown> | undefined) => Number(headers?.['x-total-count'] ?? 0);
 
+/** Nombre de problèmes d'un statut ouvert : lu dans X-Total-Count (exact, même si la liste est tronquée) ; `fiable` faux si l'en-tête manque ET que la liste atteint la limite. */
+export interface ComptageStatut {
+  total: number;
+  fiable: boolean;
+}
+
 export interface IssuesOuvertes {
+  /** Problèmes ouverts par statut (périmètre du rôle ; une seule agence pour le détail d'une agence). */
+  parStatut: Record<(typeof ISSUE_STATUTS_OUVERTS)[number], ComptageStatut>;
   items: Issue[];
   /** Total réel côté API (somme des X-Total-Count par statut ouvert). */
   total: number;
@@ -30,7 +38,13 @@ export async function fetchIssuesOuvertes(agenceId?: string): Promise<IssuesOuve
   );
   const items = res.flatMap((r) => r.data ?? []);
   const t = res.reduce((s, r) => s + total(r.headers as Record<string, unknown>), 0);
-  return { items, total: Math.max(t, items.length), tronquee: t > items.length };
+  const parStatut = Object.fromEntries(ISSUE_STATUTS_OUVERTS.map((statut, i) => {
+    const entete = (res[i].headers as Record<string, unknown> | undefined)?.['x-total-count'];
+    const lu = entete != null && Number.isFinite(Number(entete));
+    const chargees = (res[i].data ?? []).length;
+    return [statut, { total: lu ? Number(entete) : chargees, fiable: lu || chargees < ISSUES_LIMIT }];
+  })) as IssuesOuvertes['parStatut'];
+  return { items, total: Math.max(t, items.length), tronquee: t > items.length, parStatut };
 }
 
 /**

@@ -138,6 +138,52 @@ export function formatKpiSubtitle(k: KPIResult, jours: number): string {
   return `${jours} derniers jours`;
 }
 
+/**
+ * Indicateurs qui reposent sur des données que l'interface ne permet pas (encore) de produire : durée de résolution, boucle fermée, résolution,
+ * délai de traitement (SLA), récurrence. Tant que ces données manquent, afficher « 0 % » ou « Aucune donnée / pas assez de données sur 30 jours »
+ * serait trompeur (le manque ne vient ni de la période ni d'une réalité mesurée) : on dit « Non renseigné » et pourquoi.
+ * Aucun chiffre n'est inventé : un indicateur réellement calculé (par exemple depuis l'API) garde sa valeur.
+ */
+const CODES_RECURRENCE = ['ISSUE_RECURRENCE_RATE', 'RESTO_RECIDIVE_CATEGORIE', 'TEL_RECURRENCE_AGENCE', 'TEL_RECURRENCE_HORS_PERIMETRE'];
+
+export interface EtatNonRenseigne {
+  valeur: string;
+  sousTitre: string;
+}
+
+const sansValeur = (k: KPIResult) => k.status === 'no_data' || k.value === null;
+
+/**
+ * « Non renseigné » + une phrase exacte, ou null (l'indicateur s'affiche normalement). Chaque phrase est vraie PAR DÉFINITION de l'indicateur :
+ *  - durée de résolution : aucun problème résolu parmi ceux de la période ;
+ *  - boucle fermée : aucun problème de la période n'a d'action décidée ;
+ *  - délai (SLA) : aucun problème résolu de la période n'avait de délai renseigné ;
+ *  - taux de résolution à 0 : aucun problème résolu, sur N enregistrés ;
+ *  - récurrence à 0 (numérateur nul) : aucun problème n'est relié à un problème antérieur. Sans valeur (moins de 5 problèmes résolus…), le message
+ *    habituel reste : la cause n'est alors pas l'absence de lien.
+ */
+export function etatNonRenseigne(k: KPIResult): EtatNonRenseigne | null {
+  const valeur = LIBELLES.nonRenseigne;
+  switch (k.code) {
+    case 'MEDIAN_RESOLUTION_TIME':
+      return sansValeur(k) ? { valeur, sousTitre: 'Aucun problème résolu parmi ceux de la période : la durée se calcule dès qu’un problème est résolu.' } : null;
+    case 'LOOP_CLOSURE_RATE':
+      return sansValeur(k) ? { valeur, sousTitre: 'Aucun problème de la période n’a d’action décidée : le taux se calcule dès qu’une action existe sur un problème.' } : null;
+    case 'SLA_COMPLIANCE_RATE':
+      return sansValeur(k) ? { valeur, sousTitre: 'Aucun problème résolu de la période n’avait de délai de traitement renseigné.' } : null;
+    case 'ISSUE_RESOLUTION_RATE': {
+      if (sansValeur(k) || (k.numerator ?? 0) !== 0) return null;
+      const n = k.denominator ?? 0;
+      return { valeur, sousTitre: `Aucun problème résolu pour l’instant, sur ${n} enregistré${n > 1 ? 's' : ''}.` };
+    }
+    default:
+      if (CODES_RECURRENCE.includes(k.code) && !sansValeur(k) && (k.numerator ?? 0) === 0) {
+        return { valeur, sousTitre: 'Aucun problème n’est relié à un problème antérieur : la récurrence se calcule dès qu’un lien est renseigné.' };
+      }
+      return null;
+  }
+}
+
 /** Explication courte d'un indicateur (infobulle « ? »), absente si le code est inconnu. */
 export function kpiAide(code: string): string | undefined {
   return INDICATEUR_AIDE[code];

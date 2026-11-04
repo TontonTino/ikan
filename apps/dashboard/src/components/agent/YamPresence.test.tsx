@@ -189,7 +189,7 @@ describe('page Actions : état vide', () => {
     boutons.liste = [];
     const html = rendre();
     expect(html).toContain('Aucune action en cours.');
-    expect(html).toContain('Quand un problème revient dans une agence, vous pourrez le regrouper ici et lancer une action. Commencez par consulter vos alertes.');
+    expect(html).toContain('Aucune action n’est en cours sur un avis client. Une action apparaît ici quand vous la définissez sur un avis déjà pris en charge par le Responsable d’agence, puis passe dans « Terminées » une fois confirmée réalisée.');
     expect(html).toContain('/yam/yam-3d-face.webp');
     const bouton = boutons.liste.find((b) => b.label === 'Voir les alertes');
     expect(bouton?.onClick).toBeTypeOf('function');
