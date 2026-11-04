@@ -554,3 +554,20 @@
     min-height: var(--touch-target);
   }
 }
+
+/* ── Bandeau d'indicateurs (onglet « Problèmes à traiter ») : court, SOUS la liste ── */
+.kpi-bandeau { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-xl); }
+.kpi-bandeau__tete { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.kpi-bandeau__titre { margin: 0; font-size: var(--text-lg); font-weight: var(--weight-black); color: var(--color-text-main); }
+.kpi-bandeau__liste { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); }
+.kpi-bandeau__item { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.kpi-bandeau__label { font-size: var(--text-xs); font-weight: var(--weight-bold); color: var(--color-text-muted); }
+.kpi-bandeau__valeur { font-size: var(--text-xl); font-weight: var(--weight-black); color: var(--color-text-main); }
+.kpi-bandeau__item.is-non-renseigne .kpi-bandeau__valeur { font-size: var(--text-md); color: var(--color-text-muted); }
+.kpi-bandeau__precision { font-size: var(--text-xs); line-height: var(--leading-normal); color: var(--color-text-muted); }
+.kpi-bandeau__tout { margin-top: var(--space-2); }
+@media (max-width: 640px) {
+  .kpi-bandeau { padding: var(--space-3); }
+  .kpi-bandeau__liste { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpi-bandeau .ui-btn { min-height: var(--touch-target); }
+}

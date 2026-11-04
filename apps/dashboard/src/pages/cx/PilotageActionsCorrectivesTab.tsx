@@ -18,6 +18,15 @@ import { shortDate } from '../../components/ui/format';
 import { joursDepuis, libelleJours } from '../../utils/issueSuivi';
 import { extraitCommentaire } from './pilotageFormatters';
 
+/**
+ * Ce que fait la page, dit tel quel : elle liste les actions décidées sur un AVIS (par le CX Manager, sur un avis déjà pris en charge par le Responsable
+ * d'agence) ; elle ne regroupe rien et ne permet pas d'en lancer. Les actions d'un problème se suivent dans le détail du problème.
+ */
+export const TEXTE_VIDE_EN_COURS_RESEAU =
+  'Aucune action n’est en cours sur un avis client. Une action apparaît ici quand vous la définissez sur un avis déjà pris en charge par le Responsable d’agence, puis passe dans « Terminées » une fois confirmée réalisée.';
+export const TEXTE_VIDE_EN_COURS_AGENCE =
+  'Aucune action n’est en cours sur un avis de votre agence. Une action apparaît ici quand votre CX Manager la définit sur un avis que vous avez pris en charge, puis passe dans « Terminées » une fois confirmée réalisée.';
+
 type Props = {
   isAgencyManager: boolean; agencesList: Agence[]; actionsToggle: 'en_cours' | 'terminees'; setActionsToggle: Dispatch<SetStateAction<'en_cours' | 'terminees'>>;
   actionsEnCours: Feedback[]; actionsTerminees: Feedback[]; actionsEnCoursTotal: number; actionsTermineesTotal: number;
@@ -91,7 +100,7 @@ export default function PilotageActionsCorrectivesTab({ isAgencyManager, agences
         <Card tone="success" padding="none">
           <YamEtatVide
             titre="Aucune action en cours."
-            texte="Quand un problème revient dans une agence, vous pourrez le regrouper ici et lancer une action. Commencez par consulter vos alertes."
+            texte={isAgencyManager ? TEXTE_VIDE_EN_COURS_AGENCE : TEXTE_VIDE_EN_COURS_RESEAU}
             action={{ label: 'Voir les alertes', onClick: () => navigate('/alertes') }}
           />
         </Card>

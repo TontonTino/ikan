@@ -31,6 +31,8 @@ export const LIBELLES = {
   avisContradictoireCourt: 'Avis contradictoire',
   aucuneDonnee: 'Aucune donnée disponible',
   aucuneDonneeCourt: 'Aucune donnée',
+  /** Indicateur qui repose sur une saisie que l'interface ne permet pas (encore) : ni zéro ni chiffre, une explication. */
+  nonRenseigne: 'Non renseigné',
   chargement: 'Chargement en cours…',
   reessayer: 'Réessayer',
   filtrer: 'Filtrer',
