@@ -72,3 +72,8 @@
   .pb-mise-en-page--panneau .pb-col-secondaire { display: none; }
   .pb-panneau--ancre { position: sticky; top: var(--space-4); max-height: calc(100vh - 2 * var(--space-4)); }
 }
+
+/* ── Actions à mener (liste unique) ──────────────────────────────────────────────────────── */
+.pb-barre-actions { display: flex; flex-direction: column; gap: var(--space-3); }
+.pb-liste-actions { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.pb-liste-actions > li[aria-current="true"] { box-shadow: inset 4px 0 0 var(--color-primary); }

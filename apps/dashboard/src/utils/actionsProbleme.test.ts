@@ -38,10 +38,15 @@ describe('droits : qui voit « Définir une action », « Terminer » et « Conf
     }
   });
 
-  it('Terminer : CX Manager et Agency Manager (droits réels de l’API) ; jamais un autre rôle', () => {
+  it('Terminer : le CX Manager toujours ; l’Agency Manager seulement ses propres actions ; jamais un autre rôle', () => {
     expect(peutTerminerAction('cx_manager')).toBe(true);
-    expect(peutTerminerAction('agency_manager')).toBe(true);
-    expect(peutTerminerAction('admin')).toBe(false);
+    expect(peutTerminerAction('cx_manager', 'autre', 'moi')).toBe(true);
+    expect(peutTerminerAction('agency_manager', 'moi', 'moi')).toBe(true);
+    expect(peutTerminerAction('agency_manager', 'autre', 'moi')).toBe(false);
+    expect(peutTerminerAction('agency_manager', null, 'moi')).toBe(false);
+    expect(peutTerminerAction('agency_manager', 'moi', undefined)).toBe(false);
+    expect(peutTerminerAction('agency_manager')).toBe(false);
+    expect(peutTerminerAction('admin', 'moi', 'moi')).toBe(false);
     expect(peutTerminerAction(undefined)).toBe(false);
   });
 

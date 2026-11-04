@@ -25,7 +25,6 @@ interface Props {
  */
 export default function ActionsDuProbleme({ issue, role, utilisateurs, moiId, nouvelleActionId, onDefinir, onTerminer }: Props) {
   const peutDefinir = peutDefinirAction(role, issue.statut);
-  const peutTerminer = peutTerminerAction(role);
   const sansAction = issue.actions.length === 0;
 
   return (
@@ -76,7 +75,7 @@ export default function ActionsDuProbleme({ issue, role, utilisateurs, moiId, no
                   )}
                 </div>
               </div>
-              {action.statut !== 'terminee' && peutTerminer && (
+              {action.statut !== 'terminee' && peutTerminerAction(role, action.responsable_id, moiId) && (
                 <Button size="sm" icon={<CheckCircleIcon size={14} />} onClick={() => onTerminer(action)}>
                   Terminer
                 </Button>

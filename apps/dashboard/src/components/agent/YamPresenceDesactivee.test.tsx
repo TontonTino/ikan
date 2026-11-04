@@ -3,9 +3,10 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import AgencyEvolution from '../agency/AgencyEvolution';
-import PilotageActionsCorrectivesTab from '../../pages/cx/PilotageActionsCorrectivesTab';
+import PilotageActionsTab from '../../pages/cx/PilotageActionsTab';
+import { FILTRES_ACTIONS_PAR_DEFAUT, TEXTE_VIDE_EN_COURS_RESEAU } from '../../utils/actionsUnifiees';
 
-type PropsActions = React.ComponentProps<typeof PilotageActionsCorrectivesTab>;
+type PropsActions = React.ComponentProps<typeof PilotageActionsTab>;
 import YamChatPanel from './YamChatPanel';
 import YamEtatVide from './YamEtatVide';
 import YamNote from './YamNote';
@@ -45,13 +46,10 @@ describe('drapeau YAM_PRESENCE coupé', () => {
   });
 
   it('page Actions : l’état vide d’origine est conservé', () => {
-    const props = {
-      isAgencyManager: false, agencesList: [], actionsToggle: 'en_cours', setActionsToggle: () => undefined, actionsEnCours: [], actionsTerminees: [],
-      actionsEnCoursTotal: 0, actionsTermineesTotal: 0, actionsLoading: false, actionsError: false, refetchActions: () => undefined, actionsFirstLoadDone: true,
-      actionsLoadingMore: false, loadMoreActions: () => undefined, actionsAgenceId: null, setActionsAgenceId: () => undefined, marquerActionRealisee: async () => undefined,
-    };
-    const html = renderToStaticMarkup(<MemoryRouter><PilotageActionsCorrectivesTab {...(props as unknown as PropsActions)} /></MemoryRouter>);
-    expect(html).toContain('Aucune action n’est en attente de réalisation sur des avis clients.');
+    const props = { isAgencyManager: false, agencesList: [], filtres: FILTRES_ACTIONS_PAR_DEFAUT, setFiltres: () => undefined, lignes: [], total: 0, autreTotal: 0, chargement: false, premierChargement: true, erreur: false, chargementSuite: false, partiel: false, recharger: () => undefined, chargerSuite: () => undefined, confirmerAvis: async () => undefined, apresTerminaison: async () => undefined, openIssueDetail: async () => undefined, selectedIssueId: null, issueDetail: null, issueDetailLoading: false, closeIssueDetail: () => undefined, apresActionIssue: async () => undefined, verifierIssue: async () => undefined };
+    const html = renderToStaticMarkup(<MemoryRouter><PilotageActionsTab {...(props as unknown as PropsActions)} /></MemoryRouter>);
+    expect(html).toContain('Aucune action en cours');
+    expect(html).toContain(TEXTE_VIDE_EN_COURS_RESEAU);
     expect(html).not.toContain('/yam/yam-3d-face');
   });
 });

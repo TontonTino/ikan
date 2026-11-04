@@ -20,7 +20,15 @@ export const STATUTS_DEFINIR_ACTION: readonly IssueStatut[] = ['ouverte', 'reouv
 
 export const peutDefinirAction = (role: UserRole | undefined, statut: IssueStatut): boolean =>
   !!role && ROLES_DEFINIR_ACTION.includes(role) && STATUTS_DEFINIR_ACTION.includes(statut);
-export const peutTerminerAction = (role: UserRole | undefined): boolean => !!role && ROLES_TERMINER_ACTION.includes(role);
+/**
+ * Terminer une action : le CX Manager toujours ; l'Agency Manager seulement SES actions (celles dont il est le responsable). Décision de parcours, appliquée par l'interface :
+ * l'API laisse encore tout Agency Manager de l'agence terminer (à durcir côté serveur dans une PR d'intégrité).
+ */
+export const peutTerminerAction = (role: UserRole | undefined, responsableId?: string | null, moiId?: string): boolean => {
+  if (!role || !ROLES_TERMINER_ACTION.includes(role)) return false;
+  if (role === 'cx_manager') return true;
+  return !!moiId && !!responsableId && responsableId === moiId;
+};
 export const peutVerifierResolution = (role: UserRole | undefined): boolean => !!role && ROLES_VERIFIER_RESOLUTION.includes(role);
 
 // ── Saisie ────────────────────────────────────────────────────────────────────────────────────────

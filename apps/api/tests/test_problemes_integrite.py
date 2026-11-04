@@ -140,7 +140,8 @@ def test_responsable_inexistant_refuse(ctx):
 def test_aucune_route_ne_modifie_une_action_existante():
     """Il n'existe pas de route de modification d'une action : le périmètre du responsable est donc contrôlé à la seule création. Si une route PATCH/PUT est un jour
     ajoutée, ce test échoue et impose d'y appliquer `_verifier_responsable`."""
-    methodes = {(m, r.path) for r in issues.router.routes if "/actions" in r.path for m in r.methods}
+    # Routes d'ÉCRITURE seulement : la lecture (GET /issues/actions, PR 6) ne modifie rien.
+    methodes = {(m, r.path) for r in issues.router.routes if "/actions" in r.path for m in r.methods if m != "GET"}
     assert methodes == {("POST", "/{issue_id}/actions"), ("POST", "/{issue_id}/actions/{action_id}/terminer")}
 
 

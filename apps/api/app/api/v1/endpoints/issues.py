@@ -4,7 +4,7 @@ l'Issue et y rattache des feedbacks à la main. Pas de suggestion IA de regroupe
 pas de clustering, pas de dashboard ni de KPI dédiés (voir le rapport de la tâche).
 """
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Literal, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -26,6 +26,7 @@ from app.schemas.feedback import FeedbackResponse
 from app.schemas.issue import (
     ActionCorrectiveCreate,
     ActionCorrectiveResponse,
+    ActionProblemeListeResponse,
     IssueCreate,
     IssueDetailResponse,
     IssueEscalationCreate,
@@ -306,6 +307,91 @@ def lister_issues(
     ordre = Issue.premiere_detection.asc() if tri == "ancien" else Issue.premiere_detection.desc()
     issues = query.order_by(ordre).offset(offset).limit(limit).all()
     return _enrichir_liste(db, issues, maintenant)
+
+
+@router.get("/actions", response_model=List[ActionProblemeListeResponse])
+def lister_actions_problemes(
+    response: Response,
+    etat: Optional[Literal["a_faire", "terminee", "annulee"]] = Query(None, description="a_faire : ni terminée ni annulée ; terminee ; annulee. Absent : toutes."),
+    responsable_id: Optional[UUID] = Query(None),
+    en_retard: Optional[bool] = Query(None, description="True : actions à faire dont l'échéance est dépassée. False : toutes les autres."),
+    date_debut: Optional[datetime] = Query(None, description="Actions définies à partir de cet instant (inclus). Sans fuseau : UTC."),
+    date_fin: Optional[datetime] = Query(None, description="Actions définies jusqu'à cet instant (inclus). Sans fuseau : UTC."),
+    agence_id: Optional[UUID] = Query(None, description="Une agence de son périmètre ; sinon 404, identique à une agence inconnue."),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+):
+    """Liste des actions des problèmes, une ligne par action (route additive : aucune route existante ne change). Périmètre strict : le CX Manager voit son
+    organisation, l'Agency Manager SA agence ; l'administrateur est refusé (403) ; sans connexion 401. Les chiffres (responsable, retard, dernière action) sont
+    lus en une requête de plus pour toute la page."""
+    if agence_id is not None:
+        # Hors périmètre ou inconnue : la même réponse, rien ne dit si l'agence existe ailleurs.
+        agence = db.query(Agence.id).filter(Agence.id == agence_id)
+        agence = agence.filter(Agence.id == current_user.agence_id) if current_user.role == UserRole.AGENCY_MANAGER else agence.filter(Agence.organisation_id == current_user.organisation_id)
+        if agence.first() is None:
+            raise HTTPException(status_code=404, detail="Agence introuvable")
+    if date_debut is not None and date_fin is not None and _as_utc(date_debut) > _as_utc(date_fin):
+        raise HTTPException(status_code=422, detail="date_debut doit précéder date_fin")
+
+    maintenant = datetime.now(timezone.utc)
+    a_faire = ActionCorrective.statut.notin_(STATUTS_ACTION_TERMINEE)
+    requete = (
+        db.query(ActionCorrective, Issue.titre, Issue.agence_id, Agence.nom, Utilisateur.prenom, Utilisateur.nom)
+        .join(Issue, Issue.id == ActionCorrective.issue_id)
+        .join(Agence, Agence.id == Issue.agence_id)
+        .outerjoin(Utilisateur, Utilisateur.id == ActionCorrective.responsable_id)
+    )
+    if current_user.role == UserRole.AGENCY_MANAGER:
+        requete = requete.filter(Issue.agence_id == current_user.agence_id)
+    else:
+        requete = requete.filter(Issue.organisation_id == current_user.organisation_id)
+
+    if etat == "a_faire":
+        requete = requete.filter(a_faire)
+    elif etat is not None:
+        requete = requete.filter(ActionCorrective.statut == etat)
+    if responsable_id is not None:
+        requete = requete.filter(ActionCorrective.responsable_id == responsable_id)
+    if agence_id is not None:
+        requete = requete.filter(Issue.agence_id == agence_id)
+    if en_retard is not None:
+        depasse = a_faire & ActionCorrective.echeance.isnot(None) & (ActionCorrective.echeance < maintenant)
+        requete = requete.filter(depasse if en_retard else ~depasse)
+    if date_debut is not None:
+        requete = requete.filter(ActionCorrective.created_at >= _as_utc(date_debut))
+    if date_fin is not None:
+        requete = requete.filter(ActionCorrective.created_at <= _as_utc(date_fin))
+
+    response.headers["X-Total-Count"] = str(requete.order_by(None).count())
+    if etat == "terminee":
+        ordre = (ActionCorrective.date_completion.desc().nulls_last(), ActionCorrective.id)
+    else:
+        ordre = (ActionCorrective.echeance.asc().nulls_last(), ActionCorrective.created_at.desc(), ActionCorrective.id)
+    lignes = requete.order_by(*ordre).offset(offset).limit(limit).all()
+
+    # Combien d'actions à faire par problème (pour la page seulement) : « dernière à faire » prévient que terminer résoudra le problème.
+    ids = list({ligne[0].issue_id for ligne in lignes})
+    restantes = {}
+    if ids:
+        restantes = dict(
+            db.query(ActionCorrective.issue_id, func.count(ActionCorrective.id))
+            .filter(ActionCorrective.issue_id.in_(ids), a_faire)
+            .group_by(ActionCorrective.issue_id).all()
+        )
+    resultat = []
+    for action, issue_titre, issue_agence_id, agence_nom, resp_prenom, resp_nom in lignes:
+        encore = action.statut not in STATUTS_ACTION_TERMINEE
+        resultat.append(ActionProblemeListeResponse(
+            id=action.id, issue_id=action.issue_id, titre=action.titre, description=action.description, statut=action.statut,
+            responsable_id=action.responsable_id, responsable_nom=f"{resp_prenom} {resp_nom}".strip() if resp_prenom is not None else None,
+            echeance=action.echeance, date_completion=action.date_completion, created_at=action.created_at,
+            en_retard=(_as_utc(action.echeance) < maintenant) if encore and action.echeance is not None else None,
+            derniere_a_faire=encore and restantes.get(action.issue_id, 0) == 1,
+            issue_titre=issue_titre, agence_id=issue_agence_id, agence_nom=agence_nom,
+        ))
+    return resultat
 
 
 @router.get("/{issue_id}", response_model=IssueDetailResponse)

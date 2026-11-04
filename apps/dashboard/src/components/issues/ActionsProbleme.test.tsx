@@ -70,11 +70,14 @@ describe('états du bloc « Actions à mener »', () => {
     expect(html).toContain('Terminée le <time');
   });
 
-  it('Agency Manager : peut terminer, ne voit pas « Définir une action » ; le nom du responsable n’est jamais inventé', () => {
-    const html = rendre('agency_manager', probleme('action_en_cours', [action('a', { responsable_id: 'autre' })]), [], 'am');
-    expect(html).toContain('Terminer');
+  it('Agency Manager : ne termine que SES actions, ne voit pas « Définir une action » ; le nom du responsable n’est jamais inventé', () => {
+    const html = rendre('agency_manager', probleme('action_en_cours', [action('a', { responsable_id: 'autre' }), action('b', { responsable_id: 'am' })]), [], 'am');
+    expect(html.match(/>Terminer</g)).toHaveLength(1);                       // l'action dont il est responsable, pas celle d'un autre
     expect(html).not.toContain('Définir une action');
     expect(html).toContain('Responsable : Assigné');
+    expect(html).toContain('Responsable : Vous');
+    const autre = rendre('agency_manager', probleme('action_en_cours', [action('a', { responsable_id: 'autre' })]), [], 'am');
+    expect(autre).not.toContain('>Terminer<');
   });
 
   it('le CX Manager voit le nom d’un responsable connu', () => {
