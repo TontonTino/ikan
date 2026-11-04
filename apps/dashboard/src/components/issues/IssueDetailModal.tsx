@@ -10,7 +10,7 @@ import SkeletonBlock from '../ui/SkeletonBlock';
 import { CheckCircleIcon } from '../common/Icons';
 import { fullDate, shortDate } from '../ui/format';
 import { GRAVITE_LABELS, PROBLEME_STATUT_LABELS } from '../../utils/vocabulaire';
-import { estEnAttente, etatDelai, joursDepuis, libelleJours, prochainGeste } from '../../utils/issueSuivi';
+import { estEnAttente, etatDelai, ilYA, joursDepuis, libelleJours, prochainGeste } from '../../utils/issueSuivi';
 import IssueEscalationSection from './IssueEscalationSection';
 
 const STATUT_BADGE_VARIANT: Record<IssueStatut, 'info' | 'elevee' | 'positif'> = {
@@ -130,7 +130,7 @@ export default function IssueDetailModal({ issue, loading, onClose, onTerminerAc
                 <dt style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Enregistré le</dt>
                 <dd style={{ margin: 0, fontWeight: 700 }}>
                   {fullDate(issue.premiere_detection)}
-                  {estEnAttente(issue.statut) ? ` · il y a ${libelleJours(joursDepuis(issue.premiere_detection, maintenant))}` : ''}
+                  {estEnAttente(issue.statut) ? ` · ${ilYA(joursDepuis(issue.premiere_detection, maintenant))}` : ''}
                 </dd>
               </div>
               {issue.derniere_detection && (

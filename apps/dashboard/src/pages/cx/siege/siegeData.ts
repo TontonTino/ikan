@@ -11,6 +11,7 @@
  *    (l'API renvoie alors une évolution null et un taux null / status "no_data").
  */
 import { ESPACE_INSECABLE, formaterNombre, formaterPourcentage } from '../../../utils/formatNombre';
+import { estSansActionEnCours } from '../../../utils/issueSuivi';
 import type { AgenceRankDetail, AgenceSousSeuil, Alerte, EvolutionPoint, Issue, StatKPI } from '../../../types';
 
 // ════════════════════════════════════════════════════════════════════
@@ -342,6 +343,8 @@ export interface SurveillanceInput {
   alertesSeuil: Alerte[];
   /** Issues ouvertes (tous statuts ouverts confondus). */
   issuesOuvertes: Issue[];
+  /** Vrai si la liste des problèmes ouverts est tronquée (limite par statut) : les nombres par agence sont alors des minimums (« ≥ »). */
+  issuesIncompletes?: boolean;
   jours: number;
 }
 
@@ -382,7 +385,7 @@ export const regleSousSeuilTexte = () =>
   `Agences dont la satisfaction des ${REGLE_ALERTE_SEUIL_API.fenetreJours} derniers jours (au moins ${REGLE_ALERTE_SEUIL_API.minAvis} avis) ` +
   `est sous leur seuil. Le badge « Depuis plus de ${REGLE_ALERTE_SEUIL_API.persistanceHeures} h » signale celles qui déclenchent une alerte.`;
 
-export function buildSurveillance({ ranking, alertesSeuil, issuesOuvertes, jours }: SurveillanceInput) {
+export function buildSurveillance({ ranking, alertesSeuil, issuesOuvertes, issuesIncompletes = false, jours }: SurveillanceInput) {
   const parAgence = new Map<string, AgenceASurveiller>();
   const meta = new Map(ranking.map((a) => [a.agence_id, a]));
   const periode = `${jours} derniers jours`;
@@ -432,10 +435,11 @@ export function buildSurveillance({ ranking, alertesSeuil, issuesOuvertes, jours
     }
   }
 
-  // 4. Issues critiques/élevées ouvertes nécessitant une action.
+  // 4. Problèmes critiques/élevés ouverts ou rouverts SANS action en cours : ils attendent une décision. Le critère est le STATUT, pas le drapeau
+  //    `necessite_action` (posé à la création d'une action, jamais retiré : il désigne les problèmes qui ONT une action et ratait les « ouverte »).
   const issuesParAgence = new Map<string, Issue[]>();
   for (const i of issuesOuvertes) {
-    if (!i.necessite_action || (i.severite !== 'critique' && i.severite !== 'elevee')) continue;
+    if (!estSansActionEnCours(i.statut) || (i.severite !== 'critique' && i.severite !== 'elevee')) continue;
     issuesParAgence.set(i.agence_id, [...(issuesParAgence.get(i.agence_id) ?? []), i]);
   }
   for (const [agenceId, issues] of issuesParAgence) {
@@ -443,8 +447,8 @@ export function buildSurveillance({ ranking, alertesSeuil, issuesOuvertes, jours
     const critiques = issues.filter((i) => i.severite === 'critique').length;
     ajouter(agenceId, nom, {
       type: 'issues',
-      texte: `${issues.length} problème${issues.length > 1 ? 's' : ''} à traiter${critiques ? ` (dont ${critiques} critique${critiques > 1 ? 's' : ''})` : ''}`,
-      portee: 'en cours',
+      texte: `${issuesIncompletes ? '≥ ' : ''}${issues.length} problème${issues.length > 1 ? 's' : ''} sans action en cours${critiques ? ` (dont ${critiques} critique${critiques > 1 ? 's' : ''})` : ''}`,
+      portee: 'gravité critique ou élevée',
     });
   }
 

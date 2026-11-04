@@ -53,11 +53,11 @@ describe('priorités de l’agence', () => {
     expect(p.map((x) => x.ton)).toEqual(['critical', 'critical', 'warning']);
   });
 
-  it('problèmes : seuls les problèmes ouverts graves ou nécessitant une action sont prioritaires', () => {
+  it('problèmes : seuls les problèmes ouverts graves, ou sans action en cours, sont prioritaires', () => {
     expect(estProblemePrioritaire(probleme('1', 'critique'))).toBe(true);
     expect(estProblemePrioritaire(probleme('2', 'elevee', 'reouverte'))).toBe(true);
     expect(estProblemePrioritaire(probleme('3', 'faible', 'ouverte', true))).toBe(true);
-    expect(estProblemePrioritaire(probleme('4', 'faible'))).toBe(false);
+    expect(estProblemePrioritaire(probleme('4', 'faible'))).toBe(true);        // ancienne attente : false (le drapeau necessite_action ratait les « ouverte » : il attend une décision)
     expect(estProblemePrioritaire(probleme('5', 'critique', 'resolue'))).toBe(false);
     expect(estProblemePrioritaire(probleme('6', 'critique', 'verifiee'))).toBe(false);
   });
