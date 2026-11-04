@@ -6,6 +6,13 @@ const FOCUSABLE =
 let scrollLocks = 0;
 
 /**
+ * Pile des overlays ouverts (le dernier est au premier plan). Une boîte ouverte PAR-DESSUS une autre (ex. « Définir une action » sur le détail d'un problème)
+ * est seule à réagir à Échap et à Tab : sans cela, Échap fermerait les deux et le focus serait piégé par la boîte du dessous.
+ */
+const pile: symbol[] = [];
+export const estAuPremierPlan = (jeton: symbol, empilees: readonly symbol[] = pile): boolean => empilees[empilees.length - 1] === jeton;
+
+/**
  * Comportement commun Modal / Drawer :
  *  - focus placé dans le panneau à l'ouverture, rendu à l'élément d'origine à la fermeture ;
  *  - Tab / Shift+Tab bouclent dans le panneau (focus trap) ;
@@ -21,6 +28,8 @@ export function useOverlay<T extends HTMLElement>(open: boolean, onClose: () => 
     if (!open) return;
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
+    const jeton = Symbol('overlay');
+    pile.push(jeton);
 
     const first = panel?.querySelector<HTMLElement>('[data-autofocus]') ?? panel?.querySelector<HTMLElement>(FOCUSABLE);
     (first ?? panel)?.focus();
@@ -29,6 +38,7 @@ export function useOverlay<T extends HTMLElement>(open: boolean, onClose: () => 
     document.body.style.overflow = 'hidden';
 
     const onKeyDown = (e: KeyboardEvent) => {
+      if (!estAuPremierPlan(jeton)) return;
       if (e.key === 'Escape') {
         e.stopPropagation();
         onCloseRef.current();
@@ -54,6 +64,8 @@ export function useOverlay<T extends HTMLElement>(open: boolean, onClose: () => 
 
     return () => {
       document.removeEventListener('keydown', onKeyDown);
+      const rang = pile.indexOf(jeton);
+      if (rang >= 0) pile.splice(rang, 1);
       scrollLocks -= 1;
       if (scrollLocks === 0) document.body.style.overflow = '';
       previouslyFocused?.focus?.();
