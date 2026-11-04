@@ -272,14 +272,10 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
     }
   }, [fetchIssuesList]);
 
-  const terminerActionIssue = async (issueId: string, actionId: string) => {
-    try {
-      await issuesApi.terminerAction(issueId, actionId);
-      showToast('Action marquée comme terminée');
-      await rafraichirApresActionIssue(issueId);
-    } catch {
-      showToast("Impossible de terminer l’action. Réessayez.");
-    }
+  // L'appel (créer / terminer une action) est fait par les boîtes de dialogue, qui gèrent leurs erreurs ; la page annonce le résultat et rafraîchit liste, indicateurs et détail.
+  const apresActionIssue = async (issueId: string, message: string) => {
+    showToast(message);
+    await rafraichirApresActionIssue(issueId);
   };
 
   const verifierIssue = async (issueId: string) => {
@@ -312,7 +308,7 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
 
 
       {/* ── SECTION ISSUES (KPI P0 + liste + détail — pas de création ici, voir rapport) ── */}
-      {section === 'issues' && <PilotageIssuesTab isAgencyManager={isAgencyManager} agencesList={agencesList} issuesJours={issuesJours} setIssuesJours={setIssuesJours} issuesAgenceId={issuesAgenceId} setIssuesAgenceId={setIssuesAgenceId} backlogActif={backlogActif} setBacklogActif={setBacklogActif} issuesKpisRefreshToken={issuesKpisRefreshToken} issuesFirstLoadDone={issuesFirstLoadDone} issuesAffichees={issuesAffichees} issuesListRaw={issuesListRaw} issuesTotal={issuesTotal} ancienneteTexte={ancienneteTexte} issuesListError={issuesListError} issuesListLoading={issuesListLoading} fetchIssuesList={fetchIssuesList} openIssueDetail={openIssueDetail} issuesLoadingMore={issuesLoadingMore} loadMoreIssues={loadMoreIssues} selectedIssueId={selectedIssueId} issueDetail={issueDetail} issueDetailLoading={issueDetailLoading} closeIssueDetail={closeIssueDetail} terminerActionIssue={terminerActionIssue} verifierIssue={verifierIssue} />}
+      {section === 'issues' && <PilotageIssuesTab isAgencyManager={isAgencyManager} agencesList={agencesList} issuesJours={issuesJours} setIssuesJours={setIssuesJours} issuesAgenceId={issuesAgenceId} setIssuesAgenceId={setIssuesAgenceId} backlogActif={backlogActif} setBacklogActif={setBacklogActif} issuesKpisRefreshToken={issuesKpisRefreshToken} issuesFirstLoadDone={issuesFirstLoadDone} issuesAffichees={issuesAffichees} issuesListRaw={issuesListRaw} issuesTotal={issuesTotal} ancienneteTexte={ancienneteTexte} issuesListError={issuesListError} issuesListLoading={issuesListLoading} fetchIssuesList={fetchIssuesList} openIssueDetail={openIssueDetail} issuesLoadingMore={issuesLoadingMore} loadMoreIssues={loadMoreIssues} selectedIssueId={selectedIssueId} issueDetail={issueDetail} issueDetailLoading={issueDetailLoading} closeIssueDetail={closeIssueDetail} apresActionIssue={apresActionIssue} verifierIssue={verifierIssue} />}
     </div>
   );
 }

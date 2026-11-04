@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { lienAvis } from '../../utils/liensAgence';
@@ -11,7 +11,14 @@ import { CheckCircleIcon } from '../common/Icons';
 import { fullDate, shortDate } from '../ui/format';
 import { GRAVITE_LABELS, PROBLEME_STATUT_LABELS } from '../../utils/vocabulaire';
 import { estEnAttente, etatDelai, joursDepuis, libelleJours, prochainGeste } from '../../utils/issueSuivi';
+import { peutVerifierResolution, personnesAssignables } from '../../utils/actionsProbleme';
+import type { ActionCorrective } from '../../types';
+import ActionsDuProbleme from './ActionsDuProbleme';
+import DefinirActionDialog from './DefinirActionDialog';
 import IssueEscalationSection from './IssueEscalationSection';
+import Section from './SectionDetail';
+import TerminerActionDialog from './TerminerActionDialog';
+import { useResponsables } from './useResponsables';
 
 const STATUT_BADGE_VARIANT: Record<IssueStatut, 'info' | 'elevee' | 'positif'> = {
   ouverte: 'info',
@@ -29,19 +36,9 @@ interface IssueDetailModalProps {
   issue: IssueDetail | null;
   loading: boolean;
   onClose: () => void;
-  onTerminerAction: (issueId: string, actionId: string) => void | Promise<void>;
+  /** Une action vient d'être créée ou terminée (ou n'existe plus) : annonce le résultat, rafraîchit la liste et le détail. */
+  onActionsChange: (issueId: string, message: string) => void | Promise<void>;
   onVerifier: (issueId: string) => void | Promise<void>;
-}
-
-function Section({ titre, children }: { titre: string; children: React.ReactNode }) {
-  return (
-    <section style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <h3 style={{ fontSize: '0.78rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--color-text-muted)', margin: 0 }}>
-        {titre}
-      </h3>
-      {children}
-    </section>
-  );
 }
 
 /**
@@ -50,8 +47,26 @@ function Section({ titre, children }: { titre: string; children: React.ReactNode
  * « Confirmer la résolution » n'est proposé que si le statut est « Résolu » (le backend
  * refuse sinon) ; terminer la dernière action fait passer le problème à « Résolu ».
  */
-export default function IssueDetailModal({ issue, loading, onClose, onTerminerAction, onVerifier }: IssueDetailModalProps) {
-  const role = useAuthStore((s) => s.user?.role);
+export default function IssueDetailModal({ issue, loading, onClose, onActionsChange, onVerifier }: IssueDetailModalProps) {
+  const moi = useAuthStore((s) => s.user);
+  const role = moi?.role;
+  const [definirOuvert, setDefinirOuvert] = useState(false);
+  const [actionATerminer, setActionATerminer] = useState<ActionCorrective | null>(null);
+  const [nouvelleActionId, setNouvelleActionId] = useState<string | null>(null);
+  // La liste des personnes n'est lisible que par le CX Manager (l'API la refuse à l'Agency Manager : aucun appel pour lui).
+  const { etat: responsables, recharger: rechargerResponsables } = useResponsables(role === 'cx_manager' && !!issue);
+  const utilisateurs = responsables.statut === 'ok' ? responsables.utilisateurs : [];
+  const personnes = issue && moi ? personnesAssignables(utilisateurs, issue.agence_id, moi) : [];
+
+  // Après une création : la nouvelle action reçoit le focus (lecteurs d'écran) et un repère visuel discret, retiré au bout de quelques secondes.
+  useEffect(() => {
+    if (!nouvelleActionId || !issue?.actions.some((a) => a.id === nouvelleActionId)) return undefined;
+    const el = document.getElementById(`action-${nouvelleActionId}`);
+    el?.focus({ preventScroll: true });
+    el?.scrollIntoView?.({ block: 'nearest' });
+    const t = window.setTimeout(() => setNouvelleActionId(null), 4000);
+    return () => window.clearTimeout(t);
+  }, [nouvelleActionId, issue?.actions]);
   const maintenant = Date.now();
   const delai = issue ? etatDelai(issue, maintenant) : null;
   const actionsRestantes = issue ? issue.actions.filter((a) => a.statut !== 'terminee').length : 0;
@@ -65,12 +80,18 @@ export default function IssueDetailModal({ issue, loading, onClose, onTerminerAc
       subtitle={issue?.agence_nom}
       footer={
         !loading && issue && issue.statut === 'resolue' ? (
-          <>
+          peutVerifierResolution(role) ? (
+            <>
+              <span style={{ flex: 1, fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                Confirmez uniquement après avoir constaté que le problème est réellement réglé.
+              </span>
+              <Button icon={<CheckCircleIcon size={16} />} onClick={() => onVerifier(issue.id)}>Confirmer la résolution</Button>
+            </>
+          ) : (
             <span style={{ flex: 1, fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-              Confirmez uniquement après avoir constaté que le problème est réellement réglé.
+              Toutes les actions sont terminées. Le CX Manager confirmera que le problème est réellement réglé.
             </span>
-            <Button icon={<CheckCircleIcon size={16} />} onClick={() => onVerifier(issue.id)}>Confirmer la résolution</Button>
-          </>
+          )
         ) : undefined
       }
     >
@@ -191,57 +212,46 @@ export default function IssueDetailModal({ issue, loading, onClose, onTerminerAc
           </Section>
 
           {/* 3. Actions et responsable */}
-          <Section titre={`Actions à mener (${issue.actions.length})`}>
-            {issue.actions.length === 0 ? (
-              <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>Aucune action à mener définie.</p>
-            ) : (
-              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {issue.actions.map((action) => {
-                  const derniere = action.statut !== 'terminee' && actionsRestantes === 1;
-                  return (
-                    <li
-                      key={action.id}
-                      style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}
-                    >
-                      <div style={{ minWidth: 0, flex: '1 1 220px' }}>
-                        <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--color-text-main)' }}>{action.titre}</div>
-                        {action.description && (
-                          <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>{action.description}</p>
-                        )}
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '6px', fontSize: '0.74rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
-                          {/* responsable_id existe mais l'API n'expose aucun nom : seul le CX Manager peut
-                              résoudre un id en nom (GET /utilisateurs/), alors que l'Agency Manager a aussi
-                              accès à cette fenêtre. On indique « Assigné » sans nom plutôt que d'inventer. */}
-                          {action.responsable_id ? <span>Assigné</span> : <span>Responsable non renseigné</span>}
-                          {action.echeance && <span>Échéance {shortDate(action.echeance)}</span>}
-                          {action.date_completion && <span>Terminée le {shortDate(action.date_completion)}</span>}
-                        </div>
-                        {derniere && (
-                          <p style={{ margin: '6px 0 0', fontSize: '0.76rem', color: 'var(--color-text-muted)' }}>
-                            Terminer cette dernière action fera passer le problème à « Résolu ».
-                          </p>
-                        )}
-                      </div>
-
-                      {action.statut !== 'terminee' ? (
-                        <Button size="sm" icon={<CheckCircleIcon size={14} />} onClick={() => onTerminerAction(issue.id, action.id)}>
-                          Terminer
-                        </Button>
-                      ) : (
-                        <Badge label="Terminée" variant="positif" />
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </Section>
+          <ActionsDuProbleme
+            issue={issue}
+            role={role}
+            utilisateurs={utilisateurs}
+            moiId={moi?.id}
+            nouvelleActionId={nouvelleActionId}
+            onDefinir={() => setDefinirOuvert(true)}
+            onTerminer={setActionATerminer}
+          />
 
           {/* 4. Escalades */}
           <Section titre="Escalades">
             <IssueEscalationSection issueId={issue.id} statut={issue.statut} />
           </Section>
         </div>
+      )}
+      {issue && (
+        <>
+          <DefinirActionDialog
+            issue={definirOuvert ? issue : null}
+            personnes={personnes}
+            responsables={responsables}
+            onRechargerResponsables={rechargerResponsables}
+            onFermer={() => setDefinirOuvert(false)}
+            onCree={(action) => {
+              setDefinirOuvert(false);
+              setNouvelleActionId(action.id);
+              void onActionsChange(issue.id, `Action définie : ${action.titre}`);
+            }}
+            onDisparu={(message) => { setDefinirOuvert(false); void onActionsChange(issue.id, message); }}
+          />
+          <TerminerActionDialog
+            action={actionATerminer}
+            issueId={issue.id}
+            derniere={!!actionATerminer && actionsRestantes === 1}
+            onFermer={() => setActionATerminer(null)}
+            onTerminee={() => { setActionATerminer(null); void onActionsChange(issue.id, 'Action marquée comme terminée'); }}
+            onDisparue={(message) => { setActionATerminer(null); void onActionsChange(issue.id, message); }}
+          />
+        </>
       )}
     </Modal>
   );

@@ -265,6 +265,8 @@ export const issuesApi = {
     api.patch<import('../types').Issue>(`/issues/${issueId}/rattacher-feedback/${feedbackId}`),
   detacherFeedback: (issueId: string, feedbackId: string) =>
     api.patch<import('../types').Issue>(`/issues/${issueId}/detacher-feedback/${feedbackId}`),
+  creerAction: (issueId: string, data: { titre: string; description?: string; responsable_id?: string; echeance?: string }) =>
+    api.post<import('../types').ActionCorrective>(`/issues/${issueId}/actions`, data),
   terminerAction: (issueId: string, actionId: string) =>
     api.post<import('../types').ActionCorrective>(`/issues/${issueId}/actions/${actionId}/terminer`),
   verifier: (issueId: string) =>

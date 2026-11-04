@@ -35,7 +35,7 @@ interface Props {
   ancienneteTexte: string | null; issuesListError: boolean; issuesListLoading: boolean; fetchIssuesList: () => Promise<void>;
   openIssueDetail: (id: string) => Promise<void>; issuesLoadingMore: boolean; loadMoreIssues: () => Promise<void>;
   selectedIssueId: string | null; issueDetail: IssueDetail | null; issueDetailLoading: boolean;
-  closeIssueDetail: () => void; terminerActionIssue: (issueId: string, actionId: string) => Promise<void>;
+  closeIssueDetail: () => void; apresActionIssue: (issueId: string, message: string) => Promise<void>;
   verifierIssue: (issueId: string) => Promise<void>;
 }
 
@@ -51,7 +51,7 @@ export default function PilotageIssuesTab(props: Props) {
     backlogActif, setBacklogActif, issuesKpisRefreshToken, issuesFirstLoadDone, issuesAffichees,
     issuesListRaw, issuesTotal, ancienneteTexte, issuesListError, issuesListLoading, fetchIssuesList,
     openIssueDetail, issuesLoadingMore, loadMoreIssues, selectedIssueId, issueDetail,
-    issueDetailLoading, closeIssueDetail, terminerActionIssue, verifierIssue } = props;
+    issueDetailLoading, closeIssueDetail, apresActionIssue, verifierIssue } = props;
 
   // Filtres de lecture, appliqués côté client aux problèmes déjà chargés.
   const [groupe, setGroupe] = useState<GroupeStatut>('tous');
@@ -259,7 +259,7 @@ export default function PilotageIssuesTab(props: Props) {
           issue={issueDetail}
           loading={issueDetailLoading}
           onClose={closeIssueDetail}
-          onTerminerAction={terminerActionIssue}
+          onActionsChange={apresActionIssue}
           onVerifier={verifierIssue}
         />
       )}
