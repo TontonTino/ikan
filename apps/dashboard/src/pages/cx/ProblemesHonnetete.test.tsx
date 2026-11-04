@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Issue, KPIResult } from '../../types';
 import PilotageActionsCorrectivesTab, { TEXTE_VIDE_EN_COURS_AGENCE, TEXTE_VIDE_EN_COURS_RESEAU } from './PilotageActionsCorrectivesTab';
 import PilotageIssuesTab from './PilotageIssuesTab';
+import { FILTRES_PAR_DEFAUT } from '../../utils/problemesListe';
 import KpiCoreGrid, { CODES_BANDEAU, LigneBandeau } from '../../components/kpi/KpiCoreGrid';
 import { Action } from './siege/SiegeBlocks';
 import { bilanProblemesOuverts } from './siege/siegeData';
@@ -158,10 +159,10 @@ describe('indicateurs qui reposent sur une donnée que l’interface ne produit 
 describe('onglet « Problèmes à traiter » : la liste passe avant les indicateurs', () => {
   const props = (surcharge: Record<string, unknown> = {}) => ({
     isAgencyManager: false, agencesList: [], issuesJours: 30, setIssuesJours: () => undefined, issuesAgenceId: null, setIssuesAgenceId: () => undefined,
-    backlogActif: false, setBacklogActif: () => undefined, issuesKpisRefreshToken: 0, issuesFirstLoadDone: true, issuesAffichees: [issue('ouverte', false, 'a')], issuesListRaw: [issue('ouverte', false, 'a')],
-    issuesTotal: 1, ancienneteTexte: null, issuesListError: false, issuesListLoading: false, fetchIssuesList: async () => undefined, openIssueDetail: async () => undefined,
+    filtres: FILTRES_PAR_DEFAUT, setFiltres: () => undefined, issuesKpisRefreshToken: 0, issuesFirstLoadDone: true, issuesListRaw: [issue('ouverte', false, 'a')],
+    issuesTotal: 1, issuesListError: false, issuesListLoading: false, fetchIssuesList: async () => undefined, openIssueDetail: async () => undefined,
     issuesLoadingMore: false, loadMoreIssues: async () => undefined, selectedIssueId: null, issueDetail: null, issueDetailLoading: false, closeIssueDetail: () => undefined,
-    terminerActionIssue: async () => undefined, verifierIssue: async () => undefined, ...surcharge,
+    apresActionIssue: async () => undefined, verifierIssue: async () => undefined, ...surcharge,
   });
   const rendre = (surcharge?: Record<string, unknown>) =>
     renderToStaticMarkup(<MemoryRouter><PilotageIssuesTab {...(props(surcharge) as unknown as React.ComponentProps<typeof PilotageIssuesTab>)} /></MemoryRouter>);
@@ -177,7 +178,7 @@ describe('onglet « Problèmes à traiter » : la liste passe avant les indicate
   });
 
   it('même ordre pendant le chargement de la liste et quand la liste est vide', () => {
-    for (const s of [{ issuesListLoading: true }, { issuesAffichees: [], issuesListRaw: [], issuesTotal: 0 }]) {
+    for (const s of [{ issuesListLoading: true }, { issuesListRaw: [], issuesTotal: 0 }]) {
       const html = rendre(s);
       expect(html.indexOf('id="issues-liste"')).toBeGreaterThan(-1);
       expect(html.indexOf('id="issues-liste"')).toBeLessThan(html.indexOf('Chargement des indicateurs'));

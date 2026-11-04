@@ -118,10 +118,11 @@ export function personnesAssignables(utilisateurs: readonly UtilisateurListe[], 
   return [{ id: moi.id, libelle: `Moi (${nomComplet(moi)})` }, ...agence];
 }
 
-/** Nom affichable d'un responsable : « Vous », le nom s'il est connu, sinon « Assigné » (l'API n'expose pas de nom : jamais inventé). */
-export function libelleResponsable(responsableId: string | undefined | null, personnes: readonly UtilisateurListe[], moiId: string | undefined): string {
+/** Nom affichable d'un responsable : « Vous », le nom fourni par l'API (`responsable_nom`), le nom d'une liste connue, sinon « Assigné » (jamais un nom inventé). */
+export function libelleResponsable(responsableId: string | undefined | null, personnes: readonly UtilisateurListe[], moiId: string | undefined, nomApi?: string | null): string {
   if (!responsableId) return 'Sans responsable';
   if (responsableId === moiId) return 'Vous';
+  if (nomApi) return nomApi;
   const trouve = personnes.find((u) => u.id === responsableId);
   return trouve ? nomComplet(trouve) : 'Assigné';
 }

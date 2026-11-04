@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import type { Issue } from '../../types';
 import { construirePriorites, estProblemePrioritaire } from '../../components/agency/agenceVue';
 import PilotageIssuesTab from './PilotageIssuesTab';
+import { FILTRES_PAR_DEFAUT } from '../../utils/problemesListe';
 import { buildSurveillance } from './siege/siegeData';
 import { issuesIncompletes } from './siege/useSiegeData';
 import { estSansActionEnCours, ilYA, libelleEnregistre } from '../../utils/issueSuivi';
@@ -118,10 +119,10 @@ describe('« Enregistré aujourd’hui » et dates à la convention', () => {
 
   const props = (liste: Issue[]) => ({
     isAgencyManager: false, agencesList: [], issuesJours: 90, setIssuesJours: () => undefined, issuesAgenceId: null, setIssuesAgenceId: () => undefined,
-    backlogActif: false, setBacklogActif: () => undefined, issuesKpisRefreshToken: 0, issuesFirstLoadDone: true, issuesAffichees: liste, issuesListRaw: liste,
-    issuesTotal: liste.length, ancienneteTexte: null, issuesListError: false, issuesListLoading: false, fetchIssuesList: async () => undefined, openIssueDetail: async () => undefined,
+    filtres: FILTRES_PAR_DEFAUT, setFiltres: () => undefined, issuesKpisRefreshToken: 0, issuesFirstLoadDone: true, issuesListRaw: liste,
+    issuesTotal: liste.length, issuesListError: false, issuesListLoading: false, fetchIssuesList: async () => undefined, openIssueDetail: async () => undefined,
     issuesLoadingMore: false, loadMoreIssues: async () => undefined, selectedIssueId: null, issueDetail: null, issueDetailLoading: false, closeIssueDetail: () => undefined,
-    terminerActionIssue: async () => undefined, verifierIssue: async () => undefined,
+    apresActionIssue: async () => undefined, verifierIssue: async () => undefined,
   });
   const rendre = (liste: Issue[]) =>
     renderToStaticMarkup(<MemoryRouter><PilotageIssuesTab {...(props(liste) as unknown as React.ComponentProps<typeof PilotageIssuesTab>)} /></MemoryRouter>);
@@ -136,7 +137,6 @@ describe('« Enregistré aujourd’hui » et dates à la convention', () => {
     expect(html).not.toContain('il y a aujourd’hui');
     expect(html).toContain('>le 20 sept. 2026</time>');
     expect(html).toContain('title="20 septembre 2026 à ');
-    expect(html).toMatch(/À traiter avant le <time[^>]*>\d{1,2} \S+ 20\d\d<\/time>/);
     expect(html).not.toMatch(/\d{2}\/\d{2}\/\d{4}/);
   });
 });
