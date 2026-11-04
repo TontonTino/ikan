@@ -304,9 +304,6 @@ export default function AdminAgencesContent() {
           <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#02302D' }}>
             Répertoire des agences ({agences.length})
           </h2>
-          <p style={{ margin: '4px 0 0', fontSize: '0.84rem', color: '#64748B' }}>
-            Agences, QR codes et responsables d’agence du réseau
-          </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <button
