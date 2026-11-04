@@ -8,6 +8,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_cx_manager, get_cx_or_agency_manager, get_db
@@ -29,6 +30,7 @@ from app.schemas.issue import (
     IssueDetailResponse,
     IssueEscalationCreate,
     IssueEscalationResponse,
+    IssueListeResponse,
     IssueResponse,
 )
 from app.services.acces_agence import verifier_acces_agence, verifier_acces_feedback, verifier_acces_issue
@@ -220,13 +222,53 @@ def creer_issue(
     return _format_issue_response(issue)
 
 
-@router.get("/", response_model=List[IssueResponse])
+STATUTS_RESOLUS = ("resolue", "verifiee")
+STATUTS_ACTION_TERMINEE = ("terminee", "annulee")
+
+
+def _enrichir_liste(db: Session, issues: List[Issue], maintenant: datetime) -> List[IssueListeResponse]:
+    """Ajoute à chaque ligne les chiffres de lecture. DEUX requêtes groupées pour toute la page (jamais une par problème), sur les index
+    idx_feedbacks_issue_id et idx_actions_correctives_issue_id."""
+    ids = [i.id for i in issues]
+    avis, actions = {}, {}
+    if ids:
+        avis = dict(
+            db.query(Feedback.issue_id, func.count(Feedback.id)).filter(Feedback.issue_id.in_(ids)).group_by(Feedback.issue_id).all()
+        )
+        a_faire = ActionCorrective.statut.notin_(STATUTS_ACTION_TERMINEE)
+        actions = {
+            ligne[0]: ligne[1:]
+            for ligne in db.query(
+                ActionCorrective.issue_id,
+                func.count(ActionCorrective.id),
+                func.coalesce(func.sum(case((a_faire, 1), else_=0)), 0),
+                func.min(case((a_faire, ActionCorrective.echeance), else_=None)),
+            ).filter(ActionCorrective.issue_id.in_(ids)).group_by(ActionCorrective.issue_id).all()
+        }
+    lignes = []
+    for issue in issues:
+        ligne = IssueListeResponse.model_validate(_format_issue_response(issue))
+        total, restantes, echeance = actions.get(issue.id, (0, 0, None))
+        ligne.nb_avis = int(avis.get(issue.id, 0))
+        ligne.nb_actions = int(total)
+        ligne.nb_actions_a_faire = int(restantes)
+        ligne.prochaine_echeance = echeance
+        if issue.date_limite_sla is not None and issue.statut not in STATUTS_RESOLUS:
+            ligne.en_retard = _as_utc(issue.date_limite_sla) < maintenant
+        lignes.append(ligne)
+    return lignes
+
+
+@router.get("/", response_model=List[IssueListeResponse])
 def lister_issues(
     response: Response,
     statut: Optional[str] = Query(None),
     severite: Optional[CriticiteType] = Query(None),
     agence_id: Optional[UUID] = Query(None),
     categorie_id: Optional[UUID] = Query(None),
+    en_retard: Optional[bool] = Query(None, description="True : seulement les problèmes encore à traiter dont le délai de traitement est dépassé. False : tous les autres (délai tenu, sans délai, ou problème résolu)."),
+    date_debut: Optional[datetime] = Query(None, description="Première détection à partir de cet instant (inclus). Sans fuseau : UTC."),
+    date_fin: Optional[datetime] = Query(None, description="Première détection jusqu'à cet instant (inclus). Sans fuseau : UTC."),
     tri: Optional[str] = Query("recent", description="'recent' (défaut, décroissant) ou 'ancien' (croissant) sur premiere_detection. Toute autre valeur ou absence : comportement par défaut, inchangé."),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
@@ -249,11 +291,21 @@ def lister_issues(
         query = query.filter(Issue.agence_id == agence_id)
     if categorie_id:
         query = query.filter(Issue.categorie_id == categorie_id)
+    maintenant = datetime.now(timezone.utc)
+    if en_retard is not None:
+        depasse = (Issue.date_limite_sla.isnot(None)) & (Issue.date_limite_sla < maintenant) & (Issue.statut.notin_(STATUTS_RESOLUS))
+        query = query.filter(depasse if en_retard else ~depasse)
+    if date_debut is not None and date_fin is not None and _as_utc(date_debut) > _as_utc(date_fin):
+        raise HTTPException(status_code=422, detail="date_debut doit précéder date_fin")
+    if date_debut is not None:
+        query = query.filter(Issue.premiere_detection >= _as_utc(date_debut))
+    if date_fin is not None:
+        query = query.filter(Issue.premiere_detection <= _as_utc(date_fin))
 
     response.headers["X-Total-Count"] = str(query.order_by(None).count())
     ordre = Issue.premiere_detection.asc() if tri == "ancien" else Issue.premiere_detection.desc()
     issues = query.order_by(ordre).offset(offset).limit(limit).all()
-    return [_format_issue_response(i) for i in issues]
+    return _enrichir_liste(db, issues, maintenant)
 
 
 @router.get("/{issue_id}", response_model=IssueDetailResponse)

@@ -48,6 +48,21 @@ class IssueResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class IssueListeResponse(IssueResponse):
+    """Ligne de `GET /issues/` : tous les champs de `IssueResponse` (inchangés) + des chiffres calculés à la lecture, jamais stockés.
+
+    - `nb_avis` : avis clients rattachés ; `nb_actions` : toutes les actions du problème ; `nb_actions_a_faire` : celles ni terminées ni annulées.
+    - `prochaine_echeance` : la plus proche échéance parmi les actions à faire ; `None` si aucune action à faire n'a d'échéance.
+    - `en_retard` : `True` / `False` seulement si un délai de traitement est fixé ET que le problème reste à traiter (ni résolu ni vérifié) ; sinon `None`
+      (on ne dit jamais « à l'heure » faute de délai)."""
+
+    nb_avis: int = 0
+    nb_actions: int = 0
+    nb_actions_a_faire: int = 0
+    prochaine_echeance: Optional[datetime] = None
+    en_retard: Optional[bool] = None
+
+
 class ActionCorrectiveCreate(BaseModel):
     titre: str = Field(..., min_length=3, max_length=200)
     description: Optional[str] = None
