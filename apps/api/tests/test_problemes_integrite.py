@@ -86,11 +86,58 @@ def test_confirmer_la_resolution_est_reserve_au_cx_manager_de_l_organisation(ctx
     assert _issue(ctx, iid).statut == ("verifiee" if attendu == 200 else "resolue")
 
 
-@pytest.mark.parametrize("acteur,attendu", [("cx_a", 200), ("am_a", 200), ("am_a2", 403), ("am_b", 403), ("cx_b", 403), ("admin", 403)])
-def test_terminer_une_action_reste_ouvert_au_cx_et_a_l_agency_manager_de_l_agence(ctx, acteur, attendu):
+@pytest.mark.parametrize("acteur,attendu", [
+    ("cx_a", 200),            # le CX Manager de l'organisation
+    ("am_a", 200),            # le RESPONSABLE de l'action
+    ("am_a_bis", 403),        # un autre Agency Manager de la MÊME agence
+    ("am_a2", 403),           # un Agency Manager d'une autre agence
+    ("am_b", 403),            # d'une autre organisation
+    ("cx_b", 403),            # le CX Manager d'une autre organisation
+    ("admin", 403),
+])
+def test_terminer_une_action_est_reserve_au_responsable_et_au_cx_manager(ctx, acteur, attendu):
     iid = _creer_issue(ctx)
-    aid = _creer_action(ctx, iid).json()["id"]
+    aid = _creer_action(ctx, iid, responsable_id=str(ctx.am_a)).json()["id"]
+    r = ctx.call(acteur, "post", f"/issues/{iid}/actions/{aid}/terminer")
+    assert r.status_code == attendu, r.text
+    refus = attendu != 200
+    assert (_actions(ctx, iid)[0].statut, _actions(ctx, iid)[0].date_completion is None) == (("creee", True) if refus else ("terminee", False)), "un refus n'écrit rien"
+    assert _issue(ctx, iid).statut == ("action_en_cours" if refus else "resolue")
+    if acteur == "am_a_bis":
+        assert "responsable de l'action ou le CX Manager" in r.json()["detail"]
+
+
+@pytest.mark.parametrize("acteur,attendu", [("cx_a", 200), ("am_a", 403), ("am_a_bis", 403), ("am_a2", 403), ("admin", 403)])
+def test_action_sans_responsable_seul_le_cx_manager_peut_la_terminer(ctx, acteur, attendu):
+    iid = _creer_issue(ctx)
+    aid = _creer_action(ctx, iid).json()["id"]                                      # aucun responsable
     assert ctx.call(acteur, "post", f"/issues/{iid}/actions/{aid}/terminer").status_code == attendu
+
+
+@pytest.mark.parametrize("acteur,attendu", [("cx_a", 200), ("am_a", 403), ("am_a_bis", 403)])
+def test_action_dont_le_responsable_est_le_cx_manager_n_est_pas_terminable_par_un_agency_manager(ctx, acteur, attendu):
+    iid = _creer_issue(ctx)
+    aid = _creer_action(ctx, iid, responsable_id=str(ctx.cx_a)).json()["id"]
+    assert ctx.call(acteur, "post", f"/issues/{iid}/actions/{aid}/terminer").status_code == attendu
+
+
+def test_un_refus_ne_revele_rien_de_l_etat_de_l_action(ctx):
+    """Le contrôle précède l'idempotence : un Agency Manager non autorisé reçoit la MÊME réponse que l'action soit à faire ou déjà terminée."""
+    iid = _creer_issue(ctx)
+    aid = _creer_action(ctx, iid, responsable_id=str(ctx.am_a)).json()["id"]
+    avant = ctx.call("am_a_bis", "post", f"/issues/{iid}/actions/{aid}/terminer")
+    assert ctx.call("am_a", "post", f"/issues/{iid}/actions/{aid}/terminer").status_code == 200
+    apres = ctx.call("am_a_bis", "post", f"/issues/{iid}/actions/{aid}/terminer")
+    assert (avant.status_code, avant.json()) == (apres.status_code, apres.json()) == (403, avant.json())
+
+
+def test_le_responsable_peut_retenter_apres_avoir_termine_et_reste_idempotent(ctx):
+    iid = _creer_issue(ctx)
+    aid = _creer_action(ctx, iid, responsable_id=str(ctx.am_a)).json()["id"]
+    premiere = ctx.call("am_a", "post", f"/issues/{iid}/actions/{aid}/terminer")
+    seconde = ctx.call("am_a", "post", f"/issues/{iid}/actions/{aid}/terminer")
+    assert (premiere.status_code, seconde.status_code) == (200, 200) and seconde.json() == premiere.json()
+    assert _evenements(ctx, iid, "action_terminee") == 1
 
 
 # ── 2. Responsable dans le périmètre ──────────────────────────────────────────────────────────────────────────────────────────
@@ -154,7 +201,7 @@ def test_terminer_deux_fois_ne_reecrit_ni_la_date_ni_l_historique_ni_la_resoluti
     assert premiere.status_code == 200
     resolution = _issue(ctx, iid).date_resolution
     assert resolution is not None
-    seconde = ctx.call("am_a", "post", f"/issues/{iid}/actions/{aid}/terminer")            # un autre acteur, plus tard : même réponse, rien n'est réécrit
+    seconde = ctx.call("cx_a", "post", f"/issues/{iid}/actions/{aid}/terminer")            # un second appel, plus tard : même réponse, rien n'est réécrit
     assert seconde.status_code == 200
     assert seconde.json() == premiere.json()
     assert seconde.json()["date_completion"] == premiere.json()["date_completion"]
