@@ -35,6 +35,8 @@ export function libelleEvenement(e: Pick<EvenementProbleme, 'type_evenement' | '
     case 'action_terminee': return { texte: 'Action terminée', detail: titre };
     case 'issue_resolue': return { texte: 'Problème résolu : toutes les actions sont terminées', detail: null };
     case 'issue_verifiee': return { texte: 'Résolution confirmée', detail: null };
+    case 'delai_modifie': return { texte: 'Délai de traitement modifié', detail: null };
+    case 'recurrence_modifiee': return { texte: 'Lien de récidive modifié', detail: null };
     default: return { texte: 'Autre événement', detail: null };
   }
 }

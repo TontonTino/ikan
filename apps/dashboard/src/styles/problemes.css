@@ -87,3 +87,17 @@
 .pb-fil__corps { min-width: 0; }
 .pb-fil__texte { margin: 0; font-size: var(--text-sm); font-weight: var(--weight-bold); color: var(--color-text-main); overflow-wrap: anywhere; }
 .pb-fil__meta { margin: 2px 0 0; font-size: var(--text-xs); color: var(--color-text-muted); }
+
+/* Délai de traitement et récurrence (PR 8) */
+.pb-dr { display: flex; flex-direction: column; gap: var(--space-3); }
+.pb-dr__liste { display: flex; flex-direction: column; gap: var(--space-3); }
+.pb-dr__ligne { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); }
+.pb-dr__terme { margin: 0; font-size: var(--text-sm); }
+.pb-dr__terme dt { color: var(--color-text-muted); font-weight: var(--weight-semibold, 600); }
+.pb-dr__terme dd { margin: 0; font-weight: var(--weight-bold); color: var(--color-text-main); }
+.pb-dr__retard { color: var(--color-critical-text); font-weight: var(--weight-extrabold, 800); }
+.pb-dr__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.pb-dr__editeur { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3); background: var(--color-bg-subtle); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.pb-dr__pied { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.pb-dr__qui { margin: 0; font-size: var(--text-xs); color: var(--color-text-muted); }
+@media (max-width: 767px) { .pb-dr .ui-btn--sm { min-height: var(--touch-target); } }

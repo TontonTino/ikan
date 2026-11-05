@@ -133,6 +133,7 @@ MATRICE: dict[tuple[str, str], object] = {
     ("PATCH", f"{V1}/issues/{{issue_id}}/rattacher-feedback/{{feedback_id}}"): CA,
     ("PATCH", f"{V1}/issues/{{issue_id}}/detacher-feedback/{{feedback_id}}"): CA,
     ("POST", f"{V1}/issues/{{issue_id}}/actions"): CX_, ("POST", f"{V1}/issues/{{issue_id}}/actions/{{action_id}}/terminer"): CA,   # PR 3 : le CX Manager décide et crée l'action
+    ("PATCH", f"{V1}/issues/{{issue_id}}/delai-recurrence"): CX_,                                                                     # PR 8 : seul le CX Manager fixe le délai et la récurrence
     ("POST", f"{V1}/issues/{{issue_id}}/verifier"): CX_,                                                                              # PR 3 : seul le CX Manager confirme la résolution
     # --- KPI, secteurs ---
     ("GET", f"{V1}/kpis/"): CA, ("GET", f"{V1}/kpis/{{code}}"): CA, ("GET", f"{V1}/secteurs/"): TOUS,
@@ -159,6 +160,7 @@ BODIES_VALIDES = {
     ("PATCH", f"{V1}/alertes/agences/{{agence_id}}/seuil"): {"seuil_alerte": 75},
     ("POST", f"{V1}/issues/{{issue_id}}/escalations"): {"motif": "sla"},
     ("POST", f"{V1}/issues/{{issue_id}}/actions"): {"titre": "Action de test"},
+    ("PATCH", f"{V1}/issues/{{issue_id}}/delai-recurrence"): {"date_limite_sla": "2099-01-01T00:00:00Z"},
     ("POST", f"{V1}/issues/"): {"titre": "Issue de test", "agence_id": str(uid("A1"))},
     ("POST", f"{V1}/utilisateurs/"): {"nom": "N", "prenom": "P", "email": "nouveau@secret-matrice.io", "password": "Un-Mot-De-Passe-Solide-2026",
                                       "role": "agency_manager", "agence_id": str(uid("A1"))},

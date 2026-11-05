@@ -23,6 +23,14 @@ class IssueCreate(BaseModel):
     feedback_ids: List[uuid.UUID] = []
 
 
+class IssueDelaiRecurrenceUpdate(BaseModel):
+    """Corps de `PATCH /issues/{id}/delai-recurrence` (CX Manager). Un champ ABSENT n'est pas touché ; un champ à `null` est EFFACÉ ; un champ renseigné est posé."""
+    model_config = {"extra": "forbid"}
+
+    date_limite_sla: Optional[datetime] = None
+    issue_origine_id: Optional[uuid.UUID] = None
+
+
 class IssueResponse(BaseModel):
     id: uuid.UUID
     organisation_id: uuid.UUID

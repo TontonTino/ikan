@@ -9,7 +9,7 @@ import SkeletonBlock from '../ui/SkeletonBlock';
 import { CheckCircleIcon } from '../common/Icons';
 import { fullDate, shortDate } from '../ui/format';
 import { GRAVITE_LABELS, PROBLEME_STATUT_LABELS } from '../../utils/vocabulaire';
-import { estEnAttente, etatDelai, ilYA, joursDepuis, libelleJours, prochainGeste } from '../../utils/issueSuivi';
+import { estEnAttente, ilYA, joursDepuis, prochainGeste } from '../../utils/issueSuivi';
 import { peutVerifierResolution, personnesAssignables } from '../../utils/actionsProbleme';
 import ActionsDuProbleme from './ActionsDuProbleme';
 import DefinirActionDialog from './DefinirActionDialog';
@@ -18,6 +18,7 @@ import Section from './SectionDetail';
 import TerminerActionDialog from './TerminerActionDialog';
 import { useResponsables } from './useResponsables';
 import { FilActiviteListe, useFilActivite } from './FilActivite';
+import DelaiRecurrence from './DelaiRecurrence';
 
 const STATUT_BADGE_VARIANT: Record<IssueStatut, 'info' | 'elevee' | 'positif'> = {
   ouverte: 'info',
@@ -116,7 +117,6 @@ export default function IssueDetailContenu({ issue, loading, onNaviguer, onActio
   }, [issueId]);
 
   const maintenant = Date.now();
-  const delai = issue ? etatDelai(issue, maintenant) : null;
   const actionsRestantes = issue ? issue.actions.filter((a) => a.statut !== 'terminee' && a.statut !== 'annulee').length : 0;
 
   if (loading || !issue) {
@@ -201,16 +201,6 @@ export default function IssueDetailContenu({ issue, loading, onNaviguer, onActio
                 <dd style={{ margin: 0, fontWeight: 700 }}>{fullDate(issue.derniere_detection)}</dd>
               </div>
             )}
-            {delai && (
-              <div>
-                <dt style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Délai de traitement</dt>
-                <dd style={{ margin: 0, fontWeight: 800, color: delai.etat === 'depasse' ? 'var(--color-critical-text)' : undefined }}>
-                  {delai.etat === 'depasse'
-                    ? `Dépassé${delai.jours > 0 ? ` depuis ${libelleJours(delai.jours)}` : ' aujourd’hui'} (échéance le ${shortDate(delai.date)})`
-                    : <>À traiter avant le <time dateTime={delai.date} title={fullDate(delai.date)}>{shortDate(delai.date)}</time></>}
-                </dd>
-              </div>
-            )}
             {issue.date_resolution && (
               <div>
                 <dt style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Résolu le</dt>
@@ -223,22 +213,11 @@ export default function IssueDetailContenu({ issue, loading, onNaviguer, onActio
                 <dd style={{ margin: 0, fontWeight: 700 }}>{fullDate(issue.date_verification)}</dd>
               </div>
             )}
-            {issue.issue_origine_id && (
-              <div>
-                <dt style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Origine</dt>
-                <dd style={{ margin: 0, fontWeight: 700 }}>
-                  Récidive d’un problème précédent
-                  {onOuvrirOrigine && (
-                    <>
-                      {' · '}
-                      <button type="button" className="ui-item__link pb-lien" onClick={() => onOuvrirOrigine(issue.issue_origine_id as string)}>Voir ce problème</button>
-                    </>
-                  )}
-                </dd>
-              </div>
-            )}
           </dl>
         </Section>
+
+        {/* 1 bis. Délai de traitement et récurrence (le CX Manager décide ; l'Agency Manager lit) */}
+        <DelaiRecurrence issue={issue} role={role} onChange={onActionsChange} onOuvrirOrigine={onOuvrirOrigine} maintenant={maintenant} />
 
         {/* 2. Actions et responsable */}
         <ActionsDuProbleme
