@@ -277,6 +277,9 @@ export const issuesApi = {
     api.post<import('../types').ActionCorrective>(`/issues/${issueId}/actions/${actionId}/terminer`),
   verifier: (issueId: string) =>
     api.post<import('../types').Issue>(`/issues/${issueId}/verifier`),
+  /** Délai de traitement et récurrence (CX Manager seul, contrôlé par le serveur). Champ absent : inchangé ; null : effacé. */
+  modifierDelaiRecurrence: (issueId: string, data: { date_limite_sla?: string | null; issue_origine_id?: string | null }) =>
+    api.patch<import('../types').Issue>(`/issues/${issueId}/delai-recurrence`, data),
   // Journal d'escalade : une escalade est un enregistrement manuel, sans changement de statut ni notification.
   listEscalades: (issueId: string) =>
     api.get<import('../types').IssueEscalation[]>(`/issues/${issueId}/escalations`),

@@ -28,6 +28,7 @@ from app.schemas.issue import (
     ActionCorrectiveResponse,
     ActionProblemeListeResponse,
     IssueCreate,
+    IssueDelaiRecurrenceUpdate,
     EvenementProblemeResponse,
     IssueDetailResponse,
     IssueEscalationCreate,
@@ -152,6 +153,9 @@ def creer_issue(
     current_user: Utilisateur = Depends(get_cx_or_agency_manager),
 ):
     """Crée l'Issue (statut='ouverte') et rattache les feedback_ids fournis s'il y en a."""
+    if current_user.role == UserRole.AGENCY_MANAGER and (data.date_limite_sla is not None or data.issue_origine_id is not None):
+        # Le délai de traitement et la récurrence sont décidés par le CX Manager (règle serveur, pas seulement d'interface).
+        raise HTTPException(status_code=403, detail="Le délai de traitement et la récurrence sont fixés par le CX Manager")
     verifier_acces_agence(db, current_user, data.agence_id)
 
     agence = db.query(Agence).filter(Agence.id == data.agence_id).first()
@@ -718,6 +722,75 @@ def terminer_action_corrective(
     db.commit()
     db.refresh(action)
     return _formater_action(db, action)
+
+
+@router.patch("/{issue_id}/delai-recurrence", response_model=IssueResponse)
+def modifier_delai_recurrence(
+    issue_id: UUID,
+    data: IssueDelaiRecurrenceUpdate,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_manager),
+):
+    """Réservé au CX Manager de l'organisation (Agency Manager et administrateur : 403 ; hors organisation : 404 identique à un identifiant inconnu). Route additive, sans migration :
+    elle écrit les colonnes existantes `date_limite_sla` et `issue_origine_id`. Champ absent = inchangé ; `null` = effacé.
+
+    Délai : refusé (409) si le problème est déjà résolu ou vérifié (un délai posé après coup fausserait le respect du délai) ; doit être postérieur à la première détection (422).
+    Récurrence : mêmes règles que la création (source de la même organisation, résolue ou vérifiée, elle-même non récurrente, plus ancienne) -> 422 ; un problème qui sert déjà de
+    source ne peut pas devenir récurrent (409). IDEMPOTENT : une valeur identique n'écrit rien (pas d'événement). Chaque changement est inscrit à l'historique, sans identifiant."""
+    issue = db.query(Issue).filter(Issue.id == issue_id).with_for_update().first()
+    if issue is not None:
+        try:
+            verifier_acces_issue(current_user, issue)
+        except HTTPException:
+            issue = None
+    if issue is None:
+        raise HTTPException(status_code=404, detail="Problème introuvable")
+
+    champs = data.model_fields_set
+    changements: List[str] = []
+
+    if "date_limite_sla" in champs:
+        nouveau = data.date_limite_sla
+        ancien = issue.date_limite_sla
+        meme = (nouveau is None and ancien is None) or (
+            nouveau is not None and ancien is not None and _as_utc(nouveau) == _as_utc(ancien)
+        )
+        if not meme:
+            if issue.statut in ("resolue", "verifiee"):
+                raise HTTPException(status_code=409, detail="Ce problème est déjà résolu : son délai de traitement ne peut plus être modifié")
+            if nouveau is not None and _as_utc(nouveau) <= _as_utc(issue.premiere_detection):
+                raise HTTPException(status_code=422, detail="Le délai doit être postérieur à la première détection du problème")
+            issue.date_limite_sla = nouveau
+            changements.append("delai_modifie")
+
+    if "issue_origine_id" in champs:
+        nouvelle = data.issue_origine_id
+        if nouvelle != issue.issue_origine_id:
+            if nouvelle is not None:
+                if nouvelle == issue.id:
+                    raise HTTPException(status_code=422, detail="Un problème ne peut pas être sa propre origine")
+                a_des_occurrences = db.query(Issue.id).filter(Issue.issue_origine_id == issue.id).first() is not None
+                if a_des_occurrences:
+                    raise HTTPException(status_code=409, detail="D'autres problèmes sont déjà liés à celui-ci : il ne peut pas devenir une récurrence")
+                source = db.query(Issue).filter(
+                    Issue.id == nouvelle, Issue.organisation_id == issue.organisation_id,
+                ).with_for_update().first()
+                if source is None:
+                    raise HTTPException(status_code=422, detail="Problème d'origine invalide pour ce périmètre")
+                if source.issue_origine_id is not None:
+                    raise HTTPException(status_code=422, detail="Un problème déjà récurrent ne peut pas servir d'origine")
+                if source.statut not in ("resolue", "verifiee"):
+                    raise HTTPException(status_code=422, detail="Le problème d'origine doit être résolu ou vérifié")
+                if _as_utc(source.premiere_detection) >= _as_utc(issue.premiere_detection):
+                    raise HTTPException(status_code=422, detail="Le problème d'origine doit être antérieur à celui-ci")
+            issue.issue_origine_id = nouvelle
+            changements.append("recurrence_modifiee")
+
+    for type_evenement in changements:
+        _log_issue_event(db, issue, current_user, type_evenement)
+    db.commit()
+    db.refresh(issue)
+    return _format_issue_response(issue)
 
 
 @router.post("/{issue_id}/verifier", response_model=IssueResponse)

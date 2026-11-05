@@ -332,8 +332,8 @@ def test_agency_manager_ne_peut_pas_lier_source_dune_autre_agence(ctx):
     response = ctx.call("am_a2", "post", "/issues/", json={
         "titre": "Occurrence invalide", "agence_id": str(ctx.agence_a2), "issue_origine_id": source_id,
     })
-    assert response.status_code == 400
-    assert response.json()["detail"] == "Issue origine invalide pour ce périmètre"
+    assert response.status_code == 403   # PR 8 : avant 400 « Issue origine invalide pour ce périmètre » ; la récurrence est désormais décidée par le CX Manager seul
+    assert response.json()["detail"] == "Le délai de traitement et la récurrence sont fixés par le CX Manager"
 
 
 def test_statut_source_modifie_apres_lien_ne_supprime_pas_le_fait_historique(ctx):

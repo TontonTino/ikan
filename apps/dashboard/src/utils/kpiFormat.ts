@@ -134,9 +134,22 @@ export function formatKpiSubtitle(k: KPIResult, jours: number): string {
     const n = k.denominator;
     return `Échantillon faible (${n} réponse${n !== 1 ? 's' : ''})`;
   }
+  // Délai (SLA) et récurrence : un taux calculé sur très peu de problèmes ne doit pas passer pour solide. La valeur reste (rien n'est caché ni inventé), accompagnée de sa base.
+  // Même seuil que la règle de petit volume du moteur d'indicateurs (moins de 5 : échantillon faible).
+  if ((k.code === 'SLA_COMPLIANCE_RATE' || k.code === 'ISSUE_RECURRENCE_RATE') && k.status === 'ok' && k.denominator != null && k.denominator < SEUIL_ECHANTILLON_FAIBLE) {
+    const n = k.denominator;
+    const part = k.numerator ?? 0;
+    const pl = n !== 1 ? 's' : '';
+    return k.code === 'SLA_COMPLIANCE_RATE'
+      ? `Échantillon faible : ${part} sur ${n} problème${pl} résolu${pl} avec un délai`
+      : `Échantillon faible : ${part} récurrent${part !== 1 ? 's' : ''} sur ${n} problème${pl}`;
+  }
   if (k.status === 'no_data') return `Pas assez de données sur ${jours} jours`;
   return `${jours} derniers jours`;
 }
+
+/** En dessous de ce nombre de problèmes au dénominateur, un taux est dit « échantillon faible » (même seuil que le moteur d'indicateurs : SEUIL_MIN_ISSUES_TELECOM). */
+export const SEUIL_ECHANTILLON_FAIBLE = 5;
 
 /**
  * Indicateurs qui reposent sur des données que l'interface ne permet pas (encore) de produire : durée de résolution, boucle fermée, résolution,
