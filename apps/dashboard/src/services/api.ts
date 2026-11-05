@@ -260,6 +260,9 @@ export const issuesApi = {
   /** Actions des problèmes (une ligne par action), avec leur problème d'origine ; total dans l'en-tête X-Total-Count. */
   listActions: (params?: { etat?: 'a_faire' | 'terminee' | 'annulee'; responsable_id?: string; en_retard?: boolean; date_debut?: string; date_fin?: string; agence_id?: string; limit?: number; offset?: number }) =>
     api.get<import('../types').ActionProbleme[]>('/issues/actions', { params }),
+  /** Fil d'activité d'un problème, du plus récent au plus ancien ; total dans l'en-tête X-Total-Count. */
+  historique: (issueId: string, params?: { limit?: number; offset?: number }) =>
+    api.get<import('../types').EvenementProbleme[]>(`/issues/${issueId}/historique`, { params }),
   get: (issueId: string) =>
     api.get<import('../types').IssueDetail>(`/issues/${issueId}`),
   create: (data: { titre: string; description?: string; agence_id: string; categorie_id?: string; severite?: string; feedback_ids?: string[] }) =>

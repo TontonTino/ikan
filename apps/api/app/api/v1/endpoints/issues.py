@@ -28,6 +28,7 @@ from app.schemas.issue import (
     ActionCorrectiveResponse,
     ActionProblemeListeResponse,
     IssueCreate,
+    EvenementProblemeResponse,
     IssueDetailResponse,
     IssueEscalationCreate,
     IssueEscalationResponse,
@@ -392,6 +393,46 @@ def lister_actions_problemes(
             issue_titre=issue_titre, agence_id=issue_agence_id, agence_nom=agence_nom,
         ))
     return resultat
+
+
+# `details` d'un événement n'est exposé que pour ces types (titre d'une action du problème lui-même). Les autres textes stockés (description à la création, « avis déplacé vers/depuis
+# le problème « … » (id) ») peuvent nommer un AUTRE problème, d'une autre agence : jamais exposés.
+TYPES_AVEC_DETAILS_PUBLICS = ("action_creee", "action_terminee")
+
+
+@router.get("/{issue_id}/historique", response_model=List[EvenementProblemeResponse])
+def historique_issue(
+    issue_id: UUID,
+    response: Response,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_cx_or_agency_manager),
+):
+    """Fil d'activité d'un problème, du plus récent au plus ancien : création, avis rattaché / détaché / déplacé, action définie / terminée, résolution, vérification, réouverture
+    (selon ce que la base contient réellement ; aucun événement n'est reconstitué). LECTURE SEULE, route additive. Hors périmètre = 404 identique à un identifiant inconnu ;
+    administrateur 403 ; sans connexion 401."""
+    issue = db.query(Issue).filter(Issue.id == issue_id).first()
+    if issue is not None:
+        try:
+            verifier_acces_issue(current_user, issue)
+        except HTTPException:
+            issue = None
+    if issue is None:
+        raise HTTPException(status_code=404, detail="Problème introuvable")
+
+    requete = db.query(HistoriqueIssue).filter(HistoriqueIssue.issue_id == issue.id)
+    response.headers["X-Total-Count"] = str(requete.count())
+    lignes = requete.order_by(HistoriqueIssue.date_evenement.desc(), HistoriqueIssue.id.desc()).offset(offset).limit(limit).all()
+    return [
+        EvenementProblemeResponse(
+            id=h.id, type_evenement=h.type_evenement, date_evenement=h.date_evenement,
+            auteur_nom=(h.auteur_nom or "").strip() or None, auteur_role=(h.auteur_role or "").strip() or None,
+            ancien_statut=h.ancien_statut, nouveau_statut=h.nouveau_statut,
+            details=h.details if h.type_evenement in TYPES_AVEC_DETAILS_PUBLICS else None,
+        )
+        for h in lignes
+    ]
 
 
 @router.get("/{issue_id}", response_model=IssueDetailResponse)
