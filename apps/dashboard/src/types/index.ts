@@ -859,6 +859,18 @@ export interface ActionCorrective {
   updated_at: string;
 }
 
+/** Événement du fil d'un problème (`GET /issues/{id}/historique`) : lu tel que la base le contient ; `auteur_nom` null si inconnu ; `details` seulement pour le titre d'une action. */
+export interface EvenementProbleme {
+  id: string;
+  type_evenement: string;
+  date_evenement: string;
+  auteur_nom?: string | null;
+  auteur_role?: string | null;
+  ancien_statut?: string | null;
+  nouveau_statut?: string | null;
+  details?: string | null;
+}
+
 /** Ligne de `GET /issues/actions` : une action d'un problème, avec son problème d'origine. `en_retard` : null sans échéance ou si l'action est faite. */
 export interface ActionProbleme {
   id: string;

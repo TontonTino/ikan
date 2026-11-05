@@ -17,6 +17,7 @@ import IssueEscalationSection from './IssueEscalationSection';
 import Section from './SectionDetail';
 import TerminerActionDialog from './TerminerActionDialog';
 import { useResponsables } from './useResponsables';
+import { FilActiviteListe, useFilActivite } from './FilActivite';
 
 const STATUT_BADGE_VARIANT: Record<IssueStatut, 'info' | 'elevee' | 'positif'> = {
   ouverte: 'info',
@@ -29,6 +30,17 @@ const STATUT_BADGE_VARIANT: Record<IssueStatut, 'info' | 'elevee' | 'positif'> =
 // Position du statut dans le cycle de traitement. Un problème rouvert repart du début.
 const ETAPES = ['Enregistré', 'Actions en cours', 'Résolu', 'Résolution vérifiée'];
 const ETAPE_ACTUELLE: Record<IssueStatut, number> = { ouverte: 0, reouverte: 0, action_en_cours: 1, resolue: 2, verifiee: 3 };
+/** Section « Activité » : le fil du problème (rechargé quand le problème évolue : nouvelle action, résolution, avis rattaché). */
+function SectionActivite({ issue }: { issue: IssueDetail }) {
+  const { etat, voirPlus, reessayer, ajoutes } = useFilActivite(issue.id, `${issue.statut}|${issue.actions.length}|${issue.feedbacks.length}|${issue.updated_at}`);
+  const total = etat.statut === 'ok' ? ` (${etat.total})` : '';
+  return (
+    <Section titre={`Activité${total}`}>
+      <FilActiviteListe etat={etat} voirPlus={voirPlus} reessayer={reessayer} ajoutes={ajoutes} />
+    </Section>
+  );
+}
+
 /** Au-delà, les avis liés sont repliés : on voit les premiers, les autres s'ouvrent à la demande. */
 export const AVIS_VISIBLES = 3;
 
@@ -261,7 +273,10 @@ export default function IssueDetailContenu({ issue, loading, onNaviguer, onActio
           </div>
         </Section>
 
-        {/* 4. Escalades */}
+        {/* 4. Activité : le fil réellement enregistré, du plus récent au plus ancien */}
+        <SectionActivite issue={issue} />
+
+        {/* 5. Escalades */}
         <Section titre="Escalades">
           <IssueEscalationSection issueId={issue.id} statut={issue.statut} />
         </Section>

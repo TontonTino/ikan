@@ -86,6 +86,23 @@ class ActionProblemeListeResponse(BaseModel):
     agence_nom: Optional[str] = None
 
 
+class EvenementProblemeResponse(BaseModel):
+    """Un événement du fil d'un problème (`GET /issues/{id}/historique`), lu tel que la base le contient. Liste BLANCHE de champs : jamais d'identifiant d'avis ni d'utilisateur,
+    jamais de texte d'avis, jamais l'agence ni le titre d'un AUTRE problème. `details` : seulement le titre d'une action (événements `action_creee` et `action_terminee`).
+    `auteur_nom` : null si le nom n'est pas renseigné (jamais deviné)."""
+
+    id: uuid.UUID
+    type_evenement: str
+    date_evenement: datetime
+    auteur_nom: Optional[str] = None
+    auteur_role: Optional[str] = None
+    ancien_statut: Optional[str] = None
+    nouveau_statut: Optional[str] = None
+    details: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
 class ActionCorrectiveCreate(BaseModel):
     titre: str = Field(..., min_length=3, max_length=200)
     description: Optional[str] = None

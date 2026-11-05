@@ -77,3 +77,13 @@
 .pb-barre-actions { display: flex; flex-direction: column; gap: var(--space-3); }
 .pb-liste-actions { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
 .pb-liste-actions > li[aria-current="true"] { box-shadow: inset 4px 0 0 var(--color-primary); }
+
+/* ── Fil d'activité d'un problème (même langage que l'historique des alertes : jetons, points, texte sobre) ─────────────────────────── */
+.pb-fil { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.pb-fil__item { position: relative; display: flex; gap: var(--space-3); padding-bottom: var(--space-3); }
+.pb-fil__item:not(:last-child)::before { content: ''; position: absolute; left: 5px; top: 16px; bottom: 0; width: 2px; background: var(--color-border); }
+.pb-fil__item:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; border-radius: var(--radius-md); }
+.pb-fil__point { flex: none; width: 12px; height: 12px; margin-top: 4px; border-radius: 50%; background: var(--color-surface); border: 2px solid var(--color-primary); }
+.pb-fil__corps { min-width: 0; }
+.pb-fil__texte { margin: 0; font-size: var(--text-sm); font-weight: var(--weight-bold); color: var(--color-text-main); overflow-wrap: anywhere; }
+.pb-fil__meta { margin: 2px 0 0; font-size: var(--text-xs); color: var(--color-text-muted); }
