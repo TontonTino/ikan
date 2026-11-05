@@ -74,11 +74,13 @@ def ctx():
                         email="ama@test.bf", mot_de_passe_hash="x", role=UserRole.AGENCY_MANAGER, active=True)
     am_a2 = Utilisateur(id=uuid4(), organisation_id=org_a.id, agence_id=agence_a2.id, nom="N", prenom="AM-A2",
                         email="ama2@test.bf", mot_de_passe_hash="x", role=UserRole.AGENCY_MANAGER, active=True)
+    am_a_bis = Utilisateur(id=uuid4(), organisation_id=org_a.id, agence_id=agence_a.id, nom="N", prenom="AM-A-bis",
+                           email="amabis@test.bf", mot_de_passe_hash="x", role=UserRole.AGENCY_MANAGER, active=True)
     cx_b = Utilisateur(id=uuid4(), organisation_id=org_b.id, nom="N", prenom="CX-B", email="cxb@test.bf",
                         mot_de_passe_hash="x", role=UserRole.CX_MANAGER, active=True)
     am_b = Utilisateur(id=uuid4(), organisation_id=org_b.id, agence_id=agence_b.id, nom="N", prenom="AM-B",
                         email="amb@test.bf", mot_de_passe_hash="x", role=UserRole.AGENCY_MANAGER, active=True)
-    db.add_all([cx_a, am_a, am_a2, cx_b, am_b])
+    db.add_all([cx_a, am_a, am_a_bis, am_a2, cx_b, am_b])
     db.flush()
 
     qr_a = QRCode(id=uuid4(), agence_id=agence_a.id, code="QR-A", url="http://test/a", actif=True)
@@ -93,7 +95,7 @@ def ctx():
 
     ids = SimpleNamespace(
         org_a=org_a.id, org_b=org_b.id, agence_a=agence_a.id, agence_a2=agence_a2.id, agence_b=agence_b.id,
-        cx_a=cx_a.id, am_a=am_a.id, am_a2=am_a2.id, cx_b=cx_b.id, am_b=am_b.id, fb_a=fb_a.id, fb_b=fb_b.id,
+        cx_a=cx_a.id, am_a=am_a.id, am_a_bis=am_a_bis.id, am_a2=am_a2.id, cx_b=cx_b.id, am_b=am_b.id, fb_a=fb_a.id, fb_b=fb_b.id,
     )
     db.close()
 
@@ -111,6 +113,7 @@ def ctx():
     users = {
         "cx_a": SimpleNamespace(id=ids.cx_a, role=UserRole.CX_MANAGER, active=True, agence_id=None, organisation_id=ids.org_a, nom="A", prenom="CX"),
         "am_a": SimpleNamespace(id=ids.am_a, role=UserRole.AGENCY_MANAGER, active=True, agence_id=ids.agence_a, organisation_id=ids.org_a, nom="A", prenom="AM"),
+        "am_a_bis": SimpleNamespace(id=ids.am_a_bis, role=UserRole.AGENCY_MANAGER, active=True, agence_id=ids.agence_a, organisation_id=ids.org_a, nom="A-bis", prenom="AM"),
         "am_a2": SimpleNamespace(id=ids.am_a2, role=UserRole.AGENCY_MANAGER, active=True, agence_id=ids.agence_a2, organisation_id=ids.org_a, nom="A2", prenom="AM"),
         "admin": SimpleNamespace(id=uuid4(), role=UserRole.ADMIN, active=True, agence_id=None, organisation_id=None, nom="Sys", prenom="Admin"),
         "cx_b": SimpleNamespace(id=ids.cx_b, role=UserRole.CX_MANAGER, active=True, agence_id=None, organisation_id=ids.org_b, nom="B", prenom="CX"),

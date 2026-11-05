@@ -40,8 +40,8 @@ def _nouvel_issue(app, donnees, titre="Problème de test"):
     return r.json()["id"]
 
 
-def _nouvelle_action(app, donnees, iid, titre="Action de test"):
-    r = appeler(app, "POST", f"/api/v1/issues/{iid}/actions", donnees["users"]["cx_a"], {"titre": titre})
+def _nouvelle_action(app, donnees, iid, titre="Action de test", responsable=None):
+    r = appeler(app, "POST", f"/api/v1/issues/{iid}/actions", donnees["users"]["cx_a"], {"titre": titre, **({"responsable_id": str(responsable)} if responsable else {})})
     assert r.status_code == 201, r.text
     return r.json()["id"]
 
@@ -65,7 +65,7 @@ def _en_parallele(app, appels):
 
 def test_dix_appels_simultanes_pour_terminer_une_action_donnent_une_seule_fin(pg, donnees, reelle):  # noqa: F811
     iid = _nouvel_issue(reelle, donnees)
-    aid = _nouvelle_action(reelle, donnees, iid)
+    aid = _nouvelle_action(reelle, donnees, iid, responsable=donnees["users"]["am_a0"])         # PR 6b : le responsable et le CX Manager terminent, en concurrence
     cx, am = donnees["users"]["cx_a"], donnees["users"]["am_a0"]
     appels = [lambda u=(cx if i % 2 else am): appeler(reelle, "POST", f"/api/v1/issues/{iid}/actions/{aid}/terminer", u) for i in range(NB_APPELS)]
     reponses = _en_parallele(reelle, appels)
