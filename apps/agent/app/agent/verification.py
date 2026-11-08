@@ -6,7 +6,8 @@ code, champ `calculs_verifies`). Cette vérification ne juge pas la justesse d'u
 détecte seulement un nombre ABSENT de la source (statistique, durée, effectif, délai inventés).
 
 Elle est volontairement prudente côté faux positifs :
-  - les numéros de liste (« 1. », « 2) ») et les dates ISO ne comptent pas ;
+  - les numéros de liste (« 1. », « 2) »), les dates ISO et les nombres de structure du texte (« Top 3 »,
+    « les 3 premières », « rang 2 », « 2e ») ne comptent pas : ils ne portent aucune affirmation sur les données ;
   - une valeur 0-1 de la source (ex. sentiment 0,55) autorise aussi sa forme en pourcentage (55) ;
   - le nombre d'éléments de chaque liste de la source est autorisé (ex. « 4 alertes »).
 """
@@ -20,6 +21,16 @@ _NOMBRE_RE = re.compile(r"\d+(?:[.,]\d+)?")
 _NUMERO_LISTE_RE = re.compile(r"(?m)^\s*(?:[-*•]\s*)?\d{1,2}[.)]\s+")
 _DATE_ISO_RE = re.compile(
     r"\b\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?"
+)
+
+
+# Nombres qui ne font que structurer la phrase (jamais une donnée). Volontairement étroit : « 3 agences » ou
+# « 3 avis » restent contrôlés, car ce sont des affirmations chiffrées.
+_STRUCTURE_RE = re.compile(
+    r"(?i)\b(?:top\s*\d{1,2}\b"
+    r"|(?:rang|n°|numéro|numero)\s*\d{1,2}\b"
+    r"|(?:les\s+)?\d{1,2}\s+(?:premi[eè]re?s?|derni[eè]re?s?)\b"
+    r"|\d{1,2}(?:er|ère|ere|re|e|ème|eme)\b)"
 )
 
 
@@ -82,7 +93,7 @@ def nombres_autorises(*sources: Any) -> set[str]:
 
 def nombres_non_justifies(reponse: str, autorises: set[str]) -> list[str]:
     """Nombres de la réponse absents de la source, dans l'ordre d'apparition (forme brute)."""
-    sans_dates = _DATE_ISO_RE.sub(" ", reponse)
+    sans_dates = _STRUCTURE_RE.sub(" ", _DATE_ISO_RE.sub(" ", reponse))
     return [
         brut
         for normalise, brut in nombres_de(sans_dates, ignorer_numeros_de_liste=True).items()
