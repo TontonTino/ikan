@@ -33,7 +33,7 @@ import requests
 
 from sqlalchemy.orm import Session
 
-from app.agent import calculs, coherence, conversation_manager, perimetre, queries, secteur, verification
+from app.agent import calculs, classement, coherence, conversation_manager, perimetre, queries, secteur, verification
 from app.agent.minimisation import pour_llm
 from app.agent.intent_classifier import (
     MOTS_CLES_INTENTIONS, _strip_accents, categoriser_question_sans_intention, classifier_intention,
@@ -117,9 +117,11 @@ NOMMER les agences.
 """ + _REGLES_DONNEES + """
 
 CONSIGNES SPÉCIFIQUES :
-- Commence par le verdict, en nommant explicitement l'agence : « L'agence X a la satisfaction la plus faible :
-  32,5 % sur 40 feedbacks. » (valeurs prises telles quelles dans les données). Ne réponds JAMAIS par thème ou
-  de façon générale à la place d'une agence.
+- Le verdict (quelle agence est la plus faible / la plus élevée) est calculé et écrit par le système, placé AVANT
+  ta réponse : n'écris AUCUNE phrase de verdict et n'affirme jamais qu'une agence est « la plus faible » ou « la
+  plus élevée ». Commente le classement en nommant les agences, avec des valeurs prises telles quelles dans les
+  données. Ne réponds JAMAIS par thème ou de façon générale à la place d'une agence.
+- Une agence marquée `volume_faible` n'entre pas dans la comparaison : cite-la à part, comme moins fiable.
 - Selon la question : « la plus faible / la pire / la moins performante / en difficulté » → utilise
   `plus_faibles` ; « la meilleure / en tête / top » → utilise `meilleures`. Si le sens n'est pas précisé,
   donne les deux extrémités.
@@ -203,8 +205,12 @@ MARQUEUR_TRONQUEE = (
     "\n\n[Réponse interrompue : la fin n'a pas pu être générée. Reformulez ou posez une question plus précise.]"
 )
 MARQUEUR_VALEURS_NON_VERIFIEES = (
-    "\n\n⚠ Vérification automatique : les valeurs suivantes ne figurent pas dans les données et ne doivent pas "
-    "être prises en compte : {nombres}."
+    "\n\n⚠ Vérification automatique : le chiffre {nombres} cité dans cette réponse n'a pas pu être confirmé "
+    "par vos données. Ne vous y fiez pas."
+)
+MARQUEUR_VALEURS_NON_VERIFIEES_PLURIEL = (
+    "\n\n⚠ Vérification automatique : les chiffres {nombres} cités dans cette réponse n'ont pas pu être "
+    "confirmés par vos données. Ne vous y fiez pas."
 )
 
 MESSAGE_AGENCE_HORS_PERIMETRE = (
@@ -702,7 +708,10 @@ def _generer(
         resultat += MARQUEUR_SUGGESTIONS_RETIREES
     if "nombres" in problemes:
         avertissements.append("valeurs_non_verifiees: " + ", ".join(problemes["nombres"]))
-        resultat += MARQUEUR_VALEURS_NON_VERIFIEES.format(nombres=", ".join(problemes["nombres"]))
+        marqueur = (
+            MARQUEUR_VALEURS_NON_VERIFIEES if len(problemes["nombres"]) == 1 else MARQUEUR_VALEURS_NON_VERIFIEES_PLURIEL
+        )
+        resultat += marqueur.format(nombres=" ; ".join(problemes["nombres"]))
     autres = [f"proportion : {p}" for p in problemes.get("proportions", [])]
     autres += [f"élément absent des données : {c}" for c in problemes.get("capacites", [])]
     if autres:
@@ -931,6 +940,15 @@ def repondre_question(
         donnees = queries.query_classement_agences(
             db, organisation_id, agence_id=agence_id, jours=jours_classement
         )
+        if not donnees["perimetre_restreint_a_une_agence"] and not classement.comparaison_possible(donnees):
+            # Moins de deux agences avec un volume suffisant : aucun verdict, réponse écrite par le code
+            # (aucun appel au modèle, donc aucune phrase « la plus faible » possible).
+            donnees = {**donnees, "comparaison_possible": False}
+            return _finaliser_tour(
+                db, conversation, conversation_id_effectif, question, intention,
+                classement.reponse_comparaison_impossible(donnees), donnees, agence_id, jours_classement,
+                perimetre_texte=perimetre_txt,
+            )
         user_prompt = (
             f"Question du manager : « {question} »\n\n"
             "Voici le classement des agences (rang 1 = la moins satisfaisante) sur la période, "
@@ -947,6 +965,14 @@ def repondre_question(
         reponse_classement, tronquee, avertissements = _generer(
             sys_classement, user_prompt, messages_classement, 600, sources=(donnees, question),
         )
+        if not donnees["perimetre_restreint_a_une_agence"]:
+            # Comparaison affichée (au moins deux agences à volume suffisant) : le verdict vient du classement
+            # calculé ; une ligne du modèle qui le contredit est retirée.
+            reponse_classement, contredites = classement.retirer_verdicts_contradictoires(reponse_classement, donnees)
+            if contredites:
+                avertissements = [*avertissements, "verdict_modele_contradictoire_retire"]
+            verdict = classement.verdict_calcule(donnees, classement.sens_de_la_question(question))
+            reponse_classement = f"{verdict}\n\n{reponse_classement}" if reponse_classement else verdict
         reponse_classement = _avec_perimetre(reponse_classement, role, noms_agences.get(agence_id) if agence_id else None)
         return _finaliser_tour(
             db, conversation, conversation_id_effectif, question, intention,

@@ -129,8 +129,10 @@ def espion(monkeypatch):
 
     def classement(db, org, agence_id=None, jours=30):
         e.requetes.append(("classement", agence_id))
-        return {"plus_faibles": [{"agence_nom": "Agence Sfax Ville", "satisfaction_pct": 40.0, "nb_feedbacks": 5}],
-                "meilleures": [], "periode_jours": jours, "nb_agences_classees": 3,
+        sfax = {"agence_nom": "Agence Sfax Ville", "satisfaction_pct": 40.0, "nb_feedbacks": 5, "volume_faible": False}
+        tunis = {"agence_nom": "Agence Tunis Lac", "satisfaction_pct": 80.0, "nb_feedbacks": 10, "volume_faible": False}
+        return {"plus_faibles": [sfax, tunis], "meilleures": [tunis, sfax], "classement_complet": [sfax, tunis],
+                "periode_jours": jours, "nb_agences_classees": 2, "seuil_volume_faible": 5,
                 "perimetre_restreint_a_une_agence": False, "agences_actives_sans_feedback": []}
 
     def reco(db, org, agence_id=None, jours=7):
