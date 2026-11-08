@@ -33,6 +33,47 @@ def client(monkeypatch, tmp_path):
     return TestClient(app)
 
 
+def _valid_debug_data():
+    """Réponse debug_token d'un jeton de Page valide avec les trois permissions requises."""
+    return {
+        "type": "PAGE",
+        "is_valid": True,
+        "scopes": ["pages_show_list", "pages_read_engagement", "pages_read_user_content"],
+        "expires_at": 0,
+    }
+
+
+def _oauth_graph(pages, debug_token):
+    """Faux client Graph : échange OAuth réussi, Pages fournies, debug_token piloté par le test."""
+
+    class FakeGraphClient:
+        async def exchange_oauth_code(self, code):
+            return {"access_token": "short-lived-test-token"}
+
+        async def exchange_for_long_lived_token(self, token):
+            return {"access_token": "long-lived-test-token"}
+
+        async def fetch_managed_pages(self, token):
+            return pages
+
+        async def debug_token(self, token):
+            return await debug_token(token)
+
+        async def aclose(self):
+            return None
+
+    return lambda **_: FakeGraphClient()
+
+
+def _callback(client, nonce="nonce-x"):
+    state = create_oauth_state("client-a", "https://client.example/connect", settings.state_secret, nonce=nonce)
+    return client.get(
+        "/connect/facebook/callback",
+        params={"state": state, "code": "test-code"},
+        follow_redirects=False,
+    )
+
+
 def test_oauth_start_requires_key_and_checks_return_origin(client):
     payload = {"client_id": "client-a", "return_to": "https://client.example/connect"}
     assert client.post("/connect/facebook/start", json=payload).status_code == 401
@@ -112,6 +153,10 @@ def test_oauth_callback_encrypts_page_token_and_upserts_without_duplicates(clien
             assert token == "long-lived-test-token"
             return [{"id": "page-1", "name": "Page Demo", "category": "Business", "access_token": "page-test-token"}]
 
+        async def debug_token(self, token):
+            assert token == "page-test-token"
+            return _valid_debug_data()
+
         async def aclose(self):
             return None
 
@@ -137,6 +182,124 @@ def test_oauth_callback_encrypts_page_token_and_upserts_without_duplicates(clien
     assert pages[0].page_token_encrypted != "page-test-token"
     assert decrypt_token(pages[0].page_token_encrypted) == "page-test-token"
     assert "page-test-token" not in api.page_store.path.read_text(encoding="utf-8")
+
+
+def test_oauth_callback_token_validation_failure_marks_page_reauth_required(client, monkeypatch):
+    """Un jeton dont la validation échoue n'est JAMAIS enregistré comme valide (régression : il l'était)."""
+
+    async def failing_debug_token(token):
+        raise RuntimeError("debug_token indisponible")
+
+    pages = [{"id": "page-1", "name": "Page Demo", "access_token": "page-test-token"}]
+    monkeypatch.setattr(api, "facebook_client_factory", _oauth_graph(pages, failing_debug_token))
+
+    response = _callback(client)
+
+    assert response.status_code == 302
+    location = response.headers["location"]
+    assert "status=error" in location
+    assert "code=token_validation_failed" in location
+    assert "status=success" not in location
+    stored = asyncio.run(api.page_store.list_pages("client-a"))
+    assert len(stored) == 1
+    assert stored[0].is_valid is False
+    assert stored[0].status == "reauth_required"
+    assert stored[0].last_error == "token_validation_failed"
+    assert stored[0].expires_at is None
+    # Le jeton reste chiffré au repos, même quand il n'est pas validé.
+    assert "page-test-token" not in api.page_store.path.read_text(encoding="utf-8")
+
+
+def test_oauth_callback_counts_only_valid_active_pages(client, monkeypatch):
+    async def debug_token(token):
+        if token == "token-ok":
+            return _valid_debug_data()
+        if token == "token-missing-scope":
+            return {**_valid_debug_data(), "scopes": ["pages_show_list"]}
+        raise RuntimeError("debug_token indisponible")
+
+    pages = [
+        {"id": "page-ok", "name": "Valide", "access_token": "token-ok"},
+        {"id": "page-ko", "name": "Échec de validation", "access_token": "token-ko"},
+        {"id": "page-scope", "name": "Permissions manquantes", "access_token": "token-missing-scope"},
+    ]
+    monkeypatch.setattr(api, "facebook_client_factory", _oauth_graph(pages, debug_token))
+
+    location = _callback(client).headers["location"]
+
+    assert "status=success" in location
+    assert "pages=1" in location
+    stored = {page.page_id: page for page in asyncio.run(api.page_store.list_pages("client-a"))}
+    assert stored["page-ok"].status == "active" and stored["page-ok"].is_valid is True
+    assert stored["page-ko"].status == "reauth_required" and stored["page-ko"].is_valid is False
+    assert stored["page-scope"].status == "error"
+
+
+def test_oauth_callback_without_any_valid_page_reports_validation_failure(client, monkeypatch):
+    async def debug_token(token):
+        return {**_valid_debug_data(), "is_valid": False}
+
+    pages = [{"id": "page-1", "name": "Page", "access_token": "token-expired"}]
+    monkeypatch.setattr(api, "facebook_client_factory", _oauth_graph(pages, debug_token))
+
+    location = _callback(client).headers["location"]
+
+    assert "status=error" in location
+    assert "code=token_validation_failed" in location
+
+
+def test_oauth_start_derives_redirect_uri_from_render_external_url(client, monkeypatch):
+    monkeypatch.setattr(settings, "fb_redirect_uri", "")
+    monkeypatch.setenv("RENDER_EXTERNAL_URL", "https://veille.example.test/")
+    payload = {"client_id": "client-a", "return_to": "https://client.example/connect"}
+
+    response = client.post("/connect/facebook/start", json=payload, headers={"X-API-Key": "test-api-key"})
+
+    assert response.status_code == 200
+    query = parse_qs(urlsplit(response.json()["authorize_url"]).query)
+    assert query["redirect_uri"] == ["https://veille.example.test/connect/facebook/callback"]
+
+
+def test_explicit_redirect_uri_wins_over_render_external_url(client, monkeypatch):
+    monkeypatch.setenv("RENDER_EXTERNAL_URL", "https://veille.example.test")
+    assert settings.facebook_redirect_uri == "https://api.example/connect/facebook/callback"
+
+
+def test_oauth_start_unavailable_without_any_redirect_uri(client, monkeypatch):
+    monkeypatch.setattr(settings, "fb_redirect_uri", "")
+    monkeypatch.delenv("RENDER_EXTERNAL_URL", raising=False)
+    payload = {"client_id": "client-a", "return_to": "https://client.example/connect"}
+
+    response = client.post("/connect/facebook/start", json=payload, headers={"X-API-Key": "test-api-key"})
+
+    assert response.status_code == 503
+
+
+def test_code_exchange_sends_the_derived_redirect_uri(monkeypatch):
+    """L'échange du code OAuth utilise la même URI que l'autorisation (sinon Meta le refuse)."""
+    import httpx
+    from scraping_service.facebook.client import FacebookGraphClient
+
+    monkeypatch.setattr(settings, "fb_app_id", "test-app-id")
+    monkeypatch.setattr(settings, "fb_app_secret", "test-app-secret")
+    monkeypatch.setattr(settings, "fb_redirect_uri", "")
+    monkeypatch.setenv("RENDER_EXTERNAL_URL", "https://veille.example.test")
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.update(dict(request.url.params))
+        return httpx.Response(200, json={"access_token": "t"})
+
+    async def exchange():
+        graph = FacebookGraphClient(access_token="", transport=httpx.MockTransport(handler))
+        try:
+            await graph.exchange_oauth_code("code-1")
+        finally:
+            await graph.aclose()
+
+    asyncio.run(exchange())
+
+    assert seen["redirect_uri"] == "https://veille.example.test/connect/facebook/callback"
 
 
 def test_oauth_callback_denial_and_state_replay(client):

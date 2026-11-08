@@ -103,3 +103,62 @@ def test_api_ai_analyze_endpoint(test_setup):
 
 def test_unified_facebook_collector_alias():
     assert FacebookCollector is FacebookScraper
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        # Négation française
+        ("Ce n'est pas bon du tout", "négatif"),
+        ("Ce n’est pas rapide", "négatif"),
+        ("Je ne suis pas satisfait", "négatif"),
+        ("Je ne suis jamais déçu", "positif"),
+        ("Service sans problème, rapide", "positif"),
+        ("Aucun souci avec l'équipe", "positif"),
+        ("C'est sans défaut", "positif"),
+        ("Pas mauvais", "positif"),
+        ("Jamais satisfait du résultat", "négatif"),
+        ("Pas mauvais mais pas génial non plus", "neutre"),
+        # Négation anglaise
+        ("Not good at all", "négatif"),
+        ("I don't love it", "négatif"),
+        ("This is not bad", "positif"),
+        ("Without any problem, great experience", "positif"),
+        ("Hardly fast, really slow", "négatif"),
+        ("Never disappointed, I love it", "positif"),
+        # Sans négation : comportement d'origine conservé
+        ("Super service, je recommande", "positif"),
+        ("Service nul", "négatif"),
+        ("J'adore cette application", "positif"),
+        ("Great support, very helpful", "positif"),
+        ("Terrible service, the worst", "négatif"),
+        ("Livraison correcte", "neutre"),
+        ("", "neutre"),
+        ("   ", "neutre"),
+    ],
+)
+def test_negation_window_sentiment(text, expected):
+    result = run(RuleBasedAIAnalyzer().analyze(text))
+
+    assert result["sentiment"] == expected
+    assert 0.0 <= result["confidence"] <= 1.0
+
+
+def test_negation_does_not_leak_past_punctuation_or_opposition():
+    analyzer = RuleBasedAIAnalyzer()
+
+    # La virgule ferme la portée de « pas » : « super » reste positif.
+    assert run(analyzer.analyze("Pas de retard, super équipe"))["sentiment"] == "positif"
+    # « mais » ferme aussi la portée : « nul » reste négatif.
+    assert run(analyzer.analyze("Pas mal mais service nul"))["sentiment"] == "négatif"
+
+
+def test_sentiment_labels_are_the_historical_ones():
+    """Les trois libellés consommés en aval ne changent pas (accent compris sur « négatif »)."""
+    analyzer = RuleBasedAIAnalyzer()
+    labels = {
+        run(analyzer.analyze(text))["sentiment"]
+        for text in ("Super", "Service nul", "Ok", "Not good")
+    }
+
+    assert labels == {"positif", "négatif", "neutre"}

@@ -28,9 +28,21 @@ class RuleBasedAIAnalyzer:
     }
     NEGATIVE_WORDS = {
         "mauvais", "nul", "lent", "horrible", "déçu", "incompétent", "arnaque", "problème",
-        "erreur", "jamais", "pire", "catastrophe", "voleurs", "inadmissible", "décevant", "bug",
+        "erreur", "pire", "catastrophe", "voleurs", "inadmissible", "décevant", "bug",
+        "souci", "défaut",
         "bad", "terrible", "worst", "slow", "broken", "scam", "disappointed", "poor"
     }
+    # « jamais » est un marqueur de négation (« jamais déçu » est positif), plus un mot négatif.
+    NEGATORS = {
+        "ne", "pas", "jamais", "rien", "guère", "guere", "aucun", "aucune",
+        "sans", "ni", "not", "no", "never", "without", "hardly", "cannot",
+    }
+    # Une opposition ou une ponctuation ferme la portée de la négation.
+    OPPOSITION_WORDS = {
+        "mais", "cependant", "toutefois", "pourtant", "néanmoins", "neanmoins", "but", "however",
+    }
+    NEGATION_WINDOW = 3
+    PUNCTUATION = {".", ",", ";", ":", "!", "?", "(", ")", "[", "]", "\n", "—", "–"}
 
     THEMES_KEYWORDS = {
         "service_client": ["service", "support", "conseiller", "équipe", "réponse", "accueil", "agent", "contact"],
@@ -40,20 +52,43 @@ class RuleBasedAIAnalyzer:
         "experience_utilisateur": ["interface", "utilisation", "facile", "simple", "intuitif", "intuitive", "ergonomie", "design", "utiliser", "expérience", "navigation"],
     }
 
+    def _polarity_score(self, cleaned: str) -> int:
+        """Score signé (positifs − négatifs) ; un marqueur de négation inverse les mots polarisés
+        qui le suivent dans une fenêtre de quelques mots, jusqu'à la ponctuation ou une opposition."""
+        # Élisions et contractions ramenées à un marqueur explicite : « n'est » → « ne est »,
+        # « don't » → « do not ». Les autres élisions (j'adore, l'équipe) se découpent sur l'apostrophe.
+        expanded = re.sub(r"\bn'", "ne ", cleaned)
+        expanded = re.sub(r"n't\b", " not", expanded)
+        tokens = re.findall(r"[.,;:!?()\[\]\n—–]|\w+", expanded)
+
+        score = 0
+        window = 0
+        for token in tokens:
+            if token in self.PUNCTUATION or token in self.OPPOSITION_WORDS:
+                window = 0  # ponctuation ou opposition : la négation ne porte plus
+            elif token in self.NEGATORS:
+                window = self.NEGATION_WINDOW  # une double négation ne se re-inverse pas
+            elif token in self.POSITIVE_WORDS:
+                score += -1 if window > 0 else 1
+                window = max(0, window - 1)
+            elif token in self.NEGATIVE_WORDS:
+                score += 1 if window > 0 else -1
+                window = max(0, window - 1)
+            elif window > 0:
+                window -= 1
+        return score
+
     async def analyze(self, text: str) -> dict[str, Any]:
-        cleaned = text.lower()
-        words = set(re.findall(r"\b\w+\b", cleaned))
+        cleaned = (text or "").replace("’", "'").lower()
+        score = self._polarity_score(cleaned)
 
-        pos_matches = words.intersection(self.POSITIVE_WORDS)
-        neg_matches = words.intersection(self.NEGATIVE_WORDS)
-
-        # Détermination du sentiment
-        if len(pos_matches) > len(neg_matches):
+        # Détermination du sentiment (libellés de sortie inchangés : positif / négatif / neutre)
+        if score > 0:
             sentiment = "positif"
-            confidence = min(0.70 + 0.10 * len(pos_matches), 0.98)
-        elif len(neg_matches) > len(pos_matches):
+            confidence = min(0.70 + 0.10 * score, 0.98)
+        elif score < 0:
             sentiment = "négatif"
-            confidence = min(0.70 + 0.10 * len(neg_matches), 0.98)
+            confidence = min(0.70 + 0.10 * abs(score), 0.98)
         else:
             sentiment = "neutre"
             confidence = 0.65

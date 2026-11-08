@@ -107,13 +107,26 @@ async def sync_all(
         active_pages = [page for page in await page_store.list_pages() if page.status == "active"]
         results = []
         for page in active_pages:
-            result = await _sync_page_unlocked(
-                page,
-                store=page_store,
-                feedback_store=feedback_store or FileFeedbackStore(),
-                client_factory=client_factory,
-            )
-            results.append(result)
-            if result["status"] == "rate_limited":
+            try:
+                result = await _sync_page_unlocked(
+                    page,
+                    store=page_store,
+                    feedback_store=feedback_store or FileFeedbackStore(),
+                    client_factory=client_factory,
+                )
+            except RateLimitError:
+                # Limite Meta atteinte sur cette Page : elle reste « active » pour la prochaine
+                # passe, les résultats déjà obtenus sont conservés et on n'insiste pas sur les
+                # Pages suivantes (la limite est partagée par l'application).
+                results.append(
+                    {
+                        "page_id": page.page_id,
+                        "status": "rate_limited",
+                        "partial": False,
+                        "errors": ["rate_limited"],
+                        "count": 0,
+                    }
+                )
                 break
+            results.append(result)
         return {"status": "success", "pages": results}

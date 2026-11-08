@@ -221,13 +221,13 @@ async def health(
 async def start_facebook_connection(request: ConnectFacebookRequest) -> dict[str, str]:
     if not _allowed_return_url(request.return_to):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Origine de retour non autorisée.")
-    if not settings.state_secret or not settings.fb_app_id or not settings.fb_redirect_uri:
+    if not settings.state_secret or not settings.fb_app_id or not settings.facebook_redirect_uri:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Connexion Facebook indisponible.")
 
     state = create_oauth_state(request.client_id, request.return_to, settings.state_secret)
     query: dict[str, str] = {
         "client_id": settings.fb_app_id,
-        "redirect_uri": settings.fb_redirect_uri,
+        "redirect_uri": settings.facebook_redirect_uri,
         "state": state,
         "response_type": "code",
     }
@@ -284,18 +284,22 @@ async def facebook_callback(
                 logger.warning("Jeton refusé pour la page %s : %s", page_id, exc)
                 continue
             except Exception as exc:
-                logger.warning("debug_token a rencontré une erreur pour la page %s : %s", page_id, exc)
+                logger.warning("Échec de validation du jeton pour la page %s : %s", page_id, exc)
+                # Un jeton qu'on n'a pas pu valider n'est jamais présenté comme valide :
+                # la Page est enregistrée mais doit être reconnectée.
                 validation = {
                     "token_type": "PAGE",
-                    "is_valid": True,
-                    "expires_at": 0,
+                    "is_valid": False,
+                    "expires_at": None,
                     "data_access_expires_at": None,
                     "scopes": scopes,
-                    "status": "active",
-                    "last_error": None,
+                    "status": "reauth_required",
+                    "last_error": "token_validation_failed",
                     "token_checked_at": datetime.now(timezone.utc),
                 }
 
+            is_valid = bool(validation.get("is_valid", False))
+            page_status = validation.get("status", "active" if is_valid else "reauth_required")
             page_scopes = validation.get("scopes") or scopes
             await page_store.upsert_page(
                 ConnectedPage(
@@ -304,10 +308,10 @@ async def facebook_callback(
                     page_name=str(page.get("name") or "Page Facebook"),
                     category=page.get("category") if isinstance(page.get("category"), str) else None,
                     page_token_encrypted=encrypt_token(page_token),
-                    status=validation.get("status", "active"),
+                    status=page_status,
                     scopes=page_scopes,
                     token_type=validation.get("token_type", "PAGE"),
-                    is_valid=validation.get("is_valid", True),
+                    is_valid=is_valid,
                     expires_at=validation.get("expires_at"),
                     data_access_expires_at=validation.get("data_access_expires_at"),
                     last_error=validation.get("last_error"),
@@ -315,7 +319,11 @@ async def facebook_callback(
                     token_checked_at=validation.get("token_checked_at") or datetime.now(timezone.utc),
                 )
             )
-            connected_count += 1
+            # Seules les Pages au jeton valide ET actives comptent comme connectées.
+            if is_valid and page_status == "active":
+                connected_count += 1
+        if pages and connected_count == 0:
+            return _redirect_result(return_to, "error", code="token_validation_failed")
         return _redirect_result(return_to, "success", pages=connected_count)
     except Exception:
         return _redirect_result(return_to, "error", code="connection_failed")
@@ -368,13 +376,13 @@ async def get_page_reconnect_url(page_uuid: str, client_id: str, return_to: str)
     page = await page_store.get_page(page_uuid)
     if page is None or page.client_id != client_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page introuvable.")
-    if not settings.state_secret or not settings.fb_app_id or not settings.fb_redirect_uri:
+    if not settings.state_secret or not settings.fb_app_id or not settings.facebook_redirect_uri:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Connexion Facebook indisponible.")
 
     state = create_oauth_state(client_id, return_to, settings.state_secret)
     query: dict[str, str] = {
         "client_id": settings.fb_app_id,
-        "redirect_uri": settings.fb_redirect_uri,
+        "redirect_uri": settings.facebook_redirect_uri,
         "state": state,
         "response_type": "code",
     }

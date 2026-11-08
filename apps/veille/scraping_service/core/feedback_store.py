@@ -106,8 +106,14 @@ class FileFeedbackStore:
         return new_items
 
     def list_items(self, client_id: str, *, offset: int = 0, limit: int = 100) -> list[dict[str, Any]]:
-        client_directory = self.data_dir / "feedback" / validate_storage_id(client_id)
+        feedback_root = self.data_dir / "feedback"
+        client_directory = feedback_root / validate_storage_id(client_id)
         if not client_directory.exists():
+            return []
+        # Sur un système de fichiers insensible à la casse (Windows, macOS), « CLIENT-B » ouvrirait
+        # le dossier de « client-b » : on exige le nom exact du dossier pour que la casse ne
+        # puisse jamais servir à lire les retours d'un autre client.
+        if client_id not in {entry.name for entry in feedback_root.iterdir()}:
             return []
         records: list[dict[str, Any]] = []
         for path in sorted(client_directory.glob("*.jsonl")):
