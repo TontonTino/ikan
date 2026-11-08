@@ -68,7 +68,7 @@ Copy-Item .env.example .env
 | `VEILLE_FB_APP_ID` | Identifiant de votre App Meta. | `123456789012345` |
 | `VEILLE_FB_APP_SECRET` | Secret de l'application Meta. | `secret_meta` |
 | `VEILLE_FB_API_VERSION` | Version Meta Graph API ciblée. | `v21.0` |
-| `VEILLE_FB_REDIRECT_URI` | URL de callback OAuth pour la connexion des clients. | `http://127.0.0.1:8001/connect/facebook/callback` |
+| `VEILLE_FB_REDIRECT_URI` | URL de callback OAuth pour la connexion des clients. Si elle est vide, le service la déduit de `RENDER_EXTERNAL_URL` (`<RENDER_EXTERNAL_URL>/connect/facebook/callback`) ; elle doit être déclarée à l'identique dans l'application Meta. | `http://127.0.0.1:8001/connect/facebook/callback` |
 | `VEILLE_TOKEN_ENCRYPTION_KEY` | Clé Fernet pour chiffrer les tokens au repos. | Généré via `Fernet.generate_key()` |
 | `VEILLE_STATE_SECRET` | Clé secrète HMAC pour signer l'état OAuth anti-CSRF. | Secret aléatoire fort |
 | `VEILLE_ALLOWED_RETURN_ORIGINS` | Origines autorisées pour la redirection post-OAuth. | `http://localhost:3000` |

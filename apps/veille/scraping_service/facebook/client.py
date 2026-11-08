@@ -268,7 +268,7 @@ class FacebookGraphClient:
             params={
                 "client_id": settings.fb_app_id,
                 "client_secret": settings.fb_app_secret,
-                "redirect_uri": settings.fb_redirect_uri,
+                "redirect_uri": settings.facebook_redirect_uri,
                 "code": code,
             },
         )

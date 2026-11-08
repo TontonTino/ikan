@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -70,6 +71,14 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.env == "production"
+
+    @property
+    def facebook_redirect_uri(self) -> str:
+        """URI de rappel OAuth : VEILLE_FB_REDIRECT_URI, sinon dérivée de RENDER_EXTERNAL_URL."""
+        if self.fb_redirect_uri:
+            return self.fb_redirect_uri
+        external_url = os.environ.get("RENDER_EXTERNAL_URL", "").strip().rstrip("/")
+        return f"{external_url}/connect/facebook/callback" if external_url else ""
 
     def get_data_path(self, filename: str) -> Path:
         """Génère un chemin pour enregistrer des exports de données."""

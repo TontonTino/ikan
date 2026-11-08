@@ -8,30 +8,79 @@ from typing import Any
 
 
 class TokenMaskingFilter(logging.Filter):
-    """Filtre qui masque les jetons d'accès, en-têtes Bearer et jetons Meta (ex: EAA...)."""
+    """Filtre qui masque les jetons, secrets OAuth et en-têtes d'autorisation.
 
+    Couvre les chaînes (paramètres d'URL ``cle=valeur``, en-tête Bearer, jetons Meta ``EAA...``)
+    ainsi que les dictionnaires, listes et tuples : une valeur dont la clé est sensible est
+    remplacée en bloc, quelle que soit sa profondeur.
+    """
+
+    # Pas de caractère alphanumérique ou « _ » avant la clé : ``error_code=190`` reste lisible,
+    # alors que ``code=...`` (code OAuth) et ``app_secret=...`` sont masqués.
     TOKEN_PATTERNS = [
-        (re.compile(r"(access_token=)[^\s&'\"]+", re.IGNORECASE), r"\1[REDACTED]"),
+        (
+            re.compile(
+                r"(?<![A-Za-z0-9_])((?:access_token|client_secret|code|fb_exchange_token|input_token"
+                r"|app_secret|secret|authorization)=)[^\s&'\"]+",
+                re.IGNORECASE,
+            ),
+            r"\1[REDACTED]",
+        ),
         (re.compile(r"(Bearer\s+)[^\s&'\"]+", re.IGNORECASE), r"\1[REDACTED]"),
         (re.compile(r"\bEAA[A-Za-z0-9]+\b"), "[META_TOKEN_REDACTED]"),
     ]
 
+    SENSITIVE_KEYS = frozenset(
+        {
+            "access_token",
+            "client_secret",
+            "authorization",
+            "app_secret",
+            "secret",
+            "code",
+            "fb_exchange_token",
+            "input_token",
+        }
+    )
+
     def filter(self, record: logging.LogRecord) -> bool:
         if isinstance(record.msg, str):
-            for pattern, repl in self.TOKEN_PATTERNS:
-                record.msg = pattern.sub(repl, record.msg)
+            record.msg = self._sanitize_string(record.msg)
+        elif isinstance(record.msg, (dict, list, tuple)):
+            record.msg = self._sanitize_value(record.msg)
+        elif record.msg is not None and not isinstance(record.msg, (int, float, bool)):
+            record.msg = self._sanitize_string(str(record.msg))
         if record.args:
             if isinstance(record.args, dict):
-                record.args = {k: self._sanitize_value(v) for k, v in record.args.items()}
+                record.args = {key: self._sanitize_entry(key, value) for key, value in record.args.items()}
             elif isinstance(record.args, tuple):
-                record.args = tuple(self._sanitize_value(v) for v in record.args)
+                record.args = tuple(self._sanitize_value(value) for value in record.args)
         return True
 
+    def _sanitize_string(self, text: str) -> str:
+        for pattern, repl in self.TOKEN_PATTERNS:
+            text = pattern.sub(repl, text)
+        return text
+
+    def _sanitize_entry(self, key: Any, value: Any) -> Any:
+        if isinstance(key, str) and key.lower() in self.SENSITIVE_KEYS:
+            return "[REDACTED]"
+        return self._sanitize_value(value)
+
     def _sanitize_value(self, val: Any) -> Any:
+        # Les nombres et booléens restent tels quels : un spécificateur ``%d`` doit continuer à fonctionner.
+        if val is None or isinstance(val, (int, float, bool)):
+            return val
         if isinstance(val, str):
-            for pattern, repl in self.TOKEN_PATTERNS:
-                val = pattern.sub(repl, val)
-        return val
+            return self._sanitize_string(val)
+        if isinstance(val, dict):
+            return {key: self._sanitize_entry(key, value) for key, value in val.items()}
+        if isinstance(val, list):
+            return [self._sanitize_value(item) for item in val]
+        if isinstance(val, tuple):
+            return tuple(self._sanitize_value(item) for item in val)
+        # Objets divers (httpx.URL, exceptions...) : masqués via leur représentation texte.
+        return self._sanitize_string(str(val))
 
 
 def apply_token_masking(target_logger: logging.Logger) -> None:
