@@ -56,3 +56,15 @@ Valeurs et contrastes dans `apps/dashboard/src/styles/tokens.css`, vérifiés pa
 Typographie : Poppins auto-hébergée (`apps/dashboard/public/fonts`), 400 et 600 seulement ; échelle 12 / 14 / 15 / 18 / 22 / 28 px.
 Les anciens noms (`--color-primary`, `--color-text-muted`, `--color-success-*`, `--weight-bold`…) restent, en alias vers ces
 jetons : le lot 2b remplace leurs usages un groupe de fichiers à la fois.
+
+## Formulaire client (lot 2c)
+
+La feuille de `apps/client/src/pages/feedback/[code].astro` ne contient plus aucune couleur en dur : tout passe par les
+jetons de `FeedbackLayout.astro` (mêmes valeurs que le dashboard, plus `--color-text-on-dark-muted`, `--shadow-card` et
+`--shadow-dropdown`). `src/utils/accessibilite.test.mjs` résout ces jetons et vérifie chaque texte contre le fond lu dans la
+feuille ; il échoue si une couleur en dur ou une graisse autre que 400/600 revient.
+
+- En-tête encre plein ; « Envoyer » en accent (seul accent de l'écran) ; le reste en boutons à contour.
+- Niveau choisi : contour encre de 2 px et fond neutre (la couleur ne porte pas seule la sélection).
+- **Exception validée** : les 5 visages de note gardent leur échelle rouge → vert d'origine.
+- Exceptions typographiques : 16 px dans les champs (zoom iOS), 12/13 px des libellés de niveaux (CL-07).
