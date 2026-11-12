@@ -25,6 +25,19 @@ export interface EvolutionAffichee {
   fleche: '↑' | '↓' | '→' | '';
 }
 
+/** Vrai quand la part d'avis négatifs existe mais ne peut pas être comparée (période précédente de moins de 5 avis). */
+export function comparaisonInsuffisante(pn: PartNegatifs | null | undefined): boolean {
+  return !!pn && pn.statut_evolution !== 'sans_avis' && (pn.statut_evolution === 'insuffisant' || pn.evolution_pts == null);
+}
+
+/** Phrase unique placée au-dessus d'un tableau, au lieu de répéter « Données insuffisantes pour comparer » dans chaque cellule. */
+export function phraseComparaisonInsuffisante(nombre: number): string | null {
+  if (nombre <= 0) return null;
+  return nombre === 1
+    ? 'Pour 1 agence, la période précédente compte moins de 5 avis : l’évolution des avis négatifs n’est pas comparée.'
+    : `Pour ${nombre} agences, la période précédente compte moins de 5 avis : l’évolution des avis négatifs n’est pas comparée.`;
+}
+
 export function evolutionPartNegatifs(pn: PartNegatifs | null | undefined): EvolutionAffichee {
   if (!pn || pn.statut_evolution === 'sans_avis') return { texte: '', sens: 'neutre', fleche: '' };
   if (pn.statut_evolution === 'insuffisant' || pn.evolution_pts == null) {
@@ -40,9 +53,12 @@ export function evolutionPartNegatifs(pn: PartNegatifs | null | undefined): Evol
 
 const COULEUR: Record<EvolutionAffichee['sens'], string> = { defavorable: '#B91C1C', favorable: '#3C7730', neutre: '#64748B' };
 
-/** « 23,5 % d'avis négatifs » suivi de l'évolution (flèche + texte). `court` : sans le texte de comparaison détaillé. */
-export function PartNegatifsTexte({ pn, court = false }: { pn: PartNegatifs | null | undefined; court?: boolean }) {
-  const evolution = evolutionPartNegatifs(pn);
+/**
+ * « 23,5 % d'avis négatifs » suivi de l'évolution (flèche + texte). `court` : sans le texte de comparaison détaillé.
+ * `sansMentionInsuffisante` : n'écrit pas « Données insuffisantes pour comparer » (le tableau le dit une fois, au-dessus).
+ */
+export function PartNegatifsTexte({ pn, court = false, sansMentionInsuffisante = false }: { pn: PartNegatifs | null | undefined; court?: boolean; sansMentionInsuffisante?: boolean }) {
+  const evolution = sansMentionInsuffisante && comparaisonInsuffisante(pn) ? { texte: '', sens: 'neutre' as const, fleche: '' as const } : evolutionPartNegatifs(pn);
   return (
     <span>
       <strong>{libellePartNegatifs(pn)}</strong>

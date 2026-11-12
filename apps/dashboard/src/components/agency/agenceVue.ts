@@ -1,4 +1,4 @@
-import type { Alerte, AlerteFeedback, Issue, IssueStatut, PriorityLevel, Recommandation, TendanceSatisfaction } from '../../types';
+import type { Alerte, AlerteFeedback, Issue, IssueStatut, TendanceSatisfaction } from '../../types';
 import { GRAVITE_LABELS, PROBLEME_STATUT_LABELS, libelleRaisonAlerte } from '../../utils/vocabulaire';
 import { formaterPourcentage } from '../../utils/formatNombre';
 import { estSansActionEnCours } from '../../utils/issueSuivi';
@@ -82,37 +82,6 @@ export function construirePriorites(entrees: { alertes: Alerte[]; avis: AlerteFe
     if (a.kind === 'avis') return noteDe(a) - noteDe(b);
     return 0;
   });
-}
-
-// ── Recommandations : tri et regroupement par priorité (champ existant `priorite`) ──────────────────
-
-const RANG_PRIORITE: Record<PriorityLevel, number> = { critical: 0, high: 1, medium: 2, low: 3 };
-export const PRIORITE_RECO_LABEL: Record<PriorityLevel, string> = { critical: 'Critique', high: 'Élevée', medium: 'Moyenne', low: 'Faible' };
-export const PRIORITE_RECO_TON: Record<PriorityLevel, 'critical' | 'warning' | 'info' | 'success'> = {
-  critical: 'critical',
-  high: 'warning',
-  medium: 'info',
-  low: 'success',
-};
-
-export function trierRecommandations<T extends Recommandation>(recos: T[]): T[] {
-  return [...recos].sort(
-    (a, b) =>
-      (RANG_PRIORITE[a.priorite] ?? 9) - (RANG_PRIORITE[b.priorite] ?? 9) ||
-      new Date(b.date_generation).getTime() - new Date(a.date_generation).getTime(),
-  );
-}
-
-export interface GroupeRecommandations<T extends Recommandation = Recommandation> {
-  priorite: PriorityLevel;
-  label: string;
-  items: T[];
-}
-
-export function grouperRecommandations<T extends Recommandation>(recos: T[]): GroupeRecommandations<T>[] {
-  const groupes = new Map<PriorityLevel, T[]>();
-  for (const reco of trierRecommandations(recos)) groupes.set(reco.priorite, [...(groupes.get(reco.priorite) ?? []), reco]);
-  return [...groupes.entries()].map(([priorite, items]) => ({ priorite, label: PRIORITE_RECO_LABEL[priorite] ?? String(priorite), items }));
 }
 
 // ── Évolution de la satisfaction ───────────────────────────────────────────────────────────────────

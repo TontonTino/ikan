@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import type { ElargirPeriode } from '../../../components/ui/GraphiqueVide';
 import { Link } from 'react-router-dom';
 import { CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip as RTooltip, XAxis, YAxis } from 'recharts';
 import type { AgenceRankDetail, Alerte, EvolutionPoint, StatsCXResponse } from '../../../types';
@@ -359,7 +360,7 @@ function EvolutionDot(props: { cx?: number; cy?: number; payload?: EvolutionPoin
   );
 }
 
-export function Evolution({ stats, jours, onRetry }: { stats: Source<StatsCXResponse>; jours: number; onRetry: () => void }) {
+export function Evolution({ stats, jours, onRetry, elargir }: { stats: Source<StatsCXResponse>; jours: number; onRetry: () => void; elargir?: ElargirPeriode }) {
   const options = granularitesDisponibles(jours);
   const [choix, setChoix] = useState<Granularite>('day');
   const granularite: Granularite = options.includes(choix) ? choix : options[0];
@@ -382,7 +383,8 @@ export function Evolution({ stats, jours, onRetry }: { stats: Source<StatsCXResp
       onRetry={onRetry}
       isEmpty={stats.status === 'ok' && points.length === 0}
       emptyTitle="Aucun avis sur cette période."
-      emptyMessage="La courbe apparaîtra dès les premiers avis. Élargissez la période pour voir l'historique."
+      emptyMessage={elargir ? undefined : 'La courbe apparaîtra dès les premiers avis.'}
+      emptyAction={elargir}
       height={380}
       granularity={options.length > 1 && points.length > 0 ? { value: granularite, options, onChange: (g) => setChoix(g as Granularite) } : undefined}
       actions={<BlockLink to="/statistiques">Analyse détaillée</BlockLink>}

@@ -247,7 +247,6 @@ export default function DashboardLayout() {
     if (location.pathname.includes('/alertes')) return 'Alertes';
     if (location.pathname.includes('/actions')) return 'Actions à mener';
     if (location.pathname.includes('/issues')) return 'Problèmes à traiter';
-    if (location.pathname.includes('/veille')) return 'Veille réseaux sociaux';
     if (location.pathname.includes('/suggestions')) return 'Suggestions';
     if (location.pathname.includes('/demandes-rappel')) return 'Demandes de rappel';
     return 'Tableau de bord';

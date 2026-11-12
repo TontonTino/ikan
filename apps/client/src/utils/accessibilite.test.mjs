@@ -43,16 +43,13 @@ const CONTROLES = {
   '.sentiment-tile': 'les 5 niveaux de note',
   '.segment': 'Oui / Non',
   '.mic-btn': 'le micro',
-  '.btn-secondary': 'Réessayer, Donner un autre avis',
+  '.btn-secondary': 'Réessayer, Donner un autre avis, Partager une idée',
   '.btn-submit': 'Envoyer mon avis',
-  '.nps-skip-link': 'Passer (NPS)',
-  '.nps-scale :global(.nps-btn)': 'notes NPS 0 à 10',
   '.styled-input': 'champ téléphone',
   '.styled-select': 'liste des catégories',
   '.styled-textarea': 'commentaire',
   '.consent-row': 'ligne de la case de consentement',
   '.consent-box': 'case de consentement',
-  '.choix-carte': 'accueil : Noter l\'expérience / Partager une idée',
   '.lien-retour': 'lien « Retour » du formulaire d\'idée',
 };
 
@@ -86,8 +83,6 @@ test('chaque bouton / champ du balisage est couvert par une règle ≥ 44 px (au
     if (!classes.some((c) => couvertes.has(c))) manques.push(`${m[1]}#${id || '?'} class="${classes.join(' ')}"`);
   }
   assert.deepEqual(manques, []);
-  // Les boutons NPS sont créés par script : la règle existe (testée plus haut) et le script leur donne cette classe.
-  assert.match(page, /btn\.className = 'nps-btn'/);
 });
 
 test('la case de consentement : zone de 44 px, libellé relié à la case, texte rempli par la configuration', () => {
@@ -139,19 +134,9 @@ const PAIRES = [
   ['note de confidentialité', couleur('.lock-note'), '#FFFFFF'],
   ['message de remerciement', couleur('.success-message'), '#FFFFFF'],
   ['pastille « Transmis en direct »', couleur('.success-status-pill'), effective('.success-status-pill', 'background')],
-  ['question NPS', couleur('.nps-question'), '#FFFFFF'],
-  ['agence dans la question NPS', couleur('.nps-question strong'), '#FFFFFF'],
-  ['échelle NPS', couleur('.nps-scale :global(.nps-btn)'), '#FFFFFF'],
-  ['échelle NPS survolée', couleur('.nps-scale :global(.nps-btn):hover'), effective('.nps-scale :global(.nps-btn):hover', 'background')],
-  ['libellés des extrémités NPS', couleur('.nps-scale-labels'), '#FFFFFF'],
-  ['« Passer »', couleur('.nps-skip-link'), '#FFFFFF'],
-  ['« Réessayer » / « Donner un autre avis »', couleur('.btn-secondary'), '#F8FAFC'],
+  ['« Réessayer » / « Donner un autre avis » / « Partager une idée »', couleur('.btn-secondary'), '#F8FAFC'],
   ['texte de consentement', couleur('.consent-row'), '#F8FAFC'],
   ['texte de consentement (fond blanc)', couleur('.consent-row'), '#FFFFFF'],
-  ['accueil : nom de l\'agence', couleur('.accueil-agence'), '#FFFFFF'],
-  ['accueil : question', couleur('.accueil-titre'), '#FFFFFF'],
-  ['accueil : titre d\'un choix', couleur('.choix-titre'), '#FFFFFF'],
-  ['accueil : sous-titre d\'un choix', couleur('.choix-sous'), '#FFFFFF'],
   ['lien « Retour »', couleur('.lien-retour'), '#FFFFFF'],
 ];
 
@@ -238,14 +223,16 @@ const section = (id) => {
   return balisage.slice(debut, balisage.indexOf('</section>', debut));
 };
 
-test('l\'accueil montre le nom de l\'agence et exactement deux choix', () => {
-  const accueil = section('screen-accueil');
-  assert.match(accueil, /id="accueilAgenceNom"/);
-  assert.equal([...accueil.matchAll(/<button\b/g)].length, 2);
-  assert.match(accueil, /id="btnChoixNote"[\s\S]*Noter l'expérience/);
-  assert.match(accueil, /id="btnChoixIdee"[\s\S]*Partager une idée/);
-  assert.doesNotMatch(accueil, /style="display:\s*none/); // l'accueil est l'écran affiché d'entrée
-  assert.match(section('screen-sentiment'), /style="display:none;"/); // le formulaire noté attend le choix
+test('plus d\'écran de choix : le formulaire noté s\'affiche d\'entrée, l\'idée est proposée après l\'envoi', () => {
+  assert.doesNotMatch(balisage, /id="screen-accueil"|btnChoixNote|btnChoixIdee/);
+  assert.match(balisage, /<section id="screen-sentiment" class="screen-view">/); // premier écran affiché, sans display:none
+  assert.match(section('screen-success'), /id="btnSuccesIdee"[\s\S]*Partager une idée/);
+  assert.match(section('screen-idee-merci'), /id="btnIdeeNouvelAvis"[\s\S]*Donner un autre avis/);
+});
+
+test('plus de question NPS après l\'envoi, ni d\'appel à /nps', () => {
+  assert.doesNotMatch(section('screen-success'), /nps|recommanderiez/i);
+  assert.doesNotMatch(page, /\/nps`|nps_note|afficherQuestionNPS/);
 });
 
 test('le formulaire d\'idée : un seul champ texte, 1000 caractères, compteur, retour, aucun contact', () => {
@@ -262,10 +249,10 @@ test('le formulaire d\'idée : un seul champ texte, 1000 caractères, compteur, 
   assert.doesNotMatch(idee, /type="tel"|type="email"|checkbox|consent|téléphone|e-mail/i);
 });
 
-test('le parcours complet tient en 5 écrans au plus (3 par chemin) et la confirmation rassure', () => {
+test('le parcours complet tient en 4 écrans au plus et la confirmation rassure', () => {
   const ecrans = [...balisage.matchAll(/<section id="(screen-(?:accueil|idee|idee-merci|sentiment|success))"/g)].map((m) => m[1]);
-  assert.deepEqual(ecrans.sort(), ['screen-accueil', 'screen-idee', 'screen-idee-merci', 'screen-sentiment', 'screen-success']);
-  assert.ok(ecrans.length <= 5);
+  assert.deepEqual(ecrans.sort(), ['screen-idee', 'screen-idee-merci', 'screen-sentiment', 'screen-success']);
+  assert.ok(ecrans.length <= 4);
   assert.match(section('screen-idee-merci'), /Merci pour votre idée !/);
   assert.match(section('screen-idee-merci'), /a bien été transmise à l'agence/);
 });

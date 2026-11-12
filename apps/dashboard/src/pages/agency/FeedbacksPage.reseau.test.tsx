@@ -36,10 +36,10 @@ describe('page « Avis du réseau » (CX Manager, /feedbacks)', () => {
     expect(html).toContain('Rechercher dans le texte des avis');
   });
 
-  it('indique ce que veut dire « contradictoire » et à partir de quel forfait la détection existe', () => {
+  it('indique ce que veut dire « contradictoire », sans mention commerciale sur l’écran de travail', () => {
     const html = rendu('cx_manager');
     expect(html).toContain('la note et le ton du texte se contredisent');
-    expect(html).toContain('à partir du forfait Pro');
+    expect(html).not.toMatch(/forfait/i);
   });
 
   it('état initial : chargement annoncé, ni liste vide ni erreur (les états vide et erreur sont ceux d’EtatListeAvis)', () => {
@@ -53,5 +53,13 @@ describe('page « Avis du réseau » (CX Manager, /feedbacks)', () => {
     const html = rendu('agency_manager');
     expect(html).toContain('aria-label="Filtrer les avis contradictoires"');
     expect(html).not.toContain('aria-label="Filtrer par agence"');
+  });
+});
+
+describe('colonne de date : l’agence n’est répétée que pour le CX Manager', () => {
+  it('Responsable d’agence : « Date » seule ; CX Manager : « Date et agence »', () => {
+    expect(rendu('agency_manager')).toMatch(/<th[^>]*>Date<\/th>/);
+    expect(rendu('agency_manager')).not.toContain('Date et agence');
+    expect(rendu('cx_manager')).toContain('Date et agence');
   });
 });

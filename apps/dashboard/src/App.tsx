@@ -14,7 +14,6 @@ const DashboardSiegePage = lazy(() => import('./pages/cx/DashboardSiegePage'));
 const DashboardAgencePage = lazy(() => import('./pages/agency/DashboardAgencePage'));
 const FeedbacksPage = lazy(() => import('./pages/agency/FeedbacksPage'));
 const PilotagePage = lazy(() => import('./pages/cx/PilotagePage'));
-const VeillePage = lazy(() => import('./pages/cx/VeillePage'));
 const AdminOrgsPage = lazy(() => import('./pages/admin/AdminOrgsPage'));
 const GestionAgencesPage = lazy(() => import('./pages/admin/GestionAgencesPage'));
 const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage'));
@@ -124,9 +123,6 @@ export default function App() {
 
         {/* Ancienne page fusionnée : redirige vers la destination dédiée (?tab=actions → /actions, etc.) */}
         <Route path="pilotage" element={<PilotageRedirect />} />
-
-        {/* Veille réseaux sociaux — CX Manager uniquement (garde de rôle interne à la page) */}
-        <Route path="veille" element={<RoleRoute pattern="/veille"><VeillePage /></RoleRoute>} />
 
         {/* Admin */}
         <Route path="admin/dashboard" element={<RoleRoute pattern="/admin/dashboard"><AdminDashboardPage /></RoleRoute>} />

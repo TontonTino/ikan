@@ -4,7 +4,7 @@ import { StaticRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import type { Alerte, EpisodeDetail, EpisodeHistorique } from '../../types';
 import PilotageAlertesActionsTab, { LigneSeuil } from '../../pages/cx/PilotageAlertesActionsTab';
-import type { AlertesData, RecosData } from '../../pages/cx/AlertesView';
+import type { AlertesData } from '../../pages/cx/AlertesView';
 import type { EtatSource } from '../../pages/cx/alertesVue';
 import { phraseSynthese, syntheseAlertes } from '../../pages/cx/alertesVue';
 import { CorpsPriseEnCharge, PiedPriseEnCharge } from './PriseEnChargeDialog';
@@ -38,12 +38,11 @@ const detail = (s: Partial<EpisodeDetail> = {}): EpisodeDetail => ({ ...episode(
 // ── La liste active : l'état, le suivi, le bouton ─────────────────────────────────────────────────
 
 const etatAlertes = (donnees: Partial<AlertesData> = {}): EtatSource<AlertesData> => ({ statut: 'pret', charge: true, donnees: { seuil: [], avis: [], incluses: true, ...donnees } });
-const etatRecos: EtatSource<RecosData> = { statut: 'pret', charge: true, donnees: { items: [], total: 0 } };
 const page = (surcharge: Partial<React.ComponentProps<typeof PilotageAlertesActionsTab>> = {}) =>
   dansRouteur(
     <PilotageAlertesActionsTab
-      isAgencyManager alertes={etatAlertes()} recos={etatRecos} recosLoadingMore={false} nomForfait={null} agences={[]} selectedAgenceId={null}
-      onSelectAgence={vi.fn()} onRefresh={vi.fn()} onRetryRecos={vi.fn()} onLoadMoreRecos={vi.fn()} onMarquerRecoTraitee={vi.fn()} {...surcharge}
+      isAgencyManager alertes={etatAlertes()} nomForfait={null} agences={[]} selectedAgenceId={null}
+      onSelectAgence={vi.fn()} onRefresh={vi.fn()} {...surcharge}
     />,
   );
 

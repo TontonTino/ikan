@@ -1,9 +1,7 @@
 import React from 'react';
 import type { AgenceRankDetail } from '../../types';
-import { ArrowUpRightIcon, ArrowDownRightIcon, StoreIcon } from '../common/Icons';
-import { tendancePts } from '../../pages/cx/siege/siegeData';
 import Tooltip from '../ui/Tooltip';
-import { DEFINITION_NEGATIF, PartNegatifsTexte } from '../../utils/partNegatifs';
+import { DEFINITION_NEGATIF, PartNegatifsTexte, comparaisonInsuffisante, phraseComparaisonInsuffisante } from '../../utils/partNegatifs';
 import { AIDE_SCORE_FIABILISE, LIBELLE_SCORE_FIABILISE } from '../../utils/scoreFiabilise';
 import { formaterPourcentage } from '../../utils/formatNombre';
 
@@ -36,8 +34,14 @@ export default function AgencesRankingTable({
     );
   }
 
+  // « Données insuffisantes pour comparer » : une seule phrase au-dessus du tableau, pas une mention par cellule.
+  const insuffisantes = phraseComparaisonInsuffisante(
+    agences.filter((ag) => ag.total_feedbacks > 0 && ag.satisfaction_rate !== null && comparaisonInsuffisante(ag.part_negatifs)).length,
+  );
+
   return (
     <div style={{ width: '100%', overflowX: 'auto' }}>
+      {insuffisantes && <p className="siege-note" style={{ margin: '0 4px 8px' }}>{insuffisantes}</p>}
       <table
         style={{
           width: '100%',
@@ -61,7 +65,6 @@ export default function AgencesRankingTable({
             <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Pris en charge</th>
             <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Avis critiques</th>
             <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }} title={DEFINITION_NEGATIF}>Avis négatifs</th>
-            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Tendance</th>
             {onSelectAgence && (
               <th style={{ textAlign: 'right', padding: '8px 14px', fontWeight: 700 }}>Action</th>
             )}
@@ -73,8 +76,6 @@ export default function AgencesRankingTable({
             // 0 avis = « Pas d'avis », jamais « 0 % » ni une mauvaise performance (règle data-first).
             const sat = ag.satisfaction_rate;
             const sansAvis = ag.total_feedbacks === 0 || sat === null;
-            // tendance_val est une différence en POINTS ; null = l'une des deux périodes sans avis (pas de comparaison).
-            const tendance = tendancePts(ag.tendance_val);
             const satColor =
               sat === null || sansAvis ? '#475569' : sat >= 80 ? '#3C7730' : sat >= 60 ? '#D97706' : '#DC2626';
             const satBg =
@@ -188,32 +189,7 @@ export default function AgencesRankingTable({
 
                 {/* Part d'avis négatifs et son évolution */}
                 <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                  {sansAvis ? <span style={{ color: '#5B6B7F' }}>—</span> : <PartNegatifsTexte pn={ag.part_negatifs} court />}
-                </td>
-
-                {/* Tendance */}
-                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                  {tendance != null ? (
-                    <div
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '2px',
-                        color: tendance >= 0 ? '#3C7730' : '#DC2626',
-                        fontWeight: 700,
-                        fontSize: '0.76rem',
-                      }}
-                    >
-                      {tendance >= 0 ? (
-                        <ArrowUpRightIcon size={12} color="#3C7730" />
-                      ) : (
-                        <ArrowDownRightIcon size={12} color="#DC2626" />
-                      )}
-                      <span>{`${tendance > 0 ? '+' : tendance < 0 ? '−' : ''}${Math.abs(tendance).toLocaleString('fr-FR')} pts`}</span>
-                    </div>
-                  ) : (
-                    <span style={{ color: '#5B6B7F' }} title="Pas de comparaison possible : aucun avis sur l'une des deux périodes">—</span>
-                  )}
+                  {sansAvis ? <span style={{ color: '#5B6B7F' }}>—</span> : <PartNegatifsTexte pn={ag.part_negatifs} court sansMentionInsuffisante />}
                 </td>
 
                 {/* Action */}
