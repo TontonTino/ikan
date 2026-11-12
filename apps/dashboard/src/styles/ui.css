@@ -580,3 +580,26 @@
 }
 .ui-graphique-vide__lien:hover { text-decoration-thickness: 2px; }
 .ui-graphique-vide__lien:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: 2px; }
+
+/* ── Texte : utilitaires de rôle (lot 2b) ────────────────────────────────────
+   Remplacent les style={{ … }} qui ne portaient qu'une couleur, une taille ou une graisse.
+   Une classe = un rôle de la palette ou un pas de l'échelle ; jamais de valeur en dur. */
+.t-encre { color: var(--color-encre); }
+.t-2 { color: var(--color-text-2); }
+.t-inverse { color: var(--color-text-inverse); }
+.t-bon { color: var(--color-bon-texte); }
+.t-surveiller { color: var(--color-surveiller-texte); }
+.t-critique { color: var(--color-critique-texte); }
+.t-neutre { color: var(--color-neutre-texte); }
+.t-accent { color: var(--color-accent); }
+.t-xs { font-size: var(--text-xs); }
+.t-sm { font-size: var(--text-sm); }
+.t-base { font-size: var(--text-base); }
+.t-lg { font-size: var(--text-lg); }
+.t-xl { font-size: var(--text-xl); }
+.t-2xl { font-size: var(--text-2xl); }
+.t-normal { font-weight: var(--weight-normal); }
+.t-semi { font-weight: var(--weight-semibold); }
+.t-italique { font-style: italic; }
+.t-majuscules { text-transform: uppercase; letter-spacing: 0.04em; }
+.t-sans-soulignement { text-decoration: none; }

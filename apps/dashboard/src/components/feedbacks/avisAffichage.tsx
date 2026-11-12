@@ -1,28 +1,28 @@
 import React from 'react';
 import type { Feedback, StatutTraitement, CriticiteType } from '../../types';
-import { AlertTriangleIcon, CheckCircleIcon, ClockIcon, ThumbsUpIcon, ThumbsDownIcon } from '../common/Icons';
+import { CheckCircleIcon, ClockIcon, MessageSquareIcon, SmileyMehIcon, ThumbsUpIcon, ThumbsDownIcon } from '../common/Icons';
 import { AVIS_STATUT_LABELS, GRAVITE_LABELS } from '../../utils/vocabulaire';
 import { normalizeCriticite, normalizeSentiment } from '../../utils/triageAvis';
 import BadgeDiscordance from './BadgeDiscordance';
 
 export const STATUT_BADGES: Record<StatutTraitement, { label: string; bg: string; text: string; icon: React.ReactNode }> = {
-  nouveau: { label: AVIS_STATUT_LABELS.nouveau, bg: '#FEE2E2', text: '#B91C1C', icon: <AlertTriangleIcon size={12} color="#DC2626" /> },
-  en_traitement: { label: AVIS_STATUT_LABELS.en_traitement, bg: '#E0F2FE', text: '#0369A1', icon: <ClockIcon size={12} color="#0369A1" /> },
-  en_cours: { label: AVIS_STATUT_LABELS.en_cours, bg: '#FEF3C7', text: '#92400E', icon: <ClockIcon size={12} color="#D97706" /> },
-  resolu: { label: AVIS_STATUT_LABELS.resolu, bg: '#EBF5E9', text: '#3C7730', icon: <CheckCircleIcon size={12} color="#3C7730" /> },
+  nouveau: { label: AVIS_STATUT_LABELS.nouveau, bg: 'var(--color-neutre-fond)', text: 'var(--color-neutre-texte)', icon: <MessageSquareIcon size={12} color="var(--color-neutre-texte)" /> },
+  en_traitement: { label: AVIS_STATUT_LABELS.en_traitement, bg: 'var(--color-neutre-fond)', text: 'var(--color-neutre-texte)', icon: <ClockIcon size={12} color="var(--color-neutre-texte)" /> },
+  en_cours: { label: AVIS_STATUT_LABELS.en_cours, bg: 'var(--color-surveiller-fond)', text: 'var(--color-surveiller-texte)', icon: <ClockIcon size={12} color="var(--color-surveiller-texte)" /> },
+  resolu: { label: AVIS_STATUT_LABELS.resolu, bg: 'var(--color-bon-fond)', text: 'var(--color-bon-texte)', icon: <CheckCircleIcon size={12} color="var(--color-bon-texte)" /> },
 };
 
 export const SENTIMENT_STYLE: Record<string, { bg: string; text: string; label: string; icon: React.ReactNode }> = {
-  positif: { bg: '#EBF5E9', text: '#3C7730', label: 'Positif', icon: <ThumbsUpIcon size={13} color="#3C7730" /> },
-  neutre: { bg: '#FEF3C7', text: '#B45309', label: 'Neutre', icon: <span style={{ fontSize: '0.85rem' }} aria-hidden="true">😐</span> },
-  negatif: { bg: '#FEE2E2', text: '#B91C1C', label: 'Négatif', icon: <ThumbsDownIcon size={13} color="#B91C1C" /> },
+  positif: { bg: 'var(--color-bon-fond)', text: 'var(--color-bon-texte)', label: 'Positif', icon: <ThumbsUpIcon size={13} color="var(--color-bon-texte)" /> },
+  neutre: { bg: 'var(--color-neutre-fond)', text: 'var(--color-neutre-texte)', label: 'Neutre', icon: <SmileyMehIcon size={13} color="var(--color-neutre-texte)" /> },
+  negatif: { bg: 'var(--color-critique-fond)', text: 'var(--color-critique-texte)', label: 'Négatif', icon: <ThumbsDownIcon size={13} color="var(--color-critique-texte)" /> },
 };
 
 export const CRITICITE_STYLE: Record<string, { bg: string; text: string }> = {
-  faible: { bg: '#F1F5F9', text: '#475569' },
-  moyenne: { bg: '#E0F2FE', text: '#0369A1' },
-  elevee: { bg: '#FFEDD5', text: '#C2410C' },
-  critique: { bg: '#FEE2E2', text: '#B91C1C' },
+  faible: { bg: 'var(--color-neutre-fond)', text: 'var(--color-text-2)' },
+  moyenne: { bg: 'var(--color-neutre-fond)', text: 'var(--color-neutre-texte)' },
+  elevee: { bg: 'var(--color-surveiller-fond)', text: 'var(--color-surveiller-texte)' },
+  critique: { bg: 'var(--color-critique-fond)', text: 'var(--color-critique-texte)' },
 };
 
 export const formatDateAvis = (dateStr?: string) => {
@@ -43,19 +43,18 @@ const libelleGravite = (criticite: string) => (GRAVITE_LABELS[criticite as Criti
 /** Pastille de gravité du tableau : toujours un texte (« CRITIQUE », « ÉLEVÉE », « Gravité faible »…). */
 export function PastilleGravite({ feedback }: { feedback: Feedback }) {
   const criticite = feedback.analyse_ia?.criticite;
-  if (!criticite) return <span style={{ fontSize: '0.70rem', color: '#64748B' }}>{feedback.analyse_ia ? 'Gravité non évaluée' : libelleAnalyseAbsente(feedback)}</span>;
+  if (!criticite) return <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-2)' }}>{feedback.analyse_ia ? 'Gravité non évaluée' : libelleAnalyseAbsente(feedback)}</span>;
   const fort = criticite === 'critique' || criticite === 'elevee';
   return (
     <span
       aria-label={`Gravité ${libelleGravite(criticite)}`}
       style={{
-        background: CRITICITE_STYLE[criticite]?.bg || '#F1F5F9',
-        color: CRITICITE_STYLE[criticite]?.text || '#475569',
+        background: CRITICITE_STYLE[criticite]?.bg || 'var(--color-neutre-fond)',
+        color: CRITICITE_STYLE[criticite]?.text || 'var(--color-text-2)',
         padding: fort ? '3px 8px' : '1px 0',
         borderRadius: '6px',
-        fontSize: fort ? '0.72rem' : '0.70rem',
-        fontWeight: 800,
-        border: criticite === 'critique' ? '1px solid #DC2626' : '1px solid transparent',
+        fontSize: 'var(--text-xs)',
+        fontWeight: 'var(--weight-semibold)',
       }}
     >
       {criticite === 'critique' ? 'CRITIQUE' : criticite === 'elevee' ? 'ÉLEVÉE' : `Gravité ${libelleGravite(criticite)}`}
@@ -66,12 +65,12 @@ export function PastilleGravite({ feedback }: { feedback: Feedback }) {
 /** Note, ton, gravité et discordance d'un avis (cellule du tableau). */
 export function SignauxAvis({ feedback }: { feedback: Feedback }) {
   const sentiment = normalizeSentiment(feedback.analyse_ia?.sentiment);
-  const meta = SENTIMENT_STYLE[sentiment] || { bg: '#F1F5F9', text: '#64748B', label: sentiment || '—', icon: null };
+  const meta = SENTIMENT_STYLE[sentiment] || { bg: 'var(--color-neutre-fond)', text: 'var(--color-text-2)', label: sentiment || '—', icon: null };
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-        <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '0.90rem' }}>★ {feedback.note}/5</span>
-        <span style={{ background: meta.bg, color: meta.text, padding: '2px 8px', borderRadius: '6px', fontSize: '0.70rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+        <span style={{ fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', fontSize: 'var(--text-sm)' }}>★ {feedback.note}/5</span>
+        <span style={{ background: meta.bg, color: meta.text, padding: '2px 8px', borderRadius: '6px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
           {meta.icon}
           {feedback.analyse_ia ? meta.label : libelleAnalyseAbsente(feedback)}
         </span>
@@ -108,7 +107,7 @@ export function AvisCarteMobile({ feedback, afficherAgence, onConsulter }: { fee
         <span className="feedbacks-mobile-status" style={{ background: statut.bg, color: statut.text }}>{statut.label}</span>
         {feedback.issue_id && <span>Rattaché à un problème</span>}
       </div>
-      <button type="button" className="btn-primary" onClick={onConsulter}>Consulter</button>
+      <button type="button" className="btn-secondary" onClick={onConsulter}>Consulter</button>
     </article>
   );
 }

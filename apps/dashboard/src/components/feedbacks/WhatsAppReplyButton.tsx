@@ -13,7 +13,7 @@ interface Props {
   className?: string;
 }
 
-const noteStyle: React.CSSProperties = { margin: 0, fontSize: '0.78rem', color: '#64748B', lineHeight: 1.5 };
+const noteStyle: React.CSSProperties = { margin: 0, fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', lineHeight: 1.5 };
 
 /**
  * « Répondre au client » via WhatsApp : ouvre wa.me avec le numéro et le message prérempli
@@ -31,7 +31,7 @@ export default function WhatsAppReplyButton({ telephone, telephoneWhatsapp, masq
   if (!telephone) {
     return (
       <div className={className}>
-        <button type="button" className="btn-secondary" disabled style={{ padding: '8px 14px', fontSize: '0.8rem', borderRadius: '10px', opacity: 0.55, cursor: 'not-allowed' }}>
+        <button type="button" className="btn-secondary" disabled style={{ padding: '8px 14px', fontSize: 'var(--text-xs)', borderRadius: '10px', opacity: 0.55, cursor: 'not-allowed' }}>
           <MessageSquareIcon size={14} />
           <span>Répondre au client</span>
         </button>
@@ -44,8 +44,8 @@ export default function WhatsAppReplyButton({ telephone, telephoneWhatsapp, masq
 
   if (!telephoneWhatsapp) {
     return (
-      <div className={className} role="alert" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', color: '#B45309', fontSize: '0.8rem', fontWeight: 600, lineHeight: 1.5 }}>
-        <AlertTriangleIcon size={15} color="#B45309" />
+      <div className={className} role="alert" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', color: 'var(--color-surveiller-texte)', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', lineHeight: 1.5 }}>
+        <AlertTriangleIcon size={15} color="var(--color-surveiller-texte)" />
         <span>
           Le numéro laissé par le client (« {telephone} ») n’est pas valide : WhatsApp ne peut pas être ouvert.
           Le numéro doit inclure un indicatif international, par exemple +226 70 12 34 56.
@@ -68,7 +68,7 @@ export default function WhatsAppReplyButton({ telephone, telephoneWhatsapp, masq
   if (!ouvert) {
     return (
       <div className={className}>
-        <button type="button" onClick={() => setOuvert(true)} className="btn-primary" style={{ padding: '8px 14px', fontSize: '0.8rem', borderRadius: '10px' }}>
+        <button type="button" onClick={() => setOuvert(true)} className="btn-primary" style={{ padding: '8px 14px', fontSize: 'var(--text-xs)', borderRadius: '10px' }}>
           <MessageSquareIcon size={14} />
           <span>Répondre au client</span>
         </button>
@@ -77,8 +77,8 @@ export default function WhatsAppReplyButton({ telephone, telephoneWhatsapp, masq
   }
 
   return (
-    <div className={className} style={{ background: '#FFFFFF', padding: '14px', borderRadius: '12px', border: '1px solid #FFEDD5' }}>
-      <label htmlFor={champId} style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#431407', marginBottom: '6px' }}>
+    <div className={className} style={{ background: 'var(--color-surface)', padding: '14px', borderRadius: '12px', border: '1px solid var(--color-trait)' }}>
+      <label htmlFor={champId} style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', marginBottom: '6px' }}>
         Réponse par WhatsApp au {telephone}
       </label>
       <textarea
@@ -87,17 +87,17 @@ export default function WhatsAppReplyButton({ telephone, telephoneWhatsapp, masq
         value={message}
         onChange={(e) => { setMessage(e.target.value); if (erreur) setErreur(''); }}
         placeholder="Rédigez votre réponse au client…"
-        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.84rem', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: '8px' }}
+        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--color-trait)', fontSize: 'var(--text-sm)', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: '8px' }}
       />
       <p style={{ ...noteStyle, marginBottom: '10px' }}>
         WhatsApp s’ouvre avec ce message prérempli : vous appuyez vous-même sur « Envoyer ». IKAN AI n’envoie rien
         et ne marque pas la demande de rappel comme traitée.
       </p>
       {erreur && (
-        <p role="alert" style={{ margin: '0 0 8px', fontSize: '0.78rem', fontWeight: 700, color: '#B91C1C' }}>{erreur}</p>
+        <p role="alert" style={{ margin: '0 0 8px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-critique-texte)' }}>{erreur}</p>
       )}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-        <button type="button" onClick={() => { setOuvert(false); setErreur(''); }} className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.78rem', borderRadius: '8px' }}>
+        <button type="button" onClick={() => { setOuvert(false); setErreur(''); }} className="btn-secondary" style={{ padding: '6px 12px', fontSize: 'var(--text-xs)', borderRadius: '8px' }}>
           Fermer
         </button>
         <button
@@ -105,7 +105,7 @@ export default function WhatsAppReplyButton({ telephone, telephoneWhatsapp, masq
           onClick={ouvrirWhatsApp}
           disabled={!message.trim()}
           className="btn-primary"
-          style={{ padding: '6px 14px', fontSize: '0.78rem', borderRadius: '8px', opacity: message.trim() ? 1 : 0.5, cursor: message.trim() ? 'pointer' : 'not-allowed' }}
+          style={{ padding: '6px 14px', fontSize: 'var(--text-xs)', borderRadius: '8px', opacity: message.trim() ? 1 : 0.5, cursor: message.trim() ? 'pointer' : 'not-allowed' }}
         >
           <SendIcon size={12} />
           <span>Ouvrir WhatsApp</span>
