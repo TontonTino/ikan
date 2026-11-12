@@ -6,8 +6,8 @@
  * (onglet Console des outils de développement, messages « [Report Only] Refused to … »).
  */
 
-const API_PAR_DEFAUT = 'https://ikan-772d.onrender.com/api/v1';
-const AGENT_PAR_DEFAUT = 'https://yam-tpip.onrender.com';
+// Aucune adresse par défaut : l'API et l'agent viennent de VITE_API_URL et VITE_AGENT_URL, exigées au démarrage en
+// production par server.mjs (voir variables-requises.mjs). Une adresse absente ou invalide n'ajoute rien à connect-src.
 
 /** Origine (schéma + hôte) d'une URL, ou null si elle est invalide. */
 export function origine(url) {
@@ -28,8 +28,8 @@ export function origine(url) {
  *  - workers : blob: (génération PDF).
  */
 export function politiqueCsp(apiUrl, agentUrl) {
-  const api = origine(apiUrl || API_PAR_DEFAUT);
-  const agent = origine(agentUrl || AGENT_PAR_DEFAUT);
+  const api = apiUrl ? origine(apiUrl) : null;
+  const agent = agentUrl ? origine(agentUrl) : null;
   const connexions = ["'self'", api, agent, 'https://nominatim.openstreetmap.org'].filter(Boolean);
   return [
     "default-src 'self'",

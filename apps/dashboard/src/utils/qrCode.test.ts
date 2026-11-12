@@ -7,7 +7,7 @@ import {
   type DessinPdf, type MatriceQr,
 } from './qrCode';
 
-const URL_AGENCE = 'https://ikan-1.onrender.com/feedback/QR-AGENCE-AB12CD';
+const URL_AGENCE = 'https://client.exemple.org/feedback/QR-AGENCE-AB12CD';
 
 /** Lit le QR comme un téléphone : pixels noir/blanc -> texte décodé. */
 function decoder(matrice: MatriceQr, pixelsParModule = 6): string | null {
@@ -165,7 +165,7 @@ describe('aucun appel réseau', () => {
 });
 
 describe('getFeedbackUrl reste la seule source du domaine', () => {
-  it('le domaine vient de VITE_CLIENT_URL, avec la valeur par défaut historique', () => {
+  it('le domaine vient de VITE_CLIENT_URL (localhost en développement)', () => {
     expect(getFeedbackUrl('QR-X')).toBe(`${CLIENT_URL}/feedback/QR-X`);
     expect(CLIENT_URL).toMatch(/^https?:\/\//);
   });

@@ -5,10 +5,11 @@
  */
 import FeedbackLayout from '../../layouts/FeedbackLayout.astro';
 import { ipVisiteur } from '../../utils/securite';
+import { adresseApi } from '../../../serveur/adresse-api.mjs';
 
 const { code } = Astro.params;
-const DEFAULT_API_URL = 'https://ikan-772d.onrender.com/api/v1';
-const SSR_API_URL = import.meta.env.PUBLIC_API_URL || DEFAULT_API_URL;
+// Adresse de l'API : PUBLIC_API_URL uniquement (repli local en développement, arrêt explicite en production).
+const SSR_API_URL = adresseApi(import.meta.env.PUBLIC_API_URL, import.meta.env.PROD);
 
 let agenceInfo: { agence_nom?: string; code?: string; actif?: boolean; retention_mois?: number } | null = null;
 let erreur: string | null = null;
@@ -2009,9 +2010,9 @@ if (erreur) Astro.response.status = 404;
   import { appliquerIssue, creerMemoireSaisie } from '../../utils/saisie';
 
   // Navigation & Paramètres
-  const DEFAULT_API_URL = 'https://ikan-772d.onrender.com/api/v1';
+  // L'adresse de l'API vient uniquement du serveur (data-api-url, issu de PUBLIC_API_URL) : aucun repli codé en dur.
   const pageOuter = document.querySelector('.page-outer') as HTMLElement | null;
-  const API_URL = pageOuter?.dataset.apiUrl || DEFAULT_API_URL;
+  const API_URL = pageOuter?.dataset.apiUrl ?? '';
   const qrDejaValideParServeur = pageOuter?.dataset.qrValide === '1';
 
   // Requête API avec délai maximal. AUCUN repli vers un autre serveur : un avis ne part que vers l'API configurée

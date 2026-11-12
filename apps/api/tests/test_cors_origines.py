@@ -1,11 +1,13 @@
 """
-Origines CORS : défaut selon APP_ENV, variable explicite, normalisation, et requêtes OPTIONS
+Origines CORS : règle selon APP_ENV, variable explicite, normalisation, et requêtes OPTIONS
 réelles (preflight) via le TestClient, sans base de données.
 
 Le middleware est construit par app.core.cors.appliquer_cors, comme dans app.main : les tests
 exercent donc la même configuration que la production.
 """
 import os
+
+import pytest
 
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-cors-origines-tests-0123456789")
 
@@ -16,16 +18,16 @@ from app.api.v1.endpoints import auth
 from app.core.config import Settings
 from app.core.cors import (
     ORIGINES_LOCALES,
-    ORIGINES_PRODUCTION,
+    OriginesManquantes,
     appliquer_cors,
-    defaut_allowed_origins,
     normaliser_origines,
     origines_autorisees,
 )
 
-DASHBOARD = "https://ikanai-dashboard-fixs.onrender.com"
-CLIENT = "https://ikan-1.onrender.com"
-ANCIENS_NOMS = ["https://ikanai-client.onrender.com", "https://ikanai-dashboard.onrender.com"]
+# Adresses d'exemple : aucune adresse de déploiement réelle n'est codée dans l'API (elles viennent de ALLOWED_ORIGINS).
+DASHBOARD = "https://dashboard.exemple.org"
+CLIENT = "https://client.exemple.org"
+CONFIGUREES = f"{CLIENT},{DASHBOARD}"
 LOCALHOST = "http://localhost:5173"
 PREFLIGHT = "/api/v1/auth/login"
 
@@ -45,48 +47,47 @@ def _preflight(client, origine):
     })
 
 
-# ── Défaut selon APP_ENV ─────────────────────────────────────────────────────
+# ── Sans variable : développement = localhost, ailleurs = refus de démarrer ──────────
 
-def test_defaut_production_ne_contient_que_client_et_dashboard():
-    assert defaut_allowed_origins("production") == f"{CLIENT},{DASHBOARD}"
-    assert origines_autorisees(None, "production") == [CLIENT, DASHBOARD]
-
-
-def test_defaut_production_refuse_les_localhost():
-    origines = origines_autorisees(None, "production")
-    assert not any(o in origines for o in ORIGINES_LOCALES)
+def test_sans_variable_en_production_refuse_de_demarrer_en_nommant_la_variable():
+    for valeur in (None, "", " , ,"):
+        with pytest.raises(OriginesManquantes, match="ALLOWED_ORIGINS"):
+            origines_autorisees(valeur, "production")
 
 
-def test_defaut_development_ajoute_les_localhost_aux_deux_origines_de_production():
+def test_sans_variable_hors_development_refuse_aussi():
+    with pytest.raises(OriginesManquantes):
+        origines_autorisees(None, "staging")
+
+
+def test_sans_variable_en_development_repli_sur_localhost_uniquement():
     origines = origines_autorisees(None, "development")
-    assert origines == ORIGINES_LOCALES + ORIGINES_PRODUCTION
+    assert origines == ORIGINES_LOCALES
     assert LOCALHOST in origines
+    assert all(o.startswith("http://localhost") or o.startswith("http://127.0.0.1") for o in origines)
 
 
-def test_defaut_ne_cite_jamais_les_anciens_noms():
-    for app_env in ("development", "production"):
-        origines = origines_autorisees(None, app_env)
-        assert not any(ancien in origines for ancien in ANCIENS_NOMS)
+def test_aucune_adresse_de_deploiement_codee_dans_le_module():
+    import app.core.cors as module
+    source = open(module.__file__, encoding="utf-8").read()
+    assert "onrender.com" not in source and "https://" not in source
 
 
-def test_settings_applique_le_defaut_selon_app_env():
-    assert Settings(APP_ENV="production", ALLOWED_ORIGINS=None).allowed_origins_list == [CLIENT, DASHBOARD]
+def test_settings_applique_la_regle_selon_app_env():
     assert LOCALHOST in Settings(APP_ENV="development", ALLOWED_ORIGINS=None).allowed_origins_list
+    with pytest.raises(OriginesManquantes):
+        Settings(APP_ENV="production", ALLOWED_ORIGINS=None).allowed_origins_list
+    assert Settings(APP_ENV="production", ALLOWED_ORIGINS=CONFIGUREES).allowed_origins_list == [CLIENT, DASHBOARD]
 
 
-# ── Variable explicite : remplace toujours le défaut ─────────────────────────
+# ── Variable explicite : fait toujours foi ─────────────────────────
 
-def test_variable_explicite_remplace_le_defaut_en_production():
+def test_variable_explicite_fait_foi_en_production():
     assert origines_autorisees("https://autre.example", "production") == ["https://autre.example"]
 
 
-def test_variable_explicite_remplace_le_defaut_en_development():
+def test_variable_explicite_fait_foi_en_development():
     assert origines_autorisees("https://autre.example", "development") == ["https://autre.example"]
-
-
-def test_variable_vide_ou_sans_origine_utilise_le_defaut():
-    assert origines_autorisees("", "production") == [CLIENT, DASHBOARD]
-    assert origines_autorisees(" , ,", "production") == [CLIENT, DASHBOARD]
 
 
 # ── Normalisation ────────────────────────────────────────────────────────────
@@ -99,23 +100,23 @@ def test_normalisation_espaces_virgules_vides_et_slash_final():
 # ── Requêtes OPTIONS réelles (TestClient, sans base) ─────────────────────────
 
 def test_production_dashboard_et_client_acceptes():
-    client = _client(origines_autorisees(None, "production"))
+    client = _client(origines_autorisees(CONFIGUREES, "production"))
     for origine in (DASHBOARD, CLIENT):
         r = _preflight(client, origine)
         assert r.status_code == 200, origine
         assert r.headers["access-control-allow-origin"] == origine
 
 
-def test_production_refuse_origine_inconnue_et_anciens_noms():
-    client = _client(origines_autorisees(None, "production"))
-    for origine in ["https://inconnu.example", *ANCIENS_NOMS]:
+def test_production_refuse_origine_inconnue():
+    client = _client(origines_autorisees(CONFIGUREES, "production"))
+    for origine in ["https://inconnu.example", "https://ancien-nom.exemple.org"]:
         r = _preflight(client, origine)
         assert r.status_code == 400, origine
         assert "access-control-allow-origin" not in r.headers
 
 
 def test_production_refuse_localhost():
-    client = _client(origines_autorisees(None, "production"))
+    client = _client(origines_autorisees(CONFIGUREES, "production"))
     assert _preflight(client, LOCALHOST).status_code == 400
 
 

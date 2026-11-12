@@ -8,7 +8,17 @@
  * Lancement : npm run build && npm start        (Render : `node ./serveur.mjs`, voir render.yaml)
  */
 import { createServer } from 'node:http';
-import { API_URL_PAR_DEFAUT, enTetesSecurite } from './serveur/entetes-securite.mjs';
+import { adresseApi } from './serveur/adresse-api.mjs';
+import { enTetesSecurite } from './serveur/entetes-securite.mjs';
+
+// Production : l'adresse de l'API vient de PUBLIC_API_URL, sans repli codé en dur. Absente, on s'arrête AVANT de démarrer.
+let apiUrl;
+try {
+  apiUrl = adresseApi(process.env.PUBLIC_API_URL, true);
+} catch (erreur) {
+  console.error(erreur.message);
+  process.exit(1);
+}
 import { enveloppe } from './serveur/reponses.mjs';
 
 // L'entrée d'Astro démarre normalement son propre serveur à l'import : on le désactive pour récupérer seulement `handler`.
@@ -17,7 +27,7 @@ const { handler } = await import('./dist/server/entry.mjs');
 
 const port = process.env.PORT ? Number(process.env.PORT) : 4321;
 const hote = process.env.HOST || '0.0.0.0';
-const entetes = enTetesSecurite(process.env.PUBLIC_API_URL || API_URL_PAR_DEFAUT, true);
+const entetes = enTetesSecurite(apiUrl, true);
 
 const serveur = createServer(enveloppe(handler, { entetes }));
 serveur.listen(port, hote, () => console.log(`[client] serveur démarré sur http://${hote}:${port} (compression et cache activés)`));

@@ -41,8 +41,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    # CORS : liste séparée par des virgules (sans JSON). Si elle est renseignée, elle REMPLACE le défaut
-    # (défini dans app/core/cors.py selon APP_ENV). En production, elle doit contenir client et dashboard.
+    # CORS : liste séparée par des virgules (sans JSON). OBLIGATOIRE hors développement (client + dashboard) :
+    # sans elle, l'API refuse de démarrer. En développement, repli sur localhost (voir app/core/cors.py).
     ALLOWED_ORIGINS: str | None = None
 
     @property

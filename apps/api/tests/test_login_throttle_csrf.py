@@ -34,7 +34,7 @@ from app.models.utilisateur import Utilisateur
 from app.services.plan_catalog import PLAN_GRATUIT_ID
 
 MDP = "Motdepasse-123"
-ORIGINE_OK = "https://ikanai-dashboard-fixs.onrender.com"
+ORIGINE_OK = "https://dashboard.exemple.org"
 ORIGINE_ETRANGERE = "https://evil.example.com"
 MSG = login_throttle.MESSAGE_TROP_DE_TENTATIVES
 
@@ -51,7 +51,7 @@ class Horloge:
 def ctx(monkeypatch):
     horloge = Horloge()
     monkeypatch.setattr(limiteur, "_horloge", horloge)
-    monkeypatch.setattr(settings, "ALLOWED_ORIGINS", f"{ORIGINE_OK},https://ikan-1.onrender.com")
+    monkeypatch.setattr(settings, "ALLOWED_ORIGINS", f"{ORIGINE_OK},https://client.exemple.org")
     monkeypatch.setattr(settings, "TRUSTED_PROXY_HOPS", 1)   # l'adresse du client = dernière entrée de X-Forwarded-For
     moteur = create_engine("sqlite+pysqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False})
     assert moteur.url.get_backend_name() == "sqlite"

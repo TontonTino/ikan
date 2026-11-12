@@ -15,7 +15,7 @@ from app.core.config import settings
 from app.core.cors import appliquer_cors
 from app.core.entetes_securite import EN_TETES_FIXES, installer_entetes_securite
 
-ORIGINE = "https://ikanai-dashboard-fixs.onrender.com"
+ORIGINE = "https://dashboard.exemple.org"
 FIXES = {
     "x-content-type-options": "nosniff",
     "referrer-policy": "strict-origin-when-cross-origin",

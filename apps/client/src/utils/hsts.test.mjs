@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { enTetesSecurite, politiqueCsp } from './securite.ts';
 
-const API = 'https://ikan-772d.onrender.com/api/v1';
+const API = 'https://api.exemple.org/api/v1';
 const FIXES = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
@@ -32,7 +32,7 @@ test('la CSP du client reste en Report-Only, sans en-tête bloquant', () => {
     assert.equal('Content-Security-Policy' in h, false);
     assert.match(h['Content-Security-Policy-Report-Only'], /^default-src 'self'/);
   }
-  assert.doesNotMatch(politiqueCsp(API), /https:\/\/(?!ikan-772d)/);
+  assert.doesNotMatch(politiqueCsp(API), /https:\/\/(?!api\.exemple\.org)/);
 });
 
 test('le middleware transmet le mode production (import.meta.env.PROD) et pose les en-têtes sur toute réponse', () => {

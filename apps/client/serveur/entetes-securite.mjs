@@ -5,8 +5,6 @@
  * Un test (src/utils/serveur-entetes.test.mjs) vérifie que les deux restent identiques.
  */
 
-export const API_URL_PAR_DEFAUT = 'https://ikan-772d.onrender.com/api/v1';
-
 export function origineApi(apiUrl) {
   try {
     return new URL(apiUrl).origin;
