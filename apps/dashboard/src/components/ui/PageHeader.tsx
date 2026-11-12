@@ -56,7 +56,7 @@ export default function PageHeader({
     <div
       className="page-header-shell"
       style={{
-        background: 'linear-gradient(135deg, var(--color-bg) 0%, var(--color-bon-fond) 100%)',
+        background: 'var(--color-surface)',
         borderRadius: '24px',
         border: '1px solid var(--color-trait)',
         padding: '24px 28px',

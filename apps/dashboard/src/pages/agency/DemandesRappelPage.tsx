@@ -151,8 +151,8 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
               fontWeight: 'var(--weight-semibold)',
               cursor: 'pointer',
               fontFamily: 'inherit',
-              background: toggle === 'attente' ? 'var(--color-surveiller-fond)' : 'transparent',
-              color: toggle === 'attente' ? 'var(--color-surveiller-texte)' : 'var(--color-text-2)',
+              background: toggle === 'attente' ? 'var(--color-surface)' : 'transparent',
+              color: toggle === 'attente' ? 'var(--color-encre)' : 'var(--color-text-2)',
             }}
           >
             En attente
@@ -168,8 +168,8 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
               fontWeight: 'var(--weight-semibold)',
               cursor: 'pointer',
               fontFamily: 'inherit',
-              background: toggle === 'traitees' ? 'var(--color-bon-fond)' : 'transparent',
-              color: toggle === 'traitees' ? 'var(--color-bon-texte)' : 'var(--color-text-2)',
+              background: toggle === 'traitees' ? 'var(--color-surface)' : 'transparent',
+              color: toggle === 'traitees' ? 'var(--color-encre)' : 'var(--color-text-2)',
             }}
           >
             Traitées

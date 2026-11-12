@@ -687,7 +687,7 @@ export const AgencyLocationPicker: React.FC<AgencyLocationPickerProps> = ({
       {isPositionValid && (
         <div
           style={{
-            background: 'linear-gradient(135deg, var(--color-bg) 0%, var(--color-bon-fond) 100%)',
+            background: 'var(--color-bg)',
             border: '1.5px solid var(--color-trait)',
             borderRadius: '16px',
             padding: '16px 18px',

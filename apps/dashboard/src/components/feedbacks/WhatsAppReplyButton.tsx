@@ -31,7 +31,7 @@ export default function WhatsAppReplyButton({ telephone, telephoneWhatsapp, masq
   if (!telephone) {
     return (
       <div className={className}>
-        <button type="button" className="btn-secondary" disabled style={{ padding: '8px 14px', fontSize: 'var(--text-xs)', borderRadius: '10px', opacity: 0.55, cursor: 'not-allowed' }}>
+        <button type="button" className="btn-secondary" disabled style={{ padding: '8px 14px', borderRadius: '10px', opacity: 0.55, cursor: 'not-allowed' }}>
           <MessageSquareIcon size={14} />
           <span>Répondre au client</span>
         </button>
@@ -68,7 +68,7 @@ export default function WhatsAppReplyButton({ telephone, telephoneWhatsapp, masq
   if (!ouvert) {
     return (
       <div className={className}>
-        <button type="button" onClick={() => setOuvert(true)} className="btn-primary" style={{ padding: '8px 14px', fontSize: 'var(--text-xs)', borderRadius: '10px' }}>
+        <button type="button" onClick={() => setOuvert(true)} className="btn-secondary" style={{ padding: '8px 14px', borderRadius: '10px' }}>
           <MessageSquareIcon size={14} />
           <span>Répondre au client</span>
         </button>
