@@ -41,7 +41,7 @@ export default function VeilleDailyChart({ data }: { data: VeilleSyntheseJour[] 
       <div role="img" aria-label={description} style={{ width: '100%', height: 260 }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-trait)" />
             <XAxis dataKey="date" tickFormatter={(v) => formaterDateAxe(v)} tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} />
             <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} />
             <Tooltip

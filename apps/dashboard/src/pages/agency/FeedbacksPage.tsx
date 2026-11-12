@@ -344,7 +344,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
           {activeFilters.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }} aria-label="Filtres actifs">
               {activeFilters.map((f) => (
-                <span key={f.cle} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--color-active-item)', color: 'var(--color-primary-dark)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-pill)', padding: '4px 6px 4px 12px', fontSize: '0.76rem', fontWeight: 700 }}>
+                <span key={f.cle} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--color-active-item)', color: 'var(--color-primary-dark)', border: '1px solid var(--color-trait)', borderRadius: 'var(--radius-pill)', padding: '4px 6px 4px 12px', fontSize: '0.76rem', fontWeight: 700 }}>
                   {f.libelle}
                   <button type="button" onClick={() => retirerFiltre(f.cle)} aria-label={`Retirer le filtre ${f.libelle}`} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', color: 'inherit' }}>
                     <XCloseIcon size={13} />

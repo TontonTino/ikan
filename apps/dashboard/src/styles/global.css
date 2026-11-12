@@ -1,5 +1,4 @@
 /* Design System IKAN AI — Style Visuel SaaS Moderne & Épuré (Inspiré de Bolt.new) */
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
 @import './tokens.css';
 @import './ui.css';
 @import './layout.css';
@@ -23,9 +22,11 @@ html, body {
 
 body {
   font-family: var(--font-main);
+  font-size: var(--text-base);
+  font-weight: var(--weight-normal);
   background: var(--color-bg);
   color: var(--color-text-body);
-  line-height: 1.5;
+  line-height: var(--leading-normal);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -39,10 +40,8 @@ body {
    :where() garde une spécificité nulle pour ne jamais écraser les règles de
    composants existantes (.saas-input:focus, .yam-input:focus,
    .yam-panel :focus-visible notamment, non touchées).
-   var(--color-primary) et non var(--color-accent) : le lime vif de
-   --color-accent (#75B72A) ne passe qu'à 2.45:1 de contraste sur blanc,
-   sous le minimum WCAG 1.4.11 de 3:1 pour un indicateur de focus ;
-   --color-primary (#3C7730) passe à 5.4:1. */
+   var(--color-primary) = l'accent corail : 4,85:1 sur blanc, 4,53:1 sur la
+   crème, au-dessus du minimum WCAG 1.4.11 de 3:1 pour un indicateur de focus. */
 :where(a, button, [role="button"], [tabindex]:not([tabindex="-1"]), summary, select, input, textarea):focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
@@ -84,7 +83,7 @@ body {
 .saas-card {
   background: var(--color-surface);
   border-radius: var(--radius-2xl);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-trait);
   box-shadow: var(--shadow-card);
   padding: 24px;
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
@@ -139,9 +138,8 @@ body {
 /* Boutons */
 .btn-primary {
   background: var(--color-accent);
-  /* IMPORTANT : texte blanc sur --color-accent ne passe qu'à 2.45:1 de
-     contraste (sous le seuil WCAG AA de 4.5:1) — ne jamais repasser en blanc. */
-  color: var(--color-primary-dark);
+  /* Accent corail : texte blanc, 4,85:1. */
+  color: var(--color-text-inverse);
   border: none;
   border-radius: var(--radius-md);
   padding: 10px 18px;
@@ -152,15 +150,11 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.15s ease;
-  box-shadow: 0 2px 6px rgba(117, 183, 42, 0.25);
+  transition: background var(--duration-fast) var(--ease-standard);
 }
 
 .btn-primary:hover {
-  /* filter plutôt qu'une couleur en dur : garde le contraste texte/fond
-     sous contrôle automatiquement, quelle que soit la couleur de base. */
-  filter: brightness(0.92);
-  box-shadow: 0 4px 12px rgba(117, 183, 42, 0.35);
+  background: var(--color-accent-hover);
 }
 
 .btn-secondary {
@@ -207,9 +201,9 @@ body {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--color-accent);
+  background: var(--color-marque);
   display: inline-block;
-  box-shadow: 0 0 0 0 rgba(117, 183, 42, 0.7);
+  box-shadow: 0 0 0 0 rgba(60, 120, 48, 0.7);
   animation: pulse 2s infinite;
 }
 

@@ -53,7 +53,7 @@ export default function ActionsDuProbleme({ issue, role, utilisateurs, moiId, no
               id={`action-${action.id}`}
               tabIndex={-1}
               className={nouvelleActionId === action.id ? 'action-probleme is-nouvelle' : undefined}
-              style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}
+              style={{ background: 'var(--color-surface)', border: '1px solid var(--color-trait)', borderRadius: 'var(--radius-md)', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}
             >
               <div style={{ minWidth: 0, flex: '1 1 220px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>

@@ -93,12 +93,27 @@ const SERIES = Array.from({ length: 12 }, (_, i) => ({
   previous: [70, 71, 72, 72, 73, 74, 74, 73, 72, 72, 73, 74][i],
 }));
 
+/** Palette : un rôle fixe par couleur (voir tokens.css). */
 const TOKENS_COLORS = [
-  ['--color-primary-dark', 'Marque'], ['--color-primary', 'Marque'], ['--color-accent', 'Marque'], ['--color-lime', 'Marque (déco)'],
-  ['--color-text-main', 'Texte'], ['--color-text-body', 'Texte'], ['--color-text-muted', 'Texte'],
-  ['--color-bg', 'Neutre'], ['--color-bg-subtle', 'Neutre'], ['--color-border', 'Neutre'],
-  ['--color-success-solid', 'Succès'], ['--color-warning-solid', 'Attention'], ['--color-critical-solid', 'Critique'], ['--color-info-solid', 'Info'],
-  ['--dataviz-positive', 'Dataviz'], ['--dataviz-critical', 'Dataviz'], ['--dataviz-attention', 'Dataviz'], ['--dataviz-info', 'Dataviz'], ['--dataviz-neutral', 'Dataviz'],
+  ['--color-encre', 'Menu, titres, texte principal'], ['--color-text-2', 'Texte secondaire'],
+  ['--color-accent', 'Boutons et liens'], ['--color-accent-vif', 'Icônes et traits, jamais de texte'],
+  ['--color-marque', 'Logo et statut « bon »'], ['--color-citron', 'Graphiques et décor, jamais de texte'],
+  ['--color-bg', 'Fond de page'], ['--color-surface', 'Cartes et tableaux'],
+  ['--color-border', 'Bordures de champs et de boutons'], ['--color-trait', 'Séparateurs, contours de cartes'],
+];
+
+/** Statuts : chaque texte sur son propre fond. */
+const TOKENS_STATUTS = [
+  ['Bon', '--color-bon-texte', '--color-bon-fond'],
+  ['À surveiller', '--color-surveiller-texte', '--color-surveiller-fond'],
+  ['Critique', '--color-critique-texte', '--color-critique-fond'],
+  ['Neutre, nouveau', '--color-neutre-texte', '--color-neutre-fond'],
+];
+
+/** Échelle typographique : rien sous 12 px, deux graisses (400 / 600). */
+const TOKENS_TEXTE = [
+  ['--text-2xl', '28 px — titres de page, valeurs clés'], ['--text-xl', '22 px'], ['--text-lg', '18 px'],
+  ['--text-base', '15 px — corps'], ['--text-sm', '14 px — plancher de lecture'], ['--text-xs', '12 px — métadonnées seulement'],
 ];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -186,11 +201,28 @@ export default function DesignSystemPage() {
       </Section>
 
       <Section title="Tokens — couleurs">
-        <div style={{ ...grid, gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
-          {TOKENS_COLORS.map(([v, group]) => (
+        <div style={{ ...grid, gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+          {TOKENS_COLORS.map(([v, role]) => (
             <div key={v} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-              <span style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)', background: `var(${v})`, border: '1px solid var(--color-border)', flexShrink: 0 }} />
-              <span style={{ fontSize: 'var(--text-xs)' }}><strong>{group}</strong><br /><code>{v}</code></span>
+              <span style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)', background: `var(${v})`, border: '1px solid var(--color-trait)', flexShrink: 0 }} />
+              <span style={{ fontSize: 'var(--text-xs)' }}><strong>{role}</strong><br /><code>{v}</code></span>
+            </div>
+          ))}
+        </div>
+        <div style={{ ...row, marginTop: 'var(--space-4)' }}>
+          {TOKENS_STATUTS.map(([nom, texte, fond]) => (
+            <span key={nom} style={{ padding: 'var(--space-1) var(--space-3)', borderRadius: 'var(--radius-pill)', background: `var(${fond})`, color: `var(${texte})`, fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}>{nom}</span>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Tokens — typographie (Poppins)">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+          {TOKENS_TEXTE.map(([v, usage]) => (
+            <div key={v} style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-4)' }}>
+              <code style={{ width: 96, flexShrink: 0, fontSize: 'var(--text-xs)', color: 'var(--color-text-2)' }}>{v}</code>
+              <span style={{ fontSize: `var(${v})`, color: 'var(--color-encre)' }}>Satisfaction du réseau <strong style={{ fontWeight: 'var(--weight-semibold)' }}>61,1 %</strong></span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-2)' }}>{usage}</span>
             </div>
           ))}
         </div>

@@ -14,13 +14,13 @@ function IllustrationNoData() {
       <rect x="10" y="20" width="100" height="65" rx="12"
         fill="var(--color-active-item)" />
       <rect x="22" y="32" width="60" height="8" rx="4"
-        fill="var(--color-border)" />
+        fill="var(--color-trait)" />
       <rect x="22" y="46" width="40" height="6" rx="3"
-        fill="var(--color-border)" opacity="0.6" />
+        fill="var(--color-trait)" opacity="0.6" />
       <rect x="22" y="58" width="50" height="6" rx="3"
-        fill="var(--color-border)" opacity="0.4" />
+        fill="var(--color-trait)" opacity="0.4" />
       <circle cx="90" cy="68" r="18"
-        fill="var(--color-bg)" stroke="var(--color-border)" strokeWidth="1.5" />
+        fill="var(--color-bg)" stroke="var(--color-trait)" strokeWidth="1.5" />
       <path d="M84 68 h12 M90 62 v12"
         stroke="var(--color-text-muted)" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
     </svg>
@@ -65,9 +65,9 @@ function IllustrationNoFeedback() {
         fill="var(--color-bg)"
       />
       <rect x="30" y="32" width="60" height="7" rx="3.5"
-        fill="var(--color-border)" />
+        fill="var(--color-trait)" />
       <rect x="38" y="44" width="44" height="5" rx="2.5"
-        fill="var(--color-border)" opacity="0.55" />
+        fill="var(--color-trait)" opacity="0.55" />
       {/* Bulles de dialogue */}
       <circle cx="55" cy="70" r="4" fill="var(--color-active-item)" />
       <circle cx="66" cy="74" r="3" fill="var(--color-active-item)" />
@@ -88,7 +88,7 @@ function IllustrationDefault() {
       <rect x="20" y="15" width="80" height="70" rx="14"
         fill="var(--color-active-item)" />
       <circle cx="60" cy="45" r="16"
-        fill="var(--color-bg)" stroke="var(--color-border)" strokeWidth="1.5" />
+        fill="var(--color-bg)" stroke="var(--color-trait)" strokeWidth="1.5" />
       <path d="M60 37 v9 M60 49 v2"
         stroke="var(--color-text-muted)" strokeWidth="2.5"
         strokeLinecap="round" />

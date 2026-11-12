@@ -31,7 +31,7 @@ export default function AgencesMap({ agences, onVoirAgence }: { agences: AgenceC
 
   return (
     <>
-      <div style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
+      <div style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--color-trait)' }}>
         <MapContainer {...(bounds ? { bounds, boundsOptions: { padding: [32, 32] } } : { center, zoom: 12 })} style={{ height: 420, width: '100%' }}>
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
           {agences.map((a) => (

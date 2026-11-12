@@ -10,7 +10,7 @@
 .agence-prio__item {
   display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap;
   padding: var(--space-3);
-  border: 1px solid var(--color-border); border-left-width: 4px; border-radius: var(--radius-md);
+  border: 1px solid var(--color-trait); border-left-width: 4px; border-radius: var(--radius-md);
   background: var(--color-surface);
 }
 .agence-prio__item--critical { border-left-color: var(--color-critical-solid); }
@@ -63,14 +63,14 @@ a.agence-meter:hover { background: var(--color-bg-hover); }
 .alerte-aide__btn { background: none; border: 0; padding: 0 var(--space-1); min-height: var(--control-sm); font: inherit; font-size: var(--text-sm); font-weight: var(--weight-bold); color: var(--color-text-muted); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; border-radius: var(--radius-sm); }
 .alerte-aide__btn:hover { color: var(--color-text-main); }
 .alerte-aide__btn:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
-.alerte-aide__panneau { position: absolute; z-index: 20; top: calc(100% + var(--space-1)); left: 0; width: min(380px, 86vw); padding: var(--space-3) var(--space-4); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
+.alerte-aide__panneau { position: absolute; z-index: 20; top: calc(100% + var(--space-1)); left: 0; width: min(380px, 86vw); padding: var(--space-3) var(--space-4); background: var(--color-surface); border: 1px solid var(--color-trait); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
 .alerte-aide__panneau p, .alerte-aide__corps p { margin: 0 0 var(--space-2); font-size: var(--text-sm); color: var(--color-text-body); line-height: var(--leading-normal); }
 .alerte-aide__panneau p:last-child, .alerte-aide__corps p:last-child { margin-bottom: 0; }
 @media (max-width: 640px), (pointer: coarse) { .alerte-aide__btn { min-height: var(--touch-target); } }
 .alerte-vide-filtre { display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: var(--color-bg-subtle); color: var(--color-text-muted); }
 
 /* Page Alertes : ligne de synthèse et filtres sur une rangée (défilement horizontal au besoin) sur petit écran. */
-.alerte-synthese { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-4); margin: 0; padding: var(--space-3) var(--space-4); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-xl); box-shadow: var(--shadow-card); font-size: var(--text-sm); color: var(--color-text-muted); }
+.alerte-synthese { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-4); margin: 0; padding: var(--space-3) var(--space-4); background: var(--color-surface); border: 1px solid var(--color-trait); border-radius: var(--radius-xl); box-shadow: var(--shadow-card); font-size: var(--text-sm); color: var(--color-text-muted); }
 .alerte-synthese__titre { font-size: var(--text-md); font-weight: var(--weight-bold); color: var(--color-text-main); text-wrap: balance; }
 .alerte-synthese__detail { color: var(--color-text-body); text-wrap: balance; }
 .alerte-synthese__plus { text-wrap: balance; }
@@ -98,7 +98,7 @@ a.agence-meter:hover { background: var(--color-bg-hover); }
 }
 
 /* Page Alertes : ligne d'alerte (agence → niveau → raison → détail → action). Bordure neutre : le signal est le badge de niveau, pas la couleur de la carte. */
-.alerte-ligne { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; padding: var(--space-3) var(--space-4); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.alerte-ligne { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; padding: var(--space-3) var(--space-4); background: var(--color-surface); border: 1px solid var(--color-trait); border-radius: var(--radius-md); }
 .alerte-ligne__corps { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
 .alerte-ligne__qui { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
 .alerte-ligne__agence { font-size: var(--text-md); font-weight: var(--weight-black); color: var(--color-text-main); overflow-wrap: anywhere; }
@@ -155,7 +155,7 @@ a.agence-meter:hover { background: var(--color-bg-hover); }
 }
 
 /* Historique des alertes (repliée par défaut) */
-.alerte-histo { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-xl); box-shadow: var(--shadow-card); }
+.alerte-histo { background: var(--color-surface); border: 1px solid var(--color-trait); border-radius: var(--radius-xl); box-shadow: var(--shadow-card); }
 .alerte-histo--attente { border: 0; box-shadow: none; background: none; }
 .alerte-histo__titre { margin: 0; }
 .alerte-histo__bascule { display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: 56px; padding: var(--space-3) var(--space-4); font: inherit; text-align: left; color: inherit; background: none; border: 0; border-radius: var(--radius-xl); cursor: pointer; }
