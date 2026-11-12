@@ -19,23 +19,23 @@ export default function PerformancesCles({ stats, erreur, onRetry }: { stats: St
     );
   }
   if (!stats) {
-    return <div role="status" aria-busy="true" style={{ color: '#64748B', fontSize: '0.84rem' }}>Chargement…</div>;
+    return <div role="status" aria-busy="true" className="t-2 t-sm">Chargement…</div>;
   }
   const positifs = stats.sentiments.find((s) => s.sentiment === 'positif')?.count ?? 0;
   const negatifs = stats.sentiments.find((s) => s.sentiment === 'negatif')?.count ?? 0;
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '12px' }}>
-      <div style={{ background: '#F8FAF8', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
-        <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#02302D' }}>{formaterValeurApi(stats.kpis.satisfaction?.valeur, stats.kpis.satisfaction?.valeur_num) ?? '—'}</div>
-        <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600, marginTop: '4px' }}>Satisfaction</div>
+      <div style={{ background: 'var(--color-bg)', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
+        <div className="t-xl t-semi t-encre">{formaterValeurApi(stats.kpis.satisfaction?.valeur, stats.kpis.satisfaction?.valeur_num) ?? '—'}</div>
+        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', fontWeight: 'var(--weight-semibold)', marginTop: '4px' }}>Satisfaction</div>
       </div>
-      <div style={{ background: '#EBF6ED', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
-        <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#3C7730' }}>{positifs}</div>
-        <div style={{ fontSize: '0.72rem', color: '#3C7730', fontWeight: 600, marginTop: '4px' }}>Avis positifs</div>
+      <div style={{ background: 'var(--color-bon-fond)', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
+        <div className="t-xl t-semi t-bon">{positifs}</div>
+        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-bon-texte)', fontWeight: 'var(--weight-semibold)', marginTop: '4px' }}>Avis positifs</div>
       </div>
-      <div style={{ background: '#FEF2F2', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
-        <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#B91C1C' }}>{negatifs}</div>
-        <div style={{ fontSize: '0.72rem', color: '#B91C1C', fontWeight: 600, marginTop: '4px' }}>Avis négatifs</div>
+      <div style={{ background: 'var(--color-critique-fond)', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
+        <div className="t-xl t-semi t-critique">{negatifs}</div>
+        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-critique-texte)', fontWeight: 'var(--weight-semibold)', marginTop: '4px' }}>Avis négatifs</div>
       </div>
     </div>
   );

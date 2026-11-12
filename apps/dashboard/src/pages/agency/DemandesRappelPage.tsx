@@ -124,7 +124,7 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
       {toast && (
-        <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 1000, background: '#02302D', color: 'white', padding: '12px 20px', borderRadius: '12px', fontWeight: 700 }}>
+        <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 1000, background: 'var(--color-encre)', color: 'white', padding: '12px 20px', borderRadius: '12px', fontWeight: 'var(--weight-semibold)' }}>
           {toast}
         </div>
       )}
@@ -134,8 +134,8 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
           style={{
             display: 'inline-flex',
             padding: '4px',
-            background: '#F8FAFB',
-            border: '1px solid #E2E8F0',
+            background: 'var(--color-bg)',
+            border: '1px solid var(--color-trait)',
             borderRadius: '12px',
             width: 'fit-content',
           }}
@@ -147,12 +147,12 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
               padding: '7px 16px',
               borderRadius: '9px',
               border: 'none',
-              fontSize: '0.82rem',
-              fontWeight: 700,
+              fontSize: 'var(--text-sm)',
+              fontWeight: 'var(--weight-semibold)',
               cursor: 'pointer',
               fontFamily: 'inherit',
-              background: toggle === 'attente' ? '#FEF3C7' : 'transparent',
-              color: toggle === 'attente' ? '#B45309' : '#64748B',
+              background: toggle === 'attente' ? 'var(--color-surveiller-fond)' : 'transparent',
+              color: toggle === 'attente' ? 'var(--color-surveiller-texte)' : 'var(--color-text-2)',
             }}
           >
             En attente
@@ -164,12 +164,12 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
               padding: '7px 16px',
               borderRadius: '9px',
               border: 'none',
-              fontSize: '0.82rem',
-              fontWeight: 700,
+              fontSize: 'var(--text-sm)',
+              fontWeight: 'var(--weight-semibold)',
               cursor: 'pointer',
               fontFamily: 'inherit',
-              background: toggle === 'traitees' ? '#EBF5E9' : 'transparent',
-              color: toggle === 'traitees' ? '#3C7730' : '#64748B',
+              background: toggle === 'traitees' ? 'var(--color-bon-fond)' : 'transparent',
+              color: toggle === 'traitees' ? 'var(--color-bon-texte)' : 'var(--color-text-2)',
             }}
           >
             Traitées
@@ -212,11 +212,10 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
             <div
               key={d.id}
               style={{
-                background: '#FFFFFF',
-                border: '1px solid #E8ECE6',
+                background: 'var(--color-surface)',
+                border: '1px solid var(--color-trait)',
                 borderRadius: '24px',
                 padding: '20px 24px',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '10px',
@@ -225,52 +224,52 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   {isCXManager && d.agence_nom && (
-                    <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#3C7730', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-bon-texte)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                       {d.agence_nom}
                     </span>
                   )}
-                  <h3 style={{ margin: 0, fontSize: '0.96rem', fontWeight: 800, color: '#02302D' }}>
+                  <h3 style={{ margin: 0, fontSize: 'var(--text-base)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>
                     {d.nom || 'Client anonyme'}
                   </h3>
                 </div>
-                <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', fontWeight: 'var(--weight-semibold)', whiteSpace: 'nowrap' }}>
                   Demandé le {formatDate(d.date_demande)}
                 </span>
               </div>
 
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '0.84rem' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: 'var(--text-sm)' }}>
                 {d.telephone && (
                   <a
                     href={`tel:${d.telephone}`}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', minHeight: 44, color: '#3C7730', fontWeight: 700, textDecoration: 'none' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', minHeight: 44, color: 'var(--color-bon-texte)', fontWeight: 'var(--weight-semibold)', textDecoration: 'none' }}
                   >
-                    <PhoneIcon size={14} color="#3C7730" />
+                    <PhoneIcon size={14} color="var(--color-bon-texte)" />
                     {d.telephone}
                   </a>
                 )}
                 {d.email && (
                   <a
                     href={`mailto:${d.email}`}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', minHeight: 44, color: '#3C7730', fontWeight: 700, textDecoration: 'none' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', minHeight: 44, color: 'var(--color-bon-texte)', fontWeight: 'var(--weight-semibold)', textDecoration: 'none' }}
                   >
-                    <MailIcon size={14} color="#3C7730" />
+                    <MailIcon size={14} color="var(--color-bon-texte)" />
                     {d.email}
                   </a>
                 )}
                 {d.coordonnees_masquees && <CoordonneesMasquees />}
                 {!d.coordonnees_masquees && !d.telephone && !d.email && (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#B45309', fontWeight: 700 }}>
-                    <AlertTriangleIcon size={14} color="#B45309" />
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--color-surveiller-texte)', fontWeight: 'var(--weight-semibold)' }}>
+                    <AlertTriangleIcon size={14} color="var(--color-surveiller-texte)" />
                     Aucune coordonnée laissée par le client
                   </span>
                 )}
               </div>
 
-              <div style={{ background: '#F8FAFB', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px 14px' }}>
-                <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
+              <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-trait)', borderRadius: '12px', padding: '12px 14px' }}>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', fontWeight: 'var(--weight-semibold)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
                   Avis lié — Note {d.feedback_note}/5
                 </div>
-                <p style={{ margin: 0, fontSize: '0.86rem', color: '#334155', lineHeight: 1.5 }}>
+                <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-encre)', lineHeight: 1.5 }}>
                   {d.feedback_commentaire || 'Aucun commentaire.'}
                 </p>
               </div>
@@ -289,12 +288,12 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
               )}
 
               {toggle === 'attente' && aConfirmer !== d.id && (
-                <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #F1F4EE', paddingTop: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--color-trait)', paddingTop: '12px' }}>
                   <button
                     type="button"
                     onClick={() => setAConfirmer(d.id)}
                     className="btn-primary"
-                    style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '10px', fontWeight: 800, minHeight: 44 }}
+                    style={{ padding: '8px 16px', fontSize: 'var(--text-xs)', borderRadius: '10px', fontWeight: 'var(--weight-semibold)', minHeight: 44 }}
                     title="À utiliser une fois le client recontacté : ses coordonnées seront masquées. Ce marquage ne modifie pas le statut de l’avis."
                   >
                     <CheckCircleIcon size={15} />
