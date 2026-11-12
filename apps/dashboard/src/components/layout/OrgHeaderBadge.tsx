@@ -7,12 +7,10 @@ interface OrgHeaderBadgeProps {
 }
 
 // Couleurs de fond harmonieuses pour l'avatar de remplacement
+// Avatar de remplacement (initiales) : un seul style neutre de la palette, quelle que soit l'organisation.
+// Les cinq teintes d'avant (orange, bleu, rose, violet…) n'avaient aucun rôle dans la palette.
 const FALLBACK_PALETTES = [
-  { bg: '#FFF3E6', text: '#D95D00', border: '#FFDEC0' }, // Orange / Amber
-  { bg: '#EAF5EC', text: '#3C7730', border: '#D5E8D3' }, // Vert IKAN
-  { bg: '#EFF6FF', text: '#2563EB', border: '#DBEAFE' }, // Bleu
-  { bg: '#FDF2F8', text: '#DB2777', border: '#FCE7F3' }, // Rose / Violet
-  { bg: '#F5F3FF', text: '#7C3AED', border: '#EDE9FE' }, // Indigo
+  { bg: 'var(--color-neutre-fond)', text: 'var(--color-encre)', border: 'var(--color-neutre-fond)' },
 ];
 
 function getPalette(name: string) {
@@ -53,11 +51,11 @@ export default function OrgHeaderBadge({ user }: OrgHeaderBadgeProps) {
         display: 'inline-flex',
         alignItems: 'center',
         gap: '10px',
-        background: '#FFFFFF',
-        border: '1px solid #E2E8F0',
+        background: 'var(--color-surface)',
+        border: '1px solid var(--color-trait)',
         borderRadius: '12px',
         padding: '5px 12px 5px 8px',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
+        boxShadow: 'var(--shadow-xs)',
         transition: 'all 0.15s ease',
         cursor: 'default',
         userSelect: 'none',
@@ -71,8 +69,8 @@ export default function OrgHeaderBadge({ user }: OrgHeaderBadgeProps) {
           width: '32px',
           height: '32px',
           borderRadius: '8px',
-          background: orgLogo ? '#FFFFFF' : palette.bg,
-          border: `1px solid ${orgLogo ? '#E5E7EB' : palette.border}`,
+          background: orgLogo ? 'var(--color-surface)' : palette.bg,
+          border: `1px solid ${orgLogo ? 'var(--color-trait)' : palette.border}`,
           color: palette.text,
           display: 'flex',
           alignItems: 'center',
@@ -98,8 +96,8 @@ export default function OrgHeaderBadge({ user }: OrgHeaderBadgeProps) {
         ) : (
           <span
             style={{
-              fontSize: '0.84rem',
-              fontWeight: 800,
+              fontSize: 'var(--text-sm)',
+              fontWeight: 'var(--weight-semibold)',
               lineHeight: 1,
               letterSpacing: '-0.02em',
             }}
@@ -121,9 +119,9 @@ export default function OrgHeaderBadge({ user }: OrgHeaderBadgeProps) {
       >
         <span
           style={{
-            fontSize: '0.82rem',
-            fontWeight: 700,
-            color: '#0F172A',
+            fontSize: 'var(--text-sm)',
+            fontWeight: 'var(--weight-semibold)',
+            color: 'var(--color-encre)',
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -134,9 +132,9 @@ export default function OrgHeaderBadge({ user }: OrgHeaderBadgeProps) {
         </span>
         <span
           style={{
-            fontSize: '0.68rem',
-            fontWeight: 500,
-            color: '#64748B',
+            fontSize: 'var(--text-xs)',
+            fontWeight: 'var(--weight-normal)',
+            color: 'var(--color-text-2)',
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -148,8 +146,8 @@ export default function OrgHeaderBadge({ user }: OrgHeaderBadgeProps) {
       </div>
 
       {/* ── Petit indicateur chevron discret Option 1 ── */}
-      <div style={{ display: 'flex', alignItems: 'center', color: '#94A3B8', flexShrink: 0, marginLeft: '2px' }}>
-        <ChevronDownIcon size={14} color="#94A3B8" />
+      <div style={{ display: 'flex', alignItems: 'center', color: 'var(--color-text-2)', flexShrink: 0, marginLeft: '2px' }}>
+        <ChevronDownIcon size={14} color="var(--color-text-2)" />
       </div>
     </div>
   );
