@@ -28,7 +28,31 @@ Aucune adresse de déploiement n'est codée dans le code (lot 0). Chaque applica
 Les valeurs attendues sont listées dans le `.env.example` de chaque application. Les adresses réelles ne
 figurent que dans la configuration de déploiement (`render.yaml`, puis celle d'AWS) et dans la documentation.
 
-## Palette retenue (lot 2)
+## Palette retenue (lot 2a)
 
-Le corail porte l'action, le vert porte la marque et le statut « bon ». Détail des rôles et des contrastes dans
-`apps/dashboard/src/styles/tokens.css` une fois le lot 2a fusionné.
+Un rôle fixe par couleur. Le corail porte l'action, le vert porte la marque et le statut « bon ».
+Valeurs et contrastes dans `apps/dashboard/src/styles/tokens.css`, vérifiés par `src/styles/contraste.test.ts`.
+
+| Jeton | Valeur | Rôle |
+|---|---|---|
+| `--color-encre` | #02302D | menu, titres, texte principal |
+| `--color-text-2` | #5C7268 | texte secondaire |
+| `--color-accent` | #C54825 | boutons et liens |
+| `--color-accent-vif` | #E5603B | icônes et traits, jamais de texte |
+| `--color-marque` | #3C7830 | logo et statut « bon » |
+| `--color-citron` | #BCCF00 | graphiques et décor, jamais de texte |
+| `--color-bg` | #F6F8F1 | fond de page |
+| `--color-surface` | #FFFFFF | cartes et tableaux |
+| `--color-border` | #7E8F84 | bordures de champs et de boutons |
+| `--color-trait` | #D3DACA | séparateurs, contours de cartes |
+
+Écarts au deck, décidés au lot 2a :
+
+- **Accent** : le deck donne #C94A26. Un lien de cette couleur sur la crème ne fait que 4,37:1 (< 4,5). La variante
+  conforme la plus proche, #C54825, sert à la fois aux boutons et aux liens (une seule couleur d'action).
+- **Citron** : 1,74:1 sur blanc. Il ne peut porter aucun sens dans un graphique (seuil 3:1) : décor seulement.
+- **Ajouts** : `--color-accent-hover` (#A63C1E, survol des boutons). La sélection réutilise le fond de statut neutre.
+
+Typographie : Poppins auto-hébergée (`apps/dashboard/public/fonts`), 400 et 600 seulement ; échelle 12 / 14 / 15 / 18 / 22 / 28 px.
+Les anciens noms (`--color-primary`, `--color-text-muted`, `--color-success-*`, `--weight-bold`…) restent, en alias vers ces
+jetons : le lot 2b remplace leurs usages un groupe de fichiers à la fois.

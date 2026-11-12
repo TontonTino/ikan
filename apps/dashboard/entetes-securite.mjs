@@ -21,8 +21,8 @@ export function origine(url) {
 /**
  * Sources réellement utilisées par le dashboard :
  *  - scripts : les fichiers du site seulement (Vite ne génère aucun script en ligne) ;
- *  - styles : 'unsafe-inline' (attributs style de React, <style> de index.html) + feuille Google Fonts (global.css) ;
- *  - polices : fichiers Google Fonts (gstatic) ;
+ *  - styles : 'unsafe-inline' (attributs style de React, <style> de index.html) ;
+ *  - polices : Poppins auto-hébergée (public/fonts), plus aucun appel à Google Fonts ;
  *  - images : site, data: (logos, motifs), blob:, et https: car le logo d'une organisation peut être une URL libre ; tuiles OpenStreetMap ;
  *  - connexions : API, agent YAM, recherche d'adresse Nominatim (sélecteur de position d'agence) ;
  *  - workers : blob: (génération PDF).
@@ -34,8 +34,8 @@ export function politiqueCsp(apiUrl, agentUrl) {
   return [
     "default-src 'self'",
     "script-src 'self'",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com data:",
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self' data:",
     "img-src 'self' data: blob: https:",
     `connect-src ${connexions.join(' ')}`,
     "worker-src 'self' blob:",

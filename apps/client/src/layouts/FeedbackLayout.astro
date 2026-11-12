@@ -60,14 +60,36 @@ const { title = 'IKAN AI — Votre avis', agenceNom } = Astro.props;
         unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
       }
 
+      /* Jetons du formulaire client : MÊMES valeurs que apps/dashboard/src/styles/tokens.css (palette du lot 2a).
+         Un rôle fixe par couleur ; le lot 2c y ramène les couleurs écrites en dur dans pages/feedback/[code].astro. */
       :root {
-        --color-dark: #02302D;
-        --color-forest: #064E3B;
-        --color-primary: #3C7730;
-        --color-accent: #75B72A;
-        --color-lime: #BCCF00;
-        --color-bg: #F4F8F5;
-        --font-poppins: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --color-encre: #02302D;        /* titres, texte principal */
+        --color-text-2: #5C7268;       /* texte secondaire */
+        --color-accent: #C54825;       /* boutons et liens (variante conforme de #C94A26 : 4,53:1 sur la crème) */
+        --color-accent-hover: #A63C1E;
+        --color-accent-vif: #E5603B;   /* icônes et traits, jamais de texte */
+        --color-marque: #3C7830;       /* logo et statut « bon » */
+        --color-citron: #BCCF00;       /* décor, jamais de texte */
+        --color-bg: #F6F8F1;           /* fond de page */
+        --color-surface: #FFFFFF;      /* cartes */
+        --color-border: #7E8F84;       /* champs et boutons */
+        --color-trait: #D3DACA;        /* séparateurs, contours */
+        --color-text-inverse: #FFFFFF;
+        --color-bon-texte: #1F5A25;         --color-bon-fond: #E8F0E0;
+        --color-surveiller-texte: #7A5200;  --color-surveiller-fond: #FBF0D0;
+        --color-critique-texte: #8C3A1B;    --color-critique-fond: #FBE8E2;
+        --color-neutre-texte: #3D4A44;      --color-neutre-fond: #EEF1EC;
+
+        --text-xs: 0.75rem; --text-sm: 0.875rem; --text-base: 0.9375rem; --text-lg: 1.125rem; --text-xl: 1.375rem; --text-2xl: 1.75rem;
+        --weight-normal: 400; --weight-semibold: 600;
+        --font-main: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+        /* Alias historiques (ne pas supprimer : utilisés par le formulaire) */
+        --color-dark: var(--color-encre);
+        --color-forest: var(--color-encre);
+        --color-primary: var(--color-marque);
+        --color-lime: var(--color-citron);
+        --font-poppins: var(--font-main);
       }
 
       *, *::before, *::after {

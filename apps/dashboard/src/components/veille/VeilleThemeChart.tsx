@@ -26,7 +26,7 @@ export default function VeilleThemeChart({ data }: { data: VeilleThemeBucket[] }
             <strong>{item.count} · {formaterPourcentage(item.pourcentage)}</strong>
           </li>
         ))}
-        {nonClasse && <li style={{ borderTop: '1px solid var(--color-border)', paddingTop: 10, display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-muted)' }}><span>Non classé</span><strong>{nonClasse.count} · {nonClasse.pourcentage}%</strong></li>}
+        {nonClasse && <li style={{ borderTop: '1px solid var(--color-trait)', paddingTop: 10, display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-muted)' }}><span>Non classé</span><strong>{nonClasse.count} · {nonClasse.pourcentage}%</strong></li>}
       </ul>
     </div>
   );

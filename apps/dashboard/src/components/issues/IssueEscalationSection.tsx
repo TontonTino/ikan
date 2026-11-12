@@ -79,7 +79,7 @@ export default function IssueEscalationSection({ issueId, statut }: { issueId: s
       ) : (
         <ol style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {entrees.map((e) => (
-            <li key={e.id} style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '10px 14px' }}>
+            <li key={e.id} style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-trait)', borderRadius: 'var(--radius-md)', padding: '10px 14px' }}>
               <div style={{ fontSize: '0.86rem', fontWeight: 800, color: 'var(--color-text-main)' }}>{libelleMotifEscalade(e.motif)}</div>
               <div style={{ fontSize: '0.76rem', color: 'var(--color-text-muted)', marginTop: '2px' }}>
                 {fullDate(e.date_evenement)} · par {e.declenchee_par_nom}

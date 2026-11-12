@@ -132,7 +132,7 @@ export default function IssueDetailContenu({ issue, loading, onNaviguer, onActio
   const avisVisibles = issue.feedbacks.slice(0, AVIS_VISIBLES);
   const avisReplies = issue.feedbacks.slice(AVIS_VISIBLES);
   const carteAvis = (fb: IssueDetail['feedbacks'][number]) => (
-    <li key={fb.id} style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '12px 14px' }}>
+    <li key={fb.id} style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-trait)', borderRadius: 'var(--radius-md)', padding: '12px 14px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '8px' }}>
         <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--color-text-main)' }}>Note {fb.note}/5</span>
         <time dateTime={fb.date_soumission} title={fullDate(fb.date_soumission)} style={{ fontSize: '0.74rem', color: 'var(--color-text-muted)' }}>{shortDate(fb.date_soumission)}</time>
@@ -171,7 +171,7 @@ export default function IssueDetailContenu({ issue, loading, onNaviguer, onActio
                     borderRadius: 'var(--radius-pill)',
                     fontSize: '0.76rem',
                     fontWeight: actuelle ? 800 : 600,
-                    border: '1px solid var(--color-border)',
+                    border: '1px solid var(--color-trait)',
                     background: actuelle ? 'var(--color-primary)' : passee ? 'var(--color-bg-subtle)' : 'transparent',
                     color: actuelle ? '#FFFFFF' : passee ? 'var(--color-text-main)' : 'var(--color-text-muted)',
                   }}

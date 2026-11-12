@@ -1,13 +1,37 @@
 /* ════════════════════════════════════════════════════════════════════
-   IKAN AI — Design tokens (source unique de vérité)
+   IKAN AI — Design tokens (source unique de vérité du dashboard)
 
-   Tout composant de components/ui consomme ces variables : aucune couleur,
-   aucun radius, aucun espacement ni aucune durée en dur dans un composant.
+   Tout composant consomme ces variables : aucune couleur, aucun radius,
+   aucun espacement ni aucune durée en dur dans un composant.
 
-   Contrastes (formule WCAG 2.x, vérifiés au calcul) indiqués à côté de
-   chaque couple texte/fond. Seuils : 4.5:1 texte courant, 3:1 éléments
-   graphiques (icônes, traits de graphique, anneau de focus).
+   Palette (deck de pitch, lot 2a) : un rôle fixe par couleur — une couleur ne sert qu'à une chose.
+     encre     menu, titres, texte principal         citron      graphiques et décor, JAMAIS de texte
+     texte-2   texte secondaire                      fond        page (crème)
+     accent    boutons et liens (corail)              surface     cartes et tableaux
+     accent-vif icônes et traits, JAMAIS de texte    border      champs et boutons
+     marque    logo et statut « bon »                 trait       séparateurs, contours de cartes
+   Le corail sert à l'action, pas à l'alerte ; le vert ne sert plus aux boutons.
+
+   Contrastes WCAG 2.1 calculés et vérifiés par src/styles/contraste.test.ts :
+   4,5:1 pour le texte, 3:1 pour les bordures de contrôles, icônes et l'anneau de focus.
    ════════════════════════════════════════════════════════════════════ */
+
+/* Poppins, auto-hébergée (fichiers repris d'apps/client/public/fonts, licence OFL dans public/fonts/) : aucun appel
+   à Google Fonts. Deux graisses seulement : 400 et 600. */
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/poppins-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/poppins-latin-600-normal.woff2') format('woff2');
+}
 
 :root {
   /* ── Espacements : 4 / 8 / 12 / 16 / 24 / 32 / 48 / 64 ─────────────── */
@@ -37,80 +61,97 @@
   --ease-enter: cubic-bezier(0.22, 1, 0.36, 1);      /* apparition (décélère) */
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);           /* disparition (accélère) */
 
-  /* ── Typographie ────────────────────────────────────────────────────── */
-  --font-main: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
-  --text-2xs: 0.6875rem;  /* 11px — micro-légendes uniquement */
-  --text-xs: 0.75rem;     /* 12px */
-  --text-sm: 0.8125rem;   /* 13px */
-  --text-md: 0.875rem;    /* 14px — corps par défaut */
-  --text-lg: 1rem;        /* 16px */
-  --text-xl: 1.25rem;     /* 20px */
-  --text-2xl: 1.5rem;     /* 24px */
-  --text-3xl: 2rem;       /* 32px — valeur KPI */
-  --weight-regular: 500;
-  --weight-medium: 600;
-  --weight-bold: 700;
-  --weight-black: 800;
+  /* ── Typographie ────────────────────────────────────────────────────
+     Une seule police, deux graisses (400 / 600), rien sous 12 px.        */
+  --font-main: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --text-xs: 0.75rem;     /* 12px — métadonnées uniquement (dates, compteurs) */
+  --text-sm: 0.875rem;    /* 14px — plancher pour tout texte à lire */
+  --text-base: 0.9375rem; /* 15px — corps */
+  --text-lg: 1.125rem;    /* 18px */
+  --text-xl: 1.375rem;    /* 22px */
+  --text-2xl: 1.75rem;    /* 28px — titres de page, valeurs KPI */
+  --weight-normal: 400;
+  --weight-semibold: 600;
   --leading-tight: 1.2;
   --leading-normal: 1.5;
 
-  /* ── Marque IKAN AI ─────────────────────────────────────────────────── */
-  --color-primary-dark: #02302D;   /* Midnight Green — 14.35:1 avec blanc */
-  --color-primary: #3C7730;        /* Forest Green — 5.42:1 sur blanc */
-  --color-primary-hover: #2F5F26;
-  --color-accent: #75B72A;         /* Lime Green — JAMAIS de texte blanc dessus (2.45:1) ; texte --color-primary-dark : 5.85:1 */
-  --color-lime: #BCCF00;           /* Electric Lime — décoratif uniquement, jamais en couleur de texte (1.74:1 sur blanc) */
-  --color-active-item: #EAF5EC;    /* Menthe : fond d'item actif — --color-primary-dark dessus : 12.83:1 */
+  /* Alias historiques (ne pas supprimer : utilisés par les pages existantes) → nouvelle échelle */
+  --text-md: var(--text-base);
+  --text-3xl: var(--text-2xl);
+  --weight-regular: var(--weight-normal);
+  --weight-medium: var(--weight-semibold);
+  --weight-bold: var(--weight-semibold);
+  --weight-black: var(--weight-semibold);
 
-  /* ── Neutres ────────────────────────────────────────────────────────── */
-  --color-surface: #FFFFFF;
-  --color-bg: #F8FAFB;
-  --color-bg-subtle: #F1F5F2;
-  --color-bg-hover: #F4F7F5;
-  --color-border: #E8ECE6;
-  --color-border-strong: #D5DCD2;
-  --color-border-subtle: #F1F4EE;
-  --color-border-focus: var(--color-primary);
-
-  --color-text-main: #02302D;      /* titres, valeurs */
-  --color-text-body: #1E293B;      /* corps */
-  --color-text-muted: #5B6B7F;     /* secondaire — 5.45:1 blanc, 5.20:1 sur --color-bg, 4.95:1 sur --color-bg-subtle, 4.87:1 sur --color-active-item */
-  --color-text-subtle: #94A3B8;    /* placeholders / décoratif — NE PAS utiliser pour du texte informatif (2.56:1) */
+  /* ── Palette ──────────────────────────────────────────────────────────
+     Contrastes : sur blanc / sur crème (--color-bg).                     */
+  --color-encre: #02302D;        /* menu, titres, texte principal — 14,35 / 13,41 */
+  --color-text-2: #5C7268;       /* texte secondaire — 5,17 / 4,83 */
+  /* Boutons et liens. Deck : #C94A26, mais un lien de cette couleur sur la crème ne fait que 4,37:1 (< 4,5) :
+     variante conforme la plus proche, à l'œil identique. Blanc dessus : 4,85 ; sur blanc 4,85 ; sur crème 4,53. */
+  --color-accent: #C54825;
+  --color-accent-hover: #A63C1E; /* survol et appui d'un bouton — blanc dessus : 6,3 */
+  --color-accent-vif: #E5603B;   /* icônes et traits seulement, jamais de texte — 3,46 / 3,23 */
+  --color-marque: #3C7830;       /* logo et statut « bon » — 5,36 / 5,00 */
+  --color-citron: #BCCF00;       /* graphiques et décor seulement, jamais de texte : 1,74 sur blanc, 8,24 sur l'encre */
+  --color-bg: #F6F8F1;           /* fond de page (crème) */
+  --color-surface: #FFFFFF;      /* cartes et tableaux */
+  --color-border: #7E8F84;       /* bordures de champs et de boutons — 3,42 / 3,19 */
+  --color-trait: #D3DACA;        /* séparateurs, contours de cartes (jamais derrière du texte secondaire : 3,61) */
   --color-text-inverse: #FFFFFF;
-  --color-text-on-dark-muted: #9FB0AB; /* 6.3:1 sur --color-primary-dark */
 
-  /* ── Sémantique ─────────────────────────────────────────────────────
-     Chaque statut a 4 rôles :
-       -solid  : remplissage / icône / trait (≥ 3:1 sur blanc)
-       -text   : texte sur fond clair (≥ 4.5:1 sur -bg ET sur blanc)
-       -bg     : fond teinté
-       -border : bordure du fond teinté                                    */
-  --color-success-solid: #3C7730;
-  --color-success-text: #2F6B25;   /* 5.77:1 sur -bg */
-  --color-success-bg: #EBF5E9;
-  --color-success-border: #D5E8D3;
+  /* ── Statuts : texte sur son fond (la couleur n'est jamais le seul porteur de sens : icône ou libellé en plus) */
+  --color-bon-texte: #1F5A25;         --color-bon-fond: #E8F0E0;          /* 7,05 */
+  --color-surveiller-texte: #7A5200;  --color-surveiller-fond: #FBF0D0;   /* 6,09 */
+  --color-critique-texte: #8C3A1B;    --color-critique-fond: #FBE8E2;     /* 6,48 */
+  --color-neutre-texte: #3D4A44;      --color-neutre-fond: #EEF1EC;       /* 8,15 — neutre, nouveau */
 
-  --color-warning-solid: #D97706;  /* 3.19:1 sur blanc : graphique seulement */
-  --color-warning-text: #9A4A08;   /* 5.62:1 sur -bg */
-  --color-warning-bg: #FEF3C7;
-  --color-warning-border: #FDE68A;
+  /* ── Alias historiques (ne pas supprimer : utilisés par les pages existantes) → jetons ci-dessus.
+     Le lot 2b remplace leurs usages par les jetons de rôle ; ces alias évitent toute casse d'ici là. */
+  --color-primary: var(--color-accent);
+  --color-primary-hover: var(--color-accent-hover);
+  --color-primary-dark: var(--color-encre);
+  --color-lime: var(--color-citron);
+  --color-active-item: var(--color-neutre-fond);
+  --color-bg-subtle: var(--color-bg);
+  --color-bg-hover: var(--color-bg);
+  --color-border-strong: var(--color-border);
+  --color-border-subtle: var(--color-trait);
+  --color-border-focus: var(--color-accent);
 
-  --color-critical-solid: #DC2626; /* 4.83:1 sur blanc */
-  --color-critical-text: #B91C1C;  /* 5.30:1 sur -bg */
-  --color-critical-bg: #FEE2E2;
-  --color-critical-border: #FECACA;
+  --color-text-main: var(--color-encre);
+  --color-text-body: var(--color-encre);
+  --color-text-muted: var(--color-text-2);
+  --color-text-subtle: var(--color-text-2);
+  --color-text-on-dark-muted: #9FB0AB; /* 6,3:1 sur l'encre */
 
-  --color-info-solid: #0369A1;     /* 5.93:1 sur blanc */
-  --color-info-text: #0369A1;      /* 5.17:1 sur -bg */
-  --color-info-bg: #E0F2FE;
-  --color-info-border: #BAE6FD;
+  /* Statuts, ancien découpage en 4 rôles (-solid icône/trait, -text, -bg, -border) → palette de statuts.
+     Les bordures de fonds teintés disparaissent (même couleur que le fond) : elles ne portaient aucun sens. */
+  --color-success-solid: var(--color-marque);
+  --color-success-text: var(--color-bon-texte);
+  --color-success-bg: var(--color-bon-fond);
+  --color-success-border: var(--color-bon-fond);
 
-  --color-neutral-solid: #64748B;
-  --color-neutral-text: #475569;   /* 6.92:1 sur -bg */
-  --color-neutral-bg: #F1F5F9;
-  --color-neutral-border: #E2E8F0;
+  --color-warning-solid: var(--color-surveiller-texte);
+  --color-warning-text: var(--color-surveiller-texte);
+  --color-warning-bg: var(--color-surveiller-fond);
+  --color-warning-border: var(--color-surveiller-fond);
 
-  /* Alias historiques (ne pas supprimer : utilisés par les pages existantes) */
+  --color-critical-solid: var(--color-critique-texte);
+  --color-critical-text: var(--color-critique-texte);
+  --color-critical-bg: var(--color-critique-fond);
+  --color-critical-border: var(--color-critique-fond);
+
+  --color-info-solid: var(--color-neutre-texte);
+  --color-info-text: var(--color-neutre-texte);
+  --color-info-bg: var(--color-neutre-fond);
+  --color-info-border: var(--color-neutre-fond);
+
+  --color-neutral-solid: var(--color-text-2);
+  --color-neutral-text: var(--color-neutre-texte);
+  --color-neutral-bg: var(--color-neutre-fond);
+  --color-neutral-border: var(--color-neutre-fond);
+
   --color-success: var(--color-success-solid);
   --color-warning: var(--color-warning-text);
   --color-error: var(--color-critical-solid);
@@ -118,24 +159,15 @@
   --color-info: var(--color-info-text);
 
   /* ── Data visualization ────────────────────────────────────────────
-     3-4 couleurs max par graphique. Le sens est FIXE :
-       positive  = satisfaction / succès / progression
-       critical  = critique / négatif
-       attention = à surveiller / neutre-dégradé
-       info      = volume / information
-       neutral   = série de référence (période précédente, moyenne réseau)
-     La couleur ne porte jamais seule l'information : légende + libellé.   */
-  --dataviz-positive: var(--color-success-solid);
-  --dataviz-critical: var(--color-critical-solid);
-  /* Ambre ≠ --color-warning-solid : l'orange #D97706 était trop proche du rouge
-     (ΔE 14.4 < 15 en vision normale, validate_palette.js). #B88300 : ΔE 18.4,
-     3:1+ sur blanc. Vert/rouge restent en zone plancher CVD (ΔE 6.3–7.3) :
-     légende + libellés directs OBLIGATOIRES, jamais la couleur seule. */
-  --dataviz-attention: #B88300;
-  --dataviz-info: var(--color-info-solid);
-  --dataviz-neutral: #64748B;
-  --dataviz-grid: #EEF1EC;
-  --dataviz-axis: var(--color-text-muted);
+     Le sens est FIXE ; la couleur ne porte jamais seule l'information (légende + libellé).
+     Le citron reste décoratif (1,74:1 sur blanc) : jamais une série qui porte du sens.   */
+  --dataviz-positive: var(--color-marque);
+  --dataviz-critical: var(--color-critique-texte);
+  --dataviz-attention: var(--color-surveiller-texte);
+  --dataviz-info: var(--color-encre);
+  --dataviz-neutral: var(--color-text-2);
+  --dataviz-grid: var(--color-trait);
+  --dataviz-axis: var(--color-text-2);
   --dataviz-area-opacity: 0.14;
 
   /* ── Élévation ─────────────────────────────────────────────────────── */
@@ -145,7 +177,8 @@
   --shadow-hover: 0 8px 24px rgba(2, 48, 45, 0.06);
   --shadow-dropdown: 0 10px 30px rgba(0, 0, 0, 0.08);
   --shadow-overlay: 0 24px 64px rgba(2, 45, 42, 0.22);
-  --focus-ring: 0 0 0 3px rgba(60, 119, 48, 0.18);
+  /* Anneau de focus : liseré blanc puis 2 px d'accent (≥ 3:1 sur blanc comme sur la crème). */
+  --focus-ring: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-accent);
   --overlay-scrim: rgba(2, 30, 28, 0.42);
 
   /* ── Couches ───────────────────────────────────────────────────────── */
@@ -168,25 +201,24 @@
   --control-lg: 44px;
   --drawer-width: 480px;
 
-  /* ── Sidebar sombre (contrastes vérifiés sur les 2 extrémités du dégradé) */
-  --sidebar-bg-from: #02302D;
-  --sidebar-bg-to: #06392F;
-  --sidebar-text: #D5E0DC;          /* 10.6:1 / 9.5:1 */
+  /* ── Sidebar : encre unie (plus de dégradé décoratif) ───────────────── */
+  --sidebar-bg-from: var(--color-encre);
+  --sidebar-bg-to: var(--color-encre);
+  --sidebar-text: #D5E0DC;          /* 10,6:1 sur l'encre */
   --sidebar-text-strong: #FFFFFF;
-  --sidebar-muted: var(--color-text-on-dark-muted); /* 6.3:1 / 5.7:1 */
+  --sidebar-muted: var(--color-text-on-dark-muted); /* 6,3:1 */
   --sidebar-hover-bg: rgba(255, 255, 255, 0.06);
   --sidebar-active-bg: rgba(255, 255, 255, 0.10);
   --sidebar-active-border: rgba(255, 255, 255, 0.16);
 
-  /* ── Alias --ikan-* : référencés par l'ancien Badge (fichier tokens.css
-     jamais créé, d'où des badges sans couleur). Conservés pour compat. ── */
+  /* ── Alias --ikan-* : référencés par l'ancien Badge. Conservés pour compat. ── */
   --ikan-bg: var(--color-bg);
-  --ikan-border: var(--color-border);
+  --ikan-border: var(--color-trait);
   --ikan-ink: var(--color-text-main);
   --ikan-text-soft: var(--color-text-muted);
   --ikan-primary: var(--color-primary);
   --ikan-primary-soft: var(--color-active-item);
-  --ikan-lime-soft: #F4F8D6;
+  --ikan-lime-soft: var(--color-neutre-fond);
   --ikan-success: var(--color-success-text);
   --ikan-success-bg: var(--color-success-bg);
   --ikan-warning: var(--color-warning-text);
