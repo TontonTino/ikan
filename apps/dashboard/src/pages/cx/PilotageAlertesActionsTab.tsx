@@ -1,41 +1,32 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { lienApercuAgence, lienAvis } from '../../utils/liensAgence';
-import type { Agence, Alerte, AlerteFeedback } from '../../types';
+import { lienApercuAgence } from '../../utils/liensAgence';
+import type { Agence, Alerte } from '../../types';
 import AgenceFilterSelect from '../../components/stats/AgenceFilterSelect';
 import Alert from '../../components/ui/Alert';
-import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import EmptyState from '../../components/ui/EmptyState';
 import IconButton from '../../components/ui/IconButton';
 import Skeleton from '../../components/ui/Skeleton';
-import { dateRelativeOuAbsolue, fullDate } from '../../components/ui/format';
-import { ArrowUpRightIcon, CheckIcon, FilterIcon, RefreshIcon, TargetIcon } from '../../components/common/Icons';
-import { raisonLabel, alerteFeedbackAnchor, alerteSeuilAnchor, libelleStatutAvis } from '../../components/alerts/alerteLabels';
+import { ArrowUpRightIcon, FilterIcon, RefreshIcon } from '../../components/common/Icons';
+import { alerteSeuilAnchor } from '../../components/alerts/alerteLabels';
 import BadgeGraviteAlerte from '../../components/alerts/BadgeGraviteAlerte';
-import BadgeNiveauAvis from '../../components/alerts/BadgeNiveauAvis';
 import SuiviEpisode, { PastilleEtatEpisode } from '../../components/alerts/EtatEpisode';
 import { episodeDeAlerte, peutPrendreEnCharge } from '../../utils/episodesAlertes';
 import {
-  AVIS_VISIBLES,
-  avisCible,
   compterAlertes,
   filtrerAlertes,
-  libelleVoirAvis,
   messageForfait,
-  noteTriAvis,
-  nombreAvisVisibles,
   decouperChiffres,
   partiesSynthese,
   phraseAgencesConcernees,
   syntheseAlertes,
-  tonAvis,
-  type TypeAlerte,
 } from './alertesVue';
 import type { AlertesData } from './AlertesView';
 import type { EtatSource } from './alertesVue';
-import { formaterPourcentage } from '../../utils/formatNombre';
+import { formaterNombre, formaterPourcentage } from '../../utils/formatNombre';
+import { LIEN_FILE_A_TRAITER } from '../../utils/fileATraiter';
 
 interface Props {
   isAgencyManager: boolean;
@@ -50,13 +41,10 @@ interface Props {
   onPrendreEnCharge?: (alerte: Alerte) => void;
   /** « Historique des alertes » (repliée), affichée sous la liste des alertes actives. */
   historique?: React.ReactNode;
+  /** Nombre d'avis de la file « À traiter » (même périmètre d'agence) ; null = inconnu (chargement ou erreur). */
+  avisATraiter?: number | null;
 }
 
-const TYPES: Array<{ id: TypeAlerte; label: string }> = [
-  { id: 'toutes', label: 'Toutes' },
-  { id: 'seuil', label: 'Satisfaction' },
-  { id: 'avis', label: 'Avis clients' },
-];
 
 /** Texte dont les nombres sont mis en valeur (<b>) : le texte lu, copié ou annoncé reste identique. */
 const avecChiffres = (texte: string) =>
@@ -125,68 +113,27 @@ export function LigneSeuil({ alerte, isAgencyManager, cible, onPrendreEnCharge }
   );
 }
 
-export function LigneAvis({ avis, isAgencyManager, cible }: { avis: AlerteFeedback; isAgencyManager: boolean; cible: boolean }) {
-  const id = alerteFeedbackAnchor(avis.feedback_id);
-  const statut = libelleStatutAvis(avis.statut_traitement);
-  return (
-    <li id={id} tabIndex={-1} className={`alerte-ligne ui-alert-item${cible ? ' is-target' : ''}`}>
-      <div className="alerte-ligne__corps">
-        <div className="alerte-ligne__qui">
-          {!isAgencyManager && <strong className="alerte-ligne__agence">{avis.agence_nom}</strong>}
-          <time className="alerte-ligne__date" dateTime={avis.date_soumission} title={fullDate(avis.date_soumission)}>
-            {dateRelativeOuAbsolue(avis.date_soumission)}
-          </time>
-        </div>
-        <div className="alerte-ligne__niveau">
-          <BadgeNiveauAvis note={avis.note} />
-          <span className="alerte-ligne__raison">{raisonLabel(avis.raison)}</span>
-        </div>
-        <p className="alerte-ligne__meta">
-          {avis.categorie_nom ? `Catégorie « ${avis.categorie_nom} » · ` : ''}Note {avis.note}/5
-          {statut && (
-            <>
-              {' · '}
-              <span className="alerte-ligne__statut">
-                {avis.statut_traitement === 'en_cours' ? <TargetIcon size={13} aria-hidden="true" /> : <CheckIcon size={13} aria-hidden="true" />}
-                {statut}
-              </span>
-            </>
-          )}
-        </p>
-        <p className={`alerte-ligne__detail alerte-ligne__detail--clamp${avis.commentaire ? '' : ' ui-item__text--empty'}`}>{avis.commentaire || 'Aucun commentaire.'}</p>
-      </div>
-      <Link to={lienAvis(isAgencyManager ? 'agency_manager' : 'cx_manager', avis.agence_id, 'critiques', { avisId: avis.feedback_id })} className={CLASSE_ACTION}>
-        Traiter l’avis<ArrowUpRightIcon size={13} aria-hidden="true" />
-      </Link>
-    </li>
-  );
-}
-
 export default function PilotageAlertesActionsTab(props: Props) {
-  const { isAgencyManager, alertes, nomForfait, agences, selectedAgenceId, onSelectAgence, onRefresh, onPrendreEnCharge, historique } = props;
-  const [type, setType] = useState<TypeAlerte>('toutes');
-  const [depliee, setDepliee] = useState(false);
-  const { hash } = useLocation();
+  const { isAgencyManager, alertes, nomForfait, agences, selectedAgenceId, onSelectAgence, onRefresh, onPrendreEnCharge, historique, avisATraiter = null } = props;
 
-  const { seuil, avis, incluses } = alertes.donnees;
+  // La page Alertes ne garde que les alertes de seuil (lot 3) : les avis à risque sont dans la file « À traiter » de la page Avis.
+  const { seuil, incluses } = alertes.donnees;
   const prete = alertes.charge;
-  const target = useHashTarget(prete, `${seuil.length}-${avis.length}-${depliee}`);
-  const cibleId = avisCible(hash);
+  const target = useHashTarget(prete, `${seuil.length}`);
 
-  const compteurs = useMemo(() => compterAlertes(seuil, avis, selectedAgenceId), [seuil, avis, selectedAgenceId]);
+  const compteurs = useMemo(() => compterAlertes(seuil, [], selectedAgenceId), [seuil, selectedAgenceId]);
   // Total sans filtre : sert à dire qu'un filtre masque des alertes existantes (jamais « aucune alerte » à tort).
-  const totalGlobal = useMemo(() => compterAlertes(seuil, avis, null).total, [seuil, avis]);
-  const filtrees = useMemo(() => filtrerAlertes({ seuil, avis, type, agenceId: selectedAgenceId }), [seuil, avis, type, selectedAgenceId]);
-  const synthese = useMemo(() => syntheseAlertes({ seuil, avis, agenceId: selectedAgenceId, cx: !isAgencyManager }), [seuil, avis, selectedAgenceId, isAgencyManager]);
-  const nbAvisVisibles = nombreAvisVisibles(filtrees.avis, depliee, cibleId);
-  const avisVisibles = filtrees.avis.slice(0, nbAvisVisibles);
-  const nbAffichees = filtrees.seuil.length + filtrees.avis.length;
-  const filtreActif = type !== 'toutes' || !!selectedAgenceId;
+  const totalGlobal = useMemo(() => compterAlertes(seuil, [], null).total, [seuil]);
+  const filtrees = useMemo(() => filtrerAlertes({ seuil, avis: [], type: 'seuil', agenceId: selectedAgenceId }), [seuil, selectedAgenceId]);
+  const synthese = useMemo(() => syntheseAlertes({ seuil, avis: [], agenceId: selectedAgenceId, cx: !isAgencyManager }), [seuil, selectedAgenceId, isAgencyManager]);
+  const nbAffichees = filtrees.seuil.length;
+  const filtreActif = !!selectedAgenceId;
   const forfait = messageForfait(nomForfait, !isAgencyManager);
   const chargement = alertes.statut === 'chargement' && !prete;
   const echecInitial = alertes.statut === 'erreur' && !prete;
   const actualisationEchouee = alertes.statut === 'erreur' && prete;
-  const resetFiltres = () => { setType('toutes'); onSelectAgence(null); };
+  const resetFiltres = () => onSelectAgence(null);
+  const lienFile = `${LIEN_FILE_A_TRAITER}${selectedAgenceId && !isAgencyManager ? `&agence=${encodeURIComponent(selectedAgenceId)}` : ''}`;
 
   return (
     <div className="agence">
@@ -195,24 +142,26 @@ export default function PilotageAlertesActionsTab(props: Props) {
           <span className="alerte-synthese__titre">{avecChiffres(partiesSynthese(synthese).titre)} :</span>{' '}
           <span className="alerte-synthese__detail">{avecChiffres(partiesSynthese(synthese).detail)}</span>
           {phraseAgencesConcernees(synthese) && <span className="alerte-synthese__plus">{avecChiffres(phraseAgencesConcernees(synthese) ?? '')}</span>}
-          {synthese.avisLePlusAncien && <span className="alerte-synthese__plus">Avis le plus ancien : <time dateTime={synthese.avisLePlusAncien} title={fullDate(synthese.avisLePlusAncien)}>{dateRelativeOuAbsolue(synthese.avisLePlusAncien)}</time></span>}
         </p>
       )}
 
       <div className="alerte-toolbar">
-        <div className="ui-segmented" role="group" aria-label="Type d'alerte">
-          {TYPES.map((t) => (
-            <button key={t.id} type="button" className="ui-segmented__item" aria-pressed={type === t.id} onClick={() => setType(t.id)}>
-              {t.label}{prete && incluses ? ` (${t.id === 'toutes' ? compteurs.total : t.id === 'seuil' ? compteurs.seuil : compteurs.avis})` : ''}
-            </button>
-          ))}
-        </div>
         {!isAgencyManager && <AgenceFilterSelect agences={agences} selectedId={selectedAgenceId} onChange={onSelectAgence} label="Filtrer les alertes par agence" />}
         <IconButton label="Actualiser les alertes" icon={<RefreshIcon size={16} />} onClick={onRefresh} />
       </div>
 
+      {/* Renvoi vers LA file d'avis (même compteur que l'onglet « À traiter » et que la cloche). */}
+      <p className="alerte-renvoi-file">
+        <span>
+          {avisATraiter === null
+            ? 'Les avis qui demandent un geste sont dans la file « À traiter » de la page Avis.'
+            : <>{avecChiffres(`${formaterNombre(avisATraiter, 0)} avis à traiter`)}{' '}dans la page Avis{avisATraiter === 0 ? ' : rien en attente.' : '.'}</>}
+        </span>
+        <Link to={lienFile} className={CLASSE_ACTION}>Voir les avis à traiter<ArrowUpRightIcon size={13} aria-hidden="true" /></Link>
+      </p>
+
       <Card
-        title="Alertes actives"
+        title="Alertes de satisfaction"
         className="alerte-carte"
         aria-busy={chargement || undefined}
       >
@@ -232,51 +181,28 @@ export default function PilotageAlertesActionsTab(props: Props) {
           <EmptyState
             compact
             illustration={filtreActif && totalGlobal > 0 ? <span className="alerte-vide-filtre"><FilterIcon size={30} /></span> : 'no-alert'}
-            title={filtreActif && totalGlobal > 0 ? 'Aucune alerte pour ces filtres' : 'Aucune alerte active'}
+            title={filtreActif && totalGlobal > 0 ? 'Aucune alerte pour cette agence' : 'Aucune alerte active'}
             message={
               filtreActif && totalGlobal > 0
-                ? `Ces filtres masquent les alertes : il y a ${totalGlobal} alerte${totalGlobal > 1 ? 's' : ''} au total. Élargissez le type ou l’agence pour les voir.`
+                ? `Ce filtre masque les alertes : il y a ${totalGlobal} alerte${totalGlobal > 1 ? 's' : ''} au total. Choisissez « Toutes les agences » pour les voir.`
                 : isAgencyManager
-                  ? 'Votre agence maintient un taux de satisfaction supérieur à son seuil et aucun avis ne déclenche d’alerte.'
-                  : 'Aucune agence du réseau ne déclenche d’alerte pour le moment.'
+                  ? 'Votre agence maintient un taux de satisfaction supérieur à son seuil.'
+                  : 'Aucune agence du réseau n’est sous son seuil de satisfaction pour le moment.'
             }
-            action={filtreActif ? { label: 'Réinitialiser les filtres', onClick: resetFiltres } : undefined}
+            action={filtreActif ? { label: 'Réinitialiser le filtre', onClick: resetFiltres } : undefined}
           />
         ) : (
-          <>
-            {filtrees.seuil.length > 0 && (
-              <section aria-label="Alertes de satisfaction">
-                <h3 className="alerte-groupe-titre">Satisfaction sous le seuil ({filtrees.seuil.length})</h3>
-                <p className="siege-note">
-                  {isAgencyManager
-                    ? 'Chaque alerte disparaît quand la satisfaction des 7 derniers jours repasse au-dessus du seuil.'
-                    : 'Chaque alerte est affichée après 48 h sous le seuil ; elle disparaît quand la satisfaction des 7 derniers jours repasse au-dessus.'}
-                </p>
-                <ul className="agence-prio alerte-liste">
-                  {filtrees.seuil.map((a) => <LigneSeuil key={a.agence_id} alerte={a} isAgencyManager={isAgencyManager} cible={target === alerteSeuilAnchor(a.agence_id)} onPrendreEnCharge={onPrendreEnCharge} />)}
-                </ul>
-              </section>
-            )}
-            {filtrees.avis.length > 0 && (
-              <section aria-label="Avis à risque">
-                <h3 className="alerte-groupe-titre">Avis à risque ({filtrees.avis.length})</h3>
-                <p className="siege-note">{noteTriAvis(filtrees.avis) ? `${noteTriAvis(filtrees.avis)} ` : ''}Chaque alerte disparaît quand l’avis est marqué comme résolu.</p>
-                <ul className="agence-prio alerte-liste">
-                  {avisVisibles.map((a) => <LigneAvis key={a.feedback_id} avis={a} isAgencyManager={isAgencyManager} cible={target === alerteFeedbackAnchor(a.feedback_id)} />)}
-                </ul>
-                <div className="alerte-pied">
-                  {filtrees.avis.length > AVIS_VISIBLES && (
-                    <Button className="alerte-voir-plus" variant="secondary" aria-expanded={nbAvisVisibles === filtrees.avis.length} onClick={() => setDepliee((v) => !v)}>
-                      {libelleVoirAvis(filtrees.avis.length, nbAvisVisibles === filtrees.avis.length)}
-                    </Button>
-                  )}
-                  <p className="siege-note" role="status">
-                    {avisVisibles.length} avis affichés sur {filtrees.avis.length}
-                  </p>
-                </div>
-              </section>
-            )}
-          </>
+          <section aria-label="Alertes de satisfaction">
+            <h3 className="alerte-groupe-titre">Satisfaction sous le seuil ({compteurs.seuil})</h3>
+            <p className="siege-note">
+              {isAgencyManager
+                ? 'Chaque alerte disparaît quand la satisfaction des 7 derniers jours repasse au-dessus du seuil.'
+                : 'Chaque alerte est affichée après 48 h sous le seuil ; elle disparaît quand la satisfaction des 7 derniers jours repasse au-dessus.'}
+            </p>
+            <ul className="agence-prio alerte-liste">
+              {filtrees.seuil.map((a) => <LigneSeuil key={a.agence_id} alerte={a} isAgencyManager={isAgencyManager} cible={target === alerteSeuilAnchor(a.agence_id)} onPrendreEnCharge={onPrendreEnCharge} />)}
+            </ul>
+          </section>
         )}
       </Card>
 

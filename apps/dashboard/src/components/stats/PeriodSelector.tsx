@@ -1,23 +1,15 @@
 import React from 'react';
+import { PERIODES, type Periode } from '../../utils/periodes';
 
-export interface PeriodOption {
-  label: string;
-  jours: number;
-}
+export type PeriodOption = Periode;
 
-export const PERIOD_OPTIONS: PeriodOption[] = [
-  { label: "Aujourd'hui", jours: 1 },
-  { label: '7 jours', jours: 7 },
-  { label: '14 jours', jours: 14 },
-  { label: '30 jours', jours: 30 },
-  { label: '90 jours', jours: 90 },
-  { label: 'Cette année', jours: 365 },
-];
+/** La liste unique du dashboard (utils/periodes.ts) : 7 jours, 30 jours, 90 jours, 12 mois. */
+export const PERIOD_OPTIONS: readonly PeriodOption[] = PERIODES;
 
 interface PeriodSelectorProps {
   value: number;
   onChange: (jours: number) => void;
-  options?: PeriodOption[];
+  options?: readonly PeriodOption[];
 }
 
 export default function PeriodSelector({

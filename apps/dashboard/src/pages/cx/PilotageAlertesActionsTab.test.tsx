@@ -6,7 +6,6 @@ import type { Alerte, AlerteFeedback } from '../../types';
 import PilotageAlertesActionsTab from './PilotageAlertesActionsTab';
 import type { AlertesData } from './AlertesView';
 import type { EtatSource } from './alertesVue';
-import { AVIS_VISIBLES } from './alertesVue';
 
 const seuil = (id = 'a1'): Alerte => ({ agence_id: id, agence_nom: `Agence ${id}`, taux_actuel: 50, seuil: 70, message: 'sous le seuil' });
 const avis = (i: number, note = 1, agence = 'a1'): AlerteFeedback => ({
@@ -34,6 +33,9 @@ const rendu = (surcharge: Partial<React.ComponentProps<typeof PilotageAlertesAct
     </StaticRouter>,
   );
 
+const occurrences = (html: string, motif: string) => html.split(motif).length - 1;
+const synthese = (html: string) => (html.match(/<p class="alerte-synthese">.*?<\/p>/) || [''])[0].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
 describe('page /alertes — les six états', () => {
   it('chargement : indicateur accessible, ni liste ni message vide', () => {
     const html = rendu({ alertes: { statut: 'chargement', charge: false, donnees: { seuil: [], avis: [], incluses: true } } });
@@ -42,9 +44,11 @@ describe('page /alertes — les six états', () => {
     expect(html).not.toContain('Aucune alerte active');
   });
 
-  it('aucune alerte : véritable état vide, sans promettre que tout va bien pour un autre périmètre', () => {
+  it('aucune alerte : véritable état vide, coche positive, sans parler des avis (ils sont dans la file)', () => {
     const html = rendu();
     expect(html).toContain('Aucune alerte active');
+    expect(html).toContain('var(--color-success)');
+    expect(html).toContain('Votre agence maintient un taux de satisfaction supérieur à son seuil.');
     expect(html).not.toContain('Impossible de charger');
   });
 
@@ -71,58 +75,58 @@ describe('page /alertes — les six états', () => {
   });
 
   it('échec d’actualisation avec données : les alertes restent affichées avec un avertissement', () => {
-    const html = rendu({ alertes: etatAlertes({ avis: [avis(1)] }, { statut: 'erreur' }) });
-    expect(html).toContain('commentaire 1');
+    const html = rendu({ alertes: etatAlertes({ seuil: [seuil()] }, { statut: 'erreur' }) });
+    expect(html).toContain('id="alerte-seuil-a1"');
     expect(html).toContain('n’ont pas pu être actualisées');
     expect(html).not.toContain('Aucune alerte active');
   });
+});
 
-  it('données disponibles : deux types distincts avec leurs libellés écrits', () => {
-    const html = rendu({ alertes: etatAlertes({ seuil: [seuil()], avis: [avis(1)] }) });
-    expect(html).toContain('Satisfaction sous le seuil');
-    expect(html).toContain('alerte-ligne__raison">Note basse<');
-    expect(html).toContain('Catégorie « Accueil » · Note 1/5');
-    expect(html).toContain('pour un seuil de 70 %');
+describe('page /alertes — seulement les alertes de seuil (lot 3)', () => {
+  it('les avis à risque ne sont plus listés ici, même quand l’API en renvoie', () => {
+    const html = rendu({ alertes: etatAlertes({ seuil: [seuil()], avis: [avis(1), avis(2)] }) });
+    expect(html).not.toContain('Avis à risque');
+    expect(html).not.toContain('alerte-feedback-');
+    expect(html).not.toContain('commentaire 1');
+    expect(html).not.toContain('Traiter l’avis');
+    expect(html).toContain('Satisfaction sous le seuil (1)');
+  });
+
+  it('avis seuls côté API : la page dit qu’il n’y a aucune alerte de seuil (les avis sont dans la file)', () => {
+    const html = rendu({ alertes: etatAlertes({ avis: [avis(1)] }) });
+    expect(html).toContain('Aucune alerte active');
+    expect(html).not.toContain('alerte-synthese');
+  });
+
+  it('plus de choix de type d’alerte : il n’en reste qu’un', () => {
+    const html = rendu({ alertes: etatAlertes({ seuil: [seuil()] }) });
+    expect(html).not.toContain('aria-label="Type d&#x27;alerte"');
+    expect(html).not.toMatch(/Avis clients \(\d+\)/);
+  });
+
+  it('renvoi vers la file « À traiter » de la page Avis, avec son compteur', () => {
+    const html = rendu({ avisATraiter: 3 });
+    expect(html).toContain('<b class="alerte-synthese__n">3</b> avis à traiter');
+    expect(html).toContain('href="/feedbacks?filtre=a-traiter"');
+    expect(html).toContain('Voir les avis à traiter');
+    expect(rendu({ avisATraiter: 0 })).toContain('rien en attente');
+  });
+
+  it('compteur inconnu : jamais de « 0 » inventé, seulement le renvoi', () => {
+    const html = rendu({ avisATraiter: null });
+    expect(html).not.toMatch(/>0<\/b> avis à traiter/);
+    expect(html).toContain('Les avis qui demandent un geste sont dans la file « À traiter » de la page Avis.');
+  });
+
+  it('CX Manager filtré sur une agence : le renvoi garde l’agence', () => {
+    const html = rendu({ isAgencyManager: false, selectedAgenceId: 'a7', avisATraiter: 2 });
+    expect(html).toContain('href="/feedbacks?filtre=a-traiter&amp;agence=a7"');
   });
 });
 
-describe('page /alertes — hiérarchie, volume et filtres', () => {
-  it('au plus cinq avis visibles, le total et le dépliage sont annoncés', () => {
-    const beaucoup = Array.from({ length: 25 }, (_, i) => avis(i, 3));
-    const html = rendu({ alertes: etatAlertes({ avis: beaucoup }) });
-    expect((html.match(/id="alerte-feedback-/g) || []).length).toBe(AVIS_VISIBLES);
-    expect(html).toContain(`${AVIS_VISIBLES} avis affichés sur 25`);
-    expect(html).toContain('Voir les 20 avis');
-    expect(html).toContain('aria-expanded="false"');
-  });
-
-  it('une alerte ciblée par la cloche hors de la limite est présente dans la page', () => {
-    const beaucoup = Array.from({ length: 25 }, (_, i) => avis(i, 3));
-    const html = rendu({ alertes: etatAlertes({ avis: beaucoup }) }, '/alertes#alerte-feedback-f24');
-    expect(html).toContain('id="alerte-feedback-f24"');
-    expect(html).toContain('25 avis affichés sur 25');
-  });
-
-  it('les avis critiques passent avant les autres et la gravité est écrite', () => {
-    const html = rendu({ alertes: etatAlertes({ avis: [avis(1, 4), avis(2, 1)] }) });
-    expect(html.indexOf('alerte-feedback-f2')).toBeLessThan(html.indexOf('alerte-feedback-f1'));
-    expect(html).toContain('ui-badge--critical');
-    expect(html).toContain('ui-badge--warning');
-    expect(html).toContain('>Critique<');
-    expect(html).toContain('>À surveiller<');
-  });
-
-  it('les ancres de la cloche sont conservées pour les deux types', () => {
-    const html = rendu({ alertes: etatAlertes({ seuil: [seuil('a9')], avis: [avis(5)] }) });
-    expect(html).toContain('id="alerte-seuil-a9"');
-    expect(html).toContain('id="alerte-feedback-f5"');
-  });
-
-  it('les types affichent leurs compteurs', () => {
-    const html = rendu({ alertes: etatAlertes({ seuil: [seuil()], avis: [avis(1), avis(2)] }) });
-    expect(html).toContain('Toutes (3)');
-    expect(html).toContain('Satisfaction (1)');
-    expect(html).toContain('Avis clients (2)');
+describe('page /alertes — hiérarchie et filtres', () => {
+  it('l’ancre de seuil (liens existants) est conservée', () => {
+    expect(rendu({ alertes: etatAlertes({ seuil: [seuil('a9')] }) })).toContain('id="alerte-seuil-a9"');
   });
 
   it('sélecteur d’agence réservé au CX Manager, avec un nom accessible', () => {
@@ -132,119 +136,57 @@ describe('page /alertes — hiérarchie, volume et filtres', () => {
     expect(cx).toContain('aria-label="Filtrer les alertes par agence"');
   });
 
-  it('filtre d’agence sans résultat alors que des alertes existent : message distinct avec le total', () => {
-    const html = rendu({ isAgencyManager: false, selectedAgenceId: 'autre', alertes: etatAlertes({ avis: [avis(1)] }) });
-    expect(html).toContain('Aucune alerte pour ces filtres');
+  it('filtre d’agence sans résultat alors que des alertes existent : icône neutre et message distinct avec le total', () => {
+    const html = rendu({ isAgencyManager: false, selectedAgenceId: 'autre', alertes: etatAlertes({ seuil: [seuil()] }) });
+    expect(html).toContain('Aucune alerte pour cette agence');
     expect(html).toContain('1 alerte au total');
-    expect(html).toContain('Réinitialiser les filtres');
+    expect(html).toContain('Réinitialiser le filtre');
+    expect(html).toContain('alerte-vide-filtre');
+  });
+
+  it('la phrase de seuil est écrite UNE fois par groupe, pas par ligne', () => {
+    const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ seuil: [seuil('a1'), seuil('a2'), seuil('a3')] }) });
+    expect(occurrences(html, 'Chaque alerte est affichée après 48 h sous le seuil')).toBe(1);
+    expect(rendu({ alertes: etatAlertes({ seuil: [seuil('a1'), seuil('a2')] }) })).toContain('Chaque alerte disparaît quand la satisfaction des 7 derniers jours repasse au-dessus du seuil.');
+  });
+
+  it('titre de groupe sans majuscules intégrales', () => {
+    const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ seuil: [seuil('a1'), seuil('a2')] }) });
+    expect(html).toContain('<h3 class="alerte-groupe-titre">Satisfaction sous le seuil (2)</h3>');
   });
 });
 
-describe('page /alertes — liens vers les avis et les agences', () => {
-  it('Responsable d’agence : « Traiter l’avis » → sa liste d’avis critiques', () => {
-    const html = rendu({ alertes: etatAlertes({ avis: [avis(1, 1, 'a1')] }) });
-    expect(html).toContain('href="/feedbacks?tab=critiques&amp;avis=f1"');
-    expect(html).toContain('Traiter l’avis');
-  });
-
-  it('CX Manager : « Traiter l’avis » → l’aperçu de L’AGENCE de l’alerte, onglet Avis', () => {
-    const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ avis: [avis(1, 1, 'agence-7')] }) });
-    expect(html).toContain('href="/agences/agence-7/apercu?tab=feedbacks&amp;avis=f1"');
-    expect(html).not.toContain('href="/feedbacks');
-  });
-
+describe('page /alertes — liens', () => {
   it('alerte de seuil : le CX ouvre l’agence, le Responsable analyse la tendance', () => {
     expect(rendu({ isAgencyManager: false, alertes: etatAlertes({ seuil: [seuil('agence-9')] }) })).toContain('href="/agences/agence-9/apercu"');
     expect(rendu({ alertes: etatAlertes({ seuil: [seuil('agence-9')] }) })).toContain('href="/statistiques"');
   });
 
   it('une alerte n’est jamais déclarée résolue par l’interface : aucun bouton « résoudre » ni « acquitter »', () => {
-    const html = rendu({ alertes: etatAlertes({ seuil: [seuil()], avis: [avis(1)] }) });
+    const html = rendu({ alertes: etatAlertes({ seuil: [seuil()] }) });
     expect(html).not.toMatch(/Résoudre|Acquitter|Marquer l’alerte|Clôturer/);
-    expect(html).toContain('disparaît quand l’avis est marqué comme résolu');
-  });
-});
-
-describe('page /alertes — niveau écrit, aide repliée, aucun résultat, sous-titre', () => {
-  const avisSentiment = (i: number, note: number): AlerteFeedback => ({ ...avis(i, note), raison: 'sentiment_negatif' });
-  const occurrences = (html: string, motif: string) => html.split(motif).length - 1;
-
-  it('niveau de chaque avis écrit : note ≤ 2 « Critique », sinon « À surveiller » (texte + icône, pas la couleur seule)', () => {
-    const html = rendu({ alertes: etatAlertes({ avis: [avis(1, 2), avisSentiment(2, 3)] }) });
-    expect(html).toContain('ui-badge--critical"><span class="ui-badge__icon" aria-hidden="true">');
-    expect(html).toMatch(/ui-badge--critical"><span[^>]*>.*?<\/span>Critique</);
-    expect(html).toMatch(/ui-badge--warning"><span[^>]*>.*?<\/span>À surveiller</);
-    expect(occurrences(html, '>Critique<')).toBe(1);
-    expect(occurrences(html, '>À surveiller<')).toBe(1);
   });
 
-  it('la phrase « disparaît… » et la phrase de seuil sont écrites UNE fois par groupe, pas par ligne', () => {
-    const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ seuil: [seuil('a1'), seuil('a2'), seuil('a3')], avis: [avis(1), avis(2), avis(3)] }) });
-    expect(occurrences(html, 'disparaît quand l’avis est marqué comme résolu')).toBe(1);
-    expect(occurrences(html, 'Chaque alerte est affichée après 48 h sous le seuil')).toBe(1);
-    expect(rendu({ alertes: etatAlertes({ seuil: [seuil('a1'), seuil('a2')] }) })).toContain('Chaque alerte disparaît quand la satisfaction des 7 derniers jours repasse au-dessus du seuil.');
-  });
-
-  it('plus d’encadré d’aide dans la page : l’aide est un lien près du titre (AideAlertes)', () => {
-    const html = rendu({ alertes: etatAlertes({ avis: [avis(1)] }) });
-    expect(html).not.toContain('<details');
-    expect(html).not.toContain('Comment lire cette page');
-    expect(html).not.toContain('ui-alert--info');
-  });
-
-  it('aucun résultat : icône neutre de filtre (pas la coche verte) et message qui dit que le filtre masque les alertes', () => {
-    const html = rendu({ isAgencyManager: false, selectedAgenceId: 'autre', alertes: etatAlertes({ avis: [avis(1)] }) });
-    const alertes = html;
-    expect(alertes).toContain('alerte-vide-filtre');
-    expect(alertes).not.toContain('var(--color-success)');
-    expect(html).toContain('Ces filtres masquent les alertes');
-  });
-
-  it('aucune alerte active : la coche positive est conservée', () => {
-    const alertes = rendu();
-    expect(alertes).not.toContain('alerte-vide-filtre');
-    expect(alertes).toContain('var(--color-success)');
-  });
-
-  it('plus de sous-titre sous « Alertes actives » : les volumes ne sont pas répétés dans la carte', () => {
-    const html = rendu({ alertes: etatAlertes({ seuil: [seuil()], avis: [avis(1, 1), avis(2, 2)] }) });
-    const carte = html;
-    expect(carte).toContain('Alertes actives');
-    expect(carte).not.toContain('ui-card__subtitle');
-    expect(carte).not.toContain('tous critiques');
-    expect(carte).not.toContain('note ≤ 2)');
-  });
-});
-
-describe('page /alertes — sans recommandations automatiques', () => {
-  it('ni bloc ni chargement de recommandations : la page ne montre que les alertes', () => {
-    for (const html of [rendu(), rendu({ isAgencyManager: false })]) {
+  it('plus d’encadré d’aide ni de recommandations dans la page', () => {
+    for (const html of [rendu({ alertes: etatAlertes({ seuil: [seuil()] }) }), rendu({ isAgencyManager: false })]) {
+      expect(html).not.toContain('<details');
+      expect(html).not.toContain('ui-alert--info');
       expect(html).not.toMatch(/[Rr]ecommandation/);
     }
   });
 });
 
-describe('page /alertes — synthèse, repli des avis par groupe de 5', () => {
-  it('synthèse : bande compacte, chiffres en <b>, deux lignes de texte (titre + détail), pas de carte KPI', () => {
-    const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ seuil: [seuil('a1')], avis: [avis(1)] }) });
-    expect(html).toContain('<span class="alerte-synthese__titre"><b class="alerte-synthese__n">2</b> situations à surveiller :</span>');
-    expect(html).toContain('<span class="alerte-synthese__detail"><b class="alerte-synthese__n">1</b> alerte de seuil, <b class="alerte-synthese__n">1</b> avis à risque</span>');
+describe('page /alertes — synthèse', () => {
+  it('bande compacte, chiffres en <b>, pas de carte KPI', () => {
+    const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ seuil: [seuil('a1'), seuil('a2')] }) });
+    expect(synthese(html)).toBe('2 situations à surveiller : 2 alertes de seuil 2 agences concernées');
+    expect(html).toContain('<b class="alerte-synthese__n">2</b>');
     expect(html).not.toContain('ui-kpi');
   });
 
-  const lignes = (html: string) => (html.match(/id="alerte-feedback-/g) || []).length;
-  const synthese = (html: string) => (html.match(/<p class="alerte-synthese">.*?<\/p>/) || [''])[0].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-
-  it('synthèse du CX Manager : situations, détail, agences concernées, avis le plus ancien', () => {
-    const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ seuil: [seuil('a1'), seuil('a2')], avis: [avis(1, 1, 'a1'), avis(5, 2, 'a3')] }) });
-    expect(synthese(html)).toBe('4 situations à surveiller : 2 alertes de seuil, 2 avis à risque 3 agences concernées Avis le plus ancien : il y a 5 heures');
-  });
-
   it('Responsable d’agence : pas d’« agences concernées »', () => {
-    const html = rendu({ alertes: etatAlertes({ seuil: [seuil('a1')], avis: [avis(1)] }) });
-    expect(synthese(html)).toContain('2 situations à surveiller : 1 alerte de seuil, 1 avis à risque');
-    expect(html).not.toContain('agence concernée');
-    expect(html).not.toContain('agences concernées');
+    const html = rendu({ alertes: etatAlertes({ seuil: [seuil('a1')] }) });
+    expect(synthese(html)).toBe('1 situation à surveiller : 1 alerte de seuil');
   });
 
   it('absente en chargement, en erreur, sans forfait et sans alerte (jamais de « 0 situation »)', () => {
@@ -253,204 +195,24 @@ describe('page /alertes — synthèse, repli des avis par groupe de 5', () => {
     expect(rendu({ alertes: { statut: 'erreur', charge: false, donnees: { seuil: [], avis: [], incluses: true } } })).not.toContain('alerte-synthese');
     expect(rendu({ alertes: etatAlertes({ incluses: false }) })).not.toContain('alerte-synthese');
   });
-
-  it('les alertes de seuil restent avant les avis ; 12 avis → 5 affichés puis « Voir les 7 avis »', () => {
-    const html = rendu({ alertes: etatAlertes({ seuil: [seuil()], avis: Array.from({ length: 12 }, (_, i) => avis(i, 1)) }) });
-    expect(html.indexOf('aria-label="Alertes de satisfaction"')).toBeLessThan(html.indexOf('aria-label="Avis à risque"'));
-    expect(lignes(html)).toBe(5);
-    expect(html).toContain('5 avis affichés sur 12');
-    expect(html).toContain('Voir les 7 avis');
-    expect(html).toMatch(/<button[^>]*class="ui-btn ui-btn--secondary alerte-voir-plus"[^>]*aria-expanded="false"[^>]*>Voir les 7 avis<\/button>/);
-    expect(html).not.toContain('ui-btn--ghost alerte-voir-plus');
-    expect(html).toContain('aria-expanded="false"');
-  });
-
-  it('exactement 5 avis : aucun bouton', () => {
-    const html = rendu({ alertes: etatAlertes({ avis: Array.from({ length: 5 }, (_, i) => avis(i, 1)) }) });
-    expect(lignes(html)).toBe(5);
-    expect(html).not.toContain('Voir les');
-  });
-
-  it('filtres + repli ensemble : le compteur et le bouton suivent le filtre d’agence', () => {
-    const mix = [...Array.from({ length: 9 }, (_, i) => avis(i, 1, 'a1')), ...Array.from({ length: 3 }, (_, i) => avis(20 + i, 1, 'a2'))];
-    const html = rendu({ isAgencyManager: false, selectedAgenceId: 'a1', alertes: etatAlertes({ avis: mix }) });
-    expect(lignes(html)).toBe(5);
-    expect(html).toContain('5 avis affichés sur 9');
-    expect(html).toContain('Voir les 4 avis');
-    expect(html).toContain('Avis clients (9)');
-    expect(synthese(html)).toContain('9 situations à surveiller : 9 avis à risque');
-    const petit = rendu({ isAgencyManager: false, selectedAgenceId: 'a2', alertes: etatAlertes({ avis: mix }) });
-    expect(lignes(petit)).toBe(3);
-    expect(petit).not.toContain('Voir les');
-  });
 });
 
-describe('page /alertes — ligne d’alerte : ordre de lecture, une pastille, niveaux mélangés', () => {
-  const mel = (): AlerteFeedback[] => [
-    { ...avis(1, 1, 'a1'), raison: 'note_basse_et_sentiment_negatif' },
-    { ...avis(2, 3, 'a2'), raison: 'sentiment_negatif' },
-  ];
-  const ligne = (html: string, feedbackId: string) => (html.match(new RegExp(`<li id="alerte-feedback-${feedbackId}".*?</li>`)) || [''])[0];
+describe('page /alertes — ligne d’alerte de seuil', () => {
   const apres = (html: string, a: string, b: string) => html.indexOf(a) >= 0 && html.indexOf(b) > html.indexOf(a);
 
-  it('avis (CX) : agence et date, puis niveau, puis raison, puis catégorie et note, puis commentaire, puis action — dans le DOM', () => {
-    const l = ligne(rendu({ isAgencyManager: false, alertes: etatAlertes({ avis: mel() }) }), 'f1');
-    const ordre = ['alerte-ligne__agence', 'alerte-ligne__date', 'Critique', 'alerte-ligne__raison', 'alerte-ligne__meta', 'alerte-ligne__detail', 'alerte-ligne__action'];
-    for (let i = 1; i < ordre.length; i++) expect(apres(l, ordre[i - 1], ordre[i]), `${ordre[i - 1]} avant ${ordre[i]}`).toBe(true);
-    expect(l).toContain('Note basse et ton négatif');
-    expect(l).toContain('Catégorie « Accueil » · Note 1/5');
-  });
-
-  it('une seule pastille par ligne (le niveau) ; la raison et la note sont du texte, jamais une seconde pastille', () => {
-    const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ seuil: [{ ...seuil(), gravite: 'critique' }], avis: mel() }) });
-    for (const l of [ligne(html, 'f1'), ligne(html, 'f2')]) expect((l.match(/class="ui-badge /g) || []).length).toBe(1);
-    const lseuil = (html.match(/<li id="alerte-seuil-.*?<\/li>/) || [''])[0];
-    expect((lseuil.match(/class="ui-badge /g) || []).length).toBe(1);
-    expect(lseuil).not.toContain('ui-badge--outline');
-  });
-
-  it('niveaux mélangés : Critique et À surveiller coexistent, l’ordre critiques d’abord est conservé', () => {
-    const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ avis: [...mel().reverse()] }) });
-    expect(html.indexOf('alerte-feedback-f1')).toBeLessThan(html.indexOf('alerte-feedback-f2'));
-    expect(ligne(html, 'f1')).toContain('ui-badge--critical');
-    expect(ligne(html, 'f2')).toContain('ui-badge--warning');
-    expect(ligne(html, 'f2')).toContain('>À surveiller<');
-  });
-
-  it('Responsable d’agence : pas de nom d’agence dans la ligne d’avis', () => {
-    expect(ligne(rendu({ alertes: etatAlertes({ avis: mel() }) }), 'f1')).not.toContain('alerte-ligne__agence');
-  });
-
-  it('l’action est un vrai bouton secondaire (zone tactile du design system)', () => {
-    const l = ligne(rendu({ alertes: etatAlertes({ avis: mel() }) }), 'f1');
-    expect(l).toContain('class="ui-btn ui-btn--secondary ui-btn--sm alerte-ligne__action"');
-    expect(l).toContain('Traiter l’avis');
-  });
-
-  it('alerte de seuil : agence, puis niveau, puis raison, puis détail, puis action', () => {
+  it('agence, puis niveau, puis raison, puis détail, puis action ; une seule pastille', () => {
     const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ seuil: [{ ...seuil('a9'), gravite: 'important' }] }) });
     const l = (html.match(/<li id="alerte-seuil-a9".*?<\/li>/) || [''])[0];
     const ordre = ['alerte-ligne__agence', 'Important', 'alerte-ligne__raison', 'alerte-ligne__detail', 'alerte-ligne__action'];
     for (let i = 1; i < ordre.length; i++) expect(apres(l, ordre[i - 1], ordre[i]), `${ordre[i - 1]} avant ${ordre[i]}`).toBe(true);
-  });
-});
-
-describe('page /alertes — rouge : le badge de niveau est le seul signal', () => {
-  it('ni bordure rose sur la carte, ni liseré de couleur sur les lignes, même avec des alertes critiques', () => {
-    const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ seuil: [{ ...seuil(), gravite: 'critique' }], avis: [avis(1, 1), avis(2, 2)] }) });
-    const alertes = html;
-    expect(alertes).not.toContain('ui-card--critical');
-    expect(alertes).not.toContain('agence-prio__item--critical');
-    expect(alertes).not.toContain('agence-prio__item--warning');
-    expect(alertes).not.toMatch(/border[^"]*critical/);
+    expect((l.match(/class="ui-badge /g) || []).length).toBe(1);
+    expect(l).toContain('class="ui-btn ui-btn--secondary ui-btn--sm alerte-ligne__action"');
   });
 
-  it('le rouge n’apparaît que dans les badges de niveau (une pastille « critique » par ligne critique)', () => {
-    const html = rendu({ alertes: etatAlertes({ seuil: [{ ...seuil(), gravite: 'critique' }], avis: [avis(1, 1), avis(2, 2)] }) });
-    const alertes = html;
-    expect((alertes.match(/critical/g) || []).length).toBe((alertes.match(/ui-badge--critical/g) || []).length);
-    expect((alertes.match(/ui-badge--critical/g) || []).length).toBe(3);
-  });
-
-  it('niveaux mélangés : la carte reste neutre, chaque niveau garde son badge', () => {
-    const html = rendu({ alertes: etatAlertes({ seuil: [{ ...seuil(), gravite: 'important' }], avis: [avis(1, 3), avis(2, 1)] }) });
+  it('le rouge n’apparaît que dans le badge de niveau : ni bordure rose sur la carte, ni liseré sur la ligne', () => {
+    const html = rendu({ alertes: etatAlertes({ seuil: [{ ...seuil(), gravite: 'critique' }] }) });
     expect(html).not.toContain('ui-card--critical');
-    expect(html).toContain('ui-badge--warning');
-    expect(html).toContain('ui-badge--critical');
-  });
-});
-
-describe('page /alertes — titres de groupe', () => {
-  it('« Avis à risque (16) » et « Satisfaction sous le seuil (2) », sans majuscules intégrales ni ordre de tri dans le titre', () => {
-    const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ seuil: [seuil('a1'), seuil('a2')], avis: Array.from({ length: 16 }, (_, i) => avis(i, 1)) }) });
-    expect(html).toContain('<h3 class="alerte-groupe-titre">Avis à risque (16)</h3>');
-    expect(html).toContain('<h3 class="alerte-groupe-titre">Satisfaction sous le seuil (2)</h3>');
-    expect(html).not.toContain('critiques d’abord, puis du plus récent au plus ancien</h3>');
-    expect(html).not.toContain('agence-group-title');
-  });
-
-  it('note de tri discrète : seulement si au moins deux avis ; « critiques d’abord » seulement si les deux niveaux sont présents', () => {
-    expect(rendu({ alertes: etatAlertes({ avis: [avis(1, 1)] }) })).not.toContain('plus récent');
-    expect(rendu({ alertes: etatAlertes({ avis: [avis(1, 1), avis(2, 1)] }) })).toContain('Du plus récent au plus ancien.');
-    expect(rendu({ alertes: etatAlertes({ avis: [avis(1, 1), avis(2, 1)] }) })).not.toContain('Critiques d’abord');
-    expect(rendu({ alertes: etatAlertes({ avis: [avis(1, 1), avis(2, 4)] }) })).toContain('Critiques d’abord, puis du plus récent au plus ancien.');
-  });
-});
-
-describe('page /alertes — dates : une seule convention', () => {
-  const ancien = (jours: number): AlerteFeedback => ({ ...avis(1, 1), date_soumission: new Date(Date.now() - jours * 86_400_000 - 3_600_000).toISOString() });
-  it('avis de 3 jours : relatif ; avis de 45 jours : date absolue ; toujours un <time datetime> avec la date complète en infobulle', () => {
-    const recent = rendu({ alertes: etatAlertes({ avis: [ancien(3)] }) });
-    expect(recent).toMatch(/<time class="alerte-ligne__date" dateTime="[^"]+" title="\d+ \w+ 2\d{3} à \d{2}:\d{2}">il y a 3 jours<\/time>/);
-    const vieux = rendu({ alertes: etatAlertes({ avis: [ancien(45)] }) });
-    expect(vieux).toMatch(/<time class="alerte-ligne__date"[^>]*>\d{1,2} [^<]*\. \d{4}<\/time>|<time class="alerte-ligne__date"[^>]*>\d{1,2} (mai|juin|août|mars) \d{4}<\/time>/);
-    expect(vieux).not.toContain('il y a 1 mois');
-  });
-  it('« Avis le plus ancien » de la synthèse suit la même convention', () => {
-    const html = rendu({ alertes: etatAlertes({ avis: [ancien(3), { ...ancien(45), feedback_id: 'fx' }] }) });
-    expect(html).not.toContain('il y a 45 jours');
-    expect(html).toMatch(/Avis le plus ancien : <time dateTime="[^"]+" title="[^"]+">\d{1,2} [^<]+ \d{4}<\/time>/);
-  });
-});
-
-describe('page /alertes — statut de traitement des avis à risque', () => {
-  const avecStatut = (i: number, statut: string | null | undefined, note = 1): AlerteFeedback => ({ ...avis(i, note), statut_traitement: statut });
-  const ligne = (html: string, feedbackId: string) => (html.match(new RegExp(`<li id="alerte-feedback-${feedbackId}".*?</li>`)) || [''])[0];
-  const page = (liste: AlerteFeedback[], surcharge: Partial<React.ComponentProps<typeof PilotageAlertesActionsTab>> = {}) => rendu({ alertes: etatAlertes({ avis: liste }), ...surcharge });
-
-  const synthese = (html: string) => (html.match(/<p class="alerte-synthese">.*?<\/p>/) || [''])[0].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-
-  it('en_traitement → « Pris en charge », dans la ligne discrète (celle de la note), après la note', () => {
-    const l = ligne(page([avecStatut(1, 'en_traitement')]), 'f1');
-    expect(l).toContain('<span class="alerte-ligne__statut">');
-    expect(l).toContain('Pris en charge</span>');
-    const meta = (l.match(/<p class="alerte-ligne__meta">.*?<\/p>/) || [''])[0];
-    expect(meta.indexOf('Note 1/5')).toBeGreaterThanOrEqual(0);
-    expect(meta.indexOf('alerte-ligne__statut')).toBeGreaterThan(meta.indexOf('Note 1/5'));
-  });
-
-  it('en_cours → « Action en cours »', () => expect(ligne(page([avecStatut(1, 'en_cours')]), 'f1')).toContain('Action en cours</span>'));
-
-  it('nouveau, null, absent, vide, valeur héritée : aucune mention', () => {
-    const html = page([avecStatut(1, 'nouveau'), avecStatut(2, null), avecStatut(3, undefined), avecStatut(4, ''), avecStatut(5, 'recontacte')]);
-    expect(html).not.toContain('alerte-ligne__statut');
-    expect(html).not.toContain('Pris en charge');
-    expect(html).not.toContain('Action en cours');
-  });
-
-  it('jamais de valeur brute à l’écran', () => {
-    const html = page([avecStatut(1, 'en_traitement'), avecStatut(2, 'en_cours'), avecStatut(3, 'nouveau'), avecStatut(4, 'recontacte')]);
-    for (const brut of ['en_traitement', 'en_cours', 'recontacte', '>nouveau<']) expect(html).not.toContain(brut);
-  });
-
-  it('ligne sans statut inchangée : identique pour nouveau, null et absent ; aucune pastille ajoutée au niveau', () => {
-    const base = avis(1); // même instant pour les trois lignes
-    const [a, b, c] = [{ ...base, statut_traitement: 'nouveau' }, { ...base, statut_traitement: null }, base].map((x) => ligne(page([x]), 'f1'));
-    expect(a).toBe(c);
-    expect(b).toBe(c);
-    const pris = ligne(page([{ ...base, statut_traitement: 'en_traitement' }]), 'f1');
-    expect((pris.match(/class="ui-badge /g) || []).length).toBe(1);
-    expect(pris.replace(/ · <span class="alerte-ligne__statut">.*?<\/span>/, '')).toBe(c);
-  });
-
-  it('mêmes libellés pour l’Agency Manager et le CX Manager', () => {
-    for (const isAgencyManager of [true, false]) {
-      const l = ligne(page([avecStatut(1, 'en_traitement'), avecStatut(2, 'en_cours')], { isAgencyManager }), 'f1');
-      expect(l).toContain('Pris en charge</span>');
-    }
-  });
-
-  it('synthèse : « dont N pris en charge » seulement si N > 0 ; titres de groupe et ordre inchangés', () => {
-    const base = [avecStatut(1, 'nouveau'), avecStatut(2, 'nouveau', 3), avecStatut(3, 'nouveau')];
-    const pris = [avecStatut(1, 'en_traitement'), avecStatut(2, 'en_cours', 3), avecStatut(3, 'nouveau')];
-    const sans = page(base);
-    const avec = page(pris);
-    expect(synthese(sans)).not.toContain('dont');
-    expect(synthese(avec)).toContain('3 avis à risque, dont 2 pris en charge');
-    expect(synthese(page([avecStatut(1, 'en_traitement'), avecStatut(2, 'nouveau')]))).toContain('2 avis à risque, dont 1 pris en charge');
-    const comptes = (h: string) => (h.match(/Avis à risque \(\d+\)/g) || []).join('|');
-    expect(comptes(avec)).toBe(comptes(sans));
-    const ordre = (h: string) => (h.match(/id="alerte-feedback-f\d"/g) || []).join('|');
-    expect(ordre(avec)).toBe(ordre(sans));
+    expect(html).not.toContain('agence-prio__item--critical');
+    expect((html.match(/critical/g) || []).length).toBe((html.match(/ui-badge--critical/g) || []).length);
   });
 });

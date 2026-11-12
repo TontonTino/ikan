@@ -1,129 +1,54 @@
-import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { AlertesResponse } from '../../types';
-import { AlertTriangleIcon, BellIcon, MessageSquareIcon } from '../common/Icons';
-import { raisonLabel, alerteFeedbackAnchor, alerteSeuilAnchor } from '../alerts/alerteLabels';
-import BadgeGraviteAlerte, { LIBELLE_GRAVITE, type GraviteAlerte } from '../alerts/BadgeGraviteAlerte';
+import type { Feedback } from '../../types';
+import { BellIcon, MessageSquareIcon } from '../common/Icons';
 import { fullDate, relativeTime } from '../ui/format';
-import { formaterPourcentage } from '../../utils/formatNombre';
+import { LIEN_FILE_A_TRAITER, estEnRetard, lienAvisDeLaFile } from '../../utils/fileATraiter';
 
 /*
- * Cloche = centre de notifications : événements récents, format court,
- * lien direct vers l'alerte. Pas d'analyse, pas de filtres (→ page Alertes).
- *
- * Limite API : les alertes de seuil sont des ÉTATS (agence sous son seuil),
- * sans identifiant ni date — affichées « En cours », jamais avec une date
- * inventée. Seules les alertes feedback portent un horodatage.
+ * Cloche = la file « À traiter » (lot 3), et rien d'autre : son compteur est le nombre d'avis de la file, le même que l'onglet
+ * « À traiter » de la page Avis et que le lien de la page Alertes. Les alertes de seuil restent sur la page Alertes.
+ * Les avis arrivent dans l'ordre du serveur : sans prise en charge depuis plus de 48 h d'abord, puis du plus récent au plus ancien.
  */
 
 const MAX_ITEMS = 8;
 
-interface NotifItem {
-  key: string;
-  kind: 'seuil' | 'feedback';
-  /** Gravité d'une alerte de seuil (libellé + icône) ; absente pour un avis ou un ancien serveur. */
-  gravite?: GraviteAlerte;
-  title: string;
-  agence: string;
-  date?: string;
-  href: string;
-  unread: boolean;
+export interface FileATraiter {
+  /** Premiers avis de la file, dans l'ordre du serveur. */
+  avis: Feedback[];
+  /** Nombre total d'avis de la file (en-tête X-Total-Count). */
+  total: number;
 }
-
-interface SeenState {
-  /** Horodatage de la dernière ouverture (alertes feedback plus récentes = non lues). */
-  lastOpenedAt: number;
-  /** Clés des alertes de seuil déjà vues (agence + niveau). */
-  seuils: string[];
-}
-
-const storageKey = (userId: string) => `ikan-notifications-seen-${userId}`;
-
-function readSeen(userId: string): SeenState {
-  try {
-    const raw = window.localStorage.getItem(storageKey(userId));
-    if (raw) return JSON.parse(raw) as SeenState;
-  } catch {
-    // stockage indisponible : tout est considéré comme non lu, sans bloquer l'affichage
-  }
-  return { lastOpenedAt: 0, seuils: [] };
-}
-
-function writeSeen(userId: string, seen: SeenState) {
-  try {
-    window.localStorage.setItem(storageKey(userId), JSON.stringify(seen));
-  } catch {
-    // préférence non persistée : sans conséquence fonctionnelle
-  }
-}
-
-const seuilKey = (agenceId: string, taux: number, seuil: number) => `${agenceId}_${taux}_${seuil}`;
 
 export interface NotificationCenterProps {
-  userId: string;
-  data: AlertesResponse | null;
+  file: FileATraiter | null;
   loading: boolean;
   /** Afficher l'agence dans chaque ligne (vue réseau CX). */
   showAgency: boolean;
   /** Ouvert au montage (vitrine / tests). */
   defaultOpen?: boolean;
+  /** Date de référence (tests) : sert à repérer les avis en retard. */
+  maintenant?: Date;
 }
 
-export default function NotificationCenter({ userId, data, loading, showAgency, defaultOpen = false }: NotificationCenterProps) {
+const extrait = (avis: Feedback) => {
+  const texte = (avis.commentaire ?? '').trim().replace(/\s+/g, ' ');
+  return texte || 'Sans commentaire';
+};
+
+export default function NotificationCenter({ file, loading, showAgency, defaultOpen = false, maintenant }: NotificationCenterProps) {
   const panelId = useId();
   const titleId = useId();
   const [open, setOpen] = useState(defaultOpen);
-  const [seen, setSeen] = useState<SeenState>(() => readSeen(userId));
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => setSeen(readSeen(userId)), [userId]);
-
-  const items = useMemo<NotifItem[]>(() => {
-    if (!data) return [];
-    const seuils: NotifItem[] = (data.alertes_seuil ?? []).map((a) => ({
-      key: `s-${a.agence_id}`,
-      kind: 'seuil',
-      title: `Satisfaction ${formaterPourcentage(a.taux_actuel)} (seuil ${formaterPourcentage(a.seuil)})`,
-      gravite: a.gravite,
-      agence: a.agence_nom,
-      href: `/alertes#${alerteSeuilAnchor(a.agence_id)}`,
-      unread: !seen.seuils.includes(seuilKey(a.agence_id, a.taux_actuel, a.seuil)),
-    }));
-    const feedbacks: NotifItem[] = [...(data.alertes_feedback ?? [])]
-      .sort((x, y) => new Date(y.date_soumission).getTime() - new Date(x.date_soumission).getTime())
-      .map((f) => ({
-        key: `f-${f.feedback_id}`,
-        kind: 'feedback',
-        title: `${raisonLabel(f.raison)} · ${f.note}/5`,
-        agence: f.agence_nom,
-        date: f.date_soumission,
-        href: `/alertes#${alerteFeedbackAnchor(f.feedback_id)}`,
-        unread: new Date(f.date_soumission).getTime() > seen.lastOpenedAt,
-      }));
-    // Non lues d'abord, puis états en cours, puis événements datés du plus récent au plus ancien.
-    return [...seuils, ...feedbacks].sort((a, b) => Number(b.unread) - Number(a.unread));
-  }, [data, seen]);
-
-  const unreadCount = items.filter((i) => i.unread).length;
-  const visible = items.slice(0, MAX_ITEMS);
-
-  const markAllSeen = () => {
-    if (!data) return;
-    const next: SeenState = {
-      lastOpenedAt: Date.now(),
-      seuils: (data.alertes_seuil ?? []).map((a) => seuilKey(a.agence_id, a.taux_actuel, a.seuil)),
-    };
-    writeSeen(userId, next);
-    // L'état « non lu » reste visible pendant l'ouverture ; il est appliqué à la fermeture.
-    return next;
-  };
+  const total = file?.total ?? 0;
+  const visible = (file?.avis ?? []).slice(0, MAX_ITEMS);
 
   const close = (returnFocus = true) => {
     setOpen(false);
-    const next = markAllSeen();
-    if (next) setSeen(next);
     if (returnFocus) buttonRef.current?.focus();
   };
 
@@ -148,11 +73,11 @@ export default function NotificationCenter({ userId, data, loading, showAgency, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const label = loading
-    ? 'Notifications, chargement'
-    : unreadCount > 0
-      ? `Notifications : ${unreadCount} nouvelle${unreadCount > 1 ? 's' : ''}`
-      : 'Notifications : rien de nouveau';
+  const label = loading && !file
+    ? 'Avis à traiter, chargement'
+    : total > 0
+      ? `Avis à traiter : ${total}`
+      : 'Avis à traiter : aucun';
 
   return (
     <div className="notif" ref={rootRef}>
@@ -167,9 +92,9 @@ export default function NotificationCenter({ userId, data, loading, showAgency, 
         onClick={() => (open ? close() : setOpen(true))}
       >
         <BellIcon size={18} aria-hidden="true" />
-        {unreadCount > 0 && (
+        {total > 0 && (
           <span className="notif__count" aria-hidden="true">
-            {unreadCount > 9 ? '9+' : unreadCount}
+            {total > 9 ? '9+' : total}
           </span>
         )}
       </button>
@@ -177,49 +102,46 @@ export default function NotificationCenter({ userId, data, loading, showAgency, 
       {open && (
         <div ref={panelRef} id={panelId} role="dialog" aria-labelledby={titleId} className="notif__panel">
           <div className="notif__head">
-            <h2 id={titleId} className="notif__title">Notifications</h2>
-            {unreadCount > 0 && <span className="notif__new">{unreadCount} nouvelle{unreadCount > 1 ? 's' : ''}</span>}
+            <h2 id={titleId} className="notif__title">Avis à traiter</h2>
+            {total > 0 && <span className="notif__new">{total} avis</span>}
           </div>
 
-          {loading && !data ? (
+          {loading && !file ? (
             <p className="notif__empty">Chargement…</p>
           ) : visible.length === 0 ? (
-            <p className="notif__empty">Rien à signaler pour le moment. Les nouvelles alertes apparaîtront ici.</p>
+            <p className="notif__empty">Aucun avis à traiter pour le moment.</p>
           ) : (
             <ul className="notif__list">
-              {visible.map((n) => (
-                <li key={n.key} className={`notif__item${n.unread ? ' is-unread' : ''}`}>
-                  <span className={`notif__icon notif__icon--${n.kind}`} aria-hidden="true">
-                    {n.kind === 'seuil' ? <AlertTriangleIcon size={16} /> : <MessageSquareIcon size={16} />}
-                  </span>
-                  <div className="notif__body">
-                    <p className="notif__item-title">
-                      {n.unread && <span className="ui-sr-only">Nouveau : </span>}
-                      {n.gravite && <span className="notif__gravite"><BadgeGraviteAlerte gravite={n.gravite} />{' '}</span>}
-                      {n.title}
-                    </p>
-                    <p className="notif__meta">
-                      {showAgency && <span>{n.agence}</span>}
-                      {showAgency && <span aria-hidden="true"> · </span>}
-                      {n.date ? (
-                        <time dateTime={n.date} title={fullDate(n.date)}>{relativeTime(n.date)}</time>
-                      ) : (
-                        <span>En cours</span>
-                      )}
-                    </p>
-                    <Link to={n.href} className="notif__link" onClick={() => close(false)}>
-                      Voir l'alerte<span className="ui-sr-only"> : {n.gravite ? `${LIBELLE_GRAVITE[n.gravite]}, ` : ''}{n.title}{showAgency ? `, ${n.agence}` : ''}</span>
-                    </Link>
-                  </div>
-                  {n.unread && <span className="notif__dot" aria-hidden="true" />}
-                </li>
-              ))}
+              {visible.map((avis) => {
+                const enRetard = estEnRetard(avis, maintenant);
+                return (
+                  <li key={avis.id} className={`notif__item${enRetard ? ' is-late' : ''}`}>
+                    <span className="notif__icon notif__icon--feedback" aria-hidden="true">
+                      <MessageSquareIcon size={16} />
+                    </span>
+                    <div className="notif__body">
+                      <p className="notif__item-title">
+                        <span className="notif__note">{avis.note}/5<span className="ui-sr-only"> :</span></span>
+                        <span className="notif__extrait">{extrait(avis)}</span>
+                      </p>
+                      <p className="notif__meta">
+                        {showAgency && avis.agence_nom && <span>{avis.agence_nom} · </span>}
+                        <time dateTime={avis.date_soumission} title={fullDate(avis.date_soumission)}>{relativeTime(avis.date_soumission)}</time>
+                        {enRetard && <span> · sans prise en charge depuis plus de 48 h</span>}
+                      </p>
+                      <Link to={lienAvisDeLaFile(avis.id)} className="notif__link" onClick={() => close(false)}>
+                        Ouvrir l'avis<span className="ui-sr-only"> noté {avis.note} sur 5{showAgency && avis.agence_nom ? `, ${avis.agence_nom}` : ''}</span>
+                      </Link>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
 
           <div className="notif__foot">
-            <Link to="/alertes" className="notif__all" onClick={() => close(false)}>
-              Toutes les alertes{items.length > MAX_ITEMS ? ` (${items.length})` : ''}
+            <Link to={LIEN_FILE_A_TRAITER} className="notif__all" onClick={() => close(false)}>
+              {total > 0 ? `Voir la file (${total} avis)` : 'Voir la page Avis'}
             </Link>
           </div>
         </div>

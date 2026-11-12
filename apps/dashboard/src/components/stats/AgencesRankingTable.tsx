@@ -1,8 +1,7 @@
 import React from 'react';
 import type { AgenceRankDetail } from '../../types';
-import Tooltip from '../ui/Tooltip';
 import { DEFINITION_NEGATIF, PartNegatifsTexte, comparaisonInsuffisante, phraseComparaisonInsuffisante } from '../../utils/partNegatifs';
-import { AIDE_SCORE_FIABILISE, LIBELLE_SCORE_FIABILISE } from '../../utils/scoreFiabilise';
+import { PHRASE_TRI_CLASSEMENT, mentionAvisEtFiabilite } from '../../utils/scoreFiabilise';
 import { formaterPourcentage } from '../../utils/formatNombre';
 
 interface AgencesRankingTableProps {
@@ -52,16 +51,9 @@ export default function AgencesRankingTable({
       >
         <thead>
           <tr style={{ color: 'var(--color-text-2)', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            <th style={{ textAlign: 'left', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }}>Rang & Agence</th>
-            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }}>
-              {LIBELLE_SCORE_FIABILISE}{' '}
-              <Tooltip content={AIDE_SCORE_FIABILISE} placement="bottom">
-                <button type="button" className="ui-info-btn" aria-label={`À propos du ${LIBELLE_SCORE_FIABILISE.toLowerCase()}`}>?</button>
-              </Tooltip>
-            </th>
+            <th style={{ textAlign: 'left', padding: '8px 14px', fontWeight: 'var(--weight-semibold)', minWidth: '240px' }}>Rang et agence</th>
             <th style={{ textAlign: 'left', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }}>Ville</th>
-            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }}>Satisfaction</th>
-            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }}>Avis collectés</th>
+            <th style={{ textAlign: 'left', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }}>Satisfaction</th>
             <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }}>Pris en charge</th>
             <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }}>Avis critiques</th>
             <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }} title={DEFINITION_NEGATIF}>Avis négatifs</th>
@@ -118,17 +110,9 @@ export default function AgencesRankingTable({
                     >
                       #{idx + 1}
                     </span>
-                    <div>
-                      <div className="t-semi t-encre">{ag.agence_nom}</div>
-                    </div>
+                    {/* Nom complet sur une ou deux lignes au plus : la colonne est assez large (240 px minimum). */}
+                    <div className="t-semi t-encre" style={{ lineHeight: 1.3, overflowWrap: 'anywhere' }}>{ag.agence_nom}</div>
                   </div>
-                </td>
-
-                {/* Score Wilson */}
-                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                  <span className="t-semi t-encre">
-                    {sansAvis ? '—' : formaterPourcentage(Math.round(ag.wilson_score * 100), 0)}
-                  </span>
                 </td>
 
                 {/* Ville */}
@@ -136,8 +120,8 @@ export default function AgencesRankingTable({
                   {ag.ville || '—'}
                 </td>
 
-                {/* Satisfaction */}
-                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                {/* Satisfaction, puis nombre d'avis et fiabilité en un mot (l'ordre de l'API n'est pas affiché : voir utils/scoreFiabilise.ts). */}
+                <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
                   <span
                     style={{
                       background: satBg,
@@ -151,11 +135,7 @@ export default function AgencesRankingTable({
                   >
                     {sansAvis ? "Pas d'avis" : formaterPourcentage(ag.satisfaction_rate)}
                   </span>
-                </td>
-
-                {/* Feedbacks collectés */}
-                <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>
-                  {ag.total_feedbacks}
+                  {!sansAvis && <span className="t-xs t-2" style={{ marginLeft: '8px' }}>{mentionAvisEtFiabilite(ag.total_feedbacks)}</span>}
                 </td>
 
                 {/* Taux de traitement */}
@@ -221,9 +201,7 @@ export default function AgencesRankingTable({
           })}
         </tbody>
       </table>
-      <p style={{ margin: '10px 4px 0', fontSize: 'var(--text-xs)', color: 'var(--color-text-2)' }}>
-        <strong>{LIBELLE_SCORE_FIABILISE}</strong> : {AIDE_SCORE_FIABILISE}
-      </p>
+      <p style={{ margin: '10px 4px 0', fontSize: 'var(--text-xs)', color: 'var(--color-text-2)' }}>{PHRASE_TRI_CLASSEMENT}</p>
     </div>
   );
 }

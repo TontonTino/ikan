@@ -9,7 +9,6 @@ import AgenceFilterSelect from '../../components/stats/AgenceFilterSelect';
 import SatisfactionVolumeChart from '../../components/stats/SatisfactionVolumeChart';
 import ThemesBarList from '../../components/stats/ThemesBarList';
 import AgencesRankingTable from '../../components/stats/AgencesRankingTable';
-import { LIBELLE_SCORE_FIABILISE } from '../../utils/scoreFiabilise';
 import { lienAvisReseau } from '../../utils/liensAgence';
 import { elargirPeriode } from '../../utils/periodeElargie';
 import type { AgenceCarte } from '../../components/map/AgencesMap';
@@ -20,9 +19,7 @@ const AgencesMap = lazy(() => import('../../components/map/AgencesMap'));
 
 type StatsTab = 'satisfaction' | 'agences';
 const STATS_TABS: StatsTab[] = ['satisfaction', 'agences'];
-const STATS_CX_PERIOD_OPTIONS = PERIOD_OPTIONS.map((option) =>
-  option.jours === 1 ? { ...option, label: '24 dernières heures' } : option,
-);
+const STATS_CX_PERIOD_OPTIONS = PERIOD_OPTIONS;
 import {
   StatsLoadingState,
   StatsErrorState,
@@ -195,7 +192,7 @@ export default function StatsCXView() {
               <StatsSectionCard
                 compact
                 title="Classement des agences"
-                subtitle={`Comparaison par ${LIBELLE_SCORE_FIABILISE.toLowerCase()}, satisfaction, avis pris en charge et avis critiques`}
+                subtitle="Satisfaction, avis pris en charge, avis critiques et avis négatifs, agence par agence"
               >
                 <AgencesRankingTable
                   agences={data.agences_ranking}

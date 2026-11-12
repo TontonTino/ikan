@@ -5,12 +5,12 @@ export interface PeriodeChoix {
 }
 
 /** Période immédiatement plus large parmi celles que la page propose, ou null si la page affiche déjà la plus large. */
-export function periodePlusLarge(jours: number, options: PeriodeChoix[]): PeriodeChoix | null {
+export function periodePlusLarge(jours: number, options: readonly PeriodeChoix[]): PeriodeChoix | null {
   return [...options].filter((o) => o.jours > jours).sort((a, b) => a.jours - b.jours)[0] ?? null;
 }
 
 /** Lien d'un graphique vide vers la période plus large (ou rien). */
-export function elargirPeriode(jours: number, options: PeriodeChoix[], choisir: (jours: number) => void) {
+export function elargirPeriode(jours: number, options: readonly PeriodeChoix[], choisir: (jours: number) => void) {
   const suivante = periodePlusLarge(jours, options);
   return suivante ? { label: `Voir sur ${suivante.label.toLowerCase()}`, onClick: () => choisir(suivante.jours) } : undefined;
 }

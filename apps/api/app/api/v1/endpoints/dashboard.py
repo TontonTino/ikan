@@ -29,7 +29,7 @@ from app.services.suggestions_scope import filtrer_par_perimetre
 from app.models.enums import UserRole, SentimentType, IdeaStatus
 from app.utils.stats import wilson_lower_bound
 from app.services.secteurs import libelle_secteur
-from app.services.dashboard_helpers import compter_negatifs, est_negatif, est_pris_en_charge, repartition_cycle
+from app.services.dashboard_helpers import compter_negatifs, est_a_traiter, est_negatif, est_pris_en_charge, repartition_cycle
 from app.services.dashboard_helpers import (
     _calc_kpi_trend,
     _cle_semaine_iso,
@@ -95,12 +95,6 @@ def dashboard_agence(
     )
 
     total = len(feedbacks)
-    feedbacks_a_traiter = sum(
-        1
-        for feedback in feedbacks
-        if feedback.statut_traitement != "resolu"
-        or (feedback.demande_contact is not None and not feedback.demande_contact.traitee)
-    )
     feedbacks_pris_en_charge = sum(1 for feedback in feedbacks if est_pris_en_charge(feedback))
     taux_prise_en_charge = round(feedbacks_pris_en_charge / total * 100, 1) if total else None
     actions_ouvertes = sum(
@@ -112,6 +106,9 @@ def dashboard_agence(
     # Analyses IA
     analyses_ids = [f.id for f in feedbacks]
     analyses = db.query(AnalyseIA).filter(AnalyseIA.feedback_id.in_(analyses_ids)).all()
+    # File « À traiter » : même règle que la liste et les notifications (dashboard_helpers.est_a_traiter), sur la période.
+    analyse_par_feedback = {a.feedback_id: a for a in analyses}
+    feedbacks_a_traiter = sum(1 for f in feedbacks if est_a_traiter(f, analyse_par_feedback.get(f.id)))
 
     cycle = repartition_cycle(feedbacks, {a.feedback_id for a in analyses})
 

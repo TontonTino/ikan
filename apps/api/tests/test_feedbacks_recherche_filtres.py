@@ -166,9 +166,11 @@ def test_filtre_note_et_onglets_a_traiter_et_a_surveiller(ctx):
     assert total(lister(ctx, "am_a1", note=5, q="resolu")) == 2                                   # ET
     surveiller = commentaires(lister(ctx, "am_a1", a_surveiller=True))
     assert sorted(surveiller) == sorted(["avis A1", "note faible", "grave", "contradictoire"])      # chaque avis une seule fois
-    assert "positif resolu" not in commentaires(lister(ctx, "am_a1", a_traiter=True))
-    assert "resolu avec rappel" in commentaires(lister(ctx, "am_a1", a_traiter=True))
-    assert total(lister(ctx, "am_a1", a_traiter=True)) == total(lister(ctx, "am_a1")) - 1
+    # File « À traiter » (lot 3) : ce qui demande un geste, et seulement cela. Le positif non résolu (« positif nouveau ») et
+    # le contradictoire positif à 4/5 n'y entrent pas ; le résolu avec un rappel en attente y reste.
+    a_traiter = lister(ctx, "am_a1", a_traiter=True)
+    assert sorted(commentaires(a_traiter)) == sorted(["avis A1", "note faible", "grave", "resolu avec rappel"])
+    assert total(a_traiter) == 4
     assert total(lister(ctx, "am_a1", a_surveiller=True, q="grave")) == 1
     assert lister(ctx, "am_a1", note=6).status_code == 422
 
@@ -310,3 +312,50 @@ def test_la_recherche_se_comporte_de_la_meme_facon_sur_postgresql():
         assert cherche("a.b") == [lignes[6]]                                                       # « . » n'est pas « n'importe quel caractère »
         assert cherche("introuvable") == [] and cherche("(") == [lignes[6]]
         cx.execute(text("DROP TABLE t_recherche_avis"))
+
+
+def test_file_a_traiter_regle_unique_et_avis_en_retard_en_tete(ctx):
+    """Lot 3 : file unique. Non résolu ET (note ≤ 2, ton négatif, gravité élevée/critique) ; OU rappel en attente.
+    Les avis encore « nouveaux » plus de 48 h après leur soumission passent en tête, du plus ancien au plus récent."""
+    from app.models.demande_contact import DemandeContact as DC
+    db = ctx.Session(); db.query(Feedback).delete(); db.commit(); db.close()
+    negatif_recent = ajouter_avis(ctx, "QR-A1", "negatif recent", note=4, sentiment=SentimentType.NEGATIF, jours=0)
+    note_basse_3j = ajouter_avis(ctx, "QR-A1", "note basse 3 jours", note=1, jours=3)
+    critique_5j = ajouter_avis(ctx, "QR-A1", "critique 5 jours", note=4, sentiment=SentimentType.POSITIF, criticite=CriticiteType.CRITIQUE, jours=5)
+    pris_en_charge_4j = ajouter_avis(ctx, "QR-A1", "pris en charge 4 jours", note=2, jours=4)
+    ajouter_avis(ctx, "QR-A1", "positif", note=5, sentiment=SentimentType.POSITIF, jours=6)
+    ajouter_avis(ctx, "QR-A1", "moyenne", note=3, criticite=CriticiteType.MOYENNE, jours=1)
+    resolu_negatif = ajouter_avis(ctx, "QR-A1", "negatif resolu", note=1, jours=2)
+    rappel = ajouter_avis(ctx, "QR-A1", "positif avec rappel", note=5, sentiment=SentimentType.POSITIF, jours=1)
+    sans_analyse = ajouter_avis(ctx, "QR-A1", "note basse sans analyse", note=2, analyse=False, date=MAINTENANT - timedelta(hours=1))
+    db = ctx.Session()
+    import uuid as _u
+    db.get(Feedback, _u.UUID(pris_en_charge_4j)).statut_traitement = "en_traitement"
+    db.get(Feedback, _u.UUID(resolu_negatif)).statut_traitement = "resolu"
+    db.add(DC(id=uuid4(), feedback_id=_u.UUID(rappel), telephone="70000000", traitee=False))
+    db.commit(); db.close()
+
+    r = lister(ctx, "am_a1", a_traiter=True)
+    assert r.status_code == 200
+    ordre = commentaires(r)
+    # en retard (nouveau, > 48 h) : du plus ancien au plus récent ; puis le reste par date décroissante
+    assert ordre[:2] == ["critique 5 jours", "note basse 3 jours"]
+    assert ordre[2:] == ["negatif recent", "note basse sans analyse", "positif avec rappel", "pris en charge 4 jours"]
+    assert total(r) == 6
+    for absent in ("positif", "moyenne", "negatif resolu"):
+        assert absent not in ordre
+    # la file d'une autre agence n'est pas mélangée
+    assert all(c not in commentaires(lister(ctx, "am_a2", a_traiter=True)) for c in ordre)
+
+
+def test_indicateur_avis_a_traiter_de_l_agence_suit_la_meme_regle(ctx):
+    from app.models.demande_contact import DemandeContact as DC
+    db = ctx.Session(); db.query(Feedback).delete(); db.commit(); db.close()
+    ajouter_avis(ctx, "QR-A1", "negatif", note=1)
+    ajouter_avis(ctx, "QR-A1", "positif", note=5, sentiment=SentimentType.POSITIF)
+    rappel = ajouter_avis(ctx, "QR-A1", "positif avec rappel", note=5, sentiment=SentimentType.POSITIF)
+    db = ctx.Session()
+    import uuid as _u
+    db.add(DC(id=uuid4(), feedback_id=_u.UUID(rappel), telephone="70000000", traitee=False)); db.commit(); db.close()
+    kpi = ctx.client.get(f"/dashboard/agence/{ctx.a1}", headers=ctx.H(ctx.am_a1)).json()["feedbacks_a_traiter"]
+    assert kpi == total(lister(ctx, "am_a1", a_traiter=True)) == 2

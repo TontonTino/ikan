@@ -3,7 +3,7 @@
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  padding: 14px 20px;
+  padding: 10px 16px;
   background: var(--color-surface);
   border: 1px solid var(--color-trait);
   border-radius: 18px;
@@ -149,3 +149,17 @@
   .feedbacks-mobile-empty { display: block; }
   .feedbacks-mobile-pagination { display: flex; }
 }
+
+/* ── Liste dense (lot 3) : une ligne par avis, ~52 px, 8 à 10 avis visibles sur 1440 × 900 ── */
+.feedbacks-ligne { border-bottom: 1px solid var(--color-trait); cursor: pointer; background: var(--color-surface); }
+.feedbacks-ligne:hover { background: var(--color-bg); }
+.feedbacks-ligne:last-child { border-bottom: none; }
+.feedbacks-cell { padding: 7px 16px; vertical-align: middle; }
+.feedbacks-cell--signaux { width: 1%; white-space: nowrap; }
+.feedbacks-cell--avis { max-width: 0; width: 100%; }
+.feedbacks-commentaire { color: var(--color-encre); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.feedbacks-meta { margin-top: 2px; color: var(--color-text-2); font-size: var(--text-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.feedbacks-consulter { padding: 4px 12px; min-height: 32px; border-radius: 10px; }
+/* Avis de la file sans prise en charge depuis plus de 48 h : un trait à gauche et la tête de liste, pas de badge (dit aussi aux lecteurs d'écran). */
+.feedbacks-ligne.is-late > td:first-child { box-shadow: inset 3px 0 0 var(--color-accent-vif); }
+.feedbacks-mobile-card.is-late { box-shadow: inset 3px 0 0 var(--color-accent-vif); }

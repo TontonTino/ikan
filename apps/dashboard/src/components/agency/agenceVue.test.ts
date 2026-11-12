@@ -27,7 +27,7 @@ describe('priorités de l’agence', () => {
     expect(p.find((x) => x.kind === 'probleme')!.type).toBe('Problème à traiter');
     expect(p.find((x) => x.kind === 'avis')!.type).toBe('Avis à examiner');
     expect(p.find((x) => x.kind === 'probleme')!.lien.to).toBe('/issues');
-    expect(p.find((x) => x.kind === 'avis')!.lien.to).toBe('/feedbacks?tab=critiques');
+    expect(p.find((x) => x.kind === 'avis')!.lien.to).toBe('/feedbacks?filtre=a-traiter');
   });
 
   it('les éléments critiques passent avant les autres', () => {

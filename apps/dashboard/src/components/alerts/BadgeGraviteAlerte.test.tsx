@@ -2,9 +2,8 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
-import type { Alerte, AlertesResponse } from '../../types';
+import type { Alerte } from '../../types';
 import BadgeGraviteAlerte from './BadgeGraviteAlerte';
-import NotificationCenter from '../layout/NotificationCenter';
 import { LigneSeuil } from '../../pages/cx/PilotageAlertesActionsTab';
 import { construirePriorites } from '../agency/agenceVue';
 
@@ -58,26 +57,6 @@ describe('carte d’alerte de satisfaction', () => {
     const html = dansRouteur(<LigneSeuil alerte={alerte()} isAgencyManager cible={false} />);
     expect(html).toContain('Satisfaction sous le seuil');
     expect(html).not.toMatch(/Critique|Important|points sous le seuil/);
-  });
-});
-
-describe('cloche de notifications', () => {
-  const donnees = (alertes_seuil: Alerte[]): AlertesResponse => ({ alertes_seuil, alertes_feedback: [], alertes_incluses: true } as AlertesResponse);
-  const cloche = (alertes: Alerte[]) =>
-    dansRouteur(<NotificationCenter userId="u1" data={donnees(alertes)} loading={false} showAgency={false} defaultOpen />);
-
-  it('chaque alerte de seuil porte son badge de gravité (texte + icône)', () => {
-    const html = cloche([alerte({ gravite: 'critique' }), alerte({ agence_id: 'a2', agence_nom: 'Agence A2', gravite: 'important', taux_actuel: 60 })]);
-    expect(html).toContain('Critique');
-    expect(html).toContain('Important');
-    expect((html.match(/ui-badge__icon/g) || []).length).toBe(2);
-    expect(html).toContain('Satisfaction 40 % (seuil 70 %)');
-  });
-
-  it('sans gravité : l’alerte reste affichée comme avant', () => {
-    const html = cloche([alerte()]);
-    expect(html).toContain('Satisfaction 40 % (seuil 70 %)');
-    expect(html).not.toMatch(/Critique|Important/);
   });
 });
 

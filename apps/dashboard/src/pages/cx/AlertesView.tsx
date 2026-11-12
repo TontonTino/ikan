@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { agencesApi, alertesApi, organisationsApi } from '../../services/api';
+import { agencesApi, alertesApi, feedbacksApi, organisationsApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import type { Agence, Alerte, AlerteFeedback } from '../../types';
 import { useToast } from '../../components/ui/Toast';
@@ -80,6 +80,21 @@ export default function AlertesView() {
       .catch(() => setAgences([]));
   }, [isAgencyManager]);
 
+  // Nombre d'avis de la file « À traiter », dans le même périmètre d'agence que la page (renvoi vers la page Avis).
+  const [avisATraiter, setAvisATraiter] = useState<number | null>(null);
+  useEffect(() => {
+    let annule = false;
+    setAvisATraiter(null);
+    feedbacksApi
+      .list({ a_traiter: true, limit: 1, offset: 0, ...(selectedAgenceId && !isAgencyManager ? { agence_id: selectedAgenceId } : {}) })
+      .then((r) => {
+        const total = Number(r.headers?.['x-total-count']);
+        if (!annule) setAvisATraiter(Number.isFinite(total) ? total : null);
+      })
+      .catch(() => { if (!annule) setAvisATraiter(null); });
+    return () => { annule = true; };
+  }, [selectedAgenceId, isAgencyManager, rafraichissement]);
+
   const rafraichirAlertes = useCallback(() => {
     chargerAlertes();
     setRafraichissement((n) => n + 1);
@@ -109,6 +124,7 @@ export default function AlertesView() {
         onSelectAgence={setSelectedAgenceId}
         onRefresh={rafraichirAlertes}
         onPrendreEnCharge={isAgencyManager ? setAPrendreEnCharge : undefined}
+        avisATraiter={avisATraiter}
         historique={<HistoriqueAlertes isAgencyManager={isAgencyManager} agences={agences} rafraichissement={rafraichissement} />}
       />
       {isAgencyManager && <PriseEnChargeDialog alerte={aPrendreEnCharge} onFermer={() => setAPrendreEnCharge(null)} onTermine={apresPriseEnCharge} />}

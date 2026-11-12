@@ -8,7 +8,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Response, BackgroundTasks
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, case, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
@@ -57,7 +57,7 @@ from app.core.rate_limit import limiter_ip_public, limiter_soumission
 from app.services.ai.analyse_service import analyser_feedback
 from app.services.ai.reprise_analyse import TYPES_TECHNIQUES, etat_analyse
 from app.core.config import settings
-from app.services.dashboard_helpers import NOTE_FAIBLE_MAX, est_critique_ou_negatif
+from app.services.dashboard_helpers import NOTE_FAIBLE_MAX, condition_a_traiter_sql, condition_en_retard_sql, est_critique_ou_negatif
 from app.services.brouillon_reponse import (
     RAISON_AUCUN_SUIVI,
     RAISON_REPONSE_EXISTANTE,
@@ -358,7 +358,7 @@ def list_feedbacks(
         description="true : avis contradictoires (la note et le ton de l'analyse se contredisent) ; false : avis sans contradiction "
                     "détectée (y compris non analysés) ; absent : pas de filtre. Calculée à l'analyse (forfait Pro et plus).",
     ),
-    a_traiter: Optional[bool] = Query(None, description="true : avis non résolus ou avec une demande de rappel en attente."),
+    a_traiter: Optional[bool] = Query(None, description="true : file « À traiter » — demande de rappel en attente, ou avis non résolu avec note ≤ 2, ton négatif ou gravité élevée/critique. Les avis encore « nouveaux » après 48 h passent en tête."),
     a_surveiller: Optional[bool] = Query(None, description="true : note de 2 ou moins, ton négatif, gravité élevée/critique ou avis contradictoire."),
     q: Optional[str] = Query(None, max_length=LONGUEUR_MAX_RECHERCHE, description="Recherche dans le texte de l'avis uniquement (casse et accents ignorés)."),
     limit: int = Query(50, ge=1, le=200),
@@ -367,7 +367,8 @@ def list_feedbacks(
     """
     Liste les feedbacks pour CX Manager et Agency Manager.
     Périmètre filtré strictement côté backend selon le RBAC ; tous les filtres s'y ajoutent en ET, jamais en OU.
-    `X-Total-Count` = nombre d'avis correspondant à TOUS les filtres (avant limit/offset). Ordre stable : date décroissante puis id.
+    `X-Total-Count` = nombre d'avis correspondant à TOUS les filtres (avant limit/offset). Ordre stable : date décroissante puis id
+    (file « À traiter » : avis sans prise en charge depuis plus de 48 h en tête, du plus ancien au plus récent).
     """
     recherche = valider_recherche(q)
     if criticite is not None and criticite != "non_evaluee" and criticite not in {c.value for c in CriticiteType}:
@@ -407,14 +408,11 @@ def list_feedbacks(
         query = query.filter(Feedback.action_a_prendre.is_(None))
     if action_realisee is not None:
         query = query.filter(Feedback.action_realisee == action_realisee)
-    if theme or sentiment or criticite or a_surveiller or discordance is not None:
+    if theme or sentiment or criticite or a_surveiller or a_traiter or discordance is not None:
         query = query.outerjoin(AnalyseIA, AnalyseIA.feedback_id == Feedback.id)  # une seule jointure d'analyse pour ces filtres
     if a_traiter:
         query = query.outerjoin(DemandeContact, DemandeContact.feedback_id == Feedback.id)
-        query = query.filter(or_(
-            Feedback.statut_traitement != "resolu",
-            and_(DemandeContact.id.isnot(None), or_(DemandeContact.traitee.is_(None), DemandeContact.traitee.is_(False))),
-        ))
+        query = query.filter(condition_a_traiter_sql())
     if a_surveiller:
         query = query.filter(or_(
             Feedback.note <= NOTE_FAIBLE_MAX,
@@ -446,7 +444,12 @@ def list_feedbacks(
         query = query.filter(condition_recherche(db.get_bind().dialect.name, Feedback.commentaire, recherche))
 
     response.headers["X-Total-Count"] = str(query.order_by(None).count())
-    feedbacks = query.order_by(Feedback.date_soumission.desc(), Feedback.id.desc()).offset(offset).limit(limit).all()
+    ordre = [Feedback.date_soumission.desc(), Feedback.id.desc()]
+    if a_traiter:
+        # File : les avis sans prise en charge depuis plus de 48 h d'abord (les plus anciens en premier), puis le reste.
+        en_retard = condition_en_retard_sql(datetime.now(timezone.utc))
+        ordre = [case((en_retard, 0), else_=1), case((en_retard, Feedback.date_soumission), else_=None).asc(), *ordre]
+    feedbacks = query.order_by(*ordre).offset(offset).limit(limit).all()
 
     return [_format_feedback_response(f, current_user) for f in feedbacks]
 

@@ -28,14 +28,10 @@ import { buildSurveillance, repartitionReseau } from './siege/siegeData';
 import { issuesIncompletes, useSiegeData } from './siege/useSiegeData';
 import { Action, Evolution, Pourquoi, Reseau, SiegeKpis, Surveillance, type KpiKind } from './siege/SiegeBlocks';
 import { elargirPeriode } from '../../utils/periodeElargie';
+import { PERIODES as PERIODES_DASHBOARD } from '../../utils/periodes';
 import { AgenceDetail, KPI_TITRE, KpiDetail } from './siege/SiegeDrawers';
 
-const PERIODES = [
-  { v: 7, l: '7 jours' },
-  { v: 30, l: '30 jours' },
-  { v: 90, l: '90 jours' },
-  { v: 365, l: '12 mois' },
-];
+const PERIODES = PERIODES_DASHBOARD.map((p) => ({ v: p.jours, l: p.label }));
 
 type DrawerView = { type: 'kpi'; kind: KpiKind } | { type: 'agence'; id: string };
 

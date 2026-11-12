@@ -164,7 +164,7 @@ export function KpiDetail({
         {kind === 'satisfaction' ? (
           <Button variant="secondary" onClick={() => navigate('/statistiques')}>Analyse détaillée</Button>
         ) : (
-          <Button variant="secondary" onClick={() => navigate(lienAvisReseau({ jours, onglet: kind === 'critiques' ? 'critiques' : undefined }))}>Voir les avis</Button>
+          <Button variant="secondary" onClick={() => navigate(lienAvisReseau({ jours, onglet: kind === 'critiques' ? 'a_traiter' : undefined }))}>Voir les avis</Button>
         )}
       </div>
     </>

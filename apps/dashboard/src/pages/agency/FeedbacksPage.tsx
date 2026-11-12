@@ -4,30 +4,28 @@ import { feedbacksApi, agencesApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import type { Feedback, Agence, StatutTraitement, ThemesSynthese } from '../../types';
 import FeedbackTreatmentModal from '../../components/feedbacks/FeedbackTreatmentModal';
-import { AvisCarteMobile, SignauxAvis, STATUT_BADGES, formatDateAvis } from '../../components/feedbacks/avisAffichage';
+import { AvisCarteMobile, DateAvis, SignauxAvisCompacts, STATUT_BADGES } from '../../components/feedbacks/avisAffichage';
+import { estEnRetard } from '../../utils/fileATraiter';
 import TabsNavigation from '../../components/ui/TabsNavigation';
 import EmptyState from '../../components/ui/EmptyState';
 import SkeletonBlock from '../../components/ui/SkeletonBlock';
 import SectionHeading from '../../components/ui/SectionHeading';
-import { MessageSquareIcon, SearchIcon, FilterIcon, StoreIcon, AlertTriangleIcon, ClockIcon, TagIcon, XCloseIcon } from '../../components/common/Icons';
+import { MessageSquareIcon, SearchIcon, FilterIcon, StoreIcon, ClockIcon, TagIcon, XCloseIcon } from '../../components/common/Icons';
 import { themeLabel } from '../../utils/themeLabels';
 import { ThemeAgences, ThemeTonGravite, ThemeVerbatim } from '../../components/feedbacks/ThemeInfos';
 import { DEFINITION_NEGATIF, PartNegatifsTexte } from '../../utils/partNegatifs';
 import { useValeurDifferee } from '../../utils/debounce';
 import {
   FILTRES_INITIAUX, LONGUEUR_MAX_RECHERCHE, TAILLE_PAGE, filtresActifs as listerFiltresActifs, libelleTotal, nombrePages,
-  parametresApi, parametresThemes, periodeDepuisUrl, rechercheNormalisee, reduireFiltres, type FiltresAvis, type OngletAvis,
+  ongletDepuisUrl, parametresApi, parametresThemes, PERIODES_AVIS, periodeDepuisUrl, rechercheNormalisee, reduireFiltres, type FiltresAvis, type OngletAvis,
 } from './avisFiltres';
 import EtatListeAvis from './EtatListeAvis';
 import PageTitle from '../../components/ui/PageTitle';
 import './FeedbacksPage.css';
 
-const TABS_VALIDES: readonly OngletAvis[] = ['tous', 'a_traiter', 'critiques', 'thematiques'];
-
 // Contexte de navigation (liens depuis les tableaux de bord) : valeurs reconnues, tout le reste est ignoré.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const identifiantDepuisUrl = (valeur: string | null) => (valeur && UUID_RE.test(valeur) ? valeur : null);
-const ongletDepuisUrl = (valeur: string | null): OngletAvis => (TABS_VALIDES.includes(valeur as OngletAvis) ? (valeur as OngletAvis) : 'tous');
 
 interface FeedbacksPageProps {
   /**
@@ -49,7 +47,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
   // Filtres, recherche, onglet et page : un seul état. Tout changement (sauf de page) revient à la page 1.
   const [filtres, dispatch] = useReducer(reduireFiltres, undefined, (): FiltresAvis => ({
     ...FILTRES_INITIAUX,
-    onglet: ongletDepuisUrl(searchParams.get('tab')),
+    onglet: ongletDepuisUrl(searchParams),
     theme: searchParams.get('theme') || 'all',
     periode: periodeDepuisUrl(searchParams.get('jours')),
     agenceId: agenceId || (isCXOrAdmin ? identifiantDepuisUrl(searchParams.get('agence')) : null) || 'all',
@@ -59,7 +57,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
 
   const [avis, setAvis] = useState<Feedback[]>([]);
   const [total, setTotal] = useState(0);
-  const [compteurs, setCompteurs] = useState<{ tous: number; a_traiter: number; critiques: number } | null>(null);
+  const [compteurs, setCompteurs] = useState<{ tous: number; a_traiter: number } | null>(null);
   const [synthese, setSynthese] = useState<ThemesSynthese | null>(null);
   const [themesDisponibles, setThemesDisponibles] = useState<string[]>([]);
   const [agences, setAgences] = useState<Agence[]>([]);
@@ -70,14 +68,8 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
   const [toast, setToast] = useState('');
   const [selectedFeedbackForTreatment, setSelectedFeedbackForTreatment] = useState<Feedback | null>(null);
   const avisModifie = useRef(false);
-  const [filtersOpen, setFiltersOpen] = useState(() => typeof window === 'undefined' || !window.matchMedia('(max-width: 700px)').matches);
-
-  useEffect(() => {
-    const mobileQuery = window.matchMedia('(max-width: 700px)');
-    const syncFilterPanel = () => setFiltersOpen(!mobileQuery.matches);
-    mobileQuery.addEventListener('change', syncFilterPanel);
-    return () => mobileQuery.removeEventListener('change', syncFilterPanel);
-  }, []);
+  // Filtres repliés derrière le bouton « Filtres » ; dépliés d'entrée seulement si un filtre est déjà actif (lien, retour).
+  const [filtersOpen, setFiltersOpen] = useState(() => [filtres.periode, filtres.note, filtres.sentiment, filtres.criticite, filtres.discordance, filtres.theme].some((v) => v !== 'all'));
 
   // La recherche part au serveur après une courte pause dans la frappe (300 ms), pas à chaque lettre.
   useEffect(() => {
@@ -86,7 +78,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
 
   // Navigation par lien (?tab, ?theme, ?jours, ?agence) : applique le contexte demandé.
   useEffect(() => {
-    dispatch({ type: 'definir', champ: 'onglet', valeur: ongletDepuisUrl(searchParams.get('tab')) });
+    dispatch({ type: 'definir', champ: 'onglet', valeur: ongletDepuisUrl(searchParams) });
     dispatch({ type: 'definir', champ: 'theme', valeur: searchParams.get('theme') || 'all' });
     dispatch({ type: 'definir', champ: 'periode', valeur: periodeDepuisUrl(searchParams.get('jours')) });
     const agenceUrl = identifiantDepuisUrl(searchParams.get('agence'));
@@ -132,8 +124,8 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
     let cancelled = false;
     const compter = (onglet: OngletAvis) => feedbacksApi.list(parametresApi(filtres, { agenceFixe: agenceId, onglet, limit: 1, offset: 0 }))
       .then((res) => Number(res?.headers?.['x-total-count']));
-    Promise.all([compter('tous'), compter('a_traiter'), compter('critiques')])
-      .then(([tous, a_traiter, critiques]) => { if (!cancelled) setCompteurs({ tous, a_traiter, critiques }); })
+    Promise.all([compter('tous'), compter('a_traiter')])
+      .then(([tous, a_traiter]) => { if (!cancelled) setCompteurs({ tous, a_traiter }); })
       .catch(() => { if (!cancelled) setCompteurs(null); });
     return () => { cancelled = true; };
   }, [cleCompteurs, reloadToken]);
@@ -232,14 +224,14 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
   const tabsConfig = [
     { id: 'tous', label: 'Tous les avis', icon: <MessageSquareIcon size={16} />, badge: compteurs ? compteurs.tous : undefined },
     { id: 'a_traiter', label: 'À traiter', icon: <ClockIcon size={16} />, badge: compteurs ? compteurs.a_traiter : undefined, badgeColor: compteurs && compteurs.a_traiter > 0 ? ('red' as const) : ('default' as const) },
-    { id: 'critiques', label: 'À surveiller', icon: <AlertTriangleIcon size={16} />, badge: compteurs ? compteurs.critiques : undefined, badgeColor: compteurs && compteurs.critiques > 0 ? ('red' as const) : ('default' as const) },
     { id: 'thematiques', label: 'Thèmes', icon: <TagIcon size={16} />, badge: filtres.onglet === 'thematiques' && !loading && !loadError ? themes.length : undefined },
   ];
 
-  const th = { textAlign: 'left' as const, padding: '12px 16px', color: 'var(--color-text-2)', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-xs)', textTransform: 'uppercase' as const };
+  const th = { textAlign: 'left' as const, padding: '10px 16px', color: 'var(--color-text-2)', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-xs)', textTransform: 'uppercase' as const };
+  const fileAffichee = filtres.onglet === 'a_traiter';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
       {toast && (
         <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 1000, background: 'var(--color-encre)', color: 'white', padding: '12px 20px', borderRadius: '12px', fontWeight: 'var(--weight-semibold)' }}>
           {toast}
@@ -264,14 +256,14 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
         )}
         <TabsNavigation tabs={tabsConfig} activeTab={filtres.onglet} onChange={(id) => dispatch({ type: 'definir', champ: 'onglet', valeur: id })} style={{ marginBottom: 0, flex: '1 1 auto' }} />
       </div>
-      <p style={{ margin: '-12px 0 0', fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
-        « À traiter » : avis non résolus ou avec une demande de rappel en attente. « À surveiller » : avis avec au moins un signal (note de 2 ou moins, ton négatif, gravité élevée ou critique, ou avis contradictoire), chacun compté une seule fois.
+      <p style={{ margin: '-8px 0 0', fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
+        « À traiter » : avis non résolus notés 2 ou moins, au ton négatif ou de gravité élevée, et rappels en attente. Plus de 48 h sans prise en charge : en tête.
       </p>
 
       {/* ── ONGLETS 1, 2, 3 : LISTE DES AVIS ── */}
       {filtres.onglet !== 'thematiques' && (
-        <section aria-labelledby="feedbacks-liste" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div id="feedbacks-liste"><SectionHeading>Liste des avis</SectionHeading></div>
+        <section aria-labelledby="feedbacks-liste" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <h2 id="feedbacks-liste" className="ui-sr-only">{fileAffichee ? 'Avis à traiter' : 'Liste des avis'}</h2>
           <div className="feedbacks-toolbar">
             <div className="feedbacks-search">
               <SearchIcon size={16} color="var(--color-text-2)" />
@@ -296,7 +288,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
               <div className="feedbacks-filter-controls">
                 <label className="feedbacks-select-label">Période
                   <select value={filtres.periode} onChange={(e) => dispatch({ type: 'definir', champ: 'periode', valeur: e.target.value })} aria-label="Filtrer par période">
-                    <option value="all">Toutes les dates</option><option value="today">Aujourd'hui</option><option value="7">7 derniers jours</option><option value="14">14 derniers jours</option><option value="30">30 derniers jours</option><option value="90">90 derniers jours</option><option value="365">12 derniers mois</option>
+                    {PERIODES_AVIS.map((p) => <option key={p.valeur} value={p.valeur}>{p.libelle}</option>)}
                   </select>
                 </label>
                 <label className="feedbacks-select-label">Note
@@ -310,7 +302,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                 <select value={filtres.criticite} onChange={(e) => dispatch({ type: 'definir', champ: 'criticite', valeur: e.target.value })} aria-label="Filtrer par gravité">
                   <option value="all">Toutes gravités</option><option value="critique">Critique</option><option value="elevee">Élevée</option><option value="moyenne">Moyenne</option><option value="faible">Faible</option><option value="non_evaluee">Non évaluée</option>
                 </select>
-                <select value={filtres.discordance} onChange={(e) => dispatch({ type: 'definir', champ: 'discordance', valeur: e.target.value })} aria-label="Filtrer les avis contradictoires">
+                <select value={filtres.discordance} onChange={(e) => dispatch({ type: 'definir', champ: 'discordance', valeur: e.target.value })} aria-label="Filtrer les avis contradictoires" title="Avis contradictoires : la note et le ton du texte se contredisent (par exemple 5/5 avec un texte négatif).">
                   <option value="all">Contradictoires ou non</option><option value="oui">Avis contradictoires uniquement</option>
                 </select>
                 <select value={filtres.theme} onChange={(e) => dispatch({ type: 'definir', champ: 'theme', valeur: e.target.value })} aria-label="Filtrer par thème">
@@ -321,9 +313,6 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                   {themesDisponibles.map((t) => <option key={t} value={t}>{t === 'non_categorise' ? 'Non catégorisé' : themeLabel(t)}</option>)}
                 </select>
               </div>
-              <p style={{ margin: '8px 0 0', fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
-                Avis contradictoires : la note et le ton du texte se contredisent (par exemple 5/5 avec un texte négatif).
-              </p>
               {themeCatalogError && (
                 <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '8px', color: 'var(--color-text-body)', fontSize: 'var(--text-sm)' }}>
                   <span>Impossible de charger la liste complète des thèmes.</span>
@@ -355,63 +344,59 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
             </div>
           )}
 
-          {/* Tableau (grands écrans) */}
-          <div className="feedbacks-desktop-table" style={{ background: 'var(--color-surface)', borderRadius: '20px', border: '1px solid var(--color-trait)', overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
+          {/* Tableau (grands écrans) : une ligne par avis, date et thème en métadonnées sous le commentaire. */}
+          <div className="feedbacks-desktop-table" style={{ background: 'var(--color-surface)', borderRadius: '16px', border: '1px solid var(--color-trait)', overflowX: 'auto' }}>
+            <table className="feedbacks-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--color-trait)', background: 'var(--color-bg)' }}>
-                  <th scope="col" style={th}>{afficherAgenceLigne ? 'Date et agence' : 'Date'}</th>
                   <th scope="col" style={th}>Note et ton</th>
-                  <th scope="col" style={th}>Commentaire du client</th>
-                  <th scope="col" style={th}>Thème</th>
-                  <th scope="col" style={{ ...th, textAlign: 'center' }}>Statut</th>
-                  <th scope="col" style={{ ...th, textAlign: 'right' }}>Action</th>
+                  <th scope="col" style={th}>Avis</th>
+                  <th scope="col" style={th}>Statut</th>
+                  <th scope="col" style={{ ...th, textAlign: 'right' }}><span className="ui-sr-only">Action</span></th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  [0, 1, 2, 3, 4, 5].map((i) => (
+                  [0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
                     <tr key={i} aria-busy="true" style={{ borderBottom: '1px solid var(--color-trait)' }}>
-                      <td colSpan={6} style={{ padding: '14px 16px' }}><SkeletonBlock height={40} radius="var(--radius-md)" /></td>
+                      <td colSpan={4} style={{ padding: '10px 16px' }}><SkeletonBlock height={32} radius="var(--radius-md)" /></td>
                     </tr>
                   ))
                 ) : avis.length > 0 ? (
                   avis.map((f) => {
                     const statMeta = STATUT_BADGES[(f.statut_traitement || 'nouveau') as StatutTraitement] || STATUT_BADGES.nouveau;
+                    const enRetard = fileAffichee && estEnRetard(f);
                     return (
-                      <tr key={f.id} style={{ borderBottom: '1px solid var(--color-trait)', cursor: 'pointer' }} onClick={() => setSelectedFeedbackForTreatment(f)}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-bg)')} onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--color-surface)')}>
-                        <td style={{ padding: '14px 16px', minWidth: '140px' }}>
-                          {afficherAgenceLigne && <div className="t-semi t-encre">{f.agence_nom || 'Agence'}</div>}
-                          <div style={afficherAgenceLigne ? { fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', marginTop: '2px' } : { color: 'var(--color-encre)' }}>{formatDateAvis(f.date_soumission)}</div>
+                      <tr key={f.id} className={`feedbacks-ligne${enRetard ? ' is-late' : ''}`} onClick={() => setSelectedFeedbackForTreatment(f)}>
+                        <td className="feedbacks-cell feedbacks-cell--signaux">
+                          {enRetard && <span className="ui-sr-only">Sans prise en charge depuis plus de 48 h. </span>}
+                          <SignauxAvisCompacts feedback={f} />
                         </td>
-                        <td style={{ padding: '14px 16px', minWidth: '150px' }}><SignauxAvis feedback={f} /></td>
-                        <td style={{ padding: '14px 16px', maxWidth: '340px' }}>
-                          <div style={{ color: 'var(--color-encre)', lineHeight: 1.4, fontSize: 'var(--text-sm)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                            {f.commentaire || 'Pas de commentaire écrit.'}
+                        <td className="feedbacks-cell feedbacks-cell--avis">
+                          <div className="feedbacks-commentaire">{f.commentaire || 'Pas de commentaire écrit.'}</div>
+                          <div className="feedbacks-meta">
+                            <DateAvis iso={f.date_soumission} />
+                            <span aria-hidden="true"> · </span>
+                            <span>{f.analyse_ia?.theme_principal ? themeLabel(f.analyse_ia.theme_principal) : 'Non catégorisé'}</span>
+                            {afficherAgenceLigne && <><span aria-hidden="true"> · </span><span>{f.agence_nom || 'Agence'}</span></>}
+                            {f.issue_id && <><span aria-hidden="true"> · </span><span>Rattaché à un problème</span></>}
                           </div>
                         </td>
-                        <td style={{ padding: '14px 16px', minWidth: '140px' }}>
-                          <span style={{ background: 'var(--color-neutre-fond)', color: 'var(--color-text-2)', padding: '4px 10px', borderRadius: '8px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)' }}>
-                            {f.analyse_ia?.theme_principal ? themeLabel(f.analyse_ia.theme_principal) : 'Non catégorisé'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                          <span style={{ background: statMeta.bg, color: statMeta.text, padding: '3px 10px', borderRadius: '9999px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <td className="feedbacks-cell">
+                          <span style={{ background: statMeta.bg, color: statMeta.text, padding: '3px 10px', borderRadius: '9999px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', display: 'inline-flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
                             {statMeta.icon}
                             {statMeta.label}
                           </span>
-                          {f.issue_id && <div style={{ marginTop: '6px', color: 'var(--color-neutre-texte)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}>Rattaché à un problème</div>}
                         </td>
-                        <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                          <button type="button" onClick={(e) => { e.stopPropagation(); setSelectedFeedbackForTreatment(f); }} className="btn-secondary" style={{ padding: '6px 12px', borderRadius: '10px' }}>Consulter</button>
+                        <td className="feedbacks-cell" style={{ textAlign: 'right' }}>
+                          <button type="button" onClick={(e) => { e.stopPropagation(); setSelectedFeedbackForTreatment(f); }} className="btn-secondary feedbacks-consulter">Consulter</button>
                         </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={4}>
                       <EtatListeAvis chargement={false} erreur={loadError} total={total} filtresActifs={filtresOuOnglet} onReessayer={() => setReloadToken((t) => t + 1)} onReinitialiser={reinitialiser} />
                     </td>
                   </tr>
@@ -424,7 +409,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
           {!loading && !loadError && avis.length > 0 && (
             <div className="feedbacks-mobile-list" aria-label="Avis clients">
               {avis.map((f) => (
-                <AvisCarteMobile key={f.id} feedback={f} afficherAgence={showAgenceSelector} onConsulter={() => setSelectedFeedbackForTreatment(f)} />
+                <AvisCarteMobile key={f.id} feedback={f} afficherAgence={showAgenceSelector} enRetard={fileAffichee && estEnRetard(f)} onConsulter={() => setSelectedFeedbackForTreatment(f)} />
               ))}
             </div>
           )}

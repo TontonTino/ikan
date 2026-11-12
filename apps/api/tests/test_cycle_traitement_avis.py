@@ -218,7 +218,7 @@ def test_en_traitement_est_pris_en_charge_mais_pas_resolu_et_resolu_est_resolu(c
     _avis(ctx, statut="resolu")
     dash = _get(ctx, "am_a1", f"/dashboard/agence/{ctx.a1}")
     assert dash["feedbacks_pris_en_charge"] == 3 and dash["feedbacks_resolus"] == 1 and dash["feedbacks_nouveaux"] == 0
-    # « à traiter » (règle existante) : non résolus -> 2 ; le résolu n'y est plus
+    # « à traiter » (file du lot 3) : avis négatifs non résolus -> 2 ; le résolu n'y est plus
     assert dash["feedbacks_a_traiter"] == 2
 
 

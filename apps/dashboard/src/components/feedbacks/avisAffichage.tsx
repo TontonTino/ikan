@@ -4,6 +4,7 @@ import { CheckCircleIcon, ClockIcon, MessageSquareIcon, SmileyMehIcon, ThumbsUpI
 import { AVIS_STATUT_LABELS, GRAVITE_LABELS } from '../../utils/vocabulaire';
 import { normalizeCriticite, normalizeSentiment } from '../../utils/triageAvis';
 import BadgeDiscordance from './BadgeDiscordance';
+import { dateRelativeOuAbsolue, fullDate } from '../ui/format';
 
 export const STATUT_BADGES: Record<StatutTraitement, { label: string; bg: string; text: string; icon: React.ReactNode }> = {
   nouveau: { label: AVIS_STATUT_LABELS.nouveau, bg: 'var(--color-neutre-fond)', text: 'var(--color-neutre-texte)', icon: <MessageSquareIcon size={12} color="var(--color-neutre-texte)" /> },
@@ -83,8 +84,33 @@ export function SignauxAvis({ feedback }: { feedback: Feedback }) {
   );
 }
 
+/** Note, ton, gravité forte et discordance sur une seule ligne (liste dense de la page Avis). La gravité faible ou moyenne
+ *  n'est pas répétée à chaque ligne : elle reste dans la fenêtre de l'avis et dans les filtres. */
+export function SignauxAvisCompacts({ feedback }: { feedback: Feedback }) {
+  const sentiment = normalizeSentiment(feedback.analyse_ia?.sentiment);
+  const meta = SENTIMENT_STYLE[sentiment] || { bg: 'var(--color-neutre-fond)', text: 'var(--color-text-2)', label: sentiment || '—', icon: null };
+  const criticite = feedback.analyse_ia?.criticite;
+  const fort = criticite === 'critique' || criticite === 'elevee';
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap' }}>
+      <span style={{ fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', fontSize: 'var(--text-sm)', whiteSpace: 'nowrap' }}>★ {feedback.note}/5</span>
+      <span style={{ background: meta.bg, color: meta.text, padding: '2px 8px', borderRadius: '6px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', display: 'inline-flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}>
+        {meta.icon}
+        {feedback.analyse_ia ? meta.label : libelleAnalyseAbsente(feedback)}
+      </span>
+      {fort && <PastilleGravite feedback={feedback} />}
+      <BadgeDiscordance discordance={feedback.analyse_ia?.discordance_detectee} />
+    </div>
+  );
+}
+
+/** Date d'un avis selon la convention du dashboard : relative jusqu'à 30 jours, puis « 12 oct. 2026 » ; date complète au survol. */
+export function DateAvis({ iso }: { iso: string }) {
+  return <time dateTime={iso} title={fullDate(iso)}>{dateRelativeOuAbsolue(iso)}</time>;
+}
+
 /** Carte d'un avis pour petit écran (≤ 700 px) : mêmes informations que la ligne du tableau, discordance comprise. */
-export function AvisCarteMobile({ feedback, afficherAgence, onConsulter }: { feedback: Feedback; afficherAgence: boolean; onConsulter: () => void }) {
+export function AvisCarteMobile({ feedback, afficherAgence, enRetard = false, onConsulter }: { feedback: Feedback; afficherAgence: boolean; enRetard?: boolean; onConsulter: () => void }) {
   const sentiment = normalizeSentiment(feedback.analyse_ia?.sentiment);
   const sentimentMeta = SENTIMENT_STYLE[sentiment];
   const criticite = normalizeCriticite(feedback.analyse_ia?.criticite);
@@ -93,7 +119,8 @@ export function AvisCarteMobile({ feedback, afficherAgence, onConsulter }: { fee
     ? (CRITICITE_STYLE[criticite] ? `${criticite === 'elevee' ? 'Élevée' : criticite.charAt(0).toUpperCase() + criticite.slice(1)}` : 'Gravité non évaluée')
     : libelleAnalyseAbsente(feedback);
   return (
-    <article className="feedbacks-mobile-card">
+    <article className={`feedbacks-mobile-card${enRetard ? ' is-late' : ''}`}>
+      {enRetard && <span className="ui-sr-only">Sans prise en charge depuis plus de 48 h.</span>}
       <div className="feedbacks-mobile-card-top">
         <strong>★ {feedback.note}/5</strong>
         <span>{libelleCriticite}</span>
@@ -103,7 +130,7 @@ export function AvisCarteMobile({ feedback, afficherAgence, onConsulter }: { fee
       <p>{feedback.commentaire || 'Pas de commentaire écrit.'}</p>
       <div className="feedbacks-mobile-meta">
         {afficherAgence && <span>{feedback.agence_nom || 'Agence'}</span>}
-        <time dateTime={feedback.date_soumission}>{formatDateAvis(feedback.date_soumission)}</time>
+        <DateAvis iso={feedback.date_soumission} />
         <span className="feedbacks-mobile-status" style={{ background: statut.bg, color: statut.text }}>{statut.label}</span>
         {feedback.issue_id && <span>Rattaché à un problème</span>}
       </div>

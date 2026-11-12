@@ -2,14 +2,17 @@
  * Filtres et pagination de la liste des avis : TOUT est envoyé au serveur (GET /feedbacks/), rien n'est filtré dans le
  * navigateur. Module pur (sans React) : les règles se testent sans écran.
  */
+import { PERIODES, libellePeriode } from '../../utils/periodes';
+
 export const TAILLE_PAGE = 25;
 export const LONGUEUR_MAX_RECHERCHE = 100;
 
-export type OngletAvis = 'tous' | 'a_traiter' | 'critiques' | 'thematiques';
+/** « À traiter » est LA file d'avis (lot 3) ; l'ancien onglet « À surveiller » y est fusionné. */
+export type OngletAvis = 'tous' | 'a_traiter' | 'thematiques';
 
 export interface FiltresAvis {
   agenceId: string;
-  periode: string; // 'all' | 'today' | '7' | '30' | '90' | '365'
+  periode: string; // 'all' | '7' | '30' | '90' | '365' (liste unique du dashboard, plus « toutes les dates » pour une liste de travail)
   sentiment: string; // 'all' | 'positif' | 'neutre' | 'negatif'
   theme: string;
   note: string; // 'all' | '1'..'5'
@@ -45,7 +48,6 @@ export const dateDebutPeriode = (periode: string, maintenant: Date = new Date())
   if (periode === 'all') return null;
   const date = new Date(maintenant);
   date.setHours(0, 0, 0, 0);
-  if (periode === 'today') return date;
   const jours = Number(periode);
   date.setDate(date.getDate() - (Number.isFinite(jours) && jours > 0 ? jours - 1 : 29));
   return date;
@@ -66,7 +68,6 @@ export interface ParametresAvis {
   q?: string;
   discordance?: true;
   a_traiter?: true;
-  a_surveiller?: true;
 }
 
 /**
@@ -93,17 +94,31 @@ export function parametresApi(
     ...(f.discordance === 'oui' ? { discordance: true as const } : {}),
     ...(q ? { q } : {}),
     ...(onglet === 'a_traiter' ? { a_traiter: true as const } : {}),
-    ...(onglet === 'critiques' ? { a_surveiller: true as const } : {}),
   };
 }
 
-const PERIODES_URL = ['1', '7', '14', '30', '90', '365'] as const;
-// « jours=1 » (Statistiques, « Aujourd'hui ») correspond à la période « Aujourd'hui » de cette page.
-export const periodeDepuisUrl = (valeur: string | null) => (valeur === '1' ? 'today' : valeur && (PERIODES_URL as readonly string[]).includes(valeur) ? valeur : 'all');
-/** Période de la page en nombre de jours (« Aujourd'hui » = 1) ; undefined = toute la période. */
+/** Périodes de la liste : celles du dashboard (utils/periodes.ts), plus « Toutes les dates » par défaut. */
+export const PERIODES_AVIS: ReadonlyArray<{ valeur: string; libelle: string }> = [
+  { valeur: 'all', libelle: 'Toutes les dates' },
+  ...PERIODES.map((p) => ({ valeur: String(p.jours), libelle: libellePeriode(p.jours) })),
+];
+const PERIODES_URL = PERIODES.map((p) => String(p.jours));
+export const periodeDepuisUrl = (valeur: string | null) => (valeur && PERIODES_URL.includes(valeur) ? valeur : 'all');
+
+/**
+ * Onglet demandé par un lien : `?filtre=a-traiter` (adresse de la file) ou `?tab=…`. L'ancien onglet « À surveiller »
+ * (`tab=critiques`) ouvre la file « À traiter », qui l'a remplacé ; toute autre valeur ouvre « Tous les avis ».
+ */
+export function ongletDepuisUrl(params: { get: (cle: string) => string | null }): OngletAvis {
+  if (params.get('filtre') === 'a-traiter') return 'a_traiter';
+  const tab = params.get('tab');
+  if (tab === 'critiques' || tab === 'a_traiter') return 'a_traiter';
+  return tab === 'thematiques' ? 'thematiques' : 'tous';
+}
+
+/** Période de la page en nombre de jours ; undefined = toute la période. */
 export const joursPeriode = (periode: string): number | undefined => {
   if (periode === 'all') return undefined;
-  if (periode === 'today') return 1;
   const jours = Number(periode);
   return Number.isInteger(jours) && jours > 0 ? jours : undefined;
 };
@@ -131,9 +146,7 @@ export const nombrePages = (total: number): number => Math.max(1, Math.ceil(tota
 
 export const libelleTotal = (total: number): string => `${total} avis`;
 
-const LIBELLES_PERIODE: Record<string, string> = {
-  today: "Aujourd'hui", '7': '7 derniers jours', '30': '30 derniers jours', '90': '90 derniers jours', '365': '12 derniers mois',
-};
+const LIBELLES_PERIODE: Record<string, string> = Object.fromEntries(PERIODES.map((p) => [String(p.jours), libellePeriode(p.jours)]));
 const LIBELLES_CRITICITE: Record<string, string> = { critique: 'Critique', elevee: 'Élevée', moyenne: 'Moyenne', faible: 'Faible', non_evaluee: 'Non évaluée' };
 const LIBELLES_SENTIMENT: Record<string, string> = { positif: 'Positif', neutre: 'Neutre', negatif: 'Négatif' };
 

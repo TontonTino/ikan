@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  FILTRES_INITIAUX, LONGUEUR_MAX_RECHERCHE, TAILLE_PAGE, filtresActifs, libelleTotal, nombrePages, parametresApi, reduireFiltres,
+  FILTRES_INITIAUX, LONGUEUR_MAX_RECHERCHE, TAILLE_PAGE, filtresActifs, libelleTotal, nombrePages, ongletDepuisUrl, parametresApi, PERIODES_AVIS, periodeDepuisUrl, reduireFiltres,
   type FiltresAvis,
 } from './avisFiltres';
 
@@ -49,12 +49,13 @@ describe('paramètres envoyés au serveur', () => {
 
   it('les onglets deviennent des filtres serveur', () => {
     expect(parametresApi({ ...FILTRES_INITIAUX, onglet: 'a_traiter' })).toMatchObject({ a_traiter: true });
-    expect(parametresApi({ ...FILTRES_INITIAUX, onglet: 'critiques' })).toMatchObject({ a_surveiller: true });
+    // l'ancien onglet « À surveiller » n'existe plus : aucun paramètre a_surveiller n'est envoyé (lot 3)
+    expect(Object.keys(parametresApi({ ...FILTRES_INITIAUX, onglet: 'a_traiter' }))).not.toContain('a_surveiller');
     expect(parametresApi({ ...FILTRES_INITIAUX, onglet: 'tous' })).not.toHaveProperty('a_traiter');
   });
 
   it('un compteur d’onglet ignore l’onglet affiché et la page', () => {
-    const f = { ...FILTRES_INITIAUX, onglet: 'critiques' as const, page: 4, sentiment: 'negatif' };
+    const f = { ...FILTRES_INITIAUX, onglet: 'thematiques' as const, page: 4, sentiment: 'negatif' };
     expect(parametresApi(f, { onglet: 'a_traiter', limit: 1, offset: 0 })).toEqual({ limit: 1, offset: 0, sentiment: 'negatif', a_traiter: true });
   });
 
@@ -83,5 +84,25 @@ describe('total et filtres actifs', () => {
     expect(filtresActifs(f, aide).map((x) => x.libelle)).toEqual(['Agence : Lyon', 'Ton : Négatif', 'Période : 30 derniers jours', 'Recherche : « retard »']);
     expect(filtresActifs(f, { ...aide, agenceFixe: true }).map((x) => x.cle)).not.toContain('agenceId');
     expect(filtresActifs(FILTRES_INITIAUX, aide)).toEqual([]);
+  });
+});
+
+describe('file « À traiter » et périodes (lot 3)', () => {
+  const url = (q: string) => new URLSearchParams(q);
+  it('?filtre=a-traiter ouvre la file ; l’ancien onglet « À surveiller » aussi', () => {
+    expect(ongletDepuisUrl(url('filtre=a-traiter'))).toBe('a_traiter');
+    expect(ongletDepuisUrl(url('tab=critiques'))).toBe('a_traiter');
+    expect(ongletDepuisUrl(url('tab=a_traiter'))).toBe('a_traiter');
+    expect(ongletDepuisUrl(url('tab=thematiques'))).toBe('thematiques');
+    expect(ongletDepuisUrl(url('tab=nimporte'))).toBe('tous');
+    expect(ongletDepuisUrl(url(''))).toBe('tous');
+  });
+
+  it('la liste propose les périodes du dashboard, plus « Toutes les dates » ; plus d’« Aujourd’hui » ni de 14 jours', () => {
+    expect(PERIODES_AVIS.map((p) => p.valeur)).toEqual(['all', '7', '30', '90', '365']);
+    expect(PERIODES_AVIS.map((p) => p.libelle)).toEqual(['Toutes les dates', '7 derniers jours', '30 derniers jours', '90 derniers jours', '12 derniers mois']);
+    expect(periodeDepuisUrl('14')).toBe('all');
+    expect(periodeDepuisUrl('1')).toBe('all');
+    expect(periodeDepuisUrl('90')).toBe('90');
   });
 });

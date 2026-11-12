@@ -1,4 +1,5 @@
 import type { Alerte, AlerteFeedback, Issue, IssueStatut, TendanceSatisfaction } from '../../types';
+import { LIEN_FILE_A_TRAITER } from '../../utils/fileATraiter';
 import { GRAVITE_LABELS, PROBLEME_STATUT_LABELS, libelleRaisonAlerte } from '../../utils/vocabulaire';
 import { formaterPourcentage } from '../../utils/formatNombre';
 import { estSansActionEnCours } from '../../utils/issueSuivi';
@@ -68,7 +69,7 @@ export function construirePriorites(entrees: { alertes: Alerte[]; avis: AlerteFe
     type: 'Avis à examiner',
     titre: `Note ${a.note}/5${a.categorie_nom ? ` · ${a.categorie_nom}` : ''}`,
     detail: `${libelleRaisonAlerte(a.raison)}${a.commentaire ? ` · « ${extrait(a.commentaire)} »` : ''}`,
-    lien: { to: '/feedbacks?tab=critiques', label: 'Examiner les avis' },
+    lien: { to: LIEN_FILE_A_TRAITER, label: 'Examiner les avis' },
   }));
 
   const gravite = (p: Priorite, source: Issue[]) =>
