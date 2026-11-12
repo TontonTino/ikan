@@ -184,6 +184,8 @@ if (erreur) Astro.response.status = 404;
               <!-- SECTION 1 : ÉVALUATION (5 EMOJIS) -->
               <div class="form-section sentiment-section">
                 <p class="field-label" id="ratingLabel">Comment s'est passée votre visite ?</p>
+                <!-- Exception de palette validée (lot 2c) : les 5 visages gardent leur échelle rouge → vert, lisible d'un coup d'œil.
+                     Le sens est aussi porté par le libellé et l'expression du visage. Aucune autre couleur hors jetons sur la page. -->
                 <div class="sentiment-grid" id="sentimentsGrid" role="radiogroup" aria-labelledby="ratingLabel" aria-describedby="ratingHint ratingError">
                   <!-- 1. Mauvais -->
                   <button type="button" class="sentiment-tile tone-mauvais" data-sentiment="mauvais" role="radio" aria-checked="false" aria-label="Mauvais" tabindex="0">
