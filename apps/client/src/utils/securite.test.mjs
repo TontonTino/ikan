@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { enTetesSecurite, ipVisiteur, origineApi, politiqueCsp } from './securite.ts';
 
-const API = 'https://ikan-772d.onrender.com/api/v1';
+const API = 'https://api.exemple.org/api/v1';
 
 test('tous les en-têtes de sécurité demandés sont présents', () => {
   const h = enTetesSecurite(API);
@@ -35,7 +35,7 @@ test('la CSP est en mode Report-Only : jamais d\'en-tête bloquant tant qu\'elle
 
 test('la CSP autorise l\'API configurée (et elle seule) en connexion, et plus aucun domaine Google', () => {
   const csp = politiqueCsp(API);
-  assert.match(csp, /connect-src 'self' https:\/\/ikan-772d\.onrender\.com(;|$)/);
+  assert.match(csp, /connect-src 'self' https:\/\/api\.exemple\.org(;|$)/);
   assert.doesNotMatch(csp, /google|gstatic/);
   assert.match(csp, /font-src 'self'(;|$)/);
   assert.equal(origineApi('pas une url'), null);

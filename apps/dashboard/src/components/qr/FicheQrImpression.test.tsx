@@ -5,7 +5,7 @@ import { lienFeedbackAgence } from '../../utils/qrCode';
 import css from './ficheQr.css?raw';
 import { CLASSE_IMPRESSION_QR, FicheQrContenu, PHRASE_INVITATION_QR, imprimerFicheQr } from './FicheQrImpression';
 
-const URL_AGENCE = 'https://ikan-1.onrender.com/feedback/QR-AGENCE-AB12CD';
+const URL_AGENCE = 'https://client.exemple.org/feedback/QR-AGENCE-AB12CD';
 const rendu = (nom: string, url = URL_AGENCE) => renderToStaticMarkup(<FicheQrContenu nom={nom} url={url} />);
 
 afterEach(() => vi.unstubAllGlobals());

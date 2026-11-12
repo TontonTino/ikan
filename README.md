@@ -35,7 +35,7 @@ ikanai/
 │   ├── dashboard/    # 🖥️ Back-Office Web Management (React 18 + Vite, Recharts, Leaflet)
 │   ├── agent/        # 🤖 Agent IA Conversationnel (FastAPI, Q&A managers, alertes automatiques)
 │   └── veille/       # 🌐 Microservice de Veille & Scraping Réseaux Sociaux (Playwright / FastAPI)
-├── shared/           # 🎨 Tokens CSS, typographies et assets partagés
+├── docs/             # 📋 État des lieux et décisions de la refonte (docs/etat-des-lieux.md)
 ├── DEPLOYMENT.md     # 📖 Guide de déploiement Cloudflare / Tunnels
 └── RENDER_DEPLOYMENT_TUTORIAL.md # 🚀 Tutoriel pas-à-pas de déploiement Cloud Render
 ```

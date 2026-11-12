@@ -7,6 +7,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const NOMS = ['X-Content-Type-Options', 'X-Frame-Options', 'Referrer-Policy', 'Permissions-Policy', 'Content-Security-Policy-Report-Only'];
 const racine = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+const FICHIERS_SERVEUR = ['server.mjs', 'entetes-securite.mjs', 'variables-requises.mjs'];
+const ADRESSES = { VITE_API_URL: 'https://api.exemple.org/api/v1', VITE_AGENT_URL: 'https://yam.exemple.org' };
 
 describe('server.mjs : en-têtes sur toutes les réponses (200, 404, 405)', () => {
   let dossier = '';
@@ -19,10 +21,11 @@ describe('server.mjs : en-têtes sur toutes les réponses (200, 404, 405)', () =
     dossier = mkdtempSync(path.join(tmpdir(), 'dash-'));
     mkdirSync(path.join(dossier, 'dist'));
     writeFileSync(path.join(dossier, 'dist', 'index.html'), '<!doctype html><title>x</title>');
-    for (const f of ['server.mjs', 'entetes-securite.mjs']) copyFileSync(path.join(racine, f), path.join(dossier, f));
+    for (const f of FICHIERS_SERVEUR) copyFileSync(path.join(racine, f), path.join(dossier, f));
     processus = spawn(process.execPath, ['server.mjs'], {
       cwd: dossier,
-      env: { ...process.env, PORT: String(port), APP_ENV: 'production' },
+      // Production : les adresses de l'API et de l'agent sont obligatoires au démarrage (variables-requises.mjs).
+      env: { ...process.env, PORT: String(port), APP_ENV: 'production', ...ADRESSES },
       stdio: ['ignore', 'pipe', 'inherit'],
     });
     await new Promise((resolve, reject) => {
@@ -56,5 +59,25 @@ describe('server.mjs : en-têtes sur toutes les réponses (200, 404, 405)', () =
     expect(r.headers.get('strict-transport-security')).toBe('max-age=15552000');
     expect(r.headers.get('content-security-policy')).toBeNull();
     expect(r.headers.get('x-frame-options')).toBe('DENY');
+  });
+});
+
+describe('server.mjs : en production, refuse de démarrer sans les adresses des services', () => {
+  it('sans VITE_API_URL ni VITE_AGENT_URL : arrêt (code 1) avec un message qui les nomme', async () => {
+    const dossier = mkdtempSync(path.join(tmpdir(), 'dash-'));
+    try {
+      for (const f of FICHIERS_SERVEUR) copyFileSync(path.join(racine, f), path.join(dossier, f));
+      const env = { ...process.env, PORT: '0', APP_ENV: 'production' };
+      delete env.VITE_API_URL;
+      delete env.VITE_AGENT_URL;
+      const processus = spawn(process.execPath, ['server.mjs'], { cwd: dossier, env, stdio: ['ignore', 'pipe', 'pipe'] });
+      let erreurs = '';
+      processus.stderr.on('data', (d) => { erreurs += String(d); });
+      const code = await new Promise((resolve) => processus.once('exit', resolve));
+      expect(code).toBe(1);
+      expect(erreurs).toContain('VITE_API_URL, VITE_AGENT_URL');
+    } finally {
+      rmSync(dossier, { recursive: true, force: true });
+    }
   });
 });

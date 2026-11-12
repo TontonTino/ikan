@@ -48,6 +48,8 @@ def test_le_middleware_d_en_tetes_est_le_plus_exterieur_de_la_pile():
 
 def test_un_403_csrf_porte_les_en_tetes_de_securite(client, monkeypatch):
     monkeypatch.setattr(settings, "APP_ENV", "production")
+    # En production, ALLOWED_ORIGINS est obligatoire (sans elle l'API ne démarre pas) : on la renseigne comme sur le service.
+    monkeypatch.setattr(settings, "ALLOWED_ORIGINS", "https://dashboard.exemple.org")
     r = client.patch("/api/v1/auth/me", json={"nom": "X"}, headers={"Cookie": "access_token=nimporte", "Origin": "https://evil.example.com"})
     assert r.status_code == 403 and r.json() == {"detail": MESSAGE_ORIGINE_REFUSEE}
     verifier(r)

@@ -4,9 +4,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { enTetesSecurite as parTs, origineApi as origineTs, politiqueCsp as cspTs } from '../utils/securite.ts';
-import { enTetesSecurite as parMjs, origineApi as origineMjs, politiqueCsp as cspMjs, API_URL_PAR_DEFAUT } from '../../serveur/entetes-securite.mjs';
+import { enTetesSecurite as parMjs, origineApi as origineMjs, politiqueCsp as cspMjs } from '../../serveur/entetes-securite.mjs';
 
-const ADRESSES = [API_URL_PAR_DEFAUT, 'https://api.exemple.org/api/v1', 'http://127.0.0.1:8099/api/v1', 'pas une url', ''];
+const ADRESSES = ['http://localhost:8000/api/v1', 'https://api.exemple.org/api/v1', 'http://127.0.0.1:8099/api/v1', 'pas une url', ''];
 
 test('mêmes en-têtes que le middleware, en production comme en développement, pour toute adresse d\'API', () => {
   for (const adresse of ADRESSES) {
@@ -16,8 +16,12 @@ test('mêmes en-têtes que le middleware, en production comme en développement,
   }
 });
 
-test('l\'adresse d\'API par défaut est la même que celle du middleware', async () => {
+test('le middleware et le serveur lisent l\'adresse d\'API par le même module, sans adresse codée', async () => {
   const { readFileSync } = await import('node:fs');
-  const source = readFileSync(new URL('../middleware.ts', import.meta.url), 'utf8');
-  assert.ok(source.includes(`'${API_URL_PAR_DEFAUT}'`));
+  for (const fichier of ['../middleware.ts', '../../serveur.mjs', '../../serveur/entetes-securite.mjs']) {
+    const source = readFileSync(new URL(fichier, import.meta.url), 'utf8');
+    assert.doesNotMatch(source, /onrender\.com/, fichier);
+  }
+  assert.match(readFileSync(new URL('../middleware.ts', import.meta.url), 'utf8'), /adresseApi\(import\.meta\.env\.PUBLIC_API_URL/);
+  assert.match(readFileSync(new URL('../../serveur.mjs', import.meta.url), 'utf8'), /adresseApi\(process\.env\.PUBLIC_API_URL, true\)/);
 });

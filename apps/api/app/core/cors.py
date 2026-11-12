@@ -3,10 +3,10 @@ Origines CORS autorisées.
 
 Liste explicite uniquement : jamais de joker ni de regex, car allow_credentials=True est actif.
 
-- Si ALLOWED_ORIGINS est renseignée (non vide après nettoyage), elle REMPLACE le défaut,
-  quel que soit APP_ENV.
-- Sinon le défaut dépend de APP_ENV : en "development", les origines locales s'ajoutent
-  aux deux origines de production ; partout ailleurs, seules les deux origines de production.
+- Si ALLOWED_ORIGINS est renseignée (au moins une origine après nettoyage), elle fait foi, quel que soit APP_ENV.
+- Sinon, en "development", repli sur les origines locales (localhost) ; partout ailleurs, l'API REFUSE de démarrer
+  avec un message qui nomme la variable manquante. Aucune adresse de déploiement n'est codée ici : elle vient
+  toujours de l'environnement du service (Render, AWS…), jamais d'un repli silencieux sur une ancienne adresse.
 """
 from typing import Iterable, List
 
@@ -21,17 +21,17 @@ ORIGINES_LOCALES: List[str] = [
     "http://127.0.0.1:5173",
 ]
 
-ORIGINES_PRODUCTION: List[str] = [
-    "https://ikan-1.onrender.com",  # formulaire client (QR codes)
-    "https://ikanai-dashboard-fixs.onrender.com",  # dashboard
-]
+
+class OriginesManquantes(RuntimeError):
+    """ALLOWED_ORIGINS absente ou vide hors développement : l'API ne doit pas démarrer."""
 
 
-def defaut_allowed_origins(app_env: str) -> str:
-    """Valeur par défaut de ALLOWED_ORIGINS (chaîne séparée par des virgules) selon APP_ENV."""
-    if app_env == "development":
-        return ",".join(ORIGINES_LOCALES + ORIGINES_PRODUCTION)
-    return ",".join(ORIGINES_PRODUCTION)
+def message_origines_manquantes(app_env: str) -> str:
+    return (
+        f"ALLOWED_ORIGINS est manquante ou vide (APP_ENV={app_env}). Hors développement, l'API ne démarre pas sans "
+        "elle : renseignez les adresses du formulaire client et du dashboard, séparées par des virgules, "
+        "dans l'environnement du service."
+    )
 
 
 def normaliser_origines(valeur: str) -> List[str]:
@@ -45,13 +45,14 @@ def normaliser_origines(valeur: str) -> List[str]:
 
 
 def origines_autorisees(allowed_origins: str | None, app_env: str) -> List[str]:
-    """Liste finale : la variable explicite si elle contient au moins une origine, sinon le défaut."""
+    """Liste finale : la variable explicite si elle contient au moins une origine, sinon le repli local (développement)."""
     if allowed_origins is not None and allowed_origins.strip():
         origines = normaliser_origines(allowed_origins)
         if origines:
             return origines
-        print("[CORS] ALLOWED_ORIGINS ne contient aucune origine valide : valeur par défaut utilisée")
-    return normaliser_origines(defaut_allowed_origins(app_env))
+    if app_env == "development":
+        return list(ORIGINES_LOCALES)
+    raise OriginesManquantes(message_origines_manquantes(app_env))
 
 
 def appliquer_cors(app: FastAPI, origines: Iterable[str]) -> None:

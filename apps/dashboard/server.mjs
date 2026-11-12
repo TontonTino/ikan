@@ -3,6 +3,16 @@ import { createServer } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { enTetesSecurite, estProduction } from './entetes-securite.mjs';
+import { VARIABLES_SERVEUR, messageVariablesManquantes, variablesManquantes } from './variables-requises.mjs';
+
+// Production : les adresses de l'API et de l'agent viennent de l'environnement, sans repli codé en dur.
+if (estProduction(process.env)) {
+  const manquantes = variablesManquantes(process.env, VARIABLES_SERVEUR);
+  if (manquantes.length) {
+    console.error(messageVariablesManquantes(manquantes, 'Démarrage du serveur'));
+    process.exit(1);
+  }
+}
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), 'dist');
 const indexFile = path.join(root, 'index.html');
