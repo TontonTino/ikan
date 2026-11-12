@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
-import { rapportContraste, melanger, lireCouleur } from './contraste.ts';
+import { rapportContraste } from './contraste.ts';
 
 const racine = new URL('../../', import.meta.url);
 const page = readFileSync(new URL('src/pages/feedback/[code].astro', racine), 'utf8');
@@ -94,65 +94,98 @@ test('la case de consentement : zone de 44 px, libellé relié à la case, texte
 
 // ── contraste ────────────────────────────────────────────────────────────────────────
 
-const HERO_CLAIR = '#2F6A2B'; // point le plus clair du dégradé du bandeau et du bouton d'envoi
+// Les couleurs de la feuille sont des jetons (var(--…)) : on suit l'alias jusqu'à la valeur hexadécimale du :root de
+// FeedbackLayout. Une couleur écrite en dur, ou un jeton inconnu, fait échouer le test.
+const racineCss = layout.slice(layout.indexOf(':root'), layout.indexOf('}', layout.indexOf(':root')));
+function jeton(nom, profondeur = 0) {
+  assert.ok(profondeur < 8, `alias circulaire : ${nom}`);
+  const m = racineCss.match(new RegExp(`${nom}:\\s*([^;]+);`));
+  assert.ok(m, `jeton introuvable dans FeedbackLayout : ${nom}`);
+  return resoudre(m[1].trim(), profondeur + 1);
+}
+function resoudre(valeur, profondeur = 0) {
+  if (!valeur) return valeur;
+  const alias = valeur.trim().match(/^var\((--[\w-]+)\)$/);
+  if (alias) return jeton(alias[1], profondeur);
+  return valeur.trim();
+}
+const couleur = (selecteur) => resoudre(effective(selecteur, 'color'));
+const fond = (selecteur) => resoudre(effective(selecteur, 'background') ?? effective(selecteur, 'background-color'));
+const BLANC = jeton('--color-surface');
 
-test('le dégradé du bandeau et du bouton d\'envoi ne dépasse pas le vert #2F6A2B', () => {
-  for (const s of ['.hero', '.btn-submit']) {
-    const fond = effective(s, 'background');
-    const stops = [...fond.matchAll(/#[0-9A-Fa-f]{6}/g)].map((m) => m[0]);
-    assert.ok(stops.length >= 2, s);
-    for (const c of stops) assert.ok(rapportContraste('#FFFFFF', c) >= 4.5, `${s} : blanc sur ${c}`);
-  }
+test('aucune couleur écrite en dur ni dégradé dans la feuille du formulaire : tout passe par les jetons', () => {
+  const sansCommentaires = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.deepEqual(sansCommentaires.match(/#[0-9A-Fa-f]{3,8}\b|rgba?\(|hsla?\(|gradient\(/g) ?? [], []);
 });
 
-// [description, couleur du texte, fond]. Les couleurs sont lues dans la feuille quand une règle les porte.
-const couleur = (selecteur) => effective(selecteur, 'color');
+test('bandeau et bouton d\'envoi : fond plein, texte blanc ≥ 4,5:1 (au repos et au survol)', () => {
+  assert.equal(fond('.hero'), jeton('--color-encre'));
+  assert.equal(fond('.btn-submit'), jeton('--color-accent'), 'une seule action d\'accent : Envoyer');
+  assert.ok(rapportContraste(couleur('.hero-title'), fond('.hero')) >= 4.5);
+  assert.ok(rapportContraste(couleur('.btn-submit'), fond('.btn-submit')) >= 4.5);
+  assert.ok(rapportContraste(couleur('.btn-submit'), fond('.btn-submit:hover')) >= 4.5);
+});
+
+// [description, couleur du texte, fond]. Couleurs ET fonds lus dans la feuille (jetons résolus).
 const PAIRES = [
-  ['libellés des champs', couleur('.field-label'), '#FFFFFF'],
-  ['texte saisi (champ, liste, commentaire)', couleur('.styled-input'), '#FFFFFF'],
-  ['titre du bandeau', couleur('.hero-title'), HERO_CLAIR],
-  ['sous-titre du bandeau (blanc à 85 %)', melanger([255, 255, 255], lireCouleur(HERO_CLAIR), 0.85), HERO_CLAIR],
-  ['pastille d\'agence sur le bandeau', couleur('.agency-chip'), melanger([255, 255, 255], lireCouleur(HERO_CLAIR), 0.12)],
-  ['« (facultatif) »', couleur('.optional'), '#FFFFFF'],
-  ['compteur de caractères', effective('.char-count', 'color'), '#FFFFFF'],
-  ['placeholders', effective('.styled-input::placeholder', 'color'), '#FFFFFF'],
-  ['placeholders (liste, fond crème)', effective('.styled-input::placeholder', 'color'), '#FAFCF9'],
-  ['libellé d\'un niveau non choisi', couleur('.tile-label'), '#F8FAFC'],
-  ['niveau choisi : Mauvais', effective('.sentiment-tile.selected.tone-mauvais .tile-label', 'color'), '#FEF2F2'],
-  ['niveau choisi : Passable', effective('.sentiment-tile.selected.tone-passable .tile-label', 'color'), '#FFF7ED'],
-  ['niveau choisi : Neutre', effective('.sentiment-tile.selected.tone-neutre .tile-label', 'color'), '#FEFCE8'],
-  ['niveau choisi : Bien', effective('.sentiment-tile.selected.tone-bien .tile-label', 'color'), '#F0FDF4'],
-  ['niveau choisi : Excellent', effective('.sentiment-tile.selected.tone-excellente .tile-label', 'color'), '#ECFDF5'],
-  ['micro', couleur('.mic-btn'), effective('.mic-btn', 'background')],
-  ['micro en cours d\'enregistrement', '#FFFFFF', effective('.mic-btn.recording', 'background')],
-  ['Non (inactif)', effective('.segment', 'color'), '#F1F5F0'],
-  ['Oui / Non actif', couleur('.segment.is-active'), effective('.segment.is-active', 'background')],
-  ['messages d\'erreur (fond blanc)', couleur('.field-error'), '#FFFFFF'],
-  ['messages d\'erreur (panneau gris)', couleur('.field-error'), '#F8FAFC'],
-  ['dictée vocale', couleur('.voice-status-bar'), '#FFFFFF'],
-  ['dictée vocale : erreur', couleur('.voice-status-bar.is-error'), '#FFFFFF'],
-  ['note de confidentialité', couleur('.lock-note'), '#FFFFFF'],
-  ['message de remerciement', couleur('.success-message'), '#FFFFFF'],
-  ['pastille « Transmis en direct »', couleur('.success-status-pill'), effective('.success-status-pill', 'background')],
-  ['« Réessayer » / « Donner un autre avis » / « Partager une idée »', couleur('.btn-secondary'), '#F8FAFC'],
-  ['texte de consentement', couleur('.consent-row'), '#F8FAFC'],
-  ['texte de consentement (fond blanc)', couleur('.consent-row'), '#FFFFFF'],
-  ['lien « Retour »', couleur('.lien-retour'), '#FFFFFF'],
+  ['libellés des champs', couleur('.field-label'), BLANC],
+  ['question Oui/Non', couleur('.field-label-inline'), BLANC],
+  ['texte saisi (champ, liste, commentaire)', couleur('.styled-input'), fond('.styled-input')],
+  ['texte de la liste', couleur('.styled-select'), BLANC],
+  ['titre du bandeau', couleur('.hero-title'), fond('.hero')],
+  ['sous-titre du bandeau', couleur('.hero-sub'), fond('.hero')],
+  ['pastille d\'agence sur le bandeau', couleur('.agency-chip'), fond('.hero')],
+  ['numéro d\'étape', couleur('.section-step-num'), fond('.section-step-num')],
+  ['« (facultatif) »', couleur('.optional'), BLANC],
+  ['compteur de caractères', couleur('.char-count'), fond('.textarea-footer')],
+  ['placeholders', effective('.styled-input::placeholder', 'color') && resoudre(effective('.styled-input::placeholder', 'color')), BLANC],
+  ['placeholders (liste désactivée)', resoudre(effective('.styled-input::placeholder', 'color')), fond('.styled-select:disabled')],
+  ['libellé d\'un niveau non choisi', couleur('.tile-label'), fond('.sentiment-tile')],
+  ['libellé d\'un niveau survolé', couleur('.tile-label'), fond('.sentiment-tile:hover')],
+  ['libellé du niveau choisi', couleur('.sentiment-tile.selected .tile-label'), fond('.sentiment-tile.selected')],
+  ['micro', couleur('.mic-btn'), fond('.mic-btn')],
+  ['micro survolé', couleur('.mic-btn'), fond('.mic-btn:hover')],
+  ['micro en cours d\'enregistrement', couleur('.mic-btn.recording'), fond('.mic-btn.recording')],
+  ['Non (inactif)', couleur('.segment'), fond('.segmented-control')],
+  ['Oui / Non actif', couleur('.segment.is-active'), fond('.segment.is-active')],
+  ['messages d\'erreur (fond blanc)', couleur('.field-error'), BLANC],
+  ['messages d\'erreur (panneau de recontact)', couleur('.field-error'), fond('.reveal-panel')],
+  ['dictée vocale', couleur('.voice-status-bar'), BLANC],
+  ['dictée vocale : erreur', couleur('.voice-status-bar.is-error'), BLANC],
+  ['note de confidentialité', couleur('.lock-note'), BLANC],
+  ['titre de remerciement', couleur('.success-title'), BLANC],
+  ['message de remerciement', couleur('.success-message'), BLANC],
+  ['pastille « Transmis en direct »', couleur('.success-status-pill'), fond('.success-status-pill')],
+  ['« Réessayer » / « Donner un autre avis » / « Partager une idée »', couleur('.btn-secondary'), fond('.btn-secondary')],
+  ['les mêmes, survolés', couleur('.btn-secondary:hover'), fond('.btn-secondary:hover')],
+  ['texte de consentement (panneau de recontact)', couleur('.consent-row'), fond('.reveal-panel')],
+  ['texte de consentement (fond blanc)', couleur('.consent-row'), BLANC],
+  ['lien « Retour »', couleur('.lien-retour'), BLANC],
+  ['écran d\'état : titre', couleur('.state-title'), BLANC],
+  ['écran d\'état : texte', couleur('.state-text'), BLANC],
+  ['QR non reconnu : titre', couleur('.error-screen h2'), BLANC],
+  ['QR non reconnu : texte', couleur('.error-screen p'), BLANC],
 ];
 
 test('rapport de contraste ≥ 4,5:1 pour tout le texte du formulaire', () => {
   const trop_faibles = [];
   for (const [nom, fg, bg] of PAIRES) {
     assert.ok(fg && bg, `couleur introuvable dans la feuille pour « ${nom} »`);
-    const fond = typeof bg === 'string' && bg.startsWith('#') ? bg.slice(0, 7) : bg;
-    const r = rapportContraste(fg, fond);
+    const r = rapportContraste(fg, bg.split(' ')[0]);
     if (r < 4.5) trop_faibles.push(`${nom} : ${r.toFixed(2)}:1`);
   }
   assert.deepEqual(trop_faibles, []);
 });
 
+test('contours des champs, boutons et cases : ≥ 3:1 (élément graphique)', () => {
+  for (const [s, p] of [['.styled-input', 'border'], ['.styled-select', 'border'], ['.textarea-box', 'border'], ['.mic-btn', 'border'], ['.btn-secondary', 'border'], ['.consent-case', 'border']]) {
+    const c = resoudre((effective(s, p) || '').split(' ').pop());
+    assert.ok(rapportContraste(c, BLANC) >= 3, `${s} : contour ${c}`);
+  }
+});
+
 test('l\'icône du champ téléphone atteint 3:1 (élément graphique)', () => {
-  assert.ok(rapportContraste(effective('.field-icon', 'color'), '#FFFFFF') >= 3);
+  assert.ok(rapportContraste(couleur('.field-icon'), BLANC) >= 3);
 });
 
 test('le calcul de contraste est exact (valeurs de référence WCAG)', () => {
@@ -199,17 +232,27 @@ test('le formulaire ne demande que le téléphone : ni nom ni e-mail', () => {
 
 test('Poppins est hébergée localement (latin, font-display: swap) et Google Fonts n\'est plus appelé', () => {
   assert.doesNotMatch(layout, /fonts\.googleapis|fonts\.gstatic/);
-  for (const w of [400, 500, 600, 700, 800]) {
+  for (const w of [400, 600]) {
     assert.ok(existsSync(new URL(`public/fonts/poppins-latin-${w}-normal.woff2`, racine)), `fichier ${w}`);
     assert.match(layout, new RegExp(`font-weight: ${w};\\s*font-display: swap;\\s*src: url\\('/fonts/poppins-latin-${w}-normal\\.woff2'\\) format\\('woff2'\\)`));
   }
   assert.match(layout, /unicode-range: U\+0000-00FF/);
+  // Deux graisses seulement (lot 2c, comme le dashboard) : plus de fichier ni de @font-face 500 / 700 / 800.
+  for (const w of [500, 700, 800]) {
+    assert.ok(!existsSync(new URL(`public/fonts/poppins-latin-${w}-normal.woff2`, racine)), `fichier ${w} encore présent`);
+    assert.doesNotMatch(layout, new RegExp(`font-weight: ${w};`));
+  }
+  const graisses = [...css.matchAll(/font-weight:\s*([^;]+);/g)].map((m) => resoudre(m[1]));
+  assert.deepEqual([...new Set(graisses)].sort(), ['400', '600']);
   assert.doesNotMatch(page, /googleapis|gstatic/);
 });
 
 test('focus clavier visible sur tous les contrôles, et l’attribut hidden l’emporte (Réessayer, recontact)', () => {
   for (const s of ['.sentiment-tile:focus-visible', '.segment:focus-visible', '.mic-btn:focus-visible', '.btn-submit:focus-visible', '.btn-secondary:focus-visible', '.styled-select:focus-visible', '.styled-textarea:focus-visible', '.styled-input:focus-visible', '.consent-box:focus-visible + .consent-case']) {
-    assert.match(effective(s, 'outline') || '', /^3px solid #/, s);
+    const contour = effective(s, 'outline') || '';
+    assert.match(contour, /^3px solid /, s);
+    const c = resoudre(contour.replace(/^3px solid /, ''));
+    assert.ok(rapportContraste(c, BLANC) >= 3 && rapportContraste(c, jeton('--color-bg')) >= 3, `${s} : ${c}`);
   }
   assert.equal(effective('.btn-secondary[hidden]', 'display'), 'none');
   assert.equal(effective('.recontact-section[hidden]', 'display'), 'none');
