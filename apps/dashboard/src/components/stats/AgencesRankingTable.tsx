@@ -22,11 +22,11 @@ export default function AgencesRankingTable({
         style={{
           padding: '32px',
           textAlign: 'center',
-          color: '#94A3B8',
-          fontSize: '0.84rem',
-          background: '#FAFCFA',
+          color: 'var(--color-text-2)',
+          fontSize: 'var(--text-sm)',
+          background: 'var(--color-bg)',
           borderRadius: '16px',
-          border: '1px dashed #D6E8D9',
+          border: '1px dashed var(--color-trait)',
         }}
       >
         Aucune agence trouvée pour ce périmètre.
@@ -47,26 +47,26 @@ export default function AgencesRankingTable({
           width: '100%',
           borderCollapse: 'separate',
           borderSpacing: '0 6px',
-          fontSize: '0.84rem',
+          fontSize: 'var(--text-sm)',
         }}
       >
         <thead>
-          <tr style={{ color: '#64748B', fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            <th style={{ textAlign: 'left', padding: '8px 14px', fontWeight: 700 }}>Rang & Agence</th>
-            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>
+          <tr style={{ color: 'var(--color-text-2)', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <th style={{ textAlign: 'left', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }}>Rang & Agence</th>
+            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }}>
               {LIBELLE_SCORE_FIABILISE}{' '}
               <Tooltip content={AIDE_SCORE_FIABILISE} placement="bottom">
                 <button type="button" className="ui-info-btn" aria-label={`À propos du ${LIBELLE_SCORE_FIABILISE.toLowerCase()}`}>?</button>
               </Tooltip>
             </th>
-            <th style={{ textAlign: 'left', padding: '8px 14px', fontWeight: 700 }}>Ville</th>
-            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Satisfaction</th>
-            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Avis collectés</th>
-            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Pris en charge</th>
-            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Avis critiques</th>
-            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }} title={DEFINITION_NEGATIF}>Avis négatifs</th>
+            <th style={{ textAlign: 'left', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }}>Ville</th>
+            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }}>Satisfaction</th>
+            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }}>Avis collectés</th>
+            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }}>Pris en charge</th>
+            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }}>Avis critiques</th>
+            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }} title={DEFINITION_NEGATIF}>Avis négatifs</th>
             {onSelectAgence && (
-              <th style={{ textAlign: 'right', padding: '8px 14px', fontWeight: 700 }}>Action</th>
+              <th style={{ textAlign: 'right', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }}>Action</th>
             )}
           </tr>
         </thead>
@@ -77,26 +77,25 @@ export default function AgencesRankingTable({
             const sat = ag.satisfaction_rate;
             const sansAvis = ag.total_feedbacks === 0 || sat === null;
             const satColor =
-              sat === null || sansAvis ? '#475569' : sat >= 80 ? '#3C7730' : sat >= 60 ? '#D97706' : '#DC2626';
+              sat === null || sansAvis ? 'var(--color-neutre-texte)' : sat >= 80 ? 'var(--color-bon-texte)' : sat >= 60 ? 'var(--color-surveiller-texte)' : 'var(--color-critique-texte)';
             const satBg =
-              sat === null || sansAvis ? '#F1F5F9' : sat >= 80 ? '#EBF6ED' : sat >= 60 ? '#FEF3C7' : '#FEE2E2';
+              sat === null || sansAvis ? 'var(--color-neutre-fond)' : sat >= 80 ? 'var(--color-bon-fond)' : sat >= 60 ? 'var(--color-surveiller-fond)' : 'var(--color-critique-fond)';
 
             return (
               <tr
                 key={ag.agence_id}
                 style={{
-                  background: isSelected ? '#EBF5E9' : '#FFFFFF',
+                  background: isSelected ? 'var(--color-bon-fond)' : 'var(--color-surface)',
                   borderRadius: '12px',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.02)',
                   transition: 'background 0.15s ease, transform 0.15s ease',
                   cursor: onSelectAgence ? 'pointer' : 'default',
                 }}
                 onClick={() => onSelectAgence && onSelectAgence(isSelected ? null : ag.agence_id)}
                 onMouseEnter={(e) => {
-                  if (!isSelected) e.currentTarget.style.background = '#F8FAFC';
+                  if (!isSelected) e.currentTarget.style.background = 'var(--color-bg)';
                 }}
                 onMouseLeave={(e) => {
-                  if (!isSelected) e.currentTarget.style.background = '#FFFFFF';
+                  if (!isSelected) e.currentTarget.style.background = 'var(--color-surface)';
                 }}
               >
                 {/* Rang & Agence */}
@@ -107,10 +106,10 @@ export default function AgencesRankingTable({
                         width: '24px',
                         height: '24px',
                         borderRadius: '8px',
-                        background: idx === 0 ? '#FEF3C7' : '#F1F5F9',
-                        color: idx === 0 ? '#B45309' : '#64748B',
-                        fontSize: '0.74rem',
-                        fontWeight: 800,
+                        background: 'var(--color-neutre-fond)',
+                        color: 'var(--color-text-2)',
+                        fontSize: 'var(--text-xs)',
+                        fontWeight: 'var(--weight-semibold)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -120,20 +119,20 @@ export default function AgencesRankingTable({
                       #{idx + 1}
                     </span>
                     <div>
-                      <div style={{ fontWeight: 700, color: '#0F172A' }}>{ag.agence_nom}</div>
+                      <div className="t-semi t-encre">{ag.agence_nom}</div>
                     </div>
                   </div>
                 </td>
 
                 {/* Score Wilson */}
                 <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                  <span style={{ fontWeight: 700, color: '#0F172A' }}>
+                  <span className="t-semi t-encre">
                     {sansAvis ? '—' : formaterPourcentage(Math.round(ag.wilson_score * 100), 0)}
                   </span>
                 </td>
 
                 {/* Ville */}
-                <td style={{ padding: '12px 14px', color: '#64748B' }}>
+                <td style={{ padding: '12px 14px', color: 'var(--color-text-2)' }}>
                   {ag.ville || '—'}
                 </td>
 
@@ -145,8 +144,8 @@ export default function AgencesRankingTable({
                       color: satColor,
                       padding: '3px 10px',
                       borderRadius: '9999px',
-                      fontWeight: 800,
-                      fontSize: '0.80rem',
+                      fontWeight: 'var(--weight-semibold)',
+                      fontSize: 'var(--text-xs)',
                       display: 'inline-block',
                     }}
                   >
@@ -155,14 +154,14 @@ export default function AgencesRankingTable({
                 </td>
 
                 {/* Feedbacks collectés */}
-                <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#0F172A' }}>
+                <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>
                   {ag.total_feedbacks}
                 </td>
 
                 {/* Taux de traitement */}
                 <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                  <span style={{ fontWeight: 700, color: '#02302D' }}>{sansAvis || ag.taux_traitement === null ? '—' : formaterPourcentage(ag.taux_traitement)}</span>
-                  <span style={{ color: '#94A3B8', fontSize: '0.72rem', marginLeft: '4px' }}>
+                  <span className="t-semi t-encre">{sansAvis || ag.taux_traitement === null ? '—' : formaterPourcentage(ag.taux_traitement)}</span>
+                  <span style={{ color: 'var(--color-text-2)', fontSize: 'var(--text-xs)', marginLeft: '4px' }}>
                     ({ag.feedbacks_traites})
                   </span>
                 </td>
@@ -172,24 +171,24 @@ export default function AgencesRankingTable({
                   {ag.alertes_critiques > 0 ? (
                     <span
                       style={{
-                        background: '#FEE2E2',
-                        color: '#DC2626',
+                        background: 'var(--color-critique-fond)',
+                        color: 'var(--color-critique-texte)',
                         padding: '2px 8px',
                         borderRadius: '9999px',
-                        fontWeight: 800,
-                        fontSize: '0.74rem',
+                        fontWeight: 'var(--weight-semibold)',
+                        fontSize: 'var(--text-xs)',
                       }}
                     >
                       {ag.alertes_critiques}
                     </span>
                   ) : (
-                    <span style={{ color: '#94A3B8', fontSize: '0.78rem' }}>0</span>
+                    <span className="t-2 t-xs">0</span>
                   )}
                 </td>
 
                 {/* Part d'avis négatifs et son évolution */}
                 <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                  {sansAvis ? <span style={{ color: '#5B6B7F' }}>—</span> : <PartNegatifsTexte pn={ag.part_negatifs} court sansMentionInsuffisante />}
+                  {sansAvis ? <span className="t-2">—</span> : <PartNegatifsTexte pn={ag.part_negatifs} court sansMentionInsuffisante />}
                 </td>
 
                 {/* Action */}
@@ -203,11 +202,11 @@ export default function AgencesRankingTable({
                       }}
                       style={{
                         padding: '4px 10px',
-                        fontSize: '0.76rem',
-                        fontWeight: 700,
-                        color: isSelected ? '#FFFFFF' : '#3C7730',
-                        background: isSelected ? '#3C7730' : '#EBF6ED',
-                        border: 'none',
+                        fontSize: 'var(--text-xs)',
+                        fontWeight: 'var(--weight-semibold)',
+                        color: isSelected ? 'var(--color-text-inverse)' : 'var(--color-encre)',
+                        background: isSelected ? 'var(--color-encre)' : 'var(--color-surface)',
+                        border: isSelected ? '1px solid var(--color-encre)' : '1px solid var(--color-border)',
                         borderRadius: '8px',
                         cursor: 'pointer',
                         fontFamily: 'inherit',
@@ -222,7 +221,7 @@ export default function AgencesRankingTable({
           })}
         </tbody>
       </table>
-      <p style={{ margin: '10px 4px 0', fontSize: '0.76rem', color: '#64748B' }}>
+      <p style={{ margin: '10px 4px 0', fontSize: 'var(--text-xs)', color: 'var(--color-text-2)' }}>
         <strong>{LIBELLE_SCORE_FIABILISE}</strong> : {AIDE_SCORE_FIABILISE}
       </p>
     </div>

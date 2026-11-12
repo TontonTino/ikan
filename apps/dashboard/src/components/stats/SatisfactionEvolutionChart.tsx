@@ -27,23 +27,23 @@ function CustomTooltip({ active, payload, label }: any) {
     return (
       <div
         style={{
-          background: '#02302D',
-          color: '#FFFFFF',
+          background: 'var(--color-surface)',
+          color: 'var(--color-encre)',
           padding: '10px 14px',
-          borderRadius: '12px',
-          fontSize: '0.80rem',
-          boxShadow: '0 8px 24px rgba(2, 48, 45, 0.25)',
-          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 'var(--radius-sm)',
+          fontSize: 'var(--text-xs)',
+          boxShadow: 'var(--shadow-dropdown)',
+          border: '1px solid var(--color-trait)',
         }}
       >
-        <div style={{ fontWeight: 700, marginBottom: '4px', color: '#E2F2E5' }}>
+        <div style={{ fontWeight: 'var(--weight-semibold)', marginBottom: '4px', color: 'var(--color-encre)' }}>
           {libelleDatePoint(pt.date, pt.label || label)}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ color: '#75B72A', fontWeight: 800 }}>Satisfaction :</span>
-          <span style={{ fontWeight: 800, fontSize: '0.90rem' }}>{formaterPourcentage(pt.satisfaction)}</span>
+          <span className="t-2">Satisfaction :</span>
+          <span className="t-semi t-sm">{formaterPourcentage(pt.satisfaction)}</span>
         </div>
-        <div style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '4px' }}>
+        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', marginTop: '4px' }}>
           {pt.feedbacks} avis ({pt.positifs} positifs, {pt.neutres} neutres, {pt.negatifs} négatifs)
         </div>
       </div>
@@ -65,19 +65,19 @@ export default function SatisfactionEvolutionChart({
     <div style={{ width: '100%', height: `${height}px` }}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={insererPeriodesSansAvis(data)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--dataviz-grid)" vertical={false} />
           <XAxis
             dataKey="label"
-            stroke="#5B6B7F"
+            stroke="var(--color-text-2)"
             fontSize={11}
             tickLine={false}
-            axisLine={{ stroke: '#E2E8F0' }}
+            axisLine={{ stroke: 'var(--color-trait)' }}
           />
           <YAxis
             domain={[0, 100]}
             ticks={[0, 25, 50, 75, 100]}
             tickFormatter={(v) => formaterPourcentage(Number(v), 0)}
-            stroke="#5B6B7F"
+            stroke="var(--color-text-2)"
             fontSize={11}
             tickLine={false}
             axisLine={false}
@@ -86,11 +86,11 @@ export default function SatisfactionEvolutionChart({
           <Line
             type="linear"
             dataKey="satisfaction"
-            stroke="#3C7730"
+            stroke="var(--color-bon-texte)"
             strokeWidth={2}
             connectNulls={false}
-            dot={{ r: 3, fill: '#3C7730', stroke: '#FFFFFF', strokeWidth: 1 }}
-            activeDot={{ r: 5, fill: '#02302D', stroke: '#75B72A', strokeWidth: 2 }}
+            dot={{ r: 3, fill: 'var(--color-bon-texte)', stroke: 'var(--color-text-inverse)', strokeWidth: 1 }}
+            activeDot={{ r: 5, fill: 'var(--color-encre)', stroke: 'var(--color-surface)', strokeWidth: 2 }}
           />
         </LineChart>
       </ResponsiveContainer>

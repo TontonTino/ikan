@@ -32,11 +32,10 @@ export default function PeriodSelector({
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        background: '#FFFFFF',
+        background: 'var(--color-surface)',
         padding: '3px',
         borderRadius: '12px',
-        border: '1px solid #E2E8F0',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+        border: '1px solid var(--color-trait)',
         gap: '2px',
         flexWrap: 'wrap',
       }}
@@ -51,10 +50,10 @@ export default function PeriodSelector({
             onClick={() => onChange(opt.jours)}
             style={{
               padding: '6px 12px',
-              fontSize: '0.80rem',
-              fontWeight: isSelected ? 700 : 500,
-              color: isSelected ? '#FFFFFF' : '#64748B',
-              background: isSelected ? '#02302D' : 'transparent',
+              fontSize: 'var(--text-xs)',
+              fontWeight: isSelected ? 'var(--weight-semibold)' : 'var(--weight-normal)',
+              color: isSelected ? 'var(--color-text-inverse)' : 'var(--color-text-2)',
+              background: isSelected ? 'var(--color-encre)' : 'transparent',
               border: 'none',
               borderRadius: '9px',
               cursor: 'pointer',
@@ -64,13 +63,13 @@ export default function PeriodSelector({
             }}
             onMouseEnter={(e) => {
               if (!isSelected) {
-                e.currentTarget.style.color = '#02302D';
-                e.currentTarget.style.background = '#F1F5F9';
+                e.currentTarget.style.color = 'var(--color-encre)';
+                e.currentTarget.style.background = 'var(--color-neutre-fond)';
               }
             }}
             onMouseLeave={(e) => {
               if (!isSelected) {
-                e.currentTarget.style.color = '#64748B';
+                e.currentTarget.style.color = 'var(--color-text-2)';
                 e.currentTarget.style.background = 'transparent';
               }
             }}

@@ -14,9 +14,9 @@ interface SentimentDonutChartProps {
 }
 
 const SENTIMENT_META: Record<string, { label: string; color: string; bg: string }> = {
-  positif: { label: 'Positif', color: '#3C7730', bg: '#EBF6ED' },
-  neutre: { label: 'Neutre', color: '#F59E0B', bg: '#FEF3C7' },
-  negatif: { label: 'Négatif', color: '#DC2626', bg: '#FEE2E2' },
+  positif: { label: 'Positif', color: 'var(--color-bon-texte)', bg: 'var(--color-bon-fond)' },
+  neutre: { label: 'Neutre', color: 'var(--color-neutre-texte)', bg: 'var(--color-neutre-fond)' },
+  negatif: { label: 'Négatif', color: 'var(--color-critique-texte)', bg: 'var(--color-critique-fond)' },
 };
 
 export default function SentimentDonutChart({
@@ -33,11 +33,11 @@ export default function SentimentDonutChart({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#5B6B7F',
-          fontSize: '0.84rem',
-          background: '#FAFCFA',
+          color: 'var(--color-text-2)',
+          fontSize: 'var(--text-sm)',
+          background: 'var(--color-bg)',
           borderRadius: '16px',
-          border: '1px dashed #D6E8D9',
+          border: '1px dashed var(--color-trait)',
         }}
       >
         Aucun avis analysé pour cette période.
@@ -75,8 +75,8 @@ export default function SentimentDonutChart({
             >
               {data.map((entry, index) => {
                 const sKey = entry.sentiment.toLowerCase();
-                const color = SENTIMENT_META[sKey]?.color || '#94A3B8';
-                return <Cell key={`cell-${index}`} fill={color} stroke="#FFFFFF" strokeWidth={2} />;
+                const color = SENTIMENT_META[sKey]?.color || 'var(--color-text-2)';
+                return <Cell key={`cell-${index}`} fill={color} stroke="var(--color-text-inverse)" strokeWidth={2} />;
               })}
             </Pie>
             <Tooltip
@@ -86,13 +86,14 @@ export default function SentimentDonutChart({
                 return [`${value} avis`, meta?.label || name];
               }}
               contentStyle={{
-                background: '#02302D',
-                borderRadius: '10px',
-                border: 'none',
-                color: '#FFFFFF',
-                fontSize: '0.78rem',
+                background: 'var(--color-surface)',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--color-trait)',
+                boxShadow: 'var(--shadow-dropdown)',
+                color: 'var(--color-encre)',
+                fontSize: 'var(--text-xs)',
               }}
-              itemStyle={{ color: '#E2F2E5' }}
+              itemStyle={{ color: 'var(--color-encre)' }}
             />
           </PieChart>
         </ResponsiveContainer>
@@ -108,10 +109,10 @@ export default function SentimentDonutChart({
             pointerEvents: 'none',
           }}
         >
-          <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#02302D', lineHeight: 1 }}>
+          <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', lineHeight: 1 }}>
             {total}
           </div>
-          <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#64748B', marginTop: '2px' }}>
+          <div style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text-2)', marginTop: '2px' }}>
             Avis
           </div>
         </div>
@@ -130,8 +131,8 @@ export default function SentimentDonutChart({
           const sKey = item.sentiment.toLowerCase();
           const meta = SENTIMENT_META[sKey] || {
             label: item.sentiment,
-            color: '#64748B',
-            bg: '#F1F5F9',
+            color: 'var(--color-text-2)',
+            bg: 'var(--color-neutre-fond)',
           };
           return (
             <div
@@ -155,16 +156,16 @@ export default function SentimentDonutChart({
                     background: meta.color,
                   }}
                 />
-                <span style={{ fontSize: '0.80rem', fontWeight: 700, color: '#0F172A' }}>
+                <span className="t-xs t-semi t-encre">
                   {meta.label}
                 </span>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                <strong style={{ fontSize: '0.86rem', color: meta.color }}>
+                <strong style={{ fontSize: 'var(--text-sm)', color: meta.color }}>
                   {formaterPourcentage(item.pourcentage)}
                 </strong>
-                <span style={{ fontSize: '0.70rem', color: '#64748B' }}>
+                <span className="t-xs t-2">
                   ({item.count})
                 </span>
               </div>

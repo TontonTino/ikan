@@ -36,7 +36,7 @@ export default function AgenceFilterSelect({
           pointerEvents: 'none',
           display: 'flex',
           alignItems: 'center',
-          color: '#3C7730',
+          color: 'var(--color-bon-texte)',
         }}
       >
         <StoreIcon size={16} />
@@ -50,22 +50,21 @@ export default function AgenceFilterSelect({
           appearance: 'none',
           WebkitAppearance: 'none',
           MozAppearance: 'none',
-          background: '#FFFFFF',
-          border: '1px solid #E2E8F0',
+          background: 'var(--color-surface)',
+          border: '1px solid var(--color-trait)',
           borderRadius: '12px',
           padding: '8px 34px 8px 36px',
-          fontSize: '0.82rem',
-          fontWeight: 600,
-          color: '#0F172A',
+          fontSize: 'var(--text-sm)',
+          fontWeight: 'var(--weight-semibold)',
+          color: 'var(--color-encre)',
           cursor: 'pointer',
           fontFamily: 'inherit',
           outline: 'none',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
           transition: 'border-color 0.15s ease',
           minWidth: '200px',
         }}
-        onFocus={(e) => (e.currentTarget.style.borderColor = '#3C7730')}
-        onBlur={(e) => (e.currentTarget.style.borderColor = '#E2E8F0')}
+        onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--color-accent)')}
+        onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--color-trait)')}
       >
         <option value="">Toutes les agences du réseau</option>
         {agences.map((ag) => (
@@ -82,7 +81,7 @@ export default function AgenceFilterSelect({
           pointerEvents: 'none',
           display: 'flex',
           alignItems: 'center',
-          color: '#64748B',
+          color: 'var(--color-text-2)',
         }}
       >
         <ChevronDownIcon size={14} />

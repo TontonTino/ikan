@@ -15,11 +15,11 @@ export default function OrganisationsStatsTable({
         style={{
           padding: '32px',
           textAlign: 'center',
-          color: '#94A3B8',
-          fontSize: '0.84rem',
-          background: '#FAFCFA',
+          color: 'var(--color-text-2)',
+          fontSize: 'var(--text-sm)',
+          background: 'var(--color-bg)',
           borderRadius: '16px',
-          border: '1px dashed #D6E8D9',
+          border: '1px dashed var(--color-trait)',
         }}
       >
         Aucune organisation active sur la plateforme.
@@ -34,16 +34,16 @@ export default function OrganisationsStatsTable({
           width: '100%',
           borderCollapse: 'separate',
           borderSpacing: '0 6px',
-          fontSize: '0.84rem',
+          fontSize: 'var(--text-sm)',
         }}
       >
         <thead>
-          <tr style={{ color: '#64748B', fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            <th style={{ textAlign: 'left', padding: '8px 14px', fontWeight: 700 }}>Organisation</th>
-            <th style={{ textAlign: 'left', padding: '8px 14px', fontWeight: 700 }}>Secteur</th>
-            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Agences</th>
-            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Utilisateurs</th>
-            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 700 }}>Forfait</th>
+          <tr style={{ color: 'var(--color-text-2)', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <th style={{ textAlign: 'left', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }}>Organisation</th>
+            <th style={{ textAlign: 'left', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }}>Secteur</th>
+            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }}>Agences</th>
+            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }}>Utilisateurs</th>
+            <th style={{ textAlign: 'center', padding: '8px 14px', fontWeight: 'var(--weight-semibold)' }}>Forfait</th>
           </tr>
         </thead>
         <tbody>
@@ -52,13 +52,12 @@ export default function OrganisationsStatsTable({
               <tr
                 key={org.organisation_id}
                 style={{
-                  background: '#FFFFFF',
+                  background: 'var(--color-surface)',
                   borderRadius: '12px',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.02)',
                   transition: 'background 0.15s ease',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = '#F8FAFC')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = '#FFFFFF')}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-bg)')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--color-surface)')}
               >
                 {/* Organisation Nom & Logo */}
                 <td style={{ padding: '12px 14px', borderRadius: '12px 0 0 12px' }}>
@@ -68,7 +67,7 @@ export default function OrganisationsStatsTable({
                         width: '32px',
                         height: '32px',
                         borderRadius: '8px',
-                        background: '#EAF5EC',
+                        background: 'var(--color-bon-fond)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -82,33 +81,33 @@ export default function OrganisationsStatsTable({
                           style={{ width: '20px', height: '20px', objectFit: 'contain' }}
                         />
                       ) : (
-                        <BuildingIcon size={16} color="#3C7730" />
+                        <BuildingIcon size={16} color="var(--color-bon-texte)" />
                       )}
                     </div>
                     <div>
-                      <div style={{ fontWeight: 700, color: '#0F172A' }}>{org.nom}</div>
+                      <div className="t-semi t-encre">{org.nom}</div>
                     </div>
                   </div>
                 </td>
 
                 {/* Secteur */}
-                <td style={{ padding: '12px 14px', color: '#64748B', fontSize: '0.80rem' }}>
+                <td style={{ padding: '12px 14px', color: 'var(--color-text-2)', fontSize: 'var(--text-xs)' }}>
                   {org.secteur || 'Général'}
                 </td>
 
                 {/* Agences count */}
-                <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 600, color: '#0F172A' }}>
+                <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>
                   {org.agences_count}
                 </td>
 
                 {/* Utilisateurs actifs */}
-                <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 600, color: '#0F172A' }}>
+                <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>
                   {org.utilisateurs_count}
                 </td>
 
                 {/* Forfait */}
                 <td style={{ padding: '12px 14px', textAlign: 'center', borderRadius: '0 12px 12px 0' }}>
-                  <span style={{ background: '#EBF6ED', color: '#3C7730', padding: '3px 10px', borderRadius: '9999px', fontWeight: 800, fontSize: '0.78rem', display: 'inline-block' }}>
+                  <span style={{ background: 'var(--color-bon-fond)', color: 'var(--color-bon-texte)', padding: '3px 10px', borderRadius: '9999px', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-xs)', display: 'inline-block' }}>
                     {org.plan_nom || '—'}
                   </span>
                 </td>

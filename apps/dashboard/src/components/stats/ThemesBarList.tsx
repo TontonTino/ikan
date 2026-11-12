@@ -16,9 +16,9 @@ interface ThemesBarListProps {
 }
 
 const SENTIMENT_DOT_COLOR: Record<string, string> = {
-  positif: '#3C7730',
-  neutre: '#F59E0B',
-  negatif: '#DC2626',
+  positif: 'var(--color-marque)',
+  neutre: 'var(--color-neutre-texte)',
+  negatif: 'var(--color-critique-texte)',
 };
 
 export default function ThemesBarList({ themes, maxItems = 6, lienTheme, showSentiment = true }: ThemesBarListProps) {
@@ -30,11 +30,11 @@ export default function ThemesBarList({ themes, maxItems = 6, lienTheme, showSen
         style={{
           padding: '28px',
           textAlign: 'center',
-          color: '#94A3B8',
-          fontSize: '0.84rem',
-          background: '#FAFCFA',
+          color: 'var(--color-text-2)',
+          fontSize: 'var(--text-sm)',
+          background: 'var(--color-bg)',
           borderRadius: '16px',
-          border: '1px dashed #D6E8D9',
+          border: '1px dashed var(--color-trait)',
         }}
       >
         Aucun thème prédominant détecté pour cette période.
@@ -45,7 +45,7 @@ export default function ThemesBarList({ themes, maxItems = 6, lienTheme, showSen
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%' }}>
       {displayThemes.map((item) => {
-        const dotColor = SENTIMENT_DOT_COLOR[item.sentiment_predominant.toLowerCase()] || '#94A3B8';
+        const dotColor = SENTIMENT_DOT_COLOR[item.sentiment_predominant.toLowerCase()] || 'var(--color-text-2)';
         return (
           <div key={item.theme} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <div
@@ -53,7 +53,7 @@ export default function ThemesBarList({ themes, maxItems = 6, lienTheme, showSen
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                fontSize: '0.82rem',
+                fontSize: 'var(--text-sm)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -70,25 +70,25 @@ export default function ThemesBarList({ themes, maxItems = 6, lienTheme, showSen
                 {(() => {
                   const libelle = /^[a-z0-9_]+$/.test(item.label ?? '') || !item.label ? themeLabel(item.label || item.theme) : item.label;
                   return lienTheme ? (
-                    <Link to={lienTheme(item)} style={{ minWidth: 0, fontWeight: 600, color: '#0F172A', overflowWrap: 'anywhere', textDecoration: 'underline', textUnderlineOffset: 3 }} aria-label={`Voir les avis du thème ${libelle}`}>
+                    <Link to={lienTheme(item)} style={{ minWidth: 0, fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', overflowWrap: 'anywhere', textDecoration: 'underline', textUnderlineOffset: 3 }} aria-label={`Voir les avis du thème ${libelle}`}>
                       {libelle}
                     </Link>
                   ) : (
-                    <span style={{ minWidth: 0, fontWeight: 600, color: '#0F172A', overflowWrap: 'anywhere' }}>{libelle}</span>
+                    <span style={{ minWidth: 0, fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', overflowWrap: 'anywhere' }}>{libelle}</span>
                   );
                 })()}
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                <span style={{ color: '#64748B', fontSize: '0.74rem' }}>{item.count} avis</span>
-                <span style={{ fontWeight: 800, color: '#02302D', minWidth: '40px', textAlign: 'right' }}>
+                <span className="t-2 t-xs">{item.count} avis</span>
+                <span style={{ fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', minWidth: '40px', textAlign: 'right' }}>
                   {formaterPourcentage(item.pourcentage)}
                 </span>
               </div>
             </div>
 
             {item.part_negatifs && (
-              <div style={{ fontSize: '0.76rem', color: '#475569', paddingLeft: '15px' }}>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', paddingLeft: '15px' }}>
                 <PartNegatifsTexte pn={item.part_negatifs} />
               </div>
             )}
@@ -98,7 +98,7 @@ export default function ThemesBarList({ themes, maxItems = 6, lienTheme, showSen
               style={{
                 width: '100%',
                 height: '7px',
-                background: '#F1F5F9',
+                background: 'var(--color-neutre-fond)',
                 borderRadius: '9999px',
                 overflow: 'hidden',
               }}
@@ -107,7 +107,7 @@ export default function ThemesBarList({ themes, maxItems = 6, lienTheme, showSen
                 style={{
                   width: `${Math.min(100, Math.max(0, item.pourcentage))}%`,
                   height: '100%',
-                  background: 'linear-gradient(90deg, #3C7730 0%, #75B72A 100%)',
+                  background: 'var(--dataviz-info)',
                   borderRadius: '9999px',
                   transition: 'width 0.4s ease',
                 }}
