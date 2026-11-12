@@ -28,13 +28,12 @@ export default function TabsNavigation({
         alignItems: 'center',
         gap: '6px',
         padding: '4px',
-        background: '#FFFFFF',
+        background: 'var(--color-surface)',
         borderRadius: '16px',
-        border: '1px solid #E2E8F0',
+        border: '1px solid var(--color-trait)',
         width: 'fit-content',
         maxWidth: '100%',
         overflowX: 'auto',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
         marginBottom: '24px',
         scrollbarWidth: 'none',
         ...style,
@@ -54,10 +53,10 @@ export default function TabsNavigation({
               gap: '8px',
               padding: '8px 16px',
               borderRadius: '12px',
-              fontSize: '0.84rem',
-              fontWeight: isActive ? 700 : 600,
-              color: isActive ? '#FFFFFF' : '#64748B',
-              background: isActive ? '#02302D' : 'transparent',
+              fontSize: 'var(--text-sm)',
+              fontWeight: isActive ? 'var(--weight-semibold)' : 'var(--weight-semibold)',
+              color: isActive ? 'var(--color-text-inverse)' : 'var(--color-text-2)',
+              background: isActive ? 'var(--color-encre)' : 'transparent',
               border: 'none',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
@@ -67,13 +66,13 @@ export default function TabsNavigation({
             }}
             onMouseEnter={(e) => {
               if (!isActive) {
-                e.currentTarget.style.color = '#02302D';
-                e.currentTarget.style.background = '#F8FAFC';
+                e.currentTarget.style.color = 'var(--color-encre)';
+                e.currentTarget.style.background = 'var(--color-bg)';
               }
             }}
             onMouseLeave={(e) => {
               if (!isActive) {
-                e.currentTarget.style.color = '#64748B';
+                e.currentTarget.style.color = 'var(--color-text-2)';
                 e.currentTarget.style.background = 'transparent';
               }
             }}
@@ -87,25 +86,25 @@ export default function TabsNavigation({
             {tab.badge !== undefined && (
               <span
                 style={{
-                  fontSize: '0.70rem',
-                  fontWeight: 800,
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 'var(--weight-semibold)',
                   padding: '2px 7px',
                   borderRadius: '9999px',
                   lineHeight: 1,
                   background: isActive
                     ? 'rgba(255, 255, 255, 0.22)'
                     : tab.badgeColor === 'red'
-                      ? '#FEE2E2'
+                      ? 'var(--color-critique-fond)'
                       : tab.badgeColor === 'green'
-                        ? '#EBF6ED'
-                        : '#F1F5F9',
+                        ? 'var(--color-bon-fond)'
+                        : 'var(--color-neutre-fond)',
                   color: isActive
-                    ? '#FFFFFF'
+                    ? 'var(--color-text-inverse)'
                     : tab.badgeColor === 'red'
-                      ? '#B91C1C' // 5.3:1 sur #FEE2E2 (#DC2626 : 3.95:1, insuffisant)
+                      ? 'var(--color-critique-texte)'
                       : tab.badgeColor === 'green'
-                        ? '#3C7730'
-                        : '#64748B',
+                        ? 'var(--color-bon-texte)'
+                        : 'var(--color-neutre-texte)',
                 }}
               >
                 {tab.badge}

@@ -29,10 +29,9 @@ export default function AdminWelcomeBanner({
   return (
     <div
       style={{
-        background: 'linear-gradient(135deg, #F4FAF5 0%, #EBF6ED 100%)',
+        background: 'var(--color-surface)',
         borderRadius: '24px',
-        border: '1px solid #D6E8D9',
-        boxShadow: '0 4px 20px rgba(2, 48, 45, 0.04)',
+        border: '1px solid var(--color-trait)',
         padding: '28px 36px',
         display: 'flex',
         alignItems: 'center',
@@ -50,9 +49,9 @@ export default function AdminWelcomeBanner({
       <div style={{ zIndex: 2, maxWidth: '640px', minWidth: 0, flex: 1 }}>
         <div
           style={{
-            fontSize: '0.74rem',
-            fontWeight: 800,
-            color: '#4B7B47',
+            fontSize: 'var(--text-xs)',
+            fontWeight: 'var(--weight-semibold)',
+            color: 'var(--color-bon-texte)',
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
             marginBottom: '8px',
@@ -67,9 +66,9 @@ export default function AdminWelcomeBanner({
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <h1
             style={{
-              fontSize: '1.95rem',
-              fontWeight: 800,
-              color: '#02302D',
+              fontSize: 'var(--text-2xl)',
+              fontWeight: 'var(--weight-semibold)',
+              color: 'var(--color-encre)',
               margin: 0,
               letterSpacing: '-0.02em',
               lineHeight: 1.2,
@@ -81,11 +80,11 @@ export default function AdminWelcomeBanner({
 
         <p
           style={{
-            color: '#526E60',
-            fontSize: '0.94rem',
+            color: 'var(--color-text-2)',
+            fontSize: 'var(--text-base)',
             marginTop: '8px',
             marginBottom: 0,
-            fontWeight: 500,
+            fontWeight: 'var(--weight-normal)',
             lineHeight: 1.45,
           }}
         >
@@ -106,19 +105,6 @@ export default function AdminWelcomeBanner({
         <DashboardIllustration width={220} height={140} />
       </div>
 
-      {/* Décoration d'arrière-plan très subtile */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '-40px',
-          right: '-40px',
-          width: '200px',
-          height: '200px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(117, 183, 42, 0.12) 0%, rgba(255,255,255,0) 70%)',
-          pointerEvents: 'none',
-        }}
-      />
     </div>
   );
 }

@@ -29,7 +29,7 @@ interface FormulaireProps {
   onSubmit: (e: React.FormEvent) => void;
 }
 
-const boutonSecondaire: React.CSSProperties = { minHeight: CIBLE_MIN, padding: '8px 14px', fontSize: '0.82rem', borderRadius: '10px' };
+const boutonSecondaire: React.CSSProperties = { minHeight: CIBLE_MIN, padding: '8px 14px', fontSize: 'var(--text-sm)', borderRadius: '10px' };
 
 /** Partie visuelle, sans état propre : testable avec renderToStaticMarkup. */
 export function ReponseClientFormulaire({
@@ -42,39 +42,39 @@ export function ReponseClientFormulaire({
   return (
     <section
       aria-labelledby="titre-reponse-client"
-      style={{ background: '#FFF7ED', border: '1px solid #FFEDD5', borderRadius: '18px', padding: '18px 20px' }}
+      style={{ background: 'var(--color-bg)', border: '1px solid var(--color-trait)', borderRadius: '18px', padding: '18px 20px' }}
     >
-      <h3 id="titre-reponse-client" style={{ margin: '0 0 8px', fontSize: '0.84rem', fontWeight: 800, color: '#C2410C', display: 'flex', alignItems: 'center', gap: '6px', textTransform: 'uppercase' }}>
-        <MessageSquareIcon size={15} color="#C2410C" aria-hidden="true" />
+      <h3 id="titre-reponse-client" style={{ margin: '0 0 8px', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', display: 'flex', alignItems: 'center', gap: '6px', textTransform: 'uppercase' }}>
+        <MessageSquareIcon size={15} color="var(--color-text-2)" aria-hidden="true" />
         <span>Répondre au client</span>
       </h3>
-      <p style={{ margin: '0 0 10px', fontSize: '0.78rem', color: '#64748B', lineHeight: 1.5 }}>
+      <p style={{ margin: '0 0 10px', fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', lineHeight: 1.5 }}>
         IKAN AI n’envoie aucun message au client. Contactez-le par le canal choisi, puis notez ici ce que vous lui avez répondu.
       </p>
 
       {brouillon.statut === 'chargement' && (
-        <p role="status" aria-busy="true" style={{ margin: '0 0 10px', fontSize: '0.8rem', color: '#64748B' }}>Préparation d’un brouillon…</p>
+        <p role="status" aria-busy="true" style={{ margin: '0 0 10px', fontSize: 'var(--text-xs)', color: 'var(--color-text-2)' }}>Préparation d’un brouillon…</p>
       )}
       {brouillon.statut === 'erreur' && (
-        <p role="status" style={{ margin: '0 0 10px', fontSize: '0.8rem', color: '#64748B' }}>
+        <p role="status" style={{ margin: '0 0 10px', fontSize: 'var(--text-xs)', color: 'var(--color-text-2)' }}>
           Le brouillon n’est pas disponible pour le moment. Vous pouvez rédiger votre réponse ci-dessous.
         </p>
       )}
       {texteBrouillon && (
-        <div style={{ background: '#FFFFFF', border: '1px dashed #FDBA74', borderRadius: '12px', padding: '12px 14px', marginBottom: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '6px', fontSize: '0.76rem', fontWeight: 800, color: '#9A3412' }}>
-            <InfoIcon size={14} color="#9A3412" aria-hidden="true" />
+        <div style={{ background: 'var(--color-surface)', border: '1px dashed var(--color-trait)', borderRadius: '12px', padding: '12px 14px', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '6px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>
+            <InfoIcon size={14} color="var(--color-text-2)" aria-hidden="true" />
             <span>Brouillon proposé{registre && LIBELLES_REGISTRE[registre] ? ` · ${LIBELLES_REGISTRE[registre]}` : ''}</span>
           </div>
-          <p style={{ margin: '0 0 8px', fontSize: '0.74rem', color: '#64748B', lineHeight: 1.5 }}>
+          <p style={{ margin: '0 0 8px', fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', lineHeight: 1.5 }}>
             Texte généré à partir de règles, sans reprendre le commentaire du client. Relisez-le et adaptez-le avant de l’utiliser.
           </p>
-          <div data-testid="texte-brouillon" style={{ whiteSpace: 'pre-wrap', fontSize: '0.84rem', color: '#431407', lineHeight: 1.55, marginBottom: '10px' }}>
+          <div data-testid="texte-brouillon" style={{ whiteSpace: 'pre-wrap', fontSize: 'var(--text-sm)', color: 'var(--color-encre)', lineHeight: 1.55, marginBottom: '10px' }}>
             {texteBrouillon}
           </div>
           {confirmationRemplacement ? (
             <div role="alertdialog" aria-label="Remplacer le texte saisi" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <p style={{ margin: 0, fontSize: '0.8rem', fontWeight: 700, color: '#9A3412' }}>
+              <p style={{ margin: 0, fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-surveiller-texte)' }}>
                 Remplacer le texte que vous avez saisi par ce brouillon ? Votre texte sera perdu.
               </p>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -93,7 +93,7 @@ export function ReponseClientFormulaire({
       {enregistrerTraiteLaDemande(demande) && <AvertissementReponse />}
       <form onSubmit={onSubmit}>
         <fieldset style={{ border: 0, margin: '0 0 8px', padding: 0 }}>
-          <legend style={{ fontSize: '0.76rem', fontWeight: 700, color: '#64748B', marginBottom: '6px', padding: 0 }}>Canal utilisé</legend>
+          <legend style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text-2)', marginBottom: '6px', padding: 0 }}>Canal utilisé</legend>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {CANAUX_REPONSE.map((c) => (
               <button
@@ -105,12 +105,12 @@ export function ReponseClientFormulaire({
                   minHeight: CIBLE_MIN,
                   padding: '6px 12px',
                   borderRadius: '8px',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 'var(--weight-semibold)',
                   cursor: 'pointer',
-                  border: canal === c ? '2px solid #C2410C' : '1px solid #E2E8F0',
-                  background: canal === c ? '#FFF7ED' : '#FFFFFF',
-                  color: canal === c ? '#C2410C' : '#64748B',
+                  border: canal === c ? '2px solid var(--color-accent)' : '1px solid var(--color-border)',
+                  background: 'var(--color-surface)',
+                  color: canal === c ? 'var(--color-encre)' : 'var(--color-text-2)',
                 }}
               >
                 {CANAL_LABELS[c]}
@@ -118,7 +118,7 @@ export function ReponseClientFormulaire({
             ))}
           </div>
         </fieldset>
-        <label htmlFor="reponse-client-texte" style={{ display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#64748B', marginBottom: '6px' }}>
+        <label htmlFor="reponse-client-texte" style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text-2)', marginBottom: '6px' }}>
           Votre réponse
         </label>
         <textarea
@@ -128,10 +128,10 @@ export function ReponseClientFormulaire({
           maxLength={LONGUEUR_MAX_REPONSE}
           onChange={(e) => onContenu(e.target.value)}
           placeholder="Ce que vous avez répondu au client (ex. : appelé ce jour, problème de facturation expliqué et corrigé)…"
-          style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.86rem', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: '4px' }}
+          style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--color-trait)', fontSize: 'var(--text-sm)', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: '4px' }}
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.74rem', color: '#64748B' }}>{contenu.length} / {LONGUEUR_MAX_REPONSE} caractères</span>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-2)' }}>{contenu.length} / {LONGUEUR_MAX_REPONSE} caractères</span>
           <button
             type="submit"
             disabled={!peutEnregistrer}

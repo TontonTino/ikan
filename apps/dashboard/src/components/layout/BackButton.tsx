@@ -62,8 +62,8 @@ export default function BackButton({ fallbackTo, fallbackLabel }: BackButtonProp
         border: '1px solid var(--color-border)',
         borderRadius: 'var(--radius-pill)',
         padding: '7px 14px',
-        fontSize: '0.84rem',
-        fontWeight: 700,
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--weight-semibold)',
         fontFamily: 'inherit',
         cursor: 'pointer',
       }}

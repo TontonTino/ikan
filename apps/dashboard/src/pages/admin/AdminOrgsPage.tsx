@@ -145,7 +145,7 @@ function AdminOrgsPageContenu() {
   };
 
   if (loading) {
-    return <div style={{ color: '#64748B', padding: '32px', fontWeight: 600 }}>Chargement des organisations...</div>;
+    return <div style={{ color: 'var(--color-text-2)', padding: '32px', fontWeight: 'var(--weight-semibold)' }}>Chargement des organisations...</div>;
   }
 
   return (
@@ -156,7 +156,7 @@ function AdminOrgsPageContenu() {
         subtitle="Gestion des entreprises et groupes clients enregistrés sur la plateforme IKAN AI."
         primaryAction={{
           label: showForm ? 'Fermer le formulaire' : 'Nouvelle organisation',
-          icon: <PlusIcon size={16} color="#FFFFFF" />,
+          icon: <PlusIcon size={16} color="var(--color-text-inverse)" />,
           onClick: () => {
             if (showForm) {
               setShowForm(false);
@@ -169,20 +169,20 @@ function AdminOrgsPageContenu() {
       />
 
       {erreurChargement && (
-        <div role="alert" style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#B91C1C', padding: '10px 14px', borderRadius: '12px', fontSize: '0.86rem', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+        <div role="alert" style={{ background: 'var(--color-critique-fond)', border: '1px solid var(--color-critique-fond)', color: 'var(--color-critique-texte)', padding: '10px 14px', borderRadius: '12px', fontSize: 'var(--text-sm)', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <span style={{ flex: '1 1 240px' }}>{erreurChargement} Cela ne signifie pas qu’aucune organisation n’existe.</span>
           <button type="button" className="btn-secondary" onClick={loadOrgs}>Réessayer</button>
         </div>
       )}
 
       {succes && (
-        <div role="status" style={{ background: '#EAF5EC', border: '1px solid #CFE3D3', color: '#2F5D26', padding: '10px 14px', borderRadius: '12px', fontSize: '0.86rem', fontWeight: 700 }}>
+        <div role="status" style={{ background: 'var(--color-bon-fond)', border: '1px solid var(--color-trait)', color: 'var(--color-bon-texte)', padding: '10px 14px', borderRadius: '12px', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}>
           {succes}
         </div>
       )}
 
       {erreurChangement && !aDesactiver && (
-        <div role="alert" style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C', padding: '10px 14px', borderRadius: '12px', fontSize: '0.86rem', fontWeight: 700 }}>
+        <div role="alert" style={{ background: 'var(--color-critique-fond)', border: '1px solid var(--color-critique-fond)', color: 'var(--color-critique-texte)', padding: '10px 14px', borderRadius: '12px', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}>
           {erreurChangement}
         </div>
       )}
@@ -192,53 +192,52 @@ function AdminOrgsPageContenu() {
         <form
           onSubmit={handleSubmit}
           style={{
-            background: '#FFFFFF',
+            background: 'var(--color-surface)',
             borderRadius: '24px',
             padding: '28px',
-            border: '1px solid #E8ECE6',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
+            border: '1px solid var(--color-trait)',
             marginBottom: '8px',
           }}
         >
           <h3
             style={{
               marginBottom: '18px',
-              fontSize: '1.1rem',
-              fontWeight: 800,
-              color: '#02302D',
+              fontSize: 'var(--text-lg)',
+              fontWeight: 'var(--weight-semibold)',
+              color: 'var(--color-encre)',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
             }}
           >
-            <BuildingIcon size={20} color="#3C7730" />
+            <BuildingIcon size={20} color="var(--color-bon-texte)" />
             {editingOrg ? `Modifier l'organisation : ${editingOrg.nom}` : 'Créer une organisation'}
           </h3>
 
           {errorMsg && (
             <div
               style={{
-                background: '#FEE2E2',
-                border: '1px solid #FCA5A5',
-                color: '#B91C1C',
+                background: 'var(--color-critique-fond)',
+                border: '1px solid var(--color-critique-fond)',
+                color: 'var(--color-critique-texte)',
                 padding: '10px 14px',
                 borderRadius: '12px',
-                fontSize: '0.86rem',
+                fontSize: 'var(--text-sm)',
                 marginBottom: '18px',
-                fontWeight: 600,
+                fontWeight: 'var(--weight-semibold)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
               }}
             >
-              <AlertTriangleIcon size={16} color="#B91C1C" />
+              <AlertTriangleIcon size={16} color="var(--color-critique-texte)" />
               <span>{errorMsg}</span>
             </div>
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
             <div>
-              <label style={{ display: 'block', fontWeight: 700, marginBottom: '6px', fontSize: '0.84rem', color: '#1E293B' }}>
+              <label style={{ display: 'block', fontWeight: 'var(--weight-semibold)', marginBottom: '6px', fontSize: 'var(--text-sm)', color: 'var(--color-encre)' }}>
                 Nom de l'entreprise *
               </label>
               <input
@@ -252,7 +251,7 @@ function AdminOrgsPageContenu() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontWeight: 700, marginBottom: '6px', fontSize: '0.84rem', color: '#1E293B' }}>
+              <label style={{ display: 'block', fontWeight: 'var(--weight-semibold)', marginBottom: '6px', fontSize: 'var(--text-sm)', color: 'var(--color-encre)' }}>
                 E-mail professionnel *
               </label>
               <input
@@ -266,7 +265,7 @@ function AdminOrgsPageContenu() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontWeight: 700, marginBottom: '6px', fontSize: '0.84rem', color: '#1E293B' }}>
+              <label style={{ display: 'block', fontWeight: 'var(--weight-semibold)', marginBottom: '6px', fontSize: 'var(--text-sm)', color: 'var(--color-encre)' }}>
                 Secteur d'activité *
               </label>
               <select
@@ -285,7 +284,7 @@ function AdminOrgsPageContenu() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontWeight: 700, marginBottom: '6px', fontSize: '0.84rem', color: '#1E293B' }}>
+              <label style={{ display: 'block', fontWeight: 'var(--weight-semibold)', marginBottom: '6px', fontSize: 'var(--text-sm)', color: 'var(--color-encre)' }}>
                 Pays / Région *
               </label>
               <input
@@ -299,7 +298,7 @@ function AdminOrgsPageContenu() {
             </div>
 
             <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'block', fontWeight: 700, marginBottom: '6px', fontSize: '0.84rem', color: '#1E293B' }}>
+              <label style={{ display: 'block', fontWeight: 'var(--weight-semibold)', marginBottom: '6px', fontSize: 'var(--text-sm)', color: 'var(--color-encre)' }}>
                 Logo de l'organisation (URL ou image)
               </label>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
@@ -317,8 +316,8 @@ function AdminOrgsPageContenu() {
                   style={{
                     padding: '10px 16px',
                     cursor: 'pointer',
-                    fontWeight: 700,
-                    fontSize: '0.84rem',
+                    fontWeight: 'var(--weight-semibold)',
+                    fontSize: 'var(--text-sm)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
@@ -376,18 +375,18 @@ function AdminOrgsPageContenu() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '12px',
-                    background: '#F8FAFB',
+                    background: 'var(--color-bg)',
                     padding: '8px 14px',
                     borderRadius: '10px',
-                    border: '1px solid #E2E8F0',
+                    border: '1px solid var(--color-trait)',
                   }}
                 >
-                  <span style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>Aperçu :</span>
+                  <span className="t-xs t-2 t-semi">Aperçu :</span>
                   <img src={form.logo} alt="Aperçu" style={{ height: '32px', maxHeight: '32px', borderRadius: '6px', objectFit: 'contain' }} />
                   <button
                     type="button"
                     onClick={() => setForm({ ...form, logo: '' })}
-                    style={{ background: 'none', border: 'none', color: '#DC2626', cursor: 'pointer', fontSize: '0.8rem', marginLeft: 'auto', fontWeight: 700 }}
+                    style={{ background: 'none', border: 'none', color: 'var(--color-critique-texte)', cursor: 'pointer', fontSize: 'var(--text-xs)', marginLeft: 'auto', fontWeight: 'var(--weight-semibold)' }}
                   >
                     ✕ Retirer
                   </button>
@@ -417,16 +416,15 @@ function AdminOrgsPageContenu() {
       {/* ── Table des Organisations ── */}
       <div
         style={{
-          background: '#FFFFFF',
+          background: 'var(--color-surface)',
           borderRadius: '24px',
-          border: '1px solid #E8ECE6',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+          border: '1px solid var(--color-trait)',
           overflow: 'hidden',
         }}
       >
         <div style={{ width: '100%', overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
-          <thead style={{ background: '#F8FAFB', borderBottom: '1px solid #E8ECE6' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
+          <thead style={{ background: 'var(--color-bg)', borderBottom: '1px solid var(--color-trait)' }}>
             <tr>
               {['Organisation', "Secteur d'activité", 'Pays / Région', 'E-mail professionnel', 'Statut', 'Actions'].map((h) => (
                 <th
@@ -434,9 +432,9 @@ function AdminOrgsPageContenu() {
                   style={{
                     textAlign: 'left',
                     padding: '14px 20px',
-                    color: '#64748B',
-                    fontWeight: 700,
-                    fontSize: '0.78rem',
+                    color: 'var(--color-text-2)',
+                    fontWeight: 'var(--weight-semibold)',
+                    fontSize: 'var(--text-xs)',
                     letterSpacing: '0.04em',
                     textTransform: 'uppercase',
                   }}
@@ -449,7 +447,7 @@ function AdminOrgsPageContenu() {
           <tbody>
             {orgs.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ padding: '28px 20px', color: '#64748B', textAlign: 'center' }}>
+                <td colSpan={6} style={{ padding: '28px 20px', color: 'var(--color-text-2)', textAlign: 'center' }}>
                   {erreurChargement ? 'Liste non chargée.' : 'Aucune organisation pour le moment. Créez la première avec « Nouvelle organisation ».'}
                 </td>
               </tr>
@@ -458,19 +456,19 @@ function AdminOrgsPageContenu() {
               <tr
                 key={o.id}
                 style={{
-                  borderBottom: '1px solid #F1F4EE',
+                  borderBottom: '1px solid var(--color-trait)',
                   transition: 'background 0.15s ease',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = '#F8FAFB')}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-bg)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
-                <td style={{ padding: '14px 20px', fontWeight: 700, color: '#02302D' }}>
+                <td style={{ padding: '14px 20px', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     {o.logo ? (
                       <img
                         src={o.logo}
                         alt={o.nom}
-                        style={{ width: '32px', height: '32px', borderRadius: '8px', objectFit: 'contain', background: '#F8FAFC', padding: '2px', border: '1px solid #E2E8F0' }}
+                        style={{ width: '32px', height: '32px', borderRadius: '8px', objectFit: 'contain', background: 'var(--color-bg)', padding: '2px', border: '1px solid var(--color-trait)' }}
                       />
                     ) : (
                       <div
@@ -478,13 +476,13 @@ function AdminOrgsPageContenu() {
                           width: '32px',
                           height: '32px',
                           borderRadius: '8px',
-                          background: '#EAF5EC',
+                          background: 'var(--color-bon-fond)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          fontSize: '0.76rem',
-                          fontWeight: 800,
-                          color: '#3C7730',
+                          fontSize: 'var(--text-xs)',
+                          fontWeight: 'var(--weight-semibold)',
+                          color: 'var(--color-bon-texte)',
                         }}
                       >
                         {o.nom.substring(0, 2).toUpperCase()}
@@ -493,9 +491,9 @@ function AdminOrgsPageContenu() {
                     <span>{o.nom}</span>
                   </div>
                 </td>
-                <td style={{ padding: '14px 20px', color: '#475569' }}>{o.secteur_libelle || o.secteur_activite || o.secteur || '—'}</td>
-                <td style={{ padding: '14px 20px', color: '#475569' }}>{o.pays_region || '—'}</td>
-                <td style={{ padding: '14px 20px', fontWeight: 500, color: '#1E293B' }}>{o.email_pro || o.email}</td>
+                <td style={{ padding: '14px 20px', color: 'var(--color-text-2)' }}>{o.secteur_libelle || o.secteur_activite || o.secteur || '—'}</td>
+                <td style={{ padding: '14px 20px', color: 'var(--color-text-2)' }}>{o.pays_region || '—'}</td>
+                <td style={{ padding: '14px 20px', fontWeight: 'var(--weight-normal)', color: 'var(--color-encre)' }}>{o.email_pro || o.email}</td>
                 <td style={{ padding: '14px 20px' }}>
                   <BadgeEtatOrganisation active={o.active} />
                 </td>
@@ -507,8 +505,8 @@ function AdminOrgsPageContenu() {
                       style={{
                         padding: '6px 12px',
                         cursor: 'pointer',
-                        fontSize: '0.8rem',
-                        fontWeight: 700,
+                        fontSize: 'var(--text-xs)',
+                        fontWeight: 'var(--weight-semibold)',
                         fontFamily: 'inherit',
                       }}
                     >
@@ -522,18 +520,18 @@ function AdminOrgsPageContenu() {
                       }}
                       disabled={changementEnCours}
                       style={{
-                        background: '#FFFFFF',
-                        color: o.active ? '#DC2626' : '#3C7730',
-                        border: o.active ? '1px solid #FEE2E2' : '1px solid #D6E8D9',
+                        background: 'var(--color-surface)',
+                        color: o.active ? 'var(--color-critique-texte)' : 'var(--color-bon-texte)',
+                        border: o.active ? '1px solid var(--color-critique-fond)' : '1px solid var(--color-trait)',
                         borderRadius: '8px',
                         padding: '6px 12px',
                         cursor: 'pointer',
-                        fontSize: '0.8rem',
-                        fontWeight: 700,
+                        fontSize: 'var(--text-xs)',
+                        fontWeight: 'var(--weight-semibold)',
                         fontFamily: 'inherit',
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = o.active ? '#FEE2E2' : '#EBF6ED')}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = '#FFFFFF')}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = o.active ? 'var(--color-critique-fond)' : 'var(--color-bon-fond)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--color-surface)')}
                     >
                       {o.active ? 'Désactiver' : 'Réactiver'}
                     </button>

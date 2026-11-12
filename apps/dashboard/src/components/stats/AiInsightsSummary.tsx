@@ -19,58 +19,57 @@ export default function AiInsightsSummary({ insights }: AiInsightsSummaryProps) 
   const getIcon = (type: string) => {
     switch (type) {
       case 'point_fort':
-        return <CheckCircleIcon size={16} color="#3C7730" />;
+        return <CheckCircleIcon size={16} color="var(--color-bon-texte)" />;
       case 'point_vigilance':
-        return <AlertTriangleIcon size={16} color="#DC2626" />;
+        return <AlertTriangleIcon size={16} color="var(--color-surveiller-texte)" />;
       case 'recommandation':
       default:
-        return <LightbulbIcon size={16} color="#75B72A" />;
+        return <LightbulbIcon size={16} color="var(--color-neutre-texte)" />;
     }
   };
 
   const getBg = (type: string) => {
     switch (type) {
       case 'point_fort':
-        return '#EBF6ED';
+        return 'var(--color-bon-fond)';
       case 'point_vigilance':
-        return '#FEE2E2';
+        return 'var(--color-surveiller-fond)';
       case 'recommandation':
       default:
-        return '#F5FAF5';
+        return 'var(--color-bg)';
     }
   };
 
   const getBorder = (type: string) => {
     switch (type) {
       case 'point_fort':
-        return '#D6E8D9';
+        return 'var(--color-bon-fond)';
       case 'point_vigilance':
-        return '#FECACA';
+        return 'var(--color-surveiller-fond)';
       case 'recommandation':
       default:
-        return '#E2EFE1';
+        return 'var(--color-trait)';
     }
   };
 
   return (
     <div
       style={{
-        background: '#FFFFFF',
+        background: 'var(--color-surface)',
         borderRadius: '24px',
         padding: '24px 28px',
-        border: '1px solid #E8ECE6',
-        boxShadow: '0 2px 12px rgba(20, 60, 40, 0.03)',
+        border: '1px solid var(--color-trait)',
         width: '100%',
         boxSizing: 'border-box',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px' }}>
-        <FileTextIcon size={20} color="#75B72A" />
+        <FileTextIcon size={20} color="var(--color-text-2)" />
         <div>
-          <div style={{ fontSize: '1rem', fontWeight: 800, color: '#02302D' }}>
+          <div className="t-base t-semi t-encre">
             {ia ? 'Ce que suggère l’analyse (IA)' : 'Ce que suggère l’analyse'}
           </div>
-          <div style={{ fontSize: '0.76rem', color: '#64748B' }}>
+          <div className="t-xs t-2">
             {ia
               ? 'Constats et actions suggérés par l’IA à partir des avis — à vérifier avant de les appliquer'
               : 'Constats calculés automatiquement par règles à partir des avis de la période — à vérifier avant d’agir'}
@@ -96,14 +95,14 @@ export default function AiInsightsSummary({ insights }: AiInsightsSummaryProps) 
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                 {getIcon(item.type)}
-                <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#02302D' }}>
+                <span className="t-sm t-semi t-encre">
                   {item.titre}
                 </span>
               </div>
               <p
                 style={{
-                  fontSize: '0.78rem',
-                  color: '#475569',
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--color-text-2)',
                   lineHeight: 1.45,
                   margin: 0,
                 }}
@@ -114,7 +113,7 @@ export default function AiInsightsSummary({ insights }: AiInsightsSummaryProps) 
             </div>
 
             {item.agence_nom && (
-              <div style={{ fontSize: '0.70rem', fontWeight: 700, color: '#3C7730' }}>
+              <div className="t-xs t-semi t-bon">
                 📍 {item.agence_nom}
               </div>
             )}

@@ -83,7 +83,7 @@ export function FilActiviteListe({ etat, voirPlus, reessayer, ajoutes, maintenan
     );
   }
   if (etat.evenements.length === 0) {
-    return <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>Aucun événement enregistré pour ce problème.</p>;
+    return <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>Aucun événement enregistré pour ce problème.</p>;
   }
   const debutAjoutes = etat.evenements.length - ajoutes;
   const voirPlusTexte = libelleVoirPlus(etat.evenements.length, etat.total);

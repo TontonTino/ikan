@@ -180,7 +180,7 @@ export default function StatsCXView() {
                       lienTheme={(t) => lienAvisReseau({ theme: t.theme, jours, agenceId: selectedAgenceId })}
                     />
                   </div>
-                  <p role="status" style={{ margin: '14px 0 0', fontSize: '0.76rem', color: '#64748B' }}>
+                  <p role="status" style={{ margin: '14px 0 0', fontSize: 'var(--text-xs)', color: 'var(--color-text-2)' }}>
                     {`Pourcentages calculés sur ${data.themes_total_avis ?? 0} occurrences de thèmes classifiées sur la période (et non sur l’ensemble des avis). Cliquez sur un thème pour voir les avis correspondants.`}
                   </p>
                 </StatsSectionCard>

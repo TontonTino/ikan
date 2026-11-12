@@ -27,26 +27,26 @@ function CustomTooltip({ active, payload, label, receivedLabel, treatedLabel }: 
     return (
       <div
         style={{
-          background: '#02302D',
-          color: '#FFFFFF',
+          background: 'var(--color-surface)',
+          color: 'var(--color-encre)',
           padding: '10px 14px',
-          borderRadius: '12px',
-          fontSize: '0.80rem',
-          boxShadow: '0 8px 24px rgba(2, 48, 45, 0.25)',
-          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 'var(--radius-sm)',
+          fontSize: 'var(--text-xs)',
+          boxShadow: 'var(--shadow-dropdown)',
+          border: '1px solid var(--color-trait)',
         }}
       >
-        <div style={{ fontWeight: 700, marginBottom: '6px', color: '#E2F2E5' }}>
+        <div style={{ fontWeight: 'var(--weight-semibold)', marginBottom: '6px', color: 'var(--color-encre)' }}>
           {libelleDatePoint(pt.date, pt.label || label)}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
-            <span style={{ color: '#94A3B8' }}>{receivedLabel} :</span>
-            <strong style={{ color: '#FFFFFF' }}>{pt.feedbacks}</strong>
+            <span className="t-2">{receivedLabel} :</span>
+            <strong className="t-encre">{pt.feedbacks}</strong>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px' }}>
-            <span style={{ color: '#75B72A' }}>{treatedLabel} :</span>
-            <strong style={{ color: '#75B72A' }}>{pt.traites}</strong>
+            <span className="t-2">{treatedLabel} :</span>
+            <strong className="t-encre">{pt.traites}</strong>
           </div>
         </div>
       </div>
@@ -72,11 +72,11 @@ export default function VolumeEvolutionChart({
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#5B6B7F',
-          fontSize: '0.84rem',
-          background: '#FAFCFA',
+          color: 'var(--color-text-2)',
+          fontSize: 'var(--text-sm)',
+          background: 'var(--color-bg)',
           borderRadius: '16px',
-          border: '1px dashed #D6E8D9',
+          border: '1px dashed var(--color-trait)',
         }}
       >
         {emptyMessage}
@@ -88,27 +88,27 @@ export default function VolumeEvolutionChart({
     <div style={{ width: '100%', height: `${height}px` }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--dataviz-grid)" vertical={false} />
           <XAxis
             dataKey="label"
-            stroke="#5B6B7F"
-            fontSize={11}
+            stroke="var(--color-text-2)"
+            fontSize={12}
             tickLine={false}
-            axisLine={{ stroke: '#E2E8F0' }}
+            axisLine={{ stroke: 'var(--color-trait)' }}
           />
           <YAxis
-            stroke="#5B6B7F"
-            fontSize={11}
+            stroke="var(--color-text-2)"
+            fontSize={12}
             tickLine={false}
             axisLine={false}
             allowDecimals={false}
           />
           <Tooltip content={<CustomTooltip receivedLabel={receivedLabel} treatedLabel={treatedLabel} />} />
-          {showTreated && <Legend wrapperStyle={{ fontSize: 12, color: '#475569', paddingTop: 8 }} />}
+          {showTreated && <Legend wrapperStyle={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', paddingTop: 8 }} />}
           <Bar
             name={receivedLabel}
             dataKey="feedbacks"
-            fill="#3C7730"
+            fill="var(--color-bon-texte)"
             radius={[6, 6, 0, 0]}
             maxBarSize={36}
           />
@@ -116,7 +116,7 @@ export default function VolumeEvolutionChart({
             <Bar
               name={treatedLabel}
               dataKey="traites"
-              fill="#02302D"
+              fill="var(--color-encre)"
               radius={[6, 6, 0, 0]}
               maxBarSize={36}
             />

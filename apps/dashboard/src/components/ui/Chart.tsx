@@ -24,7 +24,7 @@ export type DatavizColor = keyof typeof DATAVIZ;
 /** Props communes des axes Recharts : grille et axes discrets, texte lisible. */
 export const chartAxisProps = {
   stroke: 'var(--dataviz-grid)',
-  tick: { fill: 'var(--dataviz-axis)', fontSize: 12, fontWeight: 600 },
+  tick: { fill: 'var(--dataviz-axis)', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)' },
   tickLine: false,
   axisLine: false,
 } as const;

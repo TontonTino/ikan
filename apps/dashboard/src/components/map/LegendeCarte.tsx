@@ -11,10 +11,10 @@ import { formaterPourcentage } from '../../utils/formatNombre';
 
 /** Couleurs des marqueurs (Leaflet a besoin de valeurs littérales : tokens --color-success-solid / critical-solid / neutral-solid). */
 export const STATUT_COULEUR: Record<StatutSeuil, string> = {
-  au_dessus: '#3C7730',
-  sous: '#DC2626',
-  pas_assez_avis: '#64748B',
-  sans_avis: '#94A3B8',
+  au_dessus: 'var(--color-marque)',
+  sous: 'var(--color-critique-texte)',
+  pas_assez_avis: 'var(--color-text-2)',
+  sans_avis: 'var(--color-border)',
 };
 
 /** Symbole dessiné dans le marqueur et répété dans la légende : distingue les statuts sans la couleur. */
@@ -45,7 +45,7 @@ export function LegendeCarte() {
                 {STATUT_SEUIL_LABEL[statut]}
               </strong>
               <br />
-              <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-xs)' }}>{STATUT_EXPLICATION[statut]}</span>
+              <span className="t-2 t-xs">{STATUT_EXPLICATION[statut]}</span>
             </span>
           </li>
         ))}
@@ -68,7 +68,7 @@ export interface LigneCarte {
 export function ListeAgencesCarte({ agences }: { agences: LigneCarte[] }) {
   return (
     <details style={{ marginTop: 'var(--space-3)' }}>
-      <summary style={{ cursor: 'pointer', fontSize: 'var(--text-sm)', fontWeight: 600 }}>Voir la liste des agences de la carte et leur statut</summary>
+      <summary style={{ cursor: 'pointer', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}>Voir la liste des agences de la carte et leur statut</summary>
       <ul style={{ margin: 'var(--space-2) 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', fontSize: 'var(--text-sm)' }}>
         {agences.map((a) => (
           <li key={a.id}>

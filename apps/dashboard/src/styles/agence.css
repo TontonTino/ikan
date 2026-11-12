@@ -133,12 +133,12 @@ a.agence-meter:hover { background: var(--color-bg-hover); }
 .alerte-dialogue__champ { display: flex; flex-direction: column; gap: var(--space-1); }
 .alerte-dialogue__label { font-size: var(--text-sm); font-weight: var(--weight-bold); color: var(--color-text-main); }
 .alerte-dialogue__facultatif { font-weight: var(--weight-regular); color: var(--color-text-muted); }
-.alerte-dialogue__saisie { width: 100%; box-sizing: border-box; min-height: 104px; padding: var(--space-2) var(--space-3); font: inherit; font-size: 1rem; line-height: var(--leading-normal); color: var(--color-text-main); background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); resize: vertical; }
+.alerte-dialogue__saisie { width: 100%; box-sizing: border-box; min-height: 104px; padding: var(--space-2) var(--space-3); font: inherit; font-size: var(--text-base); line-height: var(--leading-normal); color: var(--color-text-main); background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); resize: vertical; }
 .alerte-dialogue__saisie:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; box-shadow: var(--focus-ring); }
 .alerte-dialogue__saisie[readonly] { background: var(--color-bg-subtle); color: var(--color-text-muted); }
 .alerte-dialogue__compteur { margin: 0; text-align: right; font-size: var(--text-xs); color: var(--color-text-muted); }
 .alerte-dialogue__compteur.is-limite { color: var(--color-critical-text); font-weight: var(--weight-bold); }
-.alerte-dialogue__controle { width: 100%; box-sizing: border-box; min-height: 44px; padding: var(--space-2) var(--space-3); font: inherit; font-size: 1rem; color: var(--color-text-main); background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); }
+.alerte-dialogue__controle { width: 100%; box-sizing: border-box; min-height: 44px; padding: var(--space-2) var(--space-3); font: inherit; font-size: var(--text-base); color: var(--color-text-main); background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); }
 .alerte-dialogue__controle:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 1px; box-shadow: var(--focus-ring); }
 .alerte-dialogue__controle[aria-invalid="true"] { border-color: var(--color-critical-text); }
 .alerte-dialogue__controle:disabled, .alerte-dialogue__controle[readonly] { background: var(--color-bg-subtle); color: var(--color-text-muted); }

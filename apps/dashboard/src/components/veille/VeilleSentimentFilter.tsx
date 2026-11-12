@@ -35,7 +35,7 @@ export default function VeilleSentimentFilter({ value, onChange }: VeilleSentime
             aria-pressed={isActive}
             onClick={() => onChange(opt.value)}
             className={isActive ? 'btn-primary' : 'btn-secondary'}
-            style={{ padding: '6px 14px', fontSize: '0.8rem' }}
+            style={{ padding: '6px 14px', fontSize: 'var(--text-xs)' }}
           >
             {opt.label}
           </button>

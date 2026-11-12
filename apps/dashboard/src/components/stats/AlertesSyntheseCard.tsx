@@ -16,8 +16,8 @@ export default function AlertesSyntheseCard({
   return (
     <div
       style={{
-        background: hasAlerts ? '#FFFBFB' : '#FAFCFA',
-        border: hasAlerts ? '1px solid #FECACA' : '1px solid #E8ECE6',
+        background: 'var(--color-surface)',
+        border: hasAlerts ? '1px solid var(--color-critique-fond)' : '1px solid var(--color-trait)',
         borderRadius: '20px',
         padding: '20px 24px',
         display: 'flex',
@@ -35,8 +35,8 @@ export default function AlertesSyntheseCard({
               width: '36px',
               height: '36px',
               borderRadius: '10px',
-              background: hasAlerts ? '#FEE2E2' : '#EBF6ED',
-              color: hasAlerts ? '#DC2626' : '#3C7730',
+              background: hasAlerts ? 'var(--color-critique-fond)' : 'var(--color-bon-fond)',
+              color: hasAlerts ? 'var(--color-critique-texte)' : 'var(--color-bon-texte)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -45,10 +45,10 @@ export default function AlertesSyntheseCard({
             <AlertTriangleIcon size={18} />
           </div>
           <div>
-            <div style={{ fontSize: '0.90rem', fontWeight: 800, color: '#02302D' }}>
+            <div className="t-sm t-semi t-encre">
               Avis de gravité critique
             </div>
-            <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
+            <div className="t-xs t-2">
               Gravité calculée automatiquement à partir de la note, du ton et de mots-clés
             </div>
           </div>
@@ -57,12 +57,12 @@ export default function AlertesSyntheseCard({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span
             style={{
-              background: hasAlerts ? '#FEE2E2' : '#EBF6ED',
-              color: hasAlerts ? '#DC2626' : '#3C7730',
+              background: hasAlerts ? 'var(--color-critique-fond)' : 'var(--color-bon-fond)',
+              color: hasAlerts ? 'var(--color-critique-texte)' : 'var(--color-bon-texte)',
               padding: '4px 12px',
               borderRadius: '9999px',
-              fontWeight: 800,
-              fontSize: '0.84rem',
+              fontWeight: 'var(--weight-semibold)',
+              fontSize: 'var(--text-sm)',
             }}
           >
             {alertes.total_critiques} avis critique{alertes.total_critiques > 1 ? 's' : ''}
@@ -73,15 +73,15 @@ export default function AlertesSyntheseCard({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '2px',
-                fontSize: '0.74rem',
-                fontWeight: 700,
-                color: alertes.evolution_positive ? '#3C7730' : '#DC2626',
+                fontSize: 'var(--text-xs)',
+                fontWeight: 'var(--weight-semibold)',
+                color: alertes.evolution_positive ? 'var(--color-bon-texte)' : 'var(--color-critique-texte)',
               }}
             >
               {alertes.evolution_positive ? (
-                <ArrowDownRightIcon size={12} color="#3C7730" />
+                <ArrowDownRightIcon size={12} color="var(--color-bon-texte)" />
               ) : (
-                <ArrowUpRightIcon size={12} color="#DC2626" />
+                <ArrowUpRightIcon size={12} color="var(--color-critique-texte)" />
               )}
               {alertes.evolution_pct} vs période précédente
             </span>
@@ -92,7 +92,7 @@ export default function AlertesSyntheseCard({
       {/* Body: Agences Impactées */}
       {hasAlerts && alertes.agences_impactees.length > 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
+          <div className="t-xs t-semi t-2 t-majuscules">
             Agences concernées ({alertes.agences_impactees.length})
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
@@ -101,36 +101,36 @@ export default function AlertesSyntheseCard({
                 key={ag.agence_id}
                 onClick={() => onSelectAgence && onSelectAgence(ag.agence_id)}
                 style={{
-                  background: '#FFFFFF',
-                  border: '1px solid #FECACA',
+                  background: 'var(--color-surface)',
+                  border: '1px solid var(--color-critique-fond)',
                   borderRadius: '10px',
                   padding: '6px 12px',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '8px',
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  color: '#0F172A',
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 'var(--weight-semibold)',
+                  color: 'var(--color-encre)',
                   cursor: onSelectAgence ? 'pointer' : 'default',
                   transition: 'background 0.15s ease',
                 }}
                 onMouseEnter={(e) => {
-                  if (onSelectAgence) e.currentTarget.style.background = '#FEE2E2';
+                  if (onSelectAgence) e.currentTarget.style.background = 'var(--color-critique-fond)';
                 }}
                 onMouseLeave={(e) => {
-                  if (onSelectAgence) e.currentTarget.style.background = '#FFFFFF';
+                  if (onSelectAgence) e.currentTarget.style.background = 'var(--color-surface)';
                 }}
               >
-                <StoreIcon size={14} color="#DC2626" />
+                <StoreIcon size={14} color="var(--color-critique-texte)" />
                 <span>{ag.agence_nom}</span>
                 <span
                   style={{
-                    background: '#DC2626',
-                    color: '#FFFFFF',
+                    background: 'var(--color-critique-texte)',
+                    color: 'var(--color-text-inverse)',
                     borderRadius: '9999px',
                     padding: '1px 6px',
-                    fontSize: '0.68rem',
-                    fontWeight: 800,
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 'var(--weight-semibold)',
                   }}
                 >
                   {ag.alertes_count}
@@ -140,7 +140,7 @@ export default function AlertesSyntheseCard({
           </div>
         </div>
       ) : (
-        <div style={{ fontSize: '0.80rem', color: '#3C7730', fontWeight: 600 }}>
+        <div className="t-xs t-bon t-semi">
           ✅ Aucun avis critique sur cette période.
         </div>
       )}

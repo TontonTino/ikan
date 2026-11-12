@@ -83,10 +83,9 @@ export default function AdminOrganisationsTable({
   return (
     <div
       style={{
-        background: '#FFFFFF',
+        background: 'var(--color-surface)',
         borderRadius: '24px',
-        border: '1px solid #E8ECE6',
-        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.02)',
+        border: '1px solid var(--color-trait)',
         overflow: 'hidden',
         width: '100%',
         maxWidth: '100%',
@@ -103,19 +102,19 @@ export default function AdminOrganisationsTable({
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '16px',
-          borderBottom: '1px solid #F1F5F2',
+          borderBottom: '1px solid var(--color-trait)',
           width: '100%',
           boxSizing: 'border-box',
         }}
       >
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <BuildingIcon size={20} color="#02302D" />
+            <BuildingIcon size={20} color="var(--color-encre)" />
             <h2
               style={{
-                fontSize: '1.18rem',
-                fontWeight: 800,
-                color: '#02302D',
+                fontSize: 'var(--text-lg)',
+                fontWeight: 'var(--weight-semibold)',
+                color: 'var(--color-encre)',
                 margin: 0,
               }}
             >
@@ -123,10 +122,10 @@ export default function AdminOrganisationsTable({
             </h2>
             <span
               style={{
-                background: '#EAF5EC',
-                color: '#3C7730',
-                fontSize: '0.76rem',
-                fontWeight: 800,
+                background: 'var(--color-bon-fond)',
+                color: 'var(--color-bon-texte)',
+                fontSize: 'var(--text-xs)',
+                fontWeight: 'var(--weight-semibold)',
                 padding: '2px 8px',
                 borderRadius: '9999px',
               }}
@@ -136,11 +135,11 @@ export default function AdminOrganisationsTable({
           </div>
           <p
             style={{
-              color: '#64748B',
-              fontSize: '0.84rem',
+              color: 'var(--color-text-2)',
+              fontSize: 'var(--text-sm)',
               marginTop: '4px',
               marginBottom: 0,
-              fontWeight: 500,
+              fontWeight: 'var(--weight-normal)',
             }}
           >
             CX Managers, responsables d’agence, agences et forfaits de chaque organisation
@@ -152,8 +151,8 @@ export default function AdminOrganisationsTable({
           {/* Recherche */}
           <div
             style={{
-              background: '#F8FAFB',
-              border: '1px solid #E2E8F0',
+              background: 'var(--color-bg)',
+              border: '1px solid var(--color-trait)',
               borderRadius: '12px',
               padding: '10px 16px',
               minHeight: '44px',
@@ -164,7 +163,7 @@ export default function AdminOrganisationsTable({
               boxSizing: 'border-box',
             }}
           >
-            <SearchIcon size={15} color="#94A3B8" />
+            <SearchIcon size={15} color="var(--color-text-2)" />
             <input
               type="text"
               aria-label="Rechercher une organisation"
@@ -174,8 +173,8 @@ export default function AdminOrganisationsTable({
               style={{
                 border: 'none',
                 background: 'transparent',
-                fontSize: '0.875rem',
-                color: '#1E293B',
+                fontSize: 'var(--text-sm)',
+                color: 'var(--color-encre)',
                 width: '100%',
                 minHeight: '24px',
                 boxSizing: 'border-box',
@@ -191,9 +190,9 @@ export default function AdminOrganisationsTable({
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#94A3B8',
+                  color: 'var(--color-text-2)',
                   cursor: 'pointer',
-                  fontSize: '0.9rem',
+                  fontSize: 'var(--text-sm)',
                   padding: 0,
                   display: 'flex',
                   alignItems: 'center',
@@ -210,13 +209,13 @@ export default function AdminOrganisationsTable({
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
             style={{
-              background: '#F8FAFB',
-              border: '1px solid #E2E8F0',
+              background: 'var(--color-bg)',
+              border: '1px solid var(--color-trait)',
               borderRadius: '12px',
               padding: '7px 12px',
-              fontSize: '0.82rem',
-              fontWeight: 600,
-              color: '#1E293B',
+              fontSize: 'var(--text-sm)',
+              fontWeight: 'var(--weight-semibold)',
+              color: 'var(--color-encre)',
               cursor: 'pointer',
               fontFamily: 'inherit',
               boxSizing: 'border-box',
@@ -239,8 +238,8 @@ export default function AdminOrganisationsTable({
           boxSizing: 'border-box',
         }}
       >
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem', minWidth: '780px' }}>
-          <thead style={{ background: '#F8FAFB', borderBottom: '1px solid #E8ECE6' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)', minWidth: '780px' }}>
+          <thead style={{ background: 'var(--color-bg)', borderBottom: '1px solid var(--color-trait)' }}>
             <tr>
               {[
                 { label: 'Organisation', align: 'left' },
@@ -256,9 +255,9 @@ export default function AdminOrganisationsTable({
                   style={{
                     textAlign: col.align as any,
                     padding: '14px 18px',
-                    color: '#64748B',
-                    fontWeight: 700,
-                    fontSize: '0.76rem',
+                    color: 'var(--color-text-2)',
+                    fontWeight: 'var(--weight-semibold)',
+                    fontSize: 'var(--text-xs)',
                     letterSpacing: '0.04em',
                     textTransform: 'uppercase',
                     whiteSpace: 'nowrap',
@@ -280,7 +279,7 @@ export default function AdminOrganisationsTable({
               ))
             ) : filteredOrganisations.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#64748B' }}>
+                <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-2)' }}>
                   Aucune organisation trouvée.
                 </td>
               </tr>
@@ -294,12 +293,12 @@ export default function AdminOrganisationsTable({
                     {/* Ligne principale Organisation */}
                     <tr
                       style={{
-                        borderBottom: isExpanded ? 'none' : '1px solid #F1F4EE',
-                        background: isExpanded ? '#F8FBF9' : 'transparent',
+                        borderBottom: isExpanded ? 'none' : '1px solid var(--color-trait)',
+                        background: isExpanded ? 'var(--color-bg)' : 'transparent',
                         transition: 'background 0.15s ease',
                       }}
                       onMouseEnter={(e) => {
-                        if (!isExpanded) e.currentTarget.style.background = '#F8FAFB';
+                        if (!isExpanded) e.currentTarget.style.background = 'var(--color-bg)';
                       }}
                       onMouseLeave={(e) => {
                         if (!isExpanded) e.currentTarget.style.background = 'transparent';
@@ -313,7 +312,7 @@ export default function AdminOrganisationsTable({
                             style={{
                               background: 'transparent',
                               border: 'none',
-                              color: '#3C7730',
+                              color: 'var(--color-bon-texte)',
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
@@ -325,9 +324,9 @@ export default function AdminOrganisationsTable({
                             title={isExpanded ? 'Replier les détails' : 'Déplier les détails'}
                           >
                             {isExpanded ? (
-                              <ChevronDownIcon size={16} color="#3C7730" />
+                              <ChevronDownIcon size={16} color="var(--color-bon-texte)" />
                             ) : (
-                              <ChevronRightIcon size={16} color="#64748B" />
+                              <ChevronRightIcon size={16} color="var(--color-text-2)" />
                             )}
                           </button>
 
@@ -341,9 +340,9 @@ export default function AdminOrganisationsTable({
                                 height: '34px',
                                 borderRadius: '8px',
                                 objectFit: 'contain',
-                                background: '#FFFFFF',
+                                background: 'var(--color-surface)',
                                 padding: '2px',
-                                border: '1px solid #E2E8F0',
+                                border: '1px solid var(--color-trait)',
                                 flexShrink: 0,
                               }}
                             />
@@ -353,15 +352,15 @@ export default function AdminOrganisationsTable({
                                 width: '34px',
                                 height: '34px',
                                 borderRadius: '8px',
-                                background: '#EAF5EC',
+                                background: 'var(--color-bon-fond)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                fontSize: '0.78rem',
-                                fontWeight: 800,
-                                color: '#3C7730',
+                                fontSize: 'var(--text-xs)',
+                                fontWeight: 'var(--weight-semibold)',
+                                color: 'var(--color-bon-texte)',
                                 flexShrink: 0,
-                                border: '1px solid #D5E8D3',
+                                border: '1px solid var(--color-bon-fond)',
                               }}
                             >
                               {org.nom.substring(0, 2).toUpperCase()}
@@ -372,15 +371,15 @@ export default function AdminOrganisationsTable({
                             <div
                               onClick={() => toggleExpand(org.id)}
                               style={{
-                                fontWeight: 800,
-                                color: '#02302D',
+                                fontWeight: 'var(--weight-semibold)',
+                                color: 'var(--color-encre)',
                                 cursor: 'pointer',
-                                fontSize: '0.92rem',
+                                fontSize: 'var(--text-base)',
                               }}
                             >
                               {org.nom}
                             </div>
-                            <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 500 }}>
+                            <div className="t-xs t-2 t-normal">
                               {org.secteur_activite || 'Entreprise'} • {org.pays_region || 'Afrique'}
                             </div>
                           </div>
@@ -388,13 +387,13 @@ export default function AdminOrganisationsTable({
                       </td>
 
                       {/* Colonne 2 : CX Managers */}
-                      <td style={{ textAlign: 'center', padding: '16px 18px', fontWeight: 700, color: '#02302D' }}>
+                      <td style={{ textAlign: 'center', padding: '16px 18px', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>
                         <span
                           style={{
-                            background: '#F1F5F2',
+                            background: 'var(--color-bg)',
                             padding: '4px 10px',
                             borderRadius: '8px',
-                            fontSize: '0.84rem',
+                            fontSize: 'var(--text-sm)',
                           }}
                         >
                           {org.cx_managers_count}
@@ -402,13 +401,13 @@ export default function AdminOrganisationsTable({
                       </td>
 
                       {/* Colonne 3 : Agency Managers */}
-                      <td style={{ textAlign: 'center', padding: '16px 18px', fontWeight: 700, color: '#02302D' }}>
+                      <td style={{ textAlign: 'center', padding: '16px 18px', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>
                         <span
                           style={{
-                            background: '#F1F5F2',
+                            background: 'var(--color-bg)',
                             padding: '4px 10px',
                             borderRadius: '8px',
-                            fontSize: '0.84rem',
+                            fontSize: 'var(--text-sm)',
                           }}
                         >
                           {org.agency_managers_count}
@@ -416,13 +415,13 @@ export default function AdminOrganisationsTable({
                       </td>
 
                       {/* Colonne 4 : Agences */}
-                      <td style={{ textAlign: 'center', padding: '16px 18px', fontWeight: 700, color: '#02302D' }}>
+                      <td style={{ textAlign: 'center', padding: '16px 18px', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>
                         <span
                           style={{
-                            background: '#F1F5F2',
+                            background: 'var(--color-bg)',
                             padding: '4px 10px',
                             borderRadius: '8px',
-                            fontSize: '0.84rem',
+                            fontSize: 'var(--text-sm)',
                           }}
                         >
                           {org.agences_count}
@@ -433,12 +432,12 @@ export default function AdminOrganisationsTable({
                       <td style={{ textAlign: 'center', padding: '16px 18px' }}>
                         <span
                           style={{
-                            background: '#EBF5E9',
-                            color: '#3C7730',
+                            background: 'var(--color-bon-fond)',
+                            color: 'var(--color-bon-texte)',
                             padding: '3px 10px',
                             borderRadius: '9999px',
-                            fontSize: '0.76rem',
-                            fontWeight: 800,
+                            fontSize: 'var(--text-xs)',
+                            fontWeight: 'var(--weight-semibold)',
                             whiteSpace: 'nowrap',
                           }}
                         >
@@ -450,13 +449,13 @@ export default function AdminOrganisationsTable({
                       <td style={{ textAlign: 'center', padding: '16px 18px' }}>
                         <span
                           style={{
-                            background: org.active ? '#EBF5E9' : '#F1F5F9',
-                            color: org.active ? '#3C7730' : '#64748B',
+                            background: org.active ? 'var(--color-bon-fond)' : 'var(--color-neutre-fond)',
+                            color: org.active ? 'var(--color-bon-texte)' : 'var(--color-text-2)',
                             padding: '4px 10px',
                             borderRadius: '9999px',
-                            fontSize: '0.74rem',
-                            fontWeight: 800,
-                            border: `1px solid ${org.active ? '#D5E8D3' : '#E2E8F0'}`,
+                            fontSize: 'var(--text-xs)',
+                            fontWeight: 'var(--weight-semibold)',
+                            border: `1px solid ${org.active ? 'var(--color-bon-fond)' : 'var(--color-trait)'}`,
                           }}
                         >
                           {org.active ? 'Active' : 'Inactive'}
@@ -472,9 +471,9 @@ export default function AdminOrganisationsTable({
                               setActiveMenuId(isMenuActive ? null : org.id);
                             }}
                             style={{
-                              background: isMenuActive ? '#F1F5F2' : 'transparent',
+                              background: isMenuActive ? 'var(--color-bg)' : 'transparent',
                               border: '1px solid',
-                              borderColor: isMenuActive ? '#DCE8DF' : 'transparent',
+                              borderColor: isMenuActive ? 'var(--color-trait)' : 'transparent',
                               borderRadius: '8px',
                               padding: '6px',
                               minWidth: 44,
@@ -483,7 +482,7 @@ export default function AdminOrganisationsTable({
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              color: '#64748B',
+                              color: 'var(--color-text-2)',
                               transition: 'background 0.15s ease',
                             }}
                             title="Actions"
@@ -502,10 +501,10 @@ export default function AdminOrganisationsTable({
                                 right: 0,
                                 top: '100%',
                                 marginTop: '4px',
-                                background: '#FFFFFF',
+                                background: 'var(--color-surface)',
                                 borderRadius: '14px',
-                                border: '1px solid #E2E8F0',
-                                boxShadow: '0 10px 25px rgba(2, 48, 45, 0.12)',
+                                border: '1px solid var(--color-trait)',
+                                boxShadow: 'var(--shadow-sm)',
                                 zIndex: 50,
                                 minWidth: '180px',
                                 padding: '6px',
@@ -527,18 +526,18 @@ export default function AdminOrganisationsTable({
                                   background: 'transparent',
                                   border: 'none',
                                   borderRadius: '8px',
-                                  fontSize: '0.82rem',
-                                  fontWeight: 600,
-                                  color: '#02302D',
+                                  fontSize: 'var(--text-sm)',
+                                  fontWeight: 'var(--weight-semibold)',
+                                  color: 'var(--color-encre)',
                                   cursor: 'pointer',
                                   textAlign: 'left',
                                   width: '100%',
                                   fontFamily: 'inherit',
                                 }}
-                                onMouseEnter={(e) => (e.currentTarget.style.background = '#F8FAFB')}
+                                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-bg)')}
                                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                               >
-                                <BuildingIcon size={14} color="#3C7730" />
+                                <BuildingIcon size={14} color="var(--color-bon-texte)" />
                                 <span>Ouvrir la page Organisations</span>
                               </button>
 
@@ -555,18 +554,18 @@ export default function AdminOrganisationsTable({
                                   background: 'transparent',
                                   border: 'none',
                                   borderRadius: '8px',
-                                  fontSize: '0.82rem',
-                                  fontWeight: 600,
-                                  color: '#02302D',
+                                  fontSize: 'var(--text-sm)',
+                                  fontWeight: 'var(--weight-semibold)',
+                                  color: 'var(--color-encre)',
                                   cursor: 'pointer',
                                   textAlign: 'left',
                                   width: '100%',
                                   fontFamily: 'inherit',
                                 }}
-                                onMouseEnter={(e) => (e.currentTarget.style.background = '#F8FAFB')}
+                                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-bg)')}
                                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                               >
-                                <UsersIcon size={14} color="#3C7730" />
+                                <UsersIcon size={14} color="var(--color-bon-texte)" />
                                 <span>Ouvrir les comptes CX Manager</span>
                               </button>
 
@@ -583,18 +582,18 @@ export default function AdminOrganisationsTable({
                                   background: 'transparent',
                                   border: 'none',
                                   borderRadius: '8px',
-                                  fontSize: '0.82rem',
-                                  fontWeight: 600,
-                                  color: '#02302D',
+                                  fontSize: 'var(--text-sm)',
+                                  fontWeight: 'var(--weight-semibold)',
+                                  color: 'var(--color-encre)',
                                   cursor: 'pointer',
                                   textAlign: 'left',
                                   width: '100%',
                                   fontFamily: 'inherit',
                                 }}
-                                onMouseEnter={(e) => (e.currentTarget.style.background = '#F8FAFB')}
+                                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-bg)')}
                                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                               >
-                                <BarChartIcon size={14} color="#3C7730" />
+                                <BarChartIcon size={14} color="var(--color-bon-texte)" />
                                 <span>Voir le détail</span>
                               </button>
                             </div>
@@ -605,15 +604,14 @@ export default function AdminOrganisationsTable({
 
                     {/* ── Zone Expandable : Détail & Hiérarchie de l'organisation ── */}
                     {isExpanded && (
-                      <tr style={{ background: '#F8FBF9', borderBottom: '1px solid #E8ECE6' }}>
+                      <tr style={{ background: 'var(--color-bg)', borderBottom: '1px solid var(--color-trait)' }}>
                         <td colSpan={7} style={{ padding: '0 24px 24px 24px' }}>
                           <div
                             style={{
-                              background: '#FFFFFF',
+                              background: 'var(--color-surface)',
                               borderRadius: '16px',
-                              border: '1px solid #DCE8DF',
+                              border: '1px solid var(--color-trait)',
                               padding: '20px',
-                              boxShadow: '0 2px 8px rgba(2, 48, 45, 0.03)',
                             }}
                           >
                             {/* 1. Résumé Hiérarchique en 3 Blocs Clairs */}
@@ -628,27 +626,27 @@ export default function AdminOrganisationsTable({
                               {/* Bloc CX Managers */}
                               <div
                                 style={{
-                                  background: '#F8FAFB',
+                                  background: 'var(--color-bg)',
                                   borderRadius: '12px',
                                   padding: '14px 16px',
-                                  border: '1px solid #E8ECE6',
+                                  border: '1px solid var(--color-trait)',
                                 }}
                               >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                                  <UsersIcon size={16} color="#0369A1" />
-                                  <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0369A1', textTransform: 'uppercase' }}>
+                                  <UsersIcon size={16} color="var(--color-neutre-texte)" />
+                                  <span className="t-sm t-semi t-neutre t-majuscules">
                                     CX Managers ({org.cx_managers.length})
                                   </span>
                                 </div>
                                 {org.cx_managers.length === 0 ? (
-                                  <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Aucun CX Manager assigné</div>
+                                  <div className="t-xs t-2">Aucun CX Manager assigné</div>
                                 ) : (
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                     {org.cx_managers.map((cx) => (
-                                      <div key={cx.id} style={{ fontSize: '0.84rem', fontWeight: 700, color: '#02302D', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <span style={{ color: '#75B72A' }}>•</span>
+                                      <div key={cx.id} style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span aria-hidden="true" className="t-2">•</span>
                                         <span>{cx.prenom} {cx.nom}</span>
-                                        <span style={{ color: '#94A3B8', fontSize: '0.74rem', fontWeight: 500 }}>({cx.email})</span>
+                                        <span className="t-2 t-xs t-normal">({cx.email})</span>
                                       </div>
                                     ))}
                                   </div>
@@ -658,28 +656,28 @@ export default function AdminOrganisationsTable({
                               {/* Bloc Agency Managers */}
                               <div
                                 style={{
-                                  background: '#F8FAFB',
+                                  background: 'var(--color-bg)',
                                   borderRadius: '12px',
                                   padding: '14px 16px',
-                                  border: '1px solid #E8ECE6',
+                                  border: '1px solid var(--color-trait)',
                                 }}
                               >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                                  <UsersIcon size={16} color="#3C7730" />
-                                  <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#3C7730', textTransform: 'uppercase' }}>
+                                  <UsersIcon size={16} color="var(--color-bon-texte)" />
+                                  <span className="t-sm t-semi t-bon t-majuscules">
                                     Responsables d’agence ({org.agency_managers.length})
                                   </span>
                                 </div>
                                 {org.agency_managers.length === 0 ? (
-                                  <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Aucun responsable d’agence</div>
+                                  <div className="t-xs t-2">Aucun responsable d’agence</div>
                                 ) : (
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                     {org.agency_managers.map((am) => (
-                                      <div key={am.id} style={{ fontSize: '0.84rem', fontWeight: 700, color: '#02302D', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <span style={{ color: '#3C7730' }}>•</span>
+                                      <div key={am.id} style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span className="t-bon">•</span>
                                         <span>{am.prenom} {am.nom}</span>
                                         {am.agence_nom && (
-                                          <span style={{ color: '#64748B', fontSize: '0.74rem', fontWeight: 600 }}>({am.agence_nom})</span>
+                                          <span className="t-2 t-xs t-semi">({am.agence_nom})</span>
                                         )}
                                       </div>
                                     ))}
@@ -690,27 +688,27 @@ export default function AdminOrganisationsTable({
                               {/* Bloc Agences */}
                               <div
                                 style={{
-                                  background: '#F8FAFB',
+                                  background: 'var(--color-bg)',
                                   borderRadius: '12px',
                                   padding: '14px 16px',
-                                  border: '1px solid #E8ECE6',
+                                  border: '1px solid var(--color-trait)',
                                 }}
                               >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                                  <StoreIcon size={16} color="#02302D" />
-                                  <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#02302D', textTransform: 'uppercase' }}>
+                                  <StoreIcon size={16} color="var(--color-encre)" />
+                                  <span className="t-sm t-semi t-encre t-majuscules">
                                     Agences Réseau ({org.agences.length})
                                   </span>
                                 </div>
                                 {org.agences.length === 0 ? (
-                                  <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Aucune agence créée</div>
+                                  <div className="t-xs t-2">Aucune agence créée</div>
                                 ) : (
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                     {org.agences.map((ag) => (
-                                      <div key={ag.id} style={{ fontSize: '0.84rem', fontWeight: 700, color: '#02302D', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <span style={{ color: '#02302D' }}>•</span>
+                                      <div key={ag.id} style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span className="t-encre">•</span>
                                         <span>{ag.nom}</span>
-                                        {ag.ville && <span style={{ color: '#94A3B8', fontSize: '0.74rem', fontWeight: 500 }}>({ag.ville})</span>}
+                                        {ag.ville && <span className="t-2 t-xs t-normal">({ag.ville})</span>}
                                       </div>
                                     ))}
                                   </div>
@@ -721,72 +719,72 @@ export default function AdminOrganisationsTable({
                             {/* 2. Sous-Tableau des Utilisateurs de cette Organisation */}
                             <div>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                                <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: 800, color: '#02302D' }}>
+                                <h4 style={{ margin: 0, fontSize: 'var(--text-base)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>
                                   Utilisateurs rattachés ({org.users.length})
                                 </h4>
                               </div>
 
                               {org.users.length === 0 ? (
-                                <div style={{ fontSize: '0.84rem', color: '#64748B', fontStyle: 'italic', padding: '12px 0' }}>
+                                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-2)', fontStyle: 'italic', padding: '12px 0' }}>
                                   Aucun utilisateur enregistré dans cette organisation.
                                 </div>
                               ) : (
                                 <div style={{ overflowX: 'auto', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-                                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: '640px' }}>
+                                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)', minWidth: '640px' }}>
                                     <thead>
-                                      <tr style={{ background: '#F1F5F2', borderBottom: '1px solid #E2E8F0' }}>
-                                        <th style={{ textAlign: 'left', padding: '10px 14px', color: '#475569', fontWeight: 700, borderRadius: '8px 0 0 8px' }}>Nom</th>
-                                        <th style={{ textAlign: 'left', padding: '10px 14px', color: '#475569', fontWeight: 700 }}>E-mail</th>
-                                        <th style={{ textAlign: 'left', padding: '10px 14px', color: '#475569', fontWeight: 700 }}>Rôle</th>
-                                        <th style={{ textAlign: 'left', padding: '10px 14px', color: '#475569', fontWeight: 700 }}>Agences</th>
-                                        <th style={{ textAlign: 'center', padding: '10px 14px', color: '#475569', fontWeight: 700 }}>Statut</th>
-                                        <th style={{ textAlign: 'right', padding: '10px 14px', color: '#475569', fontWeight: 700, borderRadius: '0 8px 8px 0' }}>Dernière activité</th>
+                                      <tr style={{ background: 'var(--color-bg)', borderBottom: '1px solid var(--color-trait)' }}>
+                                        <th style={{ textAlign: 'left', padding: '10px 14px', color: 'var(--color-text-2)', fontWeight: 'var(--weight-semibold)', borderRadius: '8px 0 0 8px' }}>Nom</th>
+                                        <th style={{ textAlign: 'left', padding: '10px 14px', color: 'var(--color-text-2)', fontWeight: 'var(--weight-semibold)' }}>E-mail</th>
+                                        <th style={{ textAlign: 'left', padding: '10px 14px', color: 'var(--color-text-2)', fontWeight: 'var(--weight-semibold)' }}>Rôle</th>
+                                        <th style={{ textAlign: 'left', padding: '10px 14px', color: 'var(--color-text-2)', fontWeight: 'var(--weight-semibold)' }}>Agences</th>
+                                        <th style={{ textAlign: 'center', padding: '10px 14px', color: 'var(--color-text-2)', fontWeight: 'var(--weight-semibold)' }}>Statut</th>
+                                        <th style={{ textAlign: 'right', padding: '10px 14px', color: 'var(--color-text-2)', fontWeight: 'var(--weight-semibold)', borderRadius: '0 8px 8px 0' }}>Dernière activité</th>
                                       </tr>
                                     </thead>
                                     <tbody>
                                       {org.users.map((u) => {
                                         const isCX = u.role === 'CX Manager';
                                         return (
-                                          <tr key={u.id} style={{ borderBottom: '1px solid #F1F4EE' }}>
-                                            <td style={{ padding: '10px 14px', fontWeight: 700, color: '#02302D' }}>
+                                          <tr key={u.id} style={{ borderBottom: '1px solid var(--color-trait)' }}>
+                                            <td style={{ padding: '10px 14px', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>
                                               {u.prenom} {u.nom}
                                             </td>
-                                            <td style={{ padding: '10px 14px', color: '#64748B' }}>
+                                            <td style={{ padding: '10px 14px', color: 'var(--color-text-2)' }}>
                                               {u.email}
                                             </td>
                                             <td style={{ padding: '10px 14px' }}>
                                               <span
                                                 style={{
-                                                  background: isCX ? '#E0F2FE' : '#EBF5E9',
-                                                  color: isCX ? '#0369A1' : '#3C7730',
+                                                  background: isCX ? 'var(--color-neutre-fond)' : 'var(--color-bon-fond)',
+                                                  color: isCX ? 'var(--color-neutre-texte)' : 'var(--color-bon-texte)',
                                                   padding: '2px 8px',
                                                   borderRadius: '9999px',
-                                                  fontSize: '0.72rem',
-                                                  fontWeight: 800,
-                                                  border: `1px solid ${isCX ? '#BAE6FD' : '#D5E8D3'}`,
+                                                  fontSize: 'var(--text-xs)',
+                                                  fontWeight: 'var(--weight-semibold)',
+                                                  border: `1px solid ${isCX ? 'var(--color-neutre-fond)' : 'var(--color-bon-fond)'}`,
                                                 }}
                                               >
                                                 {u.role}
                                               </span>
                                             </td>
-                                            <td style={{ padding: '10px 14px', color: '#475569', fontWeight: 600 }}>
+                                            <td style={{ padding: '10px 14px', color: 'var(--color-text-2)', fontWeight: 'var(--weight-semibold)' }}>
                                               {isCX ? `${u.agences_count} agences` : u.agence_nom || '—'}
                                             </td>
                                             <td style={{ textAlign: 'center', padding: '10px 14px' }}>
                                               <span
                                                 style={{
-                                                  background: u.active ? '#EBF5E9' : '#F1F5F9',
-                                                  color: u.active ? '#3C7730' : '#64748B',
+                                                  background: u.active ? 'var(--color-bon-fond)' : 'var(--color-neutre-fond)',
+                                                  color: u.active ? 'var(--color-bon-texte)' : 'var(--color-text-2)',
                                                   padding: '2px 8px',
                                                   borderRadius: '9999px',
-                                                  fontSize: '0.7rem',
-                                                  fontWeight: 800,
+                                                  fontSize: 'var(--text-xs)',
+                                                  fontWeight: 'var(--weight-semibold)',
                                                 }}
                                               >
                                                 {u.active ? 'Actif' : 'Inactif'}
                                               </span>
                                             </td>
-                                            <td style={{ textAlign: 'right', padding: '10px 14px', color: '#64748B', fontSize: '0.76rem' }}>
+                                            <td style={{ textAlign: 'right', padding: '10px 14px', color: 'var(--color-text-2)', fontSize: 'var(--text-xs)' }}>
                                               {formatRelativeActivity(u.derniere_connexion)}
                                             </td>
                                           </tr>

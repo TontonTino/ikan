@@ -38,7 +38,7 @@ export default function VeilleKpiRow({ synthese }: { synthese: VeilleSyntheseRes
           badgeColor="neutral" subtitle={themeDominant ? mentionsLabel(themeDominant.count) : 'Aucune mention'} />
       </div>
       {echantillonReduit && (
-        <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
+        <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
           Échantillon réduit ({synthese.total} mentions), à interpréter avec prudence.
         </p>
       )}

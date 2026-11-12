@@ -10,12 +10,10 @@ interface SidebarWorkspaceCardProps {
   collapsed?: boolean;
 }
 
+// Avatar de remplacement (initiales) : un seul style neutre de la palette, quelle que soit l'organisation.
+// Les cinq teintes d'avant (orange, bleu, rose, violet…) n'avaient aucun rôle dans la palette.
 const FALLBACK_PALETTES = [
-  { bg: '#FFF3E6', text: '#D95D00', border: '#FFDEC0' }, // Orange / Amber
-  { bg: '#EAF5EC', text: '#3C7730', border: '#D5E8D3' }, // Vert IKAN
-  { bg: '#EFF6FF', text: '#2563EB', border: '#DBEAFE' }, // Bleu
-  { bg: '#FDF2F8', text: '#DB2777', border: '#FCE7F3' }, // Rose
-  { bg: '#F5F3FF', text: '#7C3AED', border: '#EDE9FE' }, // Violet
+  { bg: 'var(--color-neutre-fond)', text: 'var(--color-encre)', border: 'var(--color-neutre-fond)' },
 ];
 
 function getPalette(name: string) {
@@ -64,7 +62,7 @@ const AdminProfessionalAvatar: React.FC = () => (
     />
 
     {/* Inner Shirt (White) */}
-    <path d="M21 34L24 40L27 34" fill="#FFFFFF" />
+    <path d="M21 34L24 40L27 34" fill="var(--color-text-inverse)" />
 
     {/* Tie / Accent (IKAN Green) */}
     <path d="M23 37L24 44L25 37Z" fill="#75B72A" />
@@ -94,15 +92,15 @@ const AdminProfessionalAvatar: React.FC = () => (
     />
 
     {/* Minimalist Modern Glasses */}
-    <rect x="18" y="19" width="5" height="3.5" rx="1" stroke="#02302D" strokeWidth="1" fill="none" />
-    <rect x="25" y="19" width="5" height="3.5" rx="1" stroke="#02302D" strokeWidth="1" fill="none" />
-    <line x1="23" y1="20.5" x2="25" y2="20.5" stroke="#02302D" strokeWidth="1" />
+    <rect x="18" y="19" width="5" height="3.5" rx="1" stroke="var(--color-encre)" strokeWidth="1" fill="none" />
+    <rect x="25" y="19" width="5" height="3.5" rx="1" stroke="var(--color-encre)" strokeWidth="1" fill="none" />
+    <line x1="23" y1="20.5" x2="25" y2="20.5" stroke="var(--color-encre)" strokeWidth="1" />
 
     {/* Friendly Smile */}
     <path d="M22.5 26C23.2 26.8 24.8 26.8 25.5 26" stroke="#C28260" strokeWidth="1" strokeLinecap="round" />
 
     {/* Subtle Online / Pro Badge on Avatar Corner */}
-    <circle cx="39" cy="9" r="4" fill="#FFFFFF" />
+    <circle cx="39" cy="9" r="4" fill="var(--color-text-inverse)" />
     <circle cx="39" cy="9" r="3" fill="#75B72A" />
   </svg>
 );
@@ -237,14 +235,14 @@ export default function SidebarWorkspaceCard({ user, collapsed = false }: Sideba
             ))}
             {!contextLoading && !contextError && contextAgences.length > 0 && contextAgences.filter((agence) => `${agence.nom} ${agence.ville ?? ''}`.toLocaleLowerCase().includes(contextSearch.trim().toLocaleLowerCase())).length === 0 && <div className="cx-context-message">Aucune agence ne correspond.</div>}
             <style>{`
-              .cx-context-menu { position:absolute; top:0; left:calc(100% + 10px); z-index:60; width:min(300px, calc(100vw - 100px)); max-height:min(420px, 70vh); overflow:auto; padding:10px; box-sizing:border-box; background:#fff; color:#0f172a; border:1px solid #e2e8f0; border-radius:14px; box-shadow:0 16px 40px rgba(2,48,45,.22); }
-              .cx-context-search { display:flex; align-items:center; gap:8px; min-height:44px; box-sizing:border-box; padding:9px 10px; margin-bottom:7px; border:1px solid #dbe3df; border-radius:9px; color:#64748b; }
-              .cx-context-search input { min-width:0; width:100%; min-height:24px; border:0; outline:0; font:inherit; font-size:.875rem; }
-              .cx-context-option { display:flex; flex-direction:column; align-items:flex-start; gap:2px; width:100%; padding:9px 10px; border:0; border-radius:8px; background:transparent; color:#0f172a; text-align:left; font:inherit; font-size:.82rem; cursor:pointer; }
-              .cx-context-option:hover,.cx-context-option:focus-visible,.cx-context-option.is-selected { background:#eef5e8; outline:none; }
-              .cx-context-option small { color:#64748b; font-size:.72rem; }
-              .cx-context-message { padding:10px; color:#64748b; font-size:.78rem; }
-              .cx-context-error { color:#b91c1c; }
+              .cx-context-menu { position:absolute; top:0; left:calc(100% + 10px); z-index:60; width:min(300px, calc(100vw - 100px)); max-height:min(420px, 70vh); overflow:auto; padding:10px; box-sizing:border-box; background:var(--color-surface); color:var(--color-encre); border:1px solid var(--color-trait); border-radius:14px; box-shadow:var(--shadow-overlay); }
+              .cx-context-search { display:flex; align-items:center; gap:8px; min-height:44px; box-sizing:border-box; padding:9px 10px; margin-bottom:7px; border: 1px solid var(--color-border); border-radius:9px; color:var(--color-text-2); }
+              .cx-context-search input { min-width:0; width:100%; min-height:24px; border:0; outline:0; font:inherit; font-size:var(--text-sm); }
+              .cx-context-option { display:flex; flex-direction:column; align-items:flex-start; gap:2px; width:100%; padding:9px 10px; border:0; border-radius:8px; background:transparent; color:var(--color-encre); text-align:left; font:inherit; font-size:var(--text-sm); cursor:pointer; }
+              .cx-context-option:hover,.cx-context-option:focus-visible,.cx-context-option.is-selected { background: var(--color-neutre-fond); outline:none; }
+              .cx-context-option small { color:var(--color-text-2); font-size:var(--text-xs); }
+              .cx-context-message { padding:10px; color:var(--color-text-2); font-size:var(--text-xs); }
+              .cx-context-error { color:var(--color-critique-texte); }
               @media(max-width:1024px) { .cx-context-menu { left:0; top:calc(100% + 8px); width:100%; } }
             `}</style>
           </div>
@@ -265,20 +263,19 @@ export default function SidebarWorkspaceCard({ user, collapsed = false }: Sideba
             width: 100%;
             min-height: 68px;
             padding: 9px 36px;
-            color: #FFFFFF;
-            background: rgba(255, 255, 255, 0.055);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--color-text-inverse);
+            background: var(--sidebar-hover-bg);
+            border: 1px solid var(--sidebar-active-border);
             border-radius: 14px;
             cursor: pointer;
             transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
           }
           .agency-context-button:hover {
-            background: rgba(255, 255, 255, 0.11);
-            border-color: rgba(188, 207, 0, 0.42);
-            box-shadow: 0 5px 16px rgba(0, 0, 0, 0.16);
+            background: var(--sidebar-active-bg);
+            border-color: var(--sidebar-active-border);
           }
           .agency-context-button:focus-visible {
-            outline: 3px solid #BCCF00;
+            outline: 3px solid var(--sidebar-text-strong);
             outline-offset: 3px;
           }
           .cx-context-card {
@@ -294,10 +291,10 @@ export default function SidebarWorkspaceCard({ user, collapsed = false }: Sideba
             box-sizing: border-box;
             overflow: hidden;
             color: ${palette.text};
-            background: ${orgLogo ? '#FFFFFF' : palette.bg};
-            border: 1px solid ${orgLogo ? '#E5E7EB' : palette.border};
+            background: ${orgLogo ? 'var(--color-surface)' : palette.bg};
+            border: 1px solid ${orgLogo ? 'var(--color-trait)' : palette.border};
             border-radius: 12px;
-            font-size: 0.95rem;
+            font-size: var(--text-base);
             font-weight: 800;
           }
           .agency-context-logo img {
@@ -311,12 +308,12 @@ export default function SidebarWorkspaceCard({ user, collapsed = false }: Sideba
             right: 12px;
             display: flex;
             align-items: center;
-            color: rgba(255, 255, 255, 0.48);
+            color: var(--sidebar-muted);
             transition: color 180ms ease, transform 180ms ease;
           }
           .agency-context-button:hover .agency-context-chevron,
           .agency-context-button:focus-visible .agency-context-chevron {
-            color: #BCCF00;
+            color: var(--sidebar-text-strong);
             transform: translateX(2px);
           }
           .agency-context-tooltip {
@@ -330,21 +327,21 @@ export default function SidebarWorkspaceCard({ user, collapsed = false }: Sideba
             width: 100%;
             padding: 11px 13px;
             box-sizing: border-box;
-            color: #FFFFFF;
-            background: #064E3B;
-            border: 1px solid rgba(255, 255, 255, 0.16);
+            color: var(--color-text-inverse);
+            background: var(--color-encre);
+            border: 1px solid var(--sidebar-active-border);
             border-radius: 12px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.24);
+            box-shadow: var(--shadow-dropdown);
             pointer-events: none;
           }
           .agency-context-tooltip-org {
-            font-size: 0.78rem;
+            font-size: var(--text-xs);
             font-weight: 700;
             line-height: 1.35;
           }
           .agency-context-tooltip-agency {
-            color: #C4D5D0;
-            font-size: 0.72rem;
+            color: var(--sidebar-text);
+            font-size: var(--text-xs);
             font-weight: 500;
             line-height: 1.4;
             overflow-wrap: anywhere;
@@ -378,8 +375,8 @@ export default function SidebarWorkspaceCard({ user, collapsed = false }: Sideba
       }
       className={`sidebar-admin-context${collapsed ? ' sidebar-admin-context--collapsed' : ''}`}
       style={{
-        background: '#FFFFFF',
-        border: '1px solid #EEF0F2',
+        background: 'var(--color-surface)',
+        border: '1px solid var(--color-trait)',
         borderRadius: '16px',
         padding: '12px',
         display: 'flex',
@@ -388,7 +385,7 @@ export default function SidebarWorkspaceCard({ user, collapsed = false }: Sideba
         marginBottom: '24px',
         cursor: isAgencyManager ? 'pointer' : 'default',
         userSelect: 'none',
-        boxShadow: '0 2px 8px rgba(2, 48, 45, 0.10)',
+        boxShadow: 'var(--shadow-sm)',
       }}
     >
       {/* Logo ou Avatar */}
@@ -397,14 +394,14 @@ export default function SidebarWorkspaceCard({ user, collapsed = false }: Sideba
           width: '44px',
           height: '44px',
           borderRadius: '12px',
-          background: isAdmin ? 'transparent' : (orgLogo ? '#FFFFFF' : palette.bg),
-          border: isAdmin ? 'none' : `1px solid ${orgLogo ? '#E5E7EB' : palette.border}`,
-          color: isAdmin ? '#FFFFFF' : palette.text,
+          background: isAdmin ? 'transparent' : (orgLogo ? 'var(--color-surface)' : palette.bg),
+          border: isAdmin ? 'none' : `1px solid ${orgLogo ? 'var(--color-trait)' : palette.border}`,
+          color: isAdmin ? 'var(--color-text-inverse)' : palette.text,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '0.95rem',
-          fontWeight: 800,
+          fontSize: 'var(--text-base)',
+          fontWeight: 'var(--weight-semibold)',
           flexShrink: 0,
           overflow: 'hidden',
           padding: orgLogo ? '6px' : 0,
@@ -429,9 +426,9 @@ export default function SidebarWorkspaceCard({ user, collapsed = false }: Sideba
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
-            fontSize: '0.88rem',
-            color: '#111827',
-            fontWeight: 700,
+            fontSize: 'var(--text-sm)',
+            color: 'var(--color-encre)',
+            fontWeight: 'var(--weight-semibold)',
             lineHeight: 1.3,
             whiteSpace: 'normal',
             overflowWrap: 'break-word',
@@ -441,9 +438,9 @@ export default function SidebarWorkspaceCard({ user, collapsed = false }: Sideba
         </div>
         <div
           style={{
-            fontSize: '0.74rem',
-            color: '#64748B',
-            fontWeight: 500,
+            fontSize: 'var(--text-xs)',
+            color: 'var(--color-text-2)',
+            fontWeight: 'var(--weight-normal)',
             lineHeight: 1.3,
             marginTop: '2px',
             whiteSpace: 'normal',
@@ -455,7 +452,7 @@ export default function SidebarWorkspaceCard({ user, collapsed = false }: Sideba
       </div>
 
       {/* Chevron décoratif (indique le clic possible pour l'Agency Manager, voir commentaire ci-dessus). */}
-      <span style={{ display: 'flex', alignItems: 'center', color: '#94A3B8', flexShrink: 0 }} aria-hidden="true">
+      <span style={{ display: 'flex', alignItems: 'center', color: 'var(--color-text-2)', flexShrink: 0 }} aria-hidden="true">
         <ChevronDownIcon size={16} />
       </span>
     </div>

@@ -31,7 +31,7 @@ export function TableauEvolution({ points }: { points: TendanceSatisfaction[] })
         <tbody>
           {points.map((p) => (
             <tr key={p.date} style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
-              <th scope="row" style={{ textAlign: 'left', padding: 'var(--space-2)', fontWeight: 600 }}>{p.date}</th>
+              <th scope="row" style={{ textAlign: 'left', padding: 'var(--space-2)', fontWeight: 'var(--weight-semibold)' }}>{p.date}</th>
               <td style={{ textAlign: 'right', padding: 'var(--space-2)' }}>{formaterPourcentage(p.taux)}</td>
               <td style={{ textAlign: 'right', padding: 'var(--space-2)' }}>
                 {p.nombre_feedbacks}

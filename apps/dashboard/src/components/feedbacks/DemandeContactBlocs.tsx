@@ -23,16 +23,16 @@ const dateHeure = (iso: string) => new Date(iso).toLocaleString('fr-FR', { day: 
  * cibles de 44 px minimum, Échap = Annuler, focus initial sur « Annuler » (le choix le moins lourd de conséquences).
  */
 export function ConfirmationRecontact({ onConfirmer, onAnnuler, chargement = false }: { onConfirmer: () => void; onAnnuler: () => void; chargement?: boolean }) {
-  const bouton: React.CSSProperties = { minHeight: 44, minWidth: 44, padding: '10px 18px', fontSize: '0.84rem', borderRadius: '10px', fontWeight: 800 };
+  const bouton: React.CSSProperties = { minHeight: 44, minWidth: 44, padding: '10px 18px', fontSize: 'var(--text-sm)', borderRadius: '10px', fontWeight: 'var(--weight-semibold)' };
   return (
     <div
       role="group"
       aria-label="Confirmer : marquer comme recontacté"
       onKeyDown={(e) => { if (e.key === 'Escape') onAnnuler(); }}
-      style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '14px 16px', background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: '12px' }}
+      style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '14px 16px', background: 'var(--color-surveiller-fond)', borderRadius: '12px' }}
     >
-      <p role="alert" style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.86rem', fontWeight: 700, color: '#7C2D12', lineHeight: 1.5 }}>
-        <AlertTriangleIcon size={16} color="#9A3412" aria-hidden="true" />
+      <p role="alert" style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-surveiller-texte)', lineHeight: 1.5 }}>
+        <AlertTriangleIcon size={16} color="var(--color-surveiller-texte)" aria-hidden="true" />
         <span>{MESSAGE_CONFIRMATION_RECONTACT}</span>
       </p>
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -46,8 +46,8 @@ export function ConfirmationRecontact({ onConfirmer, onAnnuler, chargement = fal
 /** Avertissement à côté du formulaire « Enregistrer une réponse » : le geste traite aussi la demande de rappel. */
 export function AvertissementReponse() {
   return (
-    <p role="note" style={{ margin: '0 0 10px', display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '0.78rem', fontWeight: 700, color: '#9A3412', lineHeight: 1.5 }}>
-      <AlertTriangleIcon size={14} color="#9A3412" aria-hidden="true" />
+    <p role="note" style={{ margin: '0 0 10px', display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-surveiller-texte)', lineHeight: 1.5 }}>
+      <AlertTriangleIcon size={14} color="var(--color-surveiller-texte)" aria-hidden="true" />
       <span>{MESSAGE_AVERTISSEMENT_REPONSE}</span>
     </p>
   );
@@ -56,8 +56,8 @@ export function AvertissementReponse() {
 /** Remplace téléphone et e-mail d'une demande traitée (l'API ne les renvoie plus : ce n'est pas seulement un affichage). */
 export function CoordonneesMasquees() {
   return (
-    <p style={{ margin: 0, display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#475569', fontSize: '0.82rem', fontWeight: 700 }}>
-      <LockIcon size={14} color="#475569" aria-hidden="true" />
+    <p style={{ margin: 0, display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-2)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}>
+      <LockIcon size={14} color="var(--color-text-2)" aria-hidden="true" />
       <span>Coordonnées masquées : la demande a été traitée.</span>
     </p>
   );
@@ -74,7 +74,7 @@ export function ConsentementContact({ demande }: { demande: ChampsTraitementDema
   } else {
     texte = 'Consentement non enregistré';
   }
-  return <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>{texte}</p>;
+  return <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', fontWeight: 'var(--weight-semibold)' }}>{texte}</p>;
 }
 
 /** « Recontactée le … par … » ; date et auteur absents pour une demande traitée avant la migration 032. */
@@ -82,8 +82,8 @@ export function InfoTraitement({ demande }: { demande: ChampsTraitementDemande }
   if (!demande.traitee) return null;
   const par = demande.traitee_par_nom ? ` par ${demande.traitee_par_nom}` : '';
   return (
-    <p style={{ margin: 0, display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#3C7730', fontWeight: 700 }}>
-      <CheckCircleIcon size={14} color="#3C7730" aria-hidden="true" />
+    <p style={{ margin: 0, display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: 'var(--text-xs)', color: 'var(--color-bon-texte)', fontWeight: 'var(--weight-semibold)' }}>
+      <CheckCircleIcon size={14} color="var(--color-bon-texte)" aria-hidden="true" />
       <span>{demande.date_traitement ? `Recontactée le ${dateHeure(demande.date_traitement)}${par}` : 'Recontactée (date non enregistrée)'}</span>
     </p>
   );

@@ -401,7 +401,7 @@ export default function FeedbackTreatmentModal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'rgba(15, 23, 42, 0.65)',
+        background: 'var(--overlay-scrim)',
         backdropFilter: 'blur(6px)',
         WebkitBackdropFilter: 'blur(6px)',
         padding: '16px',
@@ -439,9 +439,9 @@ export default function FeedbackTreatmentModal({
           width: '780px',
           maxWidth: '100%',
           maxHeight: 'min(92vh, 900px)',
-          background: '#FFFFFF',
+          background: 'var(--color-surface)',
           borderRadius: '24px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          boxShadow: 'var(--shadow-overlay)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -453,8 +453,8 @@ export default function FeedbackTreatmentModal({
         <div
           className="on-dark feedback-treatment-header"
           style={{
-            background: '#02302D',
-            color: '#FFFFFF',
+            background: 'var(--color-encre)',
+            color: 'var(--color-text-inverse)',
             padding: '22px 28px',
             display: 'flex',
             justifyContent: 'space-between',
@@ -466,10 +466,9 @@ export default function FeedbackTreatmentModal({
             <div className="feedback-treatment-header-meta" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
               <span
                 style={{
-                  background: '#75B72A',
-                  color: '#02302D',
-                  fontWeight: 800,
-                  fontSize: '0.72rem',
+                  color: 'var(--color-text-on-dark-muted)',
+                  fontWeight: 'var(--weight-semibold)',
+                  fontSize: 'var(--text-xs)',
                   padding: '3px 10px',
                   borderRadius: '9999px',
                   textTransform: 'uppercase',
@@ -479,7 +478,7 @@ export default function FeedbackTreatmentModal({
                 Traitement de l’avis
               </span>
             </div>
-            <h2 id="feedback-treatment-title" style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
+            <h2 id="feedback-treatment-title" style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--weight-semibold)', margin: 0, letterSpacing: '-0.02em' }}>
               Avis #{feedback.id.slice(0, 8)}
             </h2>
           </div>
@@ -492,15 +491,15 @@ export default function FeedbackTreatmentModal({
             style={{
               background: 'rgba(255,255,255,0.12)',
               border: 'none',
-              color: '#FFFFFF',
+              color: 'var(--color-text-inverse)',
               width: '44px',
               height: '44px',
               minWidth: '44px',
               minHeight: '44px',
               borderRadius: '50%',
               cursor: 'pointer',
-              fontSize: '1rem',
-              fontWeight: 700,
+              fontSize: 'var(--text-base)',
+              fontWeight: 'var(--weight-semibold)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -515,13 +514,12 @@ export default function FeedbackTreatmentModal({
         {toastMessage && (
           <div
             style={{
-              background: '#3C7730',
-              color: '#FFFFFF',
+              background: 'var(--color-bon-fond)',
+              color: 'var(--color-bon-texte)',
               padding: '10px 24px',
-              fontSize: '0.84rem',
-              fontWeight: 700,
+              fontSize: 'var(--text-sm)',
+              fontWeight: 'var(--weight-semibold)',
               textAlign: 'center',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
             }}
           >
             {toastMessage}
@@ -532,9 +530,9 @@ export default function FeedbackTreatmentModal({
         <div
           className="feedback-treatment-stepper"
           style={{
-            background: '#F8FAFC',
+            background: 'var(--color-bg)',
             padding: '16px 28px',
-            borderBottom: '1px solid #E2E8F0',
+            borderBottom: '1px solid var(--color-trait)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -545,21 +543,21 @@ export default function FeedbackTreatmentModal({
             const isActive = idx === currentStepIdx && currentStatut !== 'resolu';
             const isFuture = idx > currentStepIdx;
 
-            let dotBg = '#CBD5E1';
-            let dotColor = '#64748B';
-            let labelColor = '#64748B';
-            let labelWeight = 500;
+            let dotBg = 'var(--color-neutre-fond)';
+            let dotColor = 'var(--color-text-2)';
+            let labelColor = 'var(--color-text-2)';
+            let labelWeight = 'var(--weight-normal)';
 
             if (isCompleted) {
-              dotBg = '#3C7730';
-              dotColor = '#FFFFFF';
-              labelColor = '#02302D';
-              labelWeight = 700;
+              dotBg = 'var(--color-marque)';
+              dotColor = 'var(--color-text-inverse)';
+              labelColor = 'var(--color-encre)';
+              labelWeight = 'var(--weight-semibold)';
             } else if (isActive) {
-              dotBg = '#D97706';
-              dotColor = '#FFFFFF';
-              labelColor = '#B45309';
-              labelWeight = 800;
+              dotBg = 'var(--color-encre)';
+              dotColor = 'var(--color-text-inverse)';
+              labelColor = 'var(--color-encre)';
+              labelWeight = 'var(--weight-semibold)';
             }
 
             return (
@@ -575,13 +573,13 @@ export default function FeedbackTreatmentModal({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '0.72rem',
-                      fontWeight: 800,
+                      fontSize: 'var(--text-xs)',
+                      fontWeight: 'var(--weight-semibold)',
                     }}
                   >
                     {isCompleted ? '✓' : idx + 1}
                   </div>
-                  <span style={{ fontSize: '0.82rem', color: labelColor, fontWeight: labelWeight }}>
+                  <span style={{ fontSize: 'var(--text-sm)', color: labelColor, fontWeight: labelWeight }}>
                     {step.label}
                   </span>
                 </div>
@@ -590,7 +588,7 @@ export default function FeedbackTreatmentModal({
                     style={{
                       flex: 1,
                       height: '2px',
-                      background: idx < currentStepIdx ? '#3C7730' : '#E2E8F0',
+                      background: idx < currentStepIdx ? 'var(--color-marque)' : 'var(--color-trait)',
                       margin: '0 12px',
                     }}
                   />
@@ -605,20 +603,20 @@ export default function FeedbackTreatmentModal({
           className="feedback-treatment-metadata"
           style={{
             padding: '14px 28px',
-            background: '#FFFFFF',
-            borderBottom: '1px solid #F1F5F9',
+            background: 'var(--color-surface)',
+            borderBottom: '1px solid var(--color-trait)',
             display: 'flex',
             flexWrap: 'wrap',
             alignItems: 'center',
             gap: '12px',
-            fontSize: '0.82rem',
+            fontSize: 'var(--text-sm)',
           }}
         >
           {/* Note */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#F8FAFC', padding: '4px 10px', borderRadius: '8px', border: '1px solid #E2E8F0', fontWeight: 700 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--color-bg)', padding: '4px 10px', borderRadius: '8px', border: '1px solid var(--color-trait)', fontWeight: 'var(--weight-semibold)' }}>
             <span>Note :</span>
-            <span style={{ color: '#F59E0B' }}>{'★'.repeat(feedback.note)}{'☆'.repeat(5 - feedback.note)}</span>
-            <span style={{ color: '#64748B' }}>({feedback.note}/5)</span>
+            <span className="t-encre" aria-hidden="true">{'★'.repeat(feedback.note)}{'☆'.repeat(5 - feedback.note)}</span>
+            <span className="t-2">({feedback.note}/5)</span>
           </div>
 
           {/* Sentiment */}
@@ -626,40 +624,40 @@ export default function FeedbackTreatmentModal({
             style={{
               padding: '4px 10px',
               borderRadius: '8px',
-              fontWeight: 700,
-              background: feedback.analyse_ia?.sentiment === 'positif' ? '#EBF5E9' : feedback.analyse_ia?.sentiment === 'negatif' ? '#FEE2E2' : '#FEF3C7',
-              color: feedback.analyse_ia?.sentiment === 'positif' ? '#3C7730' : feedback.analyse_ia?.sentiment === 'negatif' ? '#B91C1C' : '#B45309',
+              fontWeight: 'var(--weight-semibold)',
+              background: feedback.analyse_ia?.sentiment === 'positif' ? 'var(--color-bon-fond)' : feedback.analyse_ia?.sentiment === 'negatif' ? 'var(--color-critique-fond)' : 'var(--color-surveiller-fond)',
+              color: feedback.analyse_ia?.sentiment === 'positif' ? 'var(--color-bon-texte)' : feedback.analyse_ia?.sentiment === 'negatif' ? 'var(--color-critique-texte)' : 'var(--color-surveiller-texte)',
               display: 'flex',
               alignItems: 'center',
               gap: '5px',
             }}
           >
-            {feedback.analyse_ia?.sentiment === 'positif' && <ThumbsUpIcon size={12} color="#3C7730" />}
-            {feedback.analyse_ia?.sentiment === 'negatif' && <ThumbsDownIcon size={12} color="#B91C1C" />}
+            {feedback.analyse_ia?.sentiment === 'positif' && <ThumbsUpIcon size={12} color="var(--color-bon-texte)" />}
+            {feedback.analyse_ia?.sentiment === 'negatif' && <ThumbsDownIcon size={12} color="var(--color-critique-texte)" />}
             <span>Ton : {feedback.analyse_ia ? (feedback.analyse_ia.sentiment ? SENTIMENT_LABELS[feedback.analyse_ia.sentiment] ?? feedback.analyse_ia.sentiment : 'Non évalué') : libelleAnalyseAbsente(feedback)}</span>
           </div>
 
           {/* Criticité : afficher uniquement l'analyse réelle et distinguer une valeur absente. */}
-          <div style={{ background: feedback.analyse_ia?.criticite === 'critique' ? '#FEE2E2' : feedback.analyse_ia?.criticite === 'elevee' ? '#FFEDD5' : '#F8FAFC', color: feedback.analyse_ia?.criticite === 'critique' ? '#B91C1C' : feedback.analyse_ia?.criticite === 'elevee' ? '#C2410C' : '#475569', padding: '4px 10px', borderRadius: '8px', border: '1px solid #E2E8F0', fontWeight: 800 }}>
+          <div style={{ background: feedback.analyse_ia?.criticite === 'critique' ? 'var(--color-critique-fond)' : feedback.analyse_ia?.criticite === 'elevee' ? 'var(--color-surveiller-fond)' : 'var(--color-bg)', color: feedback.analyse_ia?.criticite === 'critique' ? 'var(--color-critique-texte)' : feedback.analyse_ia?.criticite === 'elevee' ? 'var(--color-critique-texte)' : 'var(--color-text-2)', padding: '4px 10px', borderRadius: '8px', border: '1px solid var(--color-trait)', fontWeight: 'var(--weight-semibold)' }}>
             Gravité : {feedback.analyse_ia ? (feedback.analyse_ia.criticite ? GRAVITE_LABELS[feedback.analyse_ia.criticite] ?? feedback.analyse_ia.criticite : 'Non évaluée') : libelleAnalyseAbsente(feedback)}
           </div>
           {feedback.analyse_ia?.discordance_detectee && (
-            <div role="status" style={{ background: '#FFF7ED', color: '#9A3412', padding: '4px 10px', borderRadius: '8px', border: '1px solid #FED7AA', fontWeight: 800 }}>
+            <div role="status" style={{ background: 'var(--color-surveiller-fond)', color: 'var(--color-surveiller-texte)', padding: '4px 10px', borderRadius: '8px', fontWeight: 'var(--weight-semibold)' }}>
               <span title="La note donnée ne correspond pas au ton du commentaire (ex. 5/5 avec un commentaire négatif).">Note et commentaire contradictoires</span>
             </div>
           )}
 
           {/* Statut Badge */}
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>Statut :</span>
+            <span className="t-sm t-2 t-semi">Statut :</span>
             <span
               style={{
                 padding: '4px 12px',
                 borderRadius: '9999px',
-                fontWeight: 800,
-                fontSize: '0.75rem',
-                background: currentStatut === 'resolu' ? '#EBF5E9' : currentStatut === 'en_cours' ? '#FEF3C7' : currentStatut === 'en_traitement' ? '#E0F2FE' : '#FEE2E2',
-                color: currentStatut === 'resolu' ? '#3C7730' : currentStatut === 'en_cours' ? '#92400E' : currentStatut === 'en_traitement' ? '#0369A1' : '#B91C1C',
+                fontWeight: 'var(--weight-semibold)',
+                fontSize: 'var(--text-xs)',
+                background: currentStatut === 'resolu' ? 'var(--color-bon-fond)' : currentStatut === 'en_cours' ? 'var(--color-surveiller-fond)' : currentStatut === 'en_traitement' ? 'var(--color-neutre-fond)' : 'var(--color-critique-fond)',
+                color: currentStatut === 'resolu' ? 'var(--color-bon-texte)' : currentStatut === 'en_cours' ? 'var(--color-surveiller-texte)' : currentStatut === 'en_traitement' ? 'var(--color-neutre-texte)' : 'var(--color-critique-texte)',
               }}
             >
               {AVIS_STATUT_LABELS[currentStatut] ?? AVIS_STATUT_LABELS.nouveau}
@@ -670,7 +668,7 @@ export default function FeedbackTreatmentModal({
         <PriseEnChargeBanner statut={currentStatut} role={currentUserRole} chargement={loadingAction} onPrendreEnCharge={handlePrendreEnCharge} />
 
         {/* ── Navigation Onglets ────────────────────────────────── */}
-        <div className="feedback-treatment-tabs" style={{ display: 'flex', borderBottom: '1px solid #E2E8F0', background: '#FAFAFA', padding: '0 28px' }}>
+        <div className="feedback-treatment-tabs" style={{ display: 'flex', borderBottom: '1px solid var(--color-trait)', background: 'var(--color-bg)', padding: '0 28px' }}>
           {[
             { id: 'traitement', label: 'Traitement', icon: <ClockIcon size={14} /> },
             { id: 'historique', label: `Historique (${historiqueList.length})`, icon: <UsersIcon size={14} /> },
@@ -685,10 +683,10 @@ export default function FeedbackTreatmentModal({
                   padding: '12px 18px',
                   background: 'none',
                   border: 'none',
-                  borderBottom: active ? '2px solid #02302D' : '2px solid transparent',
-                  color: active ? '#02302D' : '#64748B',
-                  fontWeight: active ? 800 : 600,
-                  fontSize: '0.84rem',
+                  borderBottom: active ? '2px solid var(--color-encre)' : '2px solid transparent',
+                  color: active ? 'var(--color-encre)' : 'var(--color-text-2)',
+                  fontWeight: active ? 'var(--weight-semibold)' : 'var(--weight-semibold)',
+                  fontSize: 'var(--text-sm)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -713,43 +711,43 @@ export default function FeedbackTreatmentModal({
               {/* 1. Commentaire Client Original */}
               <div
                 style={{
-                  background: '#F8FAFC',
+                  background: 'var(--color-bg)',
                   borderRadius: '16px',
                   padding: '18px 20px',
-                  border: '1px solid #E2E8F0',
+                  border: '1px solid var(--color-trait)',
                 }}
               >
-                <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 800, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', fontWeight: 'var(--weight-semibold)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   COMMENTAIRE DU CLIENT
                 </div>
-                <p style={{ margin: 0, fontSize: '0.94rem', color: '#0F172A', lineHeight: 1.55, fontStyle: feedback.commentaire ? 'normal' : 'italic' }}>
+                <p style={{ margin: 0, fontSize: 'var(--text-base)', color: 'var(--color-encre)', lineHeight: 1.55, fontStyle: feedback.commentaire ? 'normal' : 'italic' }}>
                   "{feedback.commentaire || 'Pas de commentaire écrit.'}"
                 </p>
               </div>
 
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', padding: '0 2px', color: '#64748B', fontSize: '0.82rem' }} aria-label="Contexte de l’avis">
-                <span><strong style={{ color: '#334155' }}>Agence :</strong> {feedback.agence_nom || 'Non renseignée'}</span>
-                <span><strong style={{ color: '#334155' }}>Date :</strong> {new Date(feedback.date_soumission).toLocaleString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                <span><strong style={{ color: '#334155' }}>Thème :</strong> {feedback.analyse_ia?.theme_principal ? themeLabel(feedback.analyse_ia.theme_principal) : 'Non catégorisé'}</span>
-                {feedback.assigne_a_nom && <span><strong style={{ color: '#334155' }}>Pris en charge par :</strong> {feedback.assigne_a_nom}</span>}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', padding: '0 2px', color: 'var(--color-text-2)', fontSize: 'var(--text-sm)' }} aria-label="Contexte de l’avis">
+                <span><strong className="t-encre">Agence :</strong> {feedback.agence_nom || 'Non renseignée'}</span>
+                <span><strong className="t-encre">Date :</strong> {new Date(feedback.date_soumission).toLocaleString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                <span><strong className="t-encre">Thème :</strong> {feedback.analyse_ia?.theme_principal ? themeLabel(feedback.analyse_ia.theme_principal) : 'Non catégorisé'}</span>
+                {feedback.assigne_a_nom && <span><strong className="t-encre">Pris en charge par :</strong> {feedback.assigne_a_nom}</span>}
               </div>
 
               {/* 2. Feedback Positif Sans Action Requise */}
               {isPositiveFeedback && (
                 <div
                   style={{
-                    background: '#EBF6ED',
-                    border: '1px solid #D6E8D9',
+                    background: 'var(--color-bon-fond)',
+                    border: '1px solid var(--color-trait)',
                     borderRadius: '16px',
                     padding: '14px 18px',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '12px',
-                    color: '#02302D',
+                    color: 'var(--color-encre)',
                   }}
                 >
-                  <ThumbsUpIcon size={20} color="#3C7730" />
-                  <div style={{ fontSize: '0.86rem', fontWeight: 700 }}>
+                  <ThumbsUpIcon size={20} color="var(--color-bon-texte)" />
+                  <div className="t-sm t-semi">
                     Avis positif : aucune action à mener n’est nécessaire.
                   </div>
                 </div>
@@ -759,30 +757,30 @@ export default function FeedbackTreatmentModal({
               {feedback.demande_contact && (feedback.demande_contact.telephone || feedback.demande_contact.email || feedback.demande_contact.souhaite_etre_rappele || feedback.demande_contact.coordonnees_masquees) && (
                 <div
                   style={{
-                    background: '#FFF7ED',
-                    border: '1px solid #FFEDD5',
+                    background: 'var(--color-surveiller-fond)',
+                    border: '1px solid var(--color-surveiller-fond)',
                     borderRadius: '18px',
                     padding: '18px 20px',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <div style={{ fontSize: '0.84rem', fontWeight: 800, color: '#C2410C', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <PhoneIcon size={15} color="#C2410C" />
+                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-critique-texte)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <PhoneIcon size={15} color="var(--color-critique-texte)" />
                       <span>INFORMATIONS CLIENT</span>
                     </div>
                     {feedback.demande_contact.souhaite_etre_rappele && (
-                      <span style={{ background: '#FEE2E2', color: '#B91C1C', padding: '2px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700 }}>
+                      <span style={{ background: 'var(--color-critique-fond)', color: 'var(--color-critique-texte)', padding: '2px 8px', borderRadius: '6px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)' }}>
                         Rappel souhaité
                       </span>
                     )}
                   </div>
 
-                  <div style={{ fontSize: '0.85rem', color: '#431407', display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '12px' }}>
+                  <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-critique-texte)', display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '12px' }}>
                     {feedback.demande_contact.nom && <div><strong>Nom :</strong> {feedback.demande_contact.nom}</div>}
                     {feedback.demande_contact.telephone && (
                       <div>
                         <strong>Téléphone :</strong>{' '}
-                        <a href={`tel:${feedback.demande_contact.telephone}`} style={{ color: '#C2410C', fontWeight: 700, textDecoration: 'none' }}>
+                        <a href={`tel:${feedback.demande_contact.telephone}`} style={{ color: 'var(--color-critique-texte)', fontWeight: 'var(--weight-semibold)', textDecoration: 'none' }}>
                           {feedback.demande_contact.telephone}
                         </a>
                       </div>
@@ -790,7 +788,7 @@ export default function FeedbackTreatmentModal({
                     {feedback.demande_contact.email && (
                       <div>
                         <strong>E-mail :</strong>{' '}
-                        <a href={`mailto:${feedback.demande_contact.email}`} style={{ color: '#C2410C', fontWeight: 700, textDecoration: 'none' }}>
+                        <a href={`mailto:${feedback.demande_contact.email}`} style={{ color: 'var(--color-critique-texte)', fontWeight: 'var(--weight-semibold)', textDecoration: 'none' }}>
                           {feedback.demande_contact.email}
                         </a>
                       </div>
@@ -830,28 +828,28 @@ export default function FeedbackTreatmentModal({
               {isAgencyManager && (
                 <div
                   style={{
-                    background: '#F8FAFC',
+                    background: 'var(--color-bg)',
                     borderRadius: '18px',
                     padding: '18px 20px',
-                    border: '1px solid #E2E8F0',
+                    border: '1px solid var(--color-trait)',
                   }}
                 >
-                  <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#02302D', marginBottom: '6px', textTransform: 'uppercase' }}>
+                  <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', marginBottom: '6px', textTransform: 'uppercase' }}>
                     Suggestion pour le CX Manager
                   </div>
-                  <p style={{ fontSize: '0.82rem', color: '#64748B', margin: '0 0 12px 0' }}>
+                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-2)', margin: '0 0 12px 0' }}>
                     Proposez une solution ou une amélioration terrain au CX Manager. L’avis restera « Pris en charge » jusqu’à ce qu’une action soit définie.
                   </p>
 
                   {feedback.suggestion_agence ? (
-                    <div style={{ background: '#EBF6ED', border: '1px solid #D6E8D9', borderRadius: '12px', padding: '12px 14px', color: '#02302D', fontSize: '0.86rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, marginBottom: '4px', color: '#3C7730' }}>
+                    <div style={{ background: 'var(--color-bon-fond)', border: '1px solid var(--color-trait)', borderRadius: '12px', padding: '12px 14px', color: 'var(--color-encre)', fontSize: 'var(--text-sm)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'var(--weight-semibold)', marginBottom: '4px', color: 'var(--color-bon-texte)' }}>
                         <CheckIcon size={14} />
                         <span>Suggestion transmise au CX Manager</span>
                       </div>
                       <p style={{ margin: '4px 0 0 0', fontStyle: 'italic' }}>"{feedback.suggestion_agence}"</p>
                       {feedback.suggestion_agence_auteur && (
-                        <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '6px' }}>
+                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', marginTop: '6px' }}>
                           Par {feedback.suggestion_agence_auteur} {feedback.suggestion_agence_date ? `le ${new Date(feedback.suggestion_agence_date).toLocaleDateString('fr-FR')}` : ''}
                         </div>
                       )}
@@ -867,10 +865,10 @@ export default function FeedbackTreatmentModal({
                           width: '100%',
                           padding: '12px',
                           borderRadius: '12px',
-                          border: '1px solid #CBD5E1',
-                          background: '#FFFFFF',
+                          border: '1px solid var(--color-trait)',
+                          background: 'var(--color-surface)',
                           fontFamily: 'inherit',
-                          fontSize: '0.86rem',
+                          fontSize: 'var(--text-sm)',
                           resize: 'none',
                           boxSizing: 'border-box',
                           marginBottom: '10px',
@@ -882,7 +880,7 @@ export default function FeedbackTreatmentModal({
                         className="btn-primary"
                         style={{
                           padding: '10px 18px',
-                          fontSize: '0.82rem',
+                          fontSize: 'var(--text-sm)',
                           borderRadius: '12px',
                           opacity: suggestionInput.trim() ? 1 : 0.5,
                           cursor: suggestionInput.trim() ? 'pointer' : 'not-allowed',
@@ -903,20 +901,20 @@ export default function FeedbackTreatmentModal({
                   {feedback.suggestion_agence && (
                     <div
                       style={{
-                        background: '#EFF6FF',
-                        border: '1px solid #BFDBFE',
+                        background: 'var(--color-neutre-fond)',
+                        border: '1px solid var(--color-neutre-fond)',
                         borderRadius: '18px',
                         padding: '16px 20px',
                       }}
                     >
-                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#1E40AF', marginBottom: '6px', textTransform: 'uppercase' }}>
+                      <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-neutre-texte)', marginBottom: '6px', textTransform: 'uppercase' }}>
                         SUGGESTION DE L'AGENCE ({feedback.agence_nom || 'Agence'})
                       </div>
-                      <p style={{ margin: 0, fontSize: '0.88rem', color: '#1E293B', fontStyle: 'italic', lineHeight: 1.5 }}>
+                      <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-encre)', fontStyle: 'italic', lineHeight: 1.5 }}>
                         "{feedback.suggestion_agence}"
                       </p>
                       {feedback.suggestion_agence_auteur && (
-                        <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '6px' }}>
+                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', marginTop: '6px' }}>
                           Soumis par {feedback.suggestion_agence_auteur}
                         </div>
                       )}
@@ -926,25 +924,25 @@ export default function FeedbackTreatmentModal({
                   {/* Définition ou Confirmation d'Action Corrective */}
                   <div
                     style={{
-                      background: '#F8FAFC',
+                      background: 'var(--color-bg)',
                       borderRadius: '18px',
                       padding: '18px 20px',
-                      border: '1px solid #E2E8F0',
+                      border: '1px solid var(--color-trait)',
                     }}
                   >
-                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#02302D', marginBottom: '8px', textTransform: 'uppercase' }}>
+                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', marginBottom: '8px', textTransform: 'uppercase' }}>
                       ACTION À MENER (DÉFINIE PAR LE CX MANAGER)
                     </div>
 
                     {currentStatut === 'en_traitement' && !actionPermise && (
-                      <p style={{ fontSize: '0.82rem', color: '#64748B', margin: 0 }}>
+                      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-2)', margin: 0 }}>
                         Une action à mener se définit seulement sur un avis critique ou négatif. Cet avis n’est ni l’un ni l’autre.
                       </p>
                     )}
 
                     {currentStatut === 'en_traitement' && actionPermise && (
                       <form onSubmit={handleDefinirActionCX}>
-                        <p style={{ fontSize: '0.82rem', color: '#64748B', margin: '0 0 10px 0' }}>
+                        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-2)', margin: '0 0 10px 0' }}>
                           Décrivez l’action à mener. Dès l’enregistrement, le statut passera à <strong>« Action en cours »</strong>.
                         </p>
                         <textarea
@@ -956,10 +954,10 @@ export default function FeedbackTreatmentModal({
                             width: '100%',
                             padding: '12px',
                             borderRadius: '12px',
-                            border: '1px solid #CBD5E1',
-                            background: '#FFFFFF',
+                            border: '1px solid var(--color-trait)',
+                            background: 'var(--color-surface)',
                             fontFamily: 'inherit',
-                            fontSize: '0.86rem',
+                            fontSize: 'var(--text-sm)',
                             resize: 'none',
                             boxSizing: 'border-box',
                             marginBottom: '10px',
@@ -971,7 +969,7 @@ export default function FeedbackTreatmentModal({
                           className="btn-primary"
                           style={{
                             padding: '10px 18px',
-                            fontSize: '0.82rem',
+                            fontSize: 'var(--text-sm)',
                             borderRadius: '12px',
                             opacity: actionInput.trim() ? 1 : 0.5,
                             cursor: actionInput.trim() ? 'pointer' : 'not-allowed',
@@ -985,9 +983,9 @@ export default function FeedbackTreatmentModal({
 
                     {currentStatut === 'en_cours' && (
                       <div>
-                        <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: '12px', padding: '12px 14px', marginBottom: '14px' }}>
-                          <div style={{ fontSize: '0.78rem', color: '#92400E', fontWeight: 800 }}>ACTION À MENER (PAS ENCORE CONFIRMÉE) :</div>
-                          <p style={{ margin: '4px 0 0 0', fontSize: '0.88rem', color: '#78350F', fontWeight: 600 }}>
+                        <div style={{ background: 'var(--color-surveiller-fond)', border: '1px solid var(--color-surveiller-fond)', borderRadius: '12px', padding: '12px 14px', marginBottom: '14px' }}>
+                          <div className="t-xs t-surveiller t-semi">ACTION À MENER (PAS ENCORE CONFIRMÉE) :</div>
+                          <p style={{ margin: '4px 0 0 0', fontSize: 'var(--text-sm)', color: 'var(--color-surveiller-texte)', fontWeight: 'var(--weight-semibold)' }}>
                             "{feedback.action_a_prendre || actionInput}"
                           </p>
                         </div>
@@ -995,7 +993,7 @@ export default function FeedbackTreatmentModal({
                           onClick={handleConfirmerActionRealisee}
                           disabled={loadingAction}
                           className="btn-primary"
-                          style={{ width: '100%', padding: '12px', fontWeight: 800, fontSize: '0.86rem', justifyContent: 'center' }}
+                          style={{ width: '100%', padding: '12px', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)', justifyContent: 'center' }}
                         >
                           <CheckCircleIcon size={16} />
                           <span>{loadingAction ? 'Validation en cours...' : 'Confirmer l’action réalisée → Résoudre l’avis'}</span>
@@ -1004,14 +1002,14 @@ export default function FeedbackTreatmentModal({
                     )}
 
                     {currentStatut === 'resolu' && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#EBF6ED', border: '1px solid #D6E8D9', borderRadius: '12px', padding: '14px 16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--color-bon-fond)', border: '1px solid var(--color-trait)', borderRadius: '12px', padding: '14px 16px' }}>
                         <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#3C7730', fontWeight: 800, fontSize: '0.88rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-bon-texte)', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)' }}>
                             <CheckCircleIcon size={16} />
                             <span>Avis marqué comme résolu</span>
                           </div>
                           {feedback.action_a_prendre && (
-                            <div style={{ fontSize: '0.82rem', color: '#02302D', marginTop: '4px' }}>
+                            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-encre)', marginTop: '4px' }}>
                               Action réalisée : "{feedback.action_a_prendre}"
                             </div>
                           )}
@@ -1020,7 +1018,7 @@ export default function FeedbackTreatmentModal({
                           onClick={handleReouvrir}
                           disabled={loadingAction}
                           className="btn-secondary"
-                          style={{ padding: '6px 12px', fontSize: '0.76rem', borderRadius: '8px' }}
+                          style={{ padding: '6px 12px', fontSize: 'var(--text-xs)', borderRadius: '8px' }}
                         >
                           <RefreshIcon size={12} />
                           <span>Rouvrir</span>
@@ -1034,19 +1032,19 @@ export default function FeedbackTreatmentModal({
               {/* 5bis. ISSUE LIÉE (CX Manager & Agency Manager) — créer, rattacher ou détacher */}
               <div
                 style={{
-                  background: '#FFFFFF',
+                  background: 'var(--color-surface)',
                   borderRadius: '18px',
                   padding: '18px 20px',
-                  border: '1px solid #E2E8F0',
+                  border: '1px solid var(--color-trait)',
                 }}
               >
-                <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#02302D', marginBottom: '10px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <TargetIcon size={15} color="#02302D" />
+                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', marginBottom: '10px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <TargetIcon size={15} color="var(--color-encre)" />
                   <span>Problème à traiter lié</span>
                 </div>
 
                 {issueLieeLoading ? (
-                  <div style={{ fontSize: '0.84rem', color: '#64748B' }}>Chargement...</div>
+                  <div className="t-sm t-2">Chargement...</div>
                 ) : feedback.issue_id ? (
                   <div
                     style={{
@@ -1054,17 +1052,17 @@ export default function FeedbackTreatmentModal({
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       gap: '12px',
-                      background: '#F8FAFC',
-                      border: '1px solid #E2E8F0',
+                      background: 'var(--color-bg)',
+                      border: '1px solid var(--color-trait)',
                       borderRadius: '12px',
                       padding: '12px 14px',
                       flexWrap: 'wrap',
                     }}
                   >
-                    <div style={{ fontSize: '0.86rem', color: '#02302D' }}>
+                    <div className="t-sm t-encre">
                       Rattaché au problème : <strong>{issueLiee?.titre || '…'}</strong>
                       {issueLiee && (
-                        <span style={{ marginLeft: '8px', fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>
+                        <span style={{ marginLeft: '8px', fontSize: 'var(--text-sm)', color: 'var(--color-text-2)', fontWeight: 'var(--weight-semibold)' }}>
                           ({ISSUE_STATUT_LABELS[issueLiee.statut]} · {ISSUE_SEVERITE_LABELS[issueLiee.severite]})
                         </span>
                       )}
@@ -1073,7 +1071,7 @@ export default function FeedbackTreatmentModal({
                       type="button"
                       onClick={handleDetacherIssue}
                       disabled={loadingAction}
-                      style={{ background: '#FFFFFF', color: '#DC2626', border: '1px solid #FEE2E2', borderRadius: '10px', padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                      style={{ background: 'var(--color-surface)', color: 'var(--color-critique-texte)', border: '1px solid var(--color-critique-fond)', borderRadius: '10px', padding: '6px 12px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', cursor: 'pointer' }}
                     >
                       Détacher
                     </button>
@@ -1084,7 +1082,7 @@ export default function FeedbackTreatmentModal({
                       type="button"
                       onClick={ouvrirCreationIssue}
                       className="btn-primary"
-                      style={{ padding: '8px 14px', fontSize: '0.8rem', borderRadius: '10px' }}
+                      style={{ padding: '8px 14px', fontSize: 'var(--text-xs)', borderRadius: '10px' }}
                     >
                       <PlusIcon size={13} />
                       <span>Créer un nouveau problème</span>
@@ -1093,7 +1091,7 @@ export default function FeedbackTreatmentModal({
                       type="button"
                       onClick={ouvrirRattachement}
                       className="btn-secondary"
-                      style={{ padding: '8px 14px', fontSize: '0.8rem', borderRadius: '10px' }}
+                      style={{ padding: '8px 14px', fontSize: 'var(--text-xs)', borderRadius: '10px' }}
                     >
                       Rattacher à un problème existant
                     </button>
@@ -1106,21 +1104,21 @@ export default function FeedbackTreatmentModal({
                       onChange={(e) => setCreerTitre(e.target.value)}
                       placeholder="Titre du problème"
                       required
-                      style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.86rem', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                      style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--color-trait)', fontSize: 'var(--text-sm)', fontFamily: 'inherit', boxSizing: 'border-box' }}
                     />
                     <textarea
                       rows={2}
                       value={creerDescription}
                       onChange={(e) => setCreerDescription(e.target.value)}
                       placeholder="Description (optionnelle)"
-                      style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.86rem', fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box' }}
+                      style={{ padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--color-trait)', fontSize: 'var(--text-sm)', fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box' }}
                     />
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                       <select
                         value={creerSeverite}
                         onChange={(e) => setCreerSeverite(e.target.value as CriticiteType)}
                         required
-                        style={{ padding: '8px 10px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.82rem', fontFamily: 'inherit' }}
+                        style={{ padding: '8px 10px', borderRadius: '10px', border: '1px solid var(--color-trait)', fontSize: 'var(--text-sm)', fontFamily: 'inherit' }}
                       >
                         <option value="">Choisir la gravité</option>
                         {(Object.keys(ISSUE_SEVERITE_LABELS) as CriticiteType[]).map((s) => (
@@ -1130,7 +1128,7 @@ export default function FeedbackTreatmentModal({
                       <select
                         value={creerCategorieId}
                         onChange={(e) => setCreerCategorieId(e.target.value)}
-                        style={{ padding: '8px 10px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.82rem', fontFamily: 'inherit', minWidth: '160px' }}
+                        style={{ padding: '8px 10px', borderRadius: '10px', border: '1px solid var(--color-trait)', fontSize: 'var(--text-sm)', fontFamily: 'inherit', minWidth: '160px' }}
                       >
                         <option value="">Sans catégorie</option>
                         {categoriesAgence.map((c) => (
@@ -1139,14 +1137,14 @@ export default function FeedbackTreatmentModal({
                       </select>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                      <button type="button" onClick={() => setIssueMode('choix')} className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.78rem', borderRadius: '8px' }}>
+                      <button type="button" onClick={() => setIssueMode('choix')} className="btn-secondary" style={{ padding: '6px 12px', borderRadius: '8px' }}>
                         Annuler
                       </button>
                       <button
                         type="submit"
                         disabled={loadingAction || !creerTitre.trim() || !creerSeverite}
                         className="btn-primary"
-                        style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '10px', opacity: creerTitre.trim() && creerSeverite ? 1 : 0.5, cursor: creerTitre.trim() && creerSeverite ? 'pointer' : 'not-allowed' }}
+                        style={{ padding: '8px 16px', fontSize: 'var(--text-xs)', borderRadius: '10px', opacity: creerTitre.trim() && creerSeverite ? 1 : 0.5, cursor: creerTitre.trim() && creerSeverite ? 'pointer' : 'not-allowed' }}
                       >
                         {loadingAction ? 'Création...' : 'Créer le problème'}
                       </button>
@@ -1155,7 +1153,7 @@ export default function FeedbackTreatmentModal({
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {issuesExistantesLoading ? (
-                      <div style={{ fontSize: '0.84rem', color: '#64748B' }}>Chargement des problèmes…</div>
+                      <div className="t-sm t-2">Chargement des problèmes…</div>
                     ) : issuesExistantesErreur ? (
                       <EmptyState
                         illustration="no-data"
@@ -1180,9 +1178,9 @@ export default function FeedbackTreatmentModal({
                               gap: '10px',
                               padding: '10px 12px',
                               borderRadius: '10px',
-                              border: issueSelectionneeId === i.id ? '2px solid #3C7730' : '1px solid #E2E8F0',
+                              border: issueSelectionneeId === i.id ? '2px solid var(--color-encre)' : '1px solid var(--color-trait)',
                               cursor: 'pointer',
-                              background: issueSelectionneeId === i.id ? '#EBF5E9' : '#FFFFFF',
+                              background: issueSelectionneeId === i.id ? 'var(--color-bon-fond)' : 'var(--color-surface)',
                             }}
                           >
                             <input
@@ -1192,8 +1190,8 @@ export default function FeedbackTreatmentModal({
                               onChange={() => setIssueSelectionneeId(i.id)}
                             />
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#02302D' }}>{i.titre}</div>
-                              <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
+                              <div className="t-sm t-semi t-encre">{i.titre}</div>
+                              <div className="t-xs t-2">
                                 {ISSUE_STATUT_LABELS[i.statut]} · {ISSUE_SEVERITE_LABELS[i.severite]}
                               </div>
                             </div>
@@ -1202,7 +1200,7 @@ export default function FeedbackTreatmentModal({
                       </div>
                     )}
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                      <button type="button" onClick={() => setIssueMode('choix')} className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.78rem', borderRadius: '8px' }}>
+                      <button type="button" onClick={() => setIssueMode('choix')} className="btn-secondary" style={{ padding: '6px 12px', borderRadius: '8px' }}>
                         Annuler
                       </button>
                       <button
@@ -1210,7 +1208,7 @@ export default function FeedbackTreatmentModal({
                         onClick={handleRattacherIssue}
                         disabled={loadingAction || !issueSelectionneeId}
                         className="btn-primary"
-                        style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: '10px', opacity: issueSelectionneeId ? 1 : 0.5, cursor: issueSelectionneeId ? 'pointer' : 'not-allowed' }}
+                        style={{ padding: '8px 16px', fontSize: 'var(--text-xs)', borderRadius: '10px', opacity: issueSelectionneeId ? 1 : 0.5, cursor: issueSelectionneeId ? 'pointer' : 'not-allowed' }}
                       >
                         {loadingAction ? 'Rattachement...' : 'Rattacher à ce problème'}
                       </button>
@@ -1222,13 +1220,13 @@ export default function FeedbackTreatmentModal({
               {/* 6. Commentaires Internes (Main Courante) */}
               <div
                 style={{
-                  background: '#FFFFFF',
+                  background: 'var(--color-surface)',
                   borderRadius: '18px',
                   padding: '18px 20px',
-                  border: '1px solid #E2E8F0',
+                  border: '1px solid var(--color-trait)',
                 }}
               >
-                <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#02302D', marginBottom: '8px', textTransform: 'uppercase' }}>
+                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', marginBottom: '8px', textTransform: 'uppercase' }}>
                   Note interne
                 </div>
                 <form onSubmit={handleAddNote}>
@@ -1241,10 +1239,10 @@ export default function FeedbackTreatmentModal({
                       width: '100%',
                       padding: '10px 12px',
                       borderRadius: '10px',
-                      border: '1px solid #CBD5E1',
-                      background: '#F8FAFC',
+                      border: '1px solid var(--color-trait)',
+                      background: 'var(--color-bg)',
                       fontFamily: 'inherit',
-                      fontSize: '0.85rem',
+                      fontSize: 'var(--text-sm)',
                       resize: 'none',
                       boxSizing: 'border-box',
                       marginBottom: '8px',
@@ -1257,7 +1255,6 @@ export default function FeedbackTreatmentModal({
                       className="btn-primary"
                       style={{
                         padding: '8px 14px',
-                        fontSize: '0.8rem',
                         borderRadius: '10px',
                         opacity: noteInterneInput.trim() ? 1 : 0.5,
                         cursor: noteInterneInput.trim() ? 'pointer' : 'not-allowed',
@@ -1276,7 +1273,7 @@ export default function FeedbackTreatmentModal({
           {activeTab === 'historique' && (
             <div>
               {historiqueList.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '32px', color: '#64748B', fontStyle: 'italic', fontSize: '0.86rem' }}>
+                <div style={{ textAlign: 'center', padding: '32px', color: 'var(--color-text-2)', fontStyle: 'italic', fontSize: 'var(--text-sm)' }}>
                   Aucun événement d'historique enregistré pour l'instant.
                 </div>
               ) : (
@@ -1289,7 +1286,7 @@ export default function FeedbackTreatmentModal({
                       top: '10px',
                       bottom: '10px',
                       width: '2px',
-                      background: '#E2E8F0',
+                      background: 'var(--color-neutre-fond)',
                     }}
                   />
 
@@ -1304,50 +1301,50 @@ export default function FeedbackTreatmentModal({
                           width: '16px',
                           height: '16px',
                           borderRadius: '50%',
-                          background: evt.type_evenement === 'action_realisee' ? '#3C7730' : evt.type_evenement === 'action_definie' ? '#D97706' : '#02302D',
-                          border: '3px solid #FFFFFF',
-                          boxShadow: '0 0 0 1px #CBD5E1',
+                          background: evt.type_evenement === 'action_realisee' ? 'var(--color-marque)' : evt.type_evenement === 'action_definie' ? 'var(--color-surveiller-texte)' : 'var(--color-encre)',
+                          border: '3px solid var(--color-surface)',
+                          boxShadow: '0 0 0 1px var(--color-trait)',
                         }}
                       />
 
                       {/* Carte d'événement */}
                       <div
                         style={{
-                          background: '#F8FAFC',
+                          background: 'var(--color-bg)',
                           borderRadius: '14px',
                           padding: '12px 16px',
-                          border: '1px solid #E2E8F0',
+                          border: '1px solid var(--color-trait)',
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <strong style={{ fontSize: '0.84rem', color: '#0F172A' }}>{evt.auteur_nom}</strong>
+                            <strong className="t-sm t-encre">{evt.auteur_nom}</strong>
                             <span
                               style={{
-                                fontSize: '0.7rem',
+                                fontSize: 'var(--text-xs)',
                                 padding: '2px 6px',
                                 borderRadius: '4px',
-                                background: evt.auteur_role === 'cx_manager' ? '#F3E8FF' : '#E0F2FE',
-                                color: evt.auteur_role === 'cx_manager' ? '#7C3AED' : '#0369A1',
-                                fontWeight: 700,
+                                background: 'var(--color-neutre-fond)',
+                                color: 'var(--color-neutre-texte)',
+                                fontWeight: 'var(--weight-semibold)',
                               }}
                             >
                               {ROLE_LABELS[evt.auteur_role as UserRole] ?? evt.auteur_role}
                             </span>
                           </div>
-                          <span style={{ fontSize: '0.74rem', color: '#64748B' }}>
+                          <span className="t-xs t-2">
                             {new Date(evt.date_evenement).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
 
                         {evt.ancien_statut && evt.nouveau_statut && evt.ancien_statut !== evt.nouveau_statut && (
-                          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#02302D', margin: '4px 0' }}>
-                            Statut : <span>{AVIS_STATUT_LABELS[evt.ancien_statut as StatutTraitement] ?? evt.ancien_statut}</span> → <strong style={{ color: '#3C7730' }}>{AVIS_STATUT_LABELS[evt.nouveau_statut as StatutTraitement] ?? evt.nouveau_statut}</strong>
+                          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', margin: '4px 0' }}>
+                            Statut : <span>{AVIS_STATUT_LABELS[evt.ancien_statut as StatutTraitement] ?? evt.ancien_statut}</span> → <strong className="t-bon">{AVIS_STATUT_LABELS[evt.nouveau_statut as StatutTraitement] ?? evt.nouveau_statut}</strong>
                           </div>
                         )}
 
                         {evt.details && (
-                          <p style={{ margin: '4px 0 0 0', fontSize: '0.84rem', color: '#334155', lineHeight: 1.4 }}>
+                          <p style={{ margin: '4px 0 0 0', fontSize: 'var(--text-sm)', color: 'var(--color-encre)', lineHeight: 1.4 }}>
                             {evt.details}
                           </p>
                         )}
@@ -1363,7 +1360,7 @@ export default function FeedbackTreatmentModal({
           {activeTab === 'reponses' && (
             <div>
               {reponsesList.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '32px', color: '#64748B', fontStyle: 'italic', fontSize: '0.86rem' }}>
+                <div style={{ textAlign: 'center', padding: '32px', color: 'var(--color-text-2)', fontStyle: 'italic', fontSize: 'var(--text-sm)' }}>
                   Aucune réponse client enregistrée pour l'instant.
                 </div>
               ) : (
@@ -1372,25 +1369,24 @@ export default function FeedbackTreatmentModal({
                     <div
                       key={rep.id}
                       style={{
-                        background: '#FFFFFF',
-                        border: '1px solid #E2E8F0',
+                        background: 'var(--color-surface)',
+                        border: '1px solid var(--color-trait)',
                         borderRadius: '14px',
                         padding: '14px 16px',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <strong style={{ fontSize: '0.84rem', color: '#02302D' }}>{rep.auteur_nom}</strong>
-                          <span style={{ fontSize: '0.72rem', background: '#FFF7ED', color: '#C2410C', padding: '2px 8px', borderRadius: '6px', fontWeight: 700, textTransform: 'uppercase' }}>
+                          <strong className="t-sm t-encre">{rep.auteur_nom}</strong>
+                          <span style={{ fontSize: 'var(--text-xs)', background: 'var(--color-neutre-fond)', color: 'var(--color-neutre-texte)', padding: '2px 8px', borderRadius: '6px', fontWeight: 'var(--weight-semibold)', textTransform: 'uppercase' }}>
                             Par {(CANAL_LABELS as Record<string, string>)[rep.canal] ?? rep.canal}
                           </span>
                         </div>
-                        <span style={{ fontSize: '0.74rem', color: '#64748B' }}>
+                        <span className="t-xs t-2">
                           {new Date(rep.date_envoi).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
-                      <p style={{ margin: 0, fontSize: '0.88rem', color: '#1E293B', lineHeight: 1.5 }}>
+                      <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-encre)', lineHeight: 1.5 }}>
                         "{rep.contenu}"
                       </p>
                     </div>
@@ -1406,8 +1402,8 @@ export default function FeedbackTreatmentModal({
         <div
           style={{
             padding: '16px 28px',
-            background: '#F8FAFC',
-            borderTop: '1px solid #E2E8F0',
+            background: 'var(--color-bg)',
+            borderTop: '1px solid var(--color-trait)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -1416,13 +1412,13 @@ export default function FeedbackTreatmentModal({
           <button
             onClick={onClose}
             className="btn-secondary"
-            style={{ padding: '10px 20px', fontSize: '0.84rem', borderRadius: '12px' }}
+            style={{ padding: '10px 20px', fontSize: 'var(--text-sm)', borderRadius: '12px' }}
           >
             Fermer
           </button>
 
-          <div style={{ fontSize: '0.8rem', color: '#64748B' }}>
-            Statut : <strong style={{ color: '#02302D', textTransform: 'capitalize' }}>{currentStatut}</strong>
+          <div className="t-xs t-2">
+            Statut : <strong style={{ color: 'var(--color-encre)', textTransform: 'capitalize' }}>{currentStatut}</strong>
           </div>
         </div>
 

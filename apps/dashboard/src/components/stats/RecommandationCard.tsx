@@ -3,10 +3,10 @@ import type { Recommandation } from '../../types';
 import { CheckIcon } from '../common/Icons';
 
 export const PRIORITE_STYLE: Record<string, { bg: string; border: string; text: string; label: string }> = {
-  critical: { bg: '#FEE2E2', border: '#DC2626', text: '#991B1B', label: 'CRITIQUE' },
-  high: { bg: '#FEF3C7', border: '#D97706', text: '#92400E', label: 'ÉLEVÉE' },
-  medium: { bg: '#E0F2FE', border: '#0284C7', text: '#075985', label: 'MOYENNE' },
-  low: { bg: '#EBF5E9', border: '#3C7730', text: '#166534', label: 'FAIBLE' },
+  critical: { bg: 'var(--color-critique-fond)', border: 'var(--color-critique-fond)', text: 'var(--color-critique-texte)', label: 'CRITIQUE' },
+  high: { bg: 'var(--color-surveiller-fond)', border: 'var(--color-surveiller-fond)', text: 'var(--color-surveiller-texte)', label: 'ÉLEVÉE' },
+  medium: { bg: 'var(--color-neutre-fond)', border: 'var(--color-neutre-fond)', text: 'var(--color-neutre-texte)', label: 'MOYENNE' },
+  low: { bg: 'var(--color-bon-fond)', border: 'var(--color-bon-fond)', text: 'var(--color-bon-texte)', label: 'FAIBLE' },
 };
 
 interface RecommandationCardProps {
@@ -18,17 +18,17 @@ interface RecommandationCardProps {
 
 export default function RecommandationCard({ recommandation: r, agenceNom, onMarquerTraitee }: RecommandationCardProps) {
   const pStyle = PRIORITE_STYLE[r.priorite] || {
-    bg: '#F8FAFB',
-    border: '#E2E8F0',
-    text: '#475569',
+    bg: 'var(--color-bg)',
+    border: 'var(--color-trait)',
+    text: 'var(--color-text-2)',
     label: r.priorite,
   };
 
   return (
     <div
       style={{
-        background: '#FFFFFF',
-        border: '1px solid #E8ECE6',
+        background: 'var(--color-surface)',
+        border: '1px solid var(--color-trait)',
         borderLeft: `5px solid ${pStyle.border}`,
         borderRadius: '16px',
         padding: '16px 20px',
@@ -37,7 +37,6 @@ export default function RecommandationCard({ recommandation: r, agenceNom, onMar
         alignItems: 'center',
         gap: '16px',
         flexWrap: 'wrap',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
       }}
     >
       <div style={{ flex: 1, minWidth: '220px' }}>
@@ -49,8 +48,8 @@ export default function RecommandationCard({ recommandation: r, agenceNom, onMar
               border: `1px solid ${pStyle.border}`,
               padding: '2px 8px',
               borderRadius: '9999px',
-              fontSize: '0.7rem',
-              fontWeight: 800,
+              fontSize: 'var(--text-xs)',
+              fontWeight: 'var(--weight-semibold)',
             }}
           >
             PRIORITÉ {pStyle.label}
@@ -58,22 +57,22 @@ export default function RecommandationCard({ recommandation: r, agenceNom, onMar
           {agenceNom && (
             <span
               style={{
-                background: '#F1F5F9',
-                color: '#475569',
+                background: 'var(--color-neutre-fond)',
+                color: 'var(--color-text-2)',
                 padding: '2px 8px',
                 borderRadius: '9999px',
-                fontSize: '0.7rem',
-                fontWeight: 700,
+                fontSize: 'var(--text-xs)',
+                fontWeight: 'var(--weight-semibold)',
               }}
             >
               📍 {agenceNom}
             </span>
           )}
-          <span style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: 600 }}>
+          <span className="t-xs t-2 t-semi">
             {new Date(r.date_generation).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
           </span>
         </div>
-        <span style={{ fontSize: '0.9rem', color: '#1E293B', lineHeight: 1.5, fontWeight: 600 }}>
+        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-encre)', lineHeight: 1.5, fontWeight: 'var(--weight-semibold)' }}>
           {r.contenu}
         </span>
       </div>
@@ -82,7 +81,7 @@ export default function RecommandationCard({ recommandation: r, agenceNom, onMar
         <button
           onClick={() => onMarquerTraitee(r.id)}
           className="btn-primary"
-          style={{ fontSize: '0.8rem', padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          style={{ fontSize: 'var(--text-xs)', padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
         >
           <CheckIcon size={14} />
           <span>Marquer comme traitée</span>
