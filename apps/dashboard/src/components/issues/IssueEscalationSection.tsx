@@ -62,26 +62,26 @@ export default function IssueEscalationSection({ issueId, statut }: { issueId: s
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
+      <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
         Une escalade est enregistrée à la main. Elle garde la trace d’une demande d’intervention supérieure,
         mais ne change pas le statut du problème et ne prévient personne automatiquement.
       </p>
 
       {erreurChargement ? (
-        <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', fontSize: '0.84rem', color: 'var(--color-critical-text)' }}>
+        <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', fontSize: 'var(--text-sm)', color: 'var(--color-critical-text)' }}>
           {erreurChargement}
           <Button size="sm" variant="secondary" onClick={charger}>Réessayer</Button>
         </div>
       ) : entrees === null ? (
         <SkeletonBlock height={44} />
       ) : entrees.length === 0 ? (
-        <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>Aucune escalade enregistrée.</p>
+        <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>Aucune escalade enregistrée.</p>
       ) : (
         <ol style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {entrees.map((e) => (
             <li key={e.id} style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-trait)', borderRadius: 'var(--radius-md)', padding: '10px 14px' }}>
-              <div style={{ fontSize: '0.86rem', fontWeight: 800, color: 'var(--color-text-main)' }}>{libelleMotifEscalade(e.motif)}</div>
-              <div style={{ fontSize: '0.76rem', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+              <div className="t-sm t-semi t-encre">{libelleMotifEscalade(e.motif)}</div>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginTop: '2px' }}>
                 {fullDate(e.date_evenement)} · par {e.declenchee_par_nom}
                 {ROLE_LABELS[e.declenchee_par_role] ? ` (${ROLE_LABELS[e.declenchee_par_role]})` : ''}
               </div>
@@ -91,7 +91,7 @@ export default function IssueEscalationSection({ issueId, statut }: { issueId: s
       )}
 
       {message && (
-        <p role={message.tone === 'erreur' ? 'alert' : 'status'} style={{ margin: 0, fontSize: '0.84rem', fontWeight: 700, color: message.tone === 'erreur' ? 'var(--color-critical-text)' : 'var(--color-success-text)' }}>
+        <p role={message.tone === 'erreur' ? 'alert' : 'status'} style={{ margin: 0, fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: message.tone === 'erreur' ? 'var(--color-critical-text)' : 'var(--color-success-text)' }}>
           {message.texte}
         </p>
       )}
@@ -99,13 +99,13 @@ export default function IssueEscalationSection({ issueId, statut }: { issueId: s
       {estEnAttente(statut) && !erreurChargement && entrees !== null && (
         formulaireOuvert ? (
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text-muted)' }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text-muted)' }}>
               Motif de l’escalade
               <select
                 value={motif}
                 onChange={(e) => setMotif(e.target.value as EscaladeMotif)}
                 disabled={envoi}
-                style={{ minHeight: 44, padding: '0 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text-main)', fontFamily: 'inherit', fontWeight: 600 }}
+                style={{ minHeight: 44, padding: '0 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text-main)', fontFamily: 'inherit', fontWeight: 'var(--weight-semibold)' }}
               >
                 {MOTIFS.map((m) => <option key={m} value={m}>{ESCALADE_MOTIF_LABELS[m]}</option>)}
               </select>

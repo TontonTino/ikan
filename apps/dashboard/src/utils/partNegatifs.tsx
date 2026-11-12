@@ -51,7 +51,7 @@ export function evolutionPartNegatifs(pn: PartNegatifs | null | undefined): Evol
     : { texte: `−${absolu} pts par rapport à la période précédente (en baisse)`, sens: 'favorable', fleche: '↓' };
 }
 
-const COULEUR: Record<EvolutionAffichee['sens'], string> = { defavorable: '#B91C1C', favorable: '#3C7730', neutre: '#64748B' };
+const COULEUR: Record<EvolutionAffichee['sens'], string> = { defavorable: 'var(--color-critique-texte)', favorable: 'var(--color-bon-texte)', neutre: 'var(--color-text-2)' };
 
 /**
  * « 23,5 % d'avis négatifs » suivi de l'évolution (flèche + texte). `court` : sans le texte de comparaison détaillé.
@@ -62,9 +62,9 @@ export function PartNegatifsTexte({ pn, court = false, sansMentionInsuffisante =
   return (
     <span>
       <strong>{libellePartNegatifs(pn)}</strong>
-      {pn && pn.part != null && !court && <span style={{ color: '#64748B' }}> d’avis négatifs ({pn.negatifs} sur {pn.total})</span>}
+      {pn && pn.part != null && !court && <span style={{ color: 'var(--color-text-2)' }}> d’avis négatifs ({pn.negatifs} sur {pn.total})</span>}
       {evolution.texte && (
-        <span style={{ display: 'block', color: COULEUR[evolution.sens], fontSize: '0.74rem', fontWeight: 600 }}>
+        <span style={{ display: 'block', color: COULEUR[evolution.sens], fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)' }}>
           {evolution.fleche && <span aria-hidden="true">{evolution.fleche} </span>}
           {court && evolution.fleche ? evolution.texte.replace(' par rapport à la période précédente', '') : evolution.texte}
         </span>

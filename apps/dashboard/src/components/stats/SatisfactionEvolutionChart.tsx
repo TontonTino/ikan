@@ -69,7 +69,7 @@ export default function SatisfactionEvolutionChart({
           <XAxis
             dataKey="label"
             stroke="var(--color-text-2)"
-            fontSize={11}
+            fontSize={12}
             tickLine={false}
             axisLine={{ stroke: 'var(--color-trait)' }}
           />
@@ -78,7 +78,7 @@ export default function SatisfactionEvolutionChart({
             ticks={[0, 25, 50, 75, 100]}
             tickFormatter={(v) => formaterPourcentage(Number(v), 0)}
             stroke="var(--color-text-2)"
-            fontSize={11}
+            fontSize={12}
             tickLine={false}
             axisLine={false}
           />

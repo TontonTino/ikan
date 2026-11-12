@@ -7,10 +7,9 @@ import { userFacingError } from '../utils/userFacingError';
 
 function cardStyle(): React.CSSProperties {
   return {
-    background: '#FFFFFF',
+    background: 'var(--color-surface)',
     borderRadius: '20px',
-    border: '1px solid #E8ECE6',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+    border: '1px solid var(--color-trait)',
     padding: '20px 22px',
   };
 }
@@ -21,13 +20,13 @@ function Bandeau({ type, texte }: { type: 'succes' | 'erreur'; texte: string }) 
     <div
       style={{
         display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '10px',
-        background: succes ? '#EAF5EC' : '#FEE2E2',
-        border: `1px solid ${succes ? '#CFE3D3' : '#FCA5A5'}`,
-        color: succes ? '#3C7730' : '#B91C1C',
-        fontSize: '0.84rem', fontWeight: 600, marginTop: '14px',
+        background: succes ? 'var(--color-bon-fond)' : 'var(--color-critique-fond)',
+        border: `1px solid ${succes ? 'var(--color-trait)' : 'var(--color-critique-fond)'}`,
+        color: succes ? 'var(--color-bon-texte)' : 'var(--color-critique-texte)',
+        fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', marginTop: '14px',
       }}
     >
-      {succes ? <CheckCircleIcon size={16} color="#3C7730" /> : <AlertTriangleIcon size={16} color="#B91C1C" />}
+      {succes ? <CheckCircleIcon size={16} color="var(--color-bon-texte)" /> : <AlertTriangleIcon size={16} color="var(--color-critique-texte)" />}
       {texte}
     </div>
   );
@@ -133,27 +132,27 @@ export default function ParametresPage() {
       {/* ── Informations du compte + Mot de passe, côte à côte pour tenir sur une page ── */}
       <div className="parametres-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(340px, 1fr) minmax(340px, 1fr)', gap: '18px', alignItems: 'start' }}>
       <div style={cardStyle()}>
-        <h3 style={{ margin: '0 0 4px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <UsersIcon size={18} color="#3C7730" />
+        <h3 style={{ margin: '0 0 4px', fontSize: 'var(--text-base)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <UsersIcon size={18} color="var(--color-bon-texte)" />
           Informations du compte
         </h3>
-        <p style={{ margin: '0 0 18px', fontSize: '0.82rem', color: '#64748B' }}>
+        <p style={{ margin: '0 0 18px', fontSize: 'var(--text-sm)', color: 'var(--color-text-2)' }}>
           Votre nom et votre e-mail de connexion.
         </p>
 
         <form onSubmit={enregistrerInfos}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
             <div>
-              <label htmlFor="parametres-prenom" style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>Prénom</label>
+              <label htmlFor="parametres-prenom" style={{ display: 'block', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)', color: 'var(--color-encre)', marginBottom: '6px' }}>Prénom</label>
               <input id="parametres-prenom" value={prenom} onChange={(e) => setPrenom(e.target.value)} required className="saas-input" style={{ width: '100%' }} />
             </div>
             <div>
-              <label htmlFor="parametres-nom" style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>Nom</label>
+              <label htmlFor="parametres-nom" style={{ display: 'block', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)', color: 'var(--color-encre)', marginBottom: '6px' }}>Nom</label>
               <input id="parametres-nom" value={nom} onChange={(e) => setNom(e.target.value)} required className="saas-input" style={{ width: '100%' }} />
             </div>
           </div>
           <div style={{ marginBottom: '4px' }}>
-            <label htmlFor="parametres-email" style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>E-mail</label>
+            <label htmlFor="parametres-email" style={{ display: 'block', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)', color: 'var(--color-encre)', marginBottom: '6px' }}>E-mail</label>
             <input id="parametres-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="saas-input" style={{ width: '100%' }} />
           </div>
 
@@ -170,17 +169,17 @@ export default function ParametresPage() {
       {/* ── Délai d'alerte "suggestion" (CX Manager uniquement) ── */}
       {user?.role === 'cx_manager' && (
         <div style={cardStyle()}>
-          <h3 style={{ margin: '0 0 4px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <BellIcon size={18} color="#3C7730" />
+          <h3 style={{ margin: '0 0 4px', fontSize: 'var(--text-base)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <BellIcon size={18} color="var(--color-bon-texte)" />
             Alertes
           </h3>
-          <p style={{ margin: '0 0 18px', fontSize: '0.82rem', color: '#64748B' }}>
+          <p style={{ margin: '0 0 18px', fontSize: 'var(--text-sm)', color: 'var(--color-text-2)' }}>
             Délai avant qu'un avis négatif non traité (note 2/5 ou moins, ou ton négatif) devienne une alerte pour vous.
           </p>
 
           <form onSubmit={enregistrerDelai}>
             <div style={{ marginBottom: '4px' }}>
-              <label htmlFor="parametres-delai" style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>Délai (en heures, de 1 à 168)</label>
+              <label htmlFor="parametres-delai" style={{ display: 'block', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)', color: 'var(--color-encre)', marginBottom: '6px' }}>Délai (en heures, de 1 à 168)</label>
               <input id="parametres-delai"
                 type="number"
                 min={DELAI_MIN}
@@ -207,26 +206,26 @@ export default function ParametresPage() {
 
       {/* ── Mot de passe ── */}
       <div style={cardStyle()}>
-        <h3 style={{ margin: '0 0 4px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <KeyIcon size={18} color="#3C7730" />
+        <h3 style={{ margin: '0 0 4px', fontSize: 'var(--text-base)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <KeyIcon size={18} color="var(--color-bon-texte)" />
           Mot de passe
         </h3>
-        <p style={{ margin: '0 0 18px', fontSize: '0.82rem', color: '#64748B' }}>
+        <p style={{ margin: '0 0 18px', fontSize: 'var(--text-sm)', color: 'var(--color-text-2)' }}>
           Votre mot de passe actuel est requis pour en définir un nouveau.
         </p>
 
         <form onSubmit={changerMotDePasse}>
           <div style={{ marginBottom: '14px' }}>
-            <label htmlFor="parametres-ancien-mdp" style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>Ancien mot de passe</label>
+            <label htmlFor="parametres-ancien-mdp" style={{ display: 'block', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)', color: 'var(--color-encre)', marginBottom: '6px' }}>Ancien mot de passe</label>
             <input id="parametres-ancien-mdp" type="password" value={ancienMdp} onChange={(e) => setAncienMdp(e.target.value)} required className="saas-input" style={{ width: '100%' }} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
             <div>
-              <label htmlFor="parametres-nouveau-mdp" style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>Nouveau mot de passe</label>
+              <label htmlFor="parametres-nouveau-mdp" style={{ display: 'block', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)', color: 'var(--color-encre)', marginBottom: '6px' }}>Nouveau mot de passe</label>
               <input id="parametres-nouveau-mdp" type="password" value={nouveauMdp} onChange={(e) => setNouveauMdp(e.target.value)} required minLength={8} className="saas-input" style={{ width: '100%' }} />
             </div>
             <div>
-              <label htmlFor="parametres-confirmation-mdp" style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B', marginBottom: '6px' }}>Confirmation</label>
+              <label htmlFor="parametres-confirmation-mdp" style={{ display: 'block', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)', color: 'var(--color-encre)', marginBottom: '6px' }}>Confirmation</label>
               <input id="parametres-confirmation-mdp" type="password" value={confirmationMdp} onChange={(e) => setConfirmationMdp(e.target.value)} required minLength={8} className="saas-input" style={{ width: '100%' }} />
             </div>
           </div>

@@ -237,11 +237,11 @@ export default function SidebarWorkspaceCard({ user, collapsed = false }: Sideba
             <style>{`
               .cx-context-menu { position:absolute; top:0; left:calc(100% + 10px); z-index:60; width:min(300px, calc(100vw - 100px)); max-height:min(420px, 70vh); overflow:auto; padding:10px; box-sizing:border-box; background:var(--color-surface); color:var(--color-encre); border:1px solid var(--color-trait); border-radius:14px; box-shadow:var(--shadow-overlay); }
               .cx-context-search { display:flex; align-items:center; gap:8px; min-height:44px; box-sizing:border-box; padding:9px 10px; margin-bottom:7px; border: 1px solid var(--color-border); border-radius:9px; color:var(--color-text-2); }
-              .cx-context-search input { min-width:0; width:100%; min-height:24px; border:0; outline:0; font:inherit; font-size:.875rem; }
-              .cx-context-option { display:flex; flex-direction:column; align-items:flex-start; gap:2px; width:100%; padding:9px 10px; border:0; border-radius:8px; background:transparent; color:var(--color-encre); text-align:left; font:inherit; font-size:.82rem; cursor:pointer; }
+              .cx-context-search input { min-width:0; width:100%; min-height:24px; border:0; outline:0; font:inherit; font-size:var(--text-sm); }
+              .cx-context-option { display:flex; flex-direction:column; align-items:flex-start; gap:2px; width:100%; padding:9px 10px; border:0; border-radius:8px; background:transparent; color:var(--color-encre); text-align:left; font:inherit; font-size:var(--text-sm); cursor:pointer; }
               .cx-context-option:hover,.cx-context-option:focus-visible,.cx-context-option.is-selected { background: var(--color-neutre-fond); outline:none; }
-              .cx-context-option small { color:var(--color-text-2); font-size:.72rem; }
-              .cx-context-message { padding:10px; color:var(--color-text-2); font-size:.78rem; }
+              .cx-context-option small { color:var(--color-text-2); font-size:var(--text-xs); }
+              .cx-context-message { padding:10px; color:var(--color-text-2); font-size:var(--text-xs); }
               .cx-context-error { color:var(--color-critique-texte); }
               @media(max-width:1024px) { .cx-context-menu { left:0; top:calc(100% + 8px); width:100%; } }
             `}</style>
@@ -294,7 +294,7 @@ export default function SidebarWorkspaceCard({ user, collapsed = false }: Sideba
             background: ${orgLogo ? 'var(--color-surface)' : palette.bg};
             border: 1px solid ${orgLogo ? 'var(--color-trait)' : palette.border};
             border-radius: 12px;
-            font-size: 0.95rem;
+            font-size: var(--text-base);
             font-weight: 800;
           }
           .agency-context-logo img {
@@ -335,13 +335,13 @@ export default function SidebarWorkspaceCard({ user, collapsed = false }: Sideba
             pointer-events: none;
           }
           .agency-context-tooltip-org {
-            font-size: 0.78rem;
+            font-size: var(--text-xs);
             font-weight: 700;
             line-height: 1.35;
           }
           .agency-context-tooltip-agency {
             color: var(--sidebar-text);
-            font-size: 0.72rem;
+            font-size: var(--text-xs);
             font-weight: 500;
             line-height: 1.4;
             overflow-wrap: anywhere;

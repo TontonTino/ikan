@@ -33,8 +33,9 @@ describe('légende de la carte (CX-02)', () => {
     expect(new Set(Object.values(STATUT_SYMBOLE)).size).toBe(4);
   });
 
-  it('les couleurs et les règles de calcul ne changent pas', () => {
-    expect(STATUT_COULEUR).toEqual({ au_dessus: '#3C7730', sous: '#DC2626', pas_assez_avis: '#64748B', sans_avis: '#94A3B8' });
+  it('les couleurs de rôle et les règles de calcul ne changent pas', () => {
+    // Lot 2b : une couleur de rôle par statut (marque = au-dessus du seuil, critique = sous le seuil).
+    expect(STATUT_COULEUR).toEqual({ au_dessus: 'var(--color-marque)', sous: 'var(--color-critique-texte)', pas_assez_avis: 'var(--color-text-2)', sans_avis: 'var(--color-border)' });
     const attendu: Array<[number | null, number, number | null, StatutSeuil]> = [
       [85, 10, 80, 'au_dessus'], [80, 10, 80, 'au_dessus'], [79.9, 10, 80, 'sous'], [50, 2, 80, 'pas_assez_avis'], [null, 0, 80, 'sans_avis'], [50, 10, null, 'pas_assez_avis'],
     ];

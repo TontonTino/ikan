@@ -10,14 +10,14 @@
 interface IkanBrandPatternProps {
   /** Opacité du motif — spec 4-6%, défaut 0.05 */
   opacity?: number;
-  /** Couleur du cube, défaut #3C7730 sur fond #02302D */
+  /** Couleur du cube, défaut --color-marque sur fond --color-encre */
   color?: string;
   className?: string;
 }
 
 export function IkanBrandPattern({
   opacity = 0.05,
-  color = '#3C7730',
+  color = 'var(--color-marque)',
   className,
 }: IkanBrandPatternProps) {
   const patternId = 'ikan-brand-pattern';

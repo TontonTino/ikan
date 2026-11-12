@@ -53,10 +53,10 @@ export default function LoginPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#EDF3EF',
+        background: 'var(--color-bg)',
         padding: '24px',
         boxSizing: 'border-box',
-        fontFamily: "'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+        fontFamily: 'var(--font-main)',
       }}
     >
       {/* SVG ClipPath Definition pour la forme organique ondulée */}
@@ -96,9 +96,9 @@ export default function LoginPage() {
           width: '100%',
           maxWidth: '1240px',
           minHeight: '700px',
-          background: '#FFFFFF',
+          background: 'var(--color-surface)',
           borderRadius: '32px',
-          boxShadow: '0 24px 64px rgba(2, 45, 42, 0.12), 0 4px 16px rgba(0, 0, 0, 0.04)',
+          boxShadow: 'var(--shadow-overlay)',
           display: 'flex',
           flexDirection: 'row',
           overflow: 'hidden',
@@ -110,12 +110,7 @@ export default function LoginPage() {
           className="login-left-pane"
           style={{
             width: '58%',
-            backgroundColor: '#022D2A',
-            backgroundImage: `
-              radial-gradient(circle at center, rgba(34, 197, 94, 0.08) 0%, rgba(2, 45, 42, 0) 60%),
-              radial-gradient(rgba(255, 255, 255, 0.06) 1.2px, transparent 1.2px)
-            `,
-            backgroundSize: '100% 100%, 28px 28px',
+            backgroundColor: 'var(--color-encre)',
             position: 'relative',
             display: 'flex',
             flexDirection: 'column',
@@ -123,7 +118,7 @@ export default function LoginPage() {
             justifyContent: 'center',
             padding: '48px 60px 48px 48px',
             overflow: 'hidden',
-            color: '#FFFFFF',
+            color: 'var(--color-text-inverse)',
             textAlign: 'center',
             clipPath: 'url(#login-organic-wave)',
             WebkitClipPath: 'url(#login-organic-wave)',
@@ -169,8 +164,8 @@ export default function LoginPage() {
             <h1
               style={{
                 fontSize: 'clamp(0.85rem, 2.4vw, 1.6rem)',
-                fontWeight: 800,
-                color: '#FFFFFF',
+                fontWeight: 'var(--weight-semibold)',
+                color: 'var(--color-text-inverse)',
                 lineHeight: 1.2,
                 letterSpacing: '-0.025em',
                 margin: '0 0 16px',
@@ -185,11 +180,11 @@ export default function LoginPage() {
             {/* Signature produit */}
             <p
               style={{
-                fontSize: '0.94rem',
-                color: 'rgba(255, 255, 255, 0.78)',
+                fontSize: 'var(--text-base)',
+                color: 'var(--sidebar-text)',
                 lineHeight: 1.55,
                 margin: 0,
-                fontWeight: 600,
+                fontWeight: 'var(--weight-semibold)',
                 letterSpacing: '0.02em',
               }}
             >
@@ -204,7 +199,7 @@ export default function LoginPage() {
           style={{
             flex: 1,
             width: '42%',
-            background: '#FFFFFF',
+            background: 'var(--color-surface)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -239,9 +234,9 @@ export default function LoginPage() {
           {/* En-tête Titre & Sous-titre */}
           <h2
             style={{
-              fontSize: '1.85rem',
-              fontWeight: 800,
-              color: '#022D2A',
+              fontSize: 'var(--text-2xl)',
+              fontWeight: 'var(--weight-semibold)',
+              color: 'var(--color-encre)',
               margin: '0 0 8px 0',
               textAlign: 'center',
               letterSpacing: '-0.02em',
@@ -252,11 +247,11 @@ export default function LoginPage() {
 
           <p
             style={{
-              fontSize: '0.92rem',
-              color: '#64748B',
+              fontSize: 'var(--text-base)',
+              color: 'var(--color-text-2)',
               margin: '0 0 32px 0',
               textAlign: 'center',
-              fontWeight: 500,
+              fontWeight: 'var(--weight-normal)',
             }}
           >
             Accédez à votre espace de gestion
@@ -270,10 +265,10 @@ export default function LoginPage() {
                 htmlFor="login-email"
                 style={{
                   display: 'block',
-                  fontWeight: 700,
+                  fontWeight: 'var(--weight-semibold)',
                   marginBottom: '8px',
-                  fontSize: '0.86rem',
-                  color: '#0F172A',
+                  fontSize: 'var(--text-sm)',
+                  color: 'var(--color-encre)',
                 }}
               >
                 Adresse e-mail
@@ -287,7 +282,7 @@ export default function LoginPage() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     pointerEvents: 'none',
-                    color: '#94A3B8',
+                    color: 'var(--color-text-2)',
                   }}
                 >
                   <svg
@@ -317,24 +312,24 @@ export default function LoginPage() {
                     height: '48px',
                     paddingLeft: '44px',
                     paddingRight: '16px',
-                    background: '#F0F4F8',
-                    border: '1px solid transparent',
+                    background: 'var(--color-surface)',
+                    border: '1px solid var(--color-border)',
                     borderRadius: '12px',
-                    fontSize: '0.92rem',
-                    color: '#0F172A',
+                    fontSize: 'var(--text-base)',
+                    color: 'var(--color-encre)',
                     outline: 'none',
                     fontFamily: 'inherit',
                     transition: 'all 0.15s ease',
                     boxSizing: 'border-box',
                   }}
                   onFocus={(e) => {
-                    e.target.style.background = '#FFFFFF';
-                    e.target.style.borderColor = '#022D2A';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(2, 45, 42, 0.08)';
+                    e.target.style.background = 'var(--color-surface)';
+                    e.target.style.borderColor = 'var(--color-accent)';
+                    e.target.style.boxShadow = 'var(--focus-ring)';
                   }}
                   onBlur={(e) => {
-                    e.target.style.background = '#F0F4F8';
-                    e.target.style.borderColor = 'transparent';
+                    e.target.style.background = 'var(--color-surface)';
+                    e.target.style.borderColor = 'var(--color-border)';
                     e.target.style.boxShadow = 'none';
                   }}
                 />
@@ -347,10 +342,10 @@ export default function LoginPage() {
                 htmlFor="login-password"
                 style={{
                   display: 'block',
-                  fontWeight: 700,
+                  fontWeight: 'var(--weight-semibold)',
                   marginBottom: '8px',
-                  fontSize: '0.86rem',
-                  color: '#0F172A',
+                  fontSize: 'var(--text-sm)',
+                  color: 'var(--color-encre)',
                 }}
               >
                 Mot de passe
@@ -364,7 +359,7 @@ export default function LoginPage() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     pointerEvents: 'none',
-                    color: '#94A3B8',
+                    color: 'var(--color-text-2)',
                   }}
                 >
                   <svg
@@ -394,24 +389,24 @@ export default function LoginPage() {
                     height: '48px',
                     paddingLeft: '44px',
                     paddingRight: '44px',
-                    background: '#F0F4F8',
-                    border: '1px solid transparent',
+                    background: 'var(--color-surface)',
+                    border: '1px solid var(--color-border)',
                     borderRadius: '12px',
-                    fontSize: '0.92rem',
-                    color: '#0F172A',
+                    fontSize: 'var(--text-base)',
+                    color: 'var(--color-encre)',
                     outline: 'none',
                     fontFamily: 'inherit',
                     transition: 'all 0.15s ease',
                     boxSizing: 'border-box',
                   }}
                   onFocus={(e) => {
-                    e.target.style.background = '#FFFFFF';
-                    e.target.style.borderColor = '#022D2A';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(2, 45, 42, 0.08)';
+                    e.target.style.background = 'var(--color-surface)';
+                    e.target.style.borderColor = 'var(--color-accent)';
+                    e.target.style.boxShadow = 'var(--focus-ring)';
                   }}
                   onBlur={(e) => {
-                    e.target.style.background = '#F0F4F8';
-                    e.target.style.borderColor = 'transparent';
+                    e.target.style.background = 'var(--color-surface)';
+                    e.target.style.borderColor = 'var(--color-border)';
                     e.target.style.boxShadow = 'none';
                   }}
                 />
@@ -473,20 +468,20 @@ export default function LoginPage() {
               <div
                 role="alert"
                 style={{
-                  background: '#FEE2E2',
-                  border: '1px solid #FCA5A5',
-                  color: '#991B1B',
+                  background: 'var(--color-critique-fond)',
+                  border: '1px solid var(--color-critique-fond)',
+                  color: 'var(--color-critique-texte)',
                   padding: '10px 14px',
                   borderRadius: '12px',
                   marginBottom: '18px',
-                  fontSize: '0.84rem',
-                  fontWeight: 600,
+                  fontSize: 'var(--text-sm)',
+                  fontWeight: 'var(--weight-semibold)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
                 }}
               >
-                <AlertTriangleIcon size={16} color="#991B1B" />
+                <AlertTriangleIcon size={16} color="var(--color-critique-texte)" />
                 <span>{error}</span>
               </div>
             )}
@@ -499,33 +494,28 @@ export default function LoginPage() {
                 width: '100%',
                 height: '48px',
                 marginTop: '4px',
-                background: loading ? '#3A5A55' : '#022D2A',
-                color: '#FFFFFF',
+                background: loading ? 'var(--color-accent-hover)' : 'var(--color-accent)',
+                color: 'var(--color-text-inverse)',
                 border: 'none',
                 borderRadius: '12px',
-                fontSize: '0.94rem',
-                fontWeight: 700,
+                fontSize: 'var(--text-base)',
+                fontWeight: 'var(--weight-semibold)',
                 fontFamily: 'inherit',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
-                boxShadow: '0 4px 12px rgba(2, 45, 42, 0.18)',
                 transition: 'all 0.15s ease',
               }}
               onMouseEnter={(e) => {
                 if (!loading) {
-                  e.currentTarget.style.background = '#033B37';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 6px 18px rgba(2, 45, 42, 0.25)';
+                  e.currentTarget.style.background = 'var(--color-accent-hover)';
                 }
               }}
               onMouseLeave={(e) => {
                 if (!loading) {
-                  e.currentTarget.style.background = '#022D2A';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(2, 45, 42, 0.18)';
+                  e.currentTarget.style.background = 'var(--color-accent)';
                 }
               }}
             >
@@ -538,9 +528,9 @@ export default function LoginPage() {
             style={{
               marginTop: '48px',
               textAlign: 'center',
-              fontSize: '0.78rem',
+              fontSize: 'var(--text-xs)',
               color: 'var(--color-text-muted)',
-              fontWeight: 500,
+              fontWeight: 'var(--weight-normal)',
               lineHeight: 1.4,
             }}
           >

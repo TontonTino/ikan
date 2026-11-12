@@ -181,7 +181,7 @@ export function LigneActionItem({ ligne, afficherAgence, role, moiId, maintenant
 
       {!probleme && !ligne.terminee && confirmationAvis?.ouverte && (
         <div role="group" aria-label="Confirmer que l’action est réalisée" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', background: 'var(--color-warning-bg, var(--color-bg-subtle))', border: '1px solid var(--color-warning-border)' }}>
-          <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--color-text-main)', lineHeight: 1.5 }}>
+          <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text-main)', lineHeight: 1.5 }}>
             En confirmant, l’avis passera à « Résolu » et sortira des alertes. Cela n’indique pas que le client est satisfait.
           </p>
           <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>

@@ -17,7 +17,7 @@ export default function VeilleInfoBanner() {
       <div style={{ color: 'var(--color-info)', flexShrink: 0, marginTop: '2px' }} aria-hidden="true">
         <InfoIcon size={18} />
       </div>
-      <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--color-text-body)', lineHeight: 1.5 }}>
+      <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text-body)', lineHeight: 1.5 }}>
         Ces données proviennent des réseaux sociaux et restent séparées des indicateurs de satisfaction
         fondés sur les notes. L'analyse automatique est indicative ; l'ironie, les emojis et les langues
         locales peuvent être mal interprétés.

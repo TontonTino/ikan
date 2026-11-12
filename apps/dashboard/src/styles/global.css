@@ -48,9 +48,8 @@ body {
 }
 
 /* Variante zones sombres (ex. .saas-card--critical, ou tout conteneur avec
-   className="on-dark") : le vert forêt --color-primary est illisible sur un
-   fond sombre --color-primary-dark, le lime --color-lime (~8:1 sur
-   #02302D) prend le relais. */
+   className="on-dark") : sur l'encre, l'accent ne fait que 3,07:1 ; le citron
+   (8,24:1) prend le relais pour l'anneau de focus (indicateur graphique, pas du texte). */
 .saas-card--critical :focus-visible,
 .on-dark :focus-visible {
   outline-color: var(--color-lime);
@@ -498,9 +497,7 @@ body {
 }
 .ikan-nav-badge--urgent {
   background: var(--color-critique-fond);
-  /* #DC2626 (rouge standard de la charte) sur #FEE2E2 ne passe qu'à
-     3.95:1 — sous 4.5:1. #B91C1C (déjà utilisé ailleurs dans l'app pour
-     le même badge "négatif") passe à 5.3:1, même fond conservé. */
+  /* Statut critique : texte et fond du même statut (6,48:1, voir contraste.test.ts). */
   color: var(--color-critique-texte);
 }
 

@@ -152,7 +152,7 @@ export const SparklineWave: React.FC<{ type?: 'up' | 'down' | 'neutral'; color?:
   width = 64,
   height = 24,
 }) => {
-  const strokeColor = color || (type === 'up' ? '#3C7730' : type === 'down' ? '#DC2626' : '#94A3B8');
+  const strokeColor = color || (type === 'up' ? 'var(--color-bon-texte)' : type === 'down' ? 'var(--color-critique-texte)' : 'var(--color-text-2)');
 
   return (
     <svg width={width} height={height} viewBox="0 0 64 24" fill="none">

@@ -92,13 +92,13 @@ export default function VolumeEvolutionChart({
           <XAxis
             dataKey="label"
             stroke="var(--color-text-2)"
-            fontSize={11}
+            fontSize={12}
             tickLine={false}
             axisLine={{ stroke: 'var(--color-trait)' }}
           />
           <YAxis
             stroke="var(--color-text-2)"
-            fontSize={11}
+            fontSize={12}
             tickLine={false}
             axisLine={false}
             allowDecimals={false}
