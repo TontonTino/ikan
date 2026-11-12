@@ -47,10 +47,10 @@ export default function ConfirmActionModal({
         </>
       }
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.88rem', lineHeight: 1.5, color: 'var(--color-text-body)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: 'var(--text-sm)', lineHeight: 1.5, color: 'var(--color-text-body)' }}>
         {children}
         {requireText && (
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontWeight: 700, fontSize: '0.8rem' }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-xs)' }}>
             Pour confirmer, recopiez « {requireText} »
             <input
               type="text"
@@ -58,12 +58,12 @@ export default function ConfirmActionModal({
               onChange={(e) => setSaisie(e.target.value)}
               autoComplete="off"
               disabled={busy}
-              style={{ minHeight: 44, padding: '0 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', fontFamily: 'inherit', fontSize: '0.9rem' }}
+              style={{ minHeight: 44, padding: '0 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', fontFamily: 'inherit', fontSize: 'var(--text-sm)' }}
             />
           </label>
         )}
         {error && (
-          <p role="alert" style={{ margin: 0, color: 'var(--color-critical-text)', fontWeight: 700 }}>{error}</p>
+          <p role="alert" style={{ margin: 0, color: 'var(--color-critical-text)', fontWeight: 'var(--weight-semibold)' }}>{error}</p>
         )}
       </div>
     </Modal>

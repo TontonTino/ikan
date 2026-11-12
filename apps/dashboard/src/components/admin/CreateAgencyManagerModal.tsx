@@ -105,20 +105,20 @@ export default function CreateAgencyManagerModal({ onClose, onCreated, manager, 
     }
   };
 
-  const labelStyle: React.CSSProperties = { fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' };
-  const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0', boxSizing: 'border-box' };
+  const labelStyle: React.CSSProperties = { fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text-2)', display: 'block', marginBottom: '4px' };
+  const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1px solid var(--color-trait)', boxSizing: 'border-box' };
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}
+      style={{ position: 'fixed', inset: 0, background: 'var(--overlay-scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}
       onClick={onClose}
     >
       <div
-        style={{ background: '#FFFFFF', borderRadius: '24px', padding: '28px', maxWidth: '520px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}
+        style={{ background: 'var(--color-surface)', borderRadius: '24px', padding: '28px', maxWidth: '520px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-          <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#02302D' }}>
+          <h3 style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>
             {enEdition ? "Modifier le responsable d’agence" : "Créer un responsable d’agence"}
           </h3>
           <button
@@ -127,7 +127,7 @@ export default function CreateAgencyManagerModal({ onClose, onCreated, manager, 
             aria-label="Fermer"
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', flexShrink: 0 }}
           >
-            <XCloseIcon size={18} color="#94A3B8" />
+            <XCloseIcon size={18} color="var(--color-text-2)" />
           </button>
         </div>
 
@@ -153,7 +153,7 @@ export default function CreateAgencyManagerModal({ onClose, onCreated, manager, 
             <select
               value={form.agence_id}
               onChange={(e) => setForm({ ...form, agence_id: e.target.value })}
-              style={{ ...inputStyle, background: '#FFFFFF' }}
+              style={{ ...inputStyle, background: 'var(--color-surface)' }}
             >
               <option value="">Aucune agence</option>
               {agences.map((ag) => (
@@ -163,7 +163,7 @@ export default function CreateAgencyManagerModal({ onClose, onCreated, manager, 
           </div>
 
           {erreur && (
-            <div style={{ gridColumn: '1 / -1', color: '#B91C1C', fontSize: '0.82rem', fontWeight: 600 }}>{erreur}</div>
+            <div style={{ gridColumn: '1 / -1', color: 'var(--color-critique-texte)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}>{erreur}</div>
           )}
 
           <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
@@ -171,7 +171,7 @@ export default function CreateAgencyManagerModal({ onClose, onCreated, manager, 
               type="button"
               onClick={onClose}
               className="btn-secondary"
-              style={{ padding: '10px 18px', fontWeight: 700, cursor: 'pointer' }}
+              style={{ padding: '10px 18px', fontWeight: 'var(--weight-semibold)', cursor: 'pointer' }}
             >
               Annuler
             </button>
@@ -179,7 +179,7 @@ export default function CreateAgencyManagerModal({ onClose, onCreated, manager, 
               type="submit"
               disabled={saving}
               className="btn-primary"
-              style={{ padding: '10px 22px', fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}
+              style={{ padding: '10px 22px', fontWeight: 'var(--weight-semibold)', cursor: 'pointer', opacity: saving ? 0.7 : 1 }}
             >
               {saving ? 'Enregistrement...' : 'Enregistrer'}
             </button>
