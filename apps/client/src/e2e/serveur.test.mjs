@@ -96,10 +96,11 @@ test('page valide : aucun appel Google Fonts, police locale préchargée, durée
   assert.match(html, /name="website"/);
 });
 
-test('la page d\'entrée propose l\'accueil à deux choix et plus la phrase « anonyme »', async () => {
+test('la page d\'entrée ouvre directement le formulaire noté (plus d\'écran de choix) et plus la phrase « anonyme »', async () => {
   const html = await (await get('/feedback/QR-OK')).text();
-  assert.match(html, /Noter l'expérience/);
-  assert.match(html, /Partager une idée/);
+  assert.doesNotMatch(html, /Noter l'expérience|screen-accueil/);
+  assert.match(html, /<section id="screen-sentiment" class="screen-view"(?: data-astro-cid-\w+)?>/); // visible d'entrée (aucun display:none)
+  assert.match(html, /Partager une idée/); // proposé sur l'écran de confirmation
   assert.match(html, /Votre avis est confidentiel\./);
   assert.doesNotMatch(html, /anonyme/i);
 });
@@ -172,45 +173,58 @@ const attendre = (page, id) => page.waitForFunction((i) => { const e = document.
 
 after(async () => { await navigateur?.close(); });
 
-test('accueil : nom de l\'agence et deux choix, le formulaire noté attend', { skip: SANS_NAVIGATEUR }, async () => {
+/** Envoie un avis noté depuis le formulaire (premier écran) et attend la confirmation. */
+async function envoyerAvis(page) {
+  await page.select('#categorieSelect', 'c1');
+  await page.click('.sentiment-tile[data-sentiment=bien]');
+  await page.click('#btnSubmitFeedback');
+  await attendre(page, 'screen-success');
+}
+
+/** « Partager une idée » est proposé après l'envoi d'un avis : on y va, puis on oublie les envois précédents. */
+async function allerAIdee(page) {
+  await envoyerAvis(page);
+  await page.click('#btnSuccesIdee');
+  await attendre(page, 'screen-idee');
+  posts.length = 0;
+}
+
+test('ouverture : le formulaire noté s\'affiche d\'entrée, avec le nom de l\'agence, sans écran de choix', { skip: SANS_NAVIGATEUR }, async () => {
   const page = await ouvrir();
-  assert.equal(await visible(page, 'screen-accueil'), true);
-  assert.equal(await visible(page, 'screen-sentiment'), false);
+  assert.equal(await page.$('#screen-accueil'), null);
+  assert.equal(await visible(page, 'screen-sentiment'), true);
   assert.equal(await visible(page, 'screen-idee'), false);
-  assert.equal(await page.$eval('#accueilAgenceNom', (e) => e.textContent.trim()), 'Agence Test');
-  assert.equal((await page.$$('#screen-accueil button')).length, 2);
+  assert.match(await page.$eval('#agencyBadgeText', (e) => e.textContent), /Agence Test/);
   await page.close();
 });
 
-test('chemin 1 « Noter l\'expérience » : accueil → formulaire → confirmation, un seul avis envoyé, aucune idée', { skip: SANS_NAVIGATEUR }, async () => {
+test('chemin 1 « Noter » : formulaire → confirmation, un seul avis envoyé, aucune idée, aucune question NPS', { skip: SANS_NAVIGATEUR }, async () => {
   const page = await ouvrir();
   const ecrans = [];
-  const noter = async () => { for (const id of ['screen-accueil', 'screen-sentiment', 'screen-success']) if (await visible(page, id)) ecrans.push(id); };
+  const noter = async () => { for (const id of ['screen-sentiment', 'screen-success']) if (await visible(page, id)) ecrans.push(id); };
   await noter();
-  await page.click('#btnChoixNote');
-  await attendre(page, 'screen-sentiment');
-  await noter();
-  assert.equal(await visible(page, 'screen-accueil'), false);
   await page.select('#categorieSelect', 'c1');
   await page.click('.sentiment-tile[data-sentiment=bien]');
   await page.click('#btnSubmitFeedback');
   await attendre(page, 'screen-success');
   await noter();
-  assert.deepEqual(ecrans, ['screen-accueil', 'screen-sentiment', 'screen-success']);
+  assert.deepEqual(ecrans, ['screen-sentiment', 'screen-success']);
+  assert.match(await page.$eval('#screen-success', (e) => e.textContent), /Partager une idée/);
+  assert.doesNotMatch(await page.$eval('#screen-success', (e) => e.textContent), /recommanderiez/);
   const avis = posts.filter((p) => p.chemin.endsWith('/feedbacks/'));
   assert.equal(avis.length, 1);
   assert.equal(avis[0].corps.note, 4);
   assert.equal(avis[0].corps.souhaite_etre_rappele, false);
   assert.equal(posts.some((p) => p.chemin.includes('/suggestions')), false);
+  assert.equal(posts.some((p) => p.chemin.includes('/nps')), false);
   await page.close();
 });
 
-test('chemin 2 « Partager une idée » : accueil → idée → confirmation, sans note ni contact, compteur, moins de 90 s', { skip: SANS_NAVIGATEUR }, async () => {
+test('chemin 2 « Partager une idée » après l\'avis : confirmation → idée → merci, sans note ni contact, compteur, moins de 90 s', { skip: SANS_NAVIGATEUR }, async () => {
   const page = await ouvrir();
   const debut = Date.now();
-  await page.click('#btnChoixIdee');
-  await attendre(page, 'screen-idee');
-  assert.equal(await visible(page, 'screen-accueil'), false);
+  await allerAIdee(page);
+  assert.equal(await visible(page, 'screen-success'), false);
   assert.equal(await page.$eval('#ideeCharCount', (e) => e.textContent), '1000 caractères restants sur 1000');
   await page.type('#inputIdee', 'Ajouter une rampe.');
   assert.equal(await page.$eval('#ideeCharCount', (e) => e.textContent), '982 caractères restants sur 1000');
@@ -223,27 +237,25 @@ test('chemin 2 « Partager une idée » : accueil → idée → confirmation, sa
   assert.deepEqual(idees[0].corps, { contenu: 'Ajouter une rampe.', website: '' }); // aucun contact, aucune note
   assert.equal(posts.some((p) => p.chemin.endsWith('/feedbacks/')), false);
   assert.ok(Date.now() - debut < 90_000);
-  await page.click('#btnIdeeAccueil');
-  await attendre(page, 'screen-accueil');
+  await page.click('#btnIdeeNouvelAvis');
+  await attendre(page, 'screen-sentiment');
   await page.close();
 });
 
-test('idée : « Retour » ramène à l\'accueil ; idée vide refusée sans envoi', { skip: SANS_NAVIGATEUR }, async () => {
+test('idée : « Retour » ramène à la confirmation de l\'avis ; idée vide refusée sans envoi', { skip: SANS_NAVIGATEUR }, async () => {
   const page = await ouvrir();
-  await page.click('#btnChoixIdee');
-  await attendre(page, 'screen-idee');
+  await allerAIdee(page);
   await page.click('#btnSubmitIdee');
   assert.match(await page.$eval('#ideeError', (e) => e.textContent), /Écrivez votre idée/);
   assert.equal(posts.length, 0);
   await page.click('#btnRetourIdee');
-  await attendre(page, 'screen-accueil');
+  await attendre(page, 'screen-success');
   await page.close();
 });
 
 test('idée : échec réseau puis refus 429 : le texte reste, message non technique, nouvelle tentative possible', { skip: SANS_NAVIGATEUR }, async () => {
   const page = await ouvrir();
-  await page.click('#btnChoixIdee');
-  await attendre(page, 'screen-idee');
+  await allerAIdee(page);
   await page.type('#inputIdee', 'Mon idée à ne pas perdre');
   comportement.idee.push(429);
 
@@ -271,8 +283,7 @@ test('idée : échec réseau puis refus 429 : le texte reste, message non techni
 
 test('idée : double clic = un seul envoi (verrou du bouton)', { skip: SANS_NAVIGATEUR }, async () => {
   const page = await ouvrir();
-  await page.click('#btnChoixIdee');
-  await attendre(page, 'screen-idee');
+  await allerAIdee(page);
   await page.type('#inputIdee', 'Une seule fois');
   await page.$eval('#btnSubmitIdee', (b) => { b.click(); b.click(); b.click(); });
   await attendre(page, 'screen-idee-merci');
@@ -282,8 +293,7 @@ test('idée : double clic = un seul envoi (verrou du bouton)', { skip: SANS_NAVI
 
 test('idée : le champ piège rempli par un robot est transmis tel quel (l\'API répond comme un succès sans rien enregistrer)', { skip: SANS_NAVIGATEUR }, async () => {
   const page = await ouvrir();
-  await page.click('#btnChoixIdee');
-  await attendre(page, 'screen-idee');
+  await allerAIdee(page);
   await page.type('#inputIdee', 'Texte de robot');
   await page.$eval('#champIdeeSiteWeb', (e) => { e.value = 'http://spam.example'; });
   await page.click('#btnSubmitIdee');
@@ -292,7 +302,7 @@ test('idée : le champ piège rempli par un robot est transmis tel quel (l\'API 
   await page.close();
 });
 
-test('zones tactiles ≥ 44 × 44 px mesurées dans le navigateur : accueil, idée, confirmation', { skip: SANS_NAVIGATEUR }, async () => {
+test('zones tactiles ≥ 44 × 44 px mesurées dans le navigateur : formulaire, confirmation, idée, merci', { skip: SANS_NAVIGATEUR }, async () => {
   const page = await ouvrir();
   const mesurer = (etiquette) => page.evaluate((nom) => {
     const faibles = [];
@@ -305,11 +315,13 @@ test('zones tactiles ≥ 44 × 44 px mesurées dans le navigateur : accueil, id�
     });
     return faibles;
   }, etiquette);
-  let faibles = await mesurer('accueil');
-  await page.click('#btnChoixIdee'); await attendre(page, 'screen-idee');
+  let faibles = await mesurer('formulaire');
+  await envoyerAvis(page);
+  faibles = faibles.concat(await mesurer('confirmation de l\'avis'));
+  await page.click('#btnSuccesIdee'); await attendre(page, 'screen-idee');
   faibles = faibles.concat(await mesurer('idée'));
   await page.type('#inputIdee', 'Texte'); await page.click('#btnSubmitIdee'); await attendre(page, 'screen-idee-merci');
-  faibles = faibles.concat(await mesurer('confirmation'));
+  faibles = faibles.concat(await mesurer('merci'));
   assert.deepEqual(faibles, []);
   await page.close();
 });

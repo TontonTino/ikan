@@ -3,8 +3,6 @@ import { Link, useLocation } from 'react-router-dom';
 import { lienApercuAgence, lienAvis } from '../../utils/liensAgence';
 import type { Agence, Alerte, AlerteFeedback } from '../../types';
 import AgenceFilterSelect from '../../components/stats/AgenceFilterSelect';
-import AgencyRecommendations, { type RecoAffichee } from '../../components/agency/AgencyRecommendations';
-import RecommandationsParAgence from '../../components/agency/RecommandationsParAgence';
 import Alert from '../../components/ui/Alert';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -19,7 +17,6 @@ import BadgeGraviteAlerte from '../../components/alerts/BadgeGraviteAlerte';
 import BadgeNiveauAvis from '../../components/alerts/BadgeNiveauAvis';
 import SuiviEpisode, { PastilleEtatEpisode } from '../../components/alerts/EtatEpisode';
 import { episodeDeAlerte, peutPrendreEnCharge } from '../../utils/episodesAlertes';
-import { libelleRecommandations } from '../../utils/sourceAnalyse';
 import {
   AVIS_VISIBLES,
   avisCible,
@@ -36,24 +33,19 @@ import {
   tonAvis,
   type TypeAlerte,
 } from './alertesVue';
-import type { AlertesData, RecosData } from './AlertesView';
+import type { AlertesData } from './AlertesView';
 import type { EtatSource } from './alertesVue';
 import { formaterPourcentage } from '../../utils/formatNombre';
 
 interface Props {
   isAgencyManager: boolean;
   alertes: EtatSource<AlertesData>;
-  recos: EtatSource<RecosData>;
-  recosLoadingMore: boolean;
   /** Nom du forfait sans alertes (lisible par le CX Manager uniquement). */
   nomForfait: string | null;
   agences: Agence[];
   selectedAgenceId: string | null;
   onSelectAgence: (id: string | null) => void;
   onRefresh: () => void;
-  onRetryRecos: () => void;
-  onLoadMoreRecos: () => void;
-  onMarquerRecoTraitee: (id: string) => void;
   /** Agency Manager : ouvre la prise en charge d'une alerte détectée. Absent : aucun bouton (le CX Manager consulte seulement). */
   onPrendreEnCharge?: (alerte: Alerte) => void;
   /** « Historique des alertes » (repliée), affichée sous la liste des alertes actives. */
@@ -171,7 +163,7 @@ export function LigneAvis({ avis, isAgencyManager, cible }: { avis: AlerteFeedba
 }
 
 export default function PilotageAlertesActionsTab(props: Props) {
-  const { isAgencyManager, alertes, recos, recosLoadingMore, nomForfait, agences, selectedAgenceId, onSelectAgence, onRefresh, onRetryRecos, onLoadMoreRecos, onMarquerRecoTraitee, onPrendreEnCharge, historique } = props;
+  const { isAgencyManager, alertes, nomForfait, agences, selectedAgenceId, onSelectAgence, onRefresh, onPrendreEnCharge, historique } = props;
   const [type, setType] = useState<TypeAlerte>('toutes');
   const [depliee, setDepliee] = useState(false);
   const { hash } = useLocation();
@@ -215,7 +207,7 @@ export default function PilotageAlertesActionsTab(props: Props) {
             </button>
           ))}
         </div>
-        {!isAgencyManager && <AgenceFilterSelect agences={agences} selectedId={selectedAgenceId} onChange={onSelectAgence} label="Filtrer les alertes et recommandations par agence" />}
+        {!isAgencyManager && <AgenceFilterSelect agences={agences} selectedId={selectedAgenceId} onChange={onSelectAgence} label="Filtrer les alertes par agence" />}
         <IconButton label="Actualiser les alertes" icon={<RefreshIcon size={16} />} onClick={onRefresh} />
       </div>
 
@@ -289,21 +281,6 @@ export default function PilotageAlertesActionsTab(props: Props) {
       </Card>
 
       {historique}
-
-      <AgencyRecommendations
-        titre={libelleRecommandations(recos.donnees.items)}
-        recos={recos.donnees.items}
-        total={recos.donnees.total}
-        loadFailed={recos.statut === 'erreur'}
-        loading={recos.statut === 'chargement'}
-        loadingMore={recosLoadingMore}
-        actionsEnCours={0}
-        afficherLienActions={false}
-        onMarquerTraitee={onMarquerRecoTraitee}
-        onLoadMore={onLoadMoreRecos}
-        onRetry={onRetryRecos}
-        vueGroupee={!isAgencyManager ? <RecommandationsParAgence agenceId={selectedAgenceId} onModifiee={onRetryRecos} /> : undefined}
-      />
     </div>
   );
 }

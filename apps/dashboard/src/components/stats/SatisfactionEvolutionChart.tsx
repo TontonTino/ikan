@@ -10,11 +10,14 @@ import {
 } from 'recharts';
 import type { EvolutionPoint } from '../../types';
 import { insererPeriodesSansAvis, libelleDatePoint, type SatisfactionChartPoint } from '../../utils/satisfactionSeries';
+import GraphiqueVide, { type ElargirPeriode } from '../ui/GraphiqueVide';
 import { formaterPourcentage } from '../../utils/formatNombre';
 
 interface SatisfactionEvolutionChartProps {
   data: EvolutionPoint[];
   height?: number;
+  /** Aucune donnée : lien vers une période plus large. */
+  elargir?: ElargirPeriode;
 }
 
 function CustomTooltip({ active, payload, label }: any) {
@@ -52,26 +55,10 @@ function CustomTooltip({ active, payload, label }: any) {
 export default function SatisfactionEvolutionChart({
   data,
   height = 260,
+  elargir,
 }: SatisfactionEvolutionChartProps) {
   if (!data || data.length === 0) {
-    return (
-      <div
-        style={{
-          height: `${height}px`,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#5B6B7F',
-          fontSize: '0.84rem',
-          background: '#FAFCFA',
-          borderRadius: '16px',
-          border: '1px dashed #D6E8D9',
-        }}
-      >
-        Aucune donnée de satisfaction disponible pour cette période.
-      </div>
-    );
+    return <GraphiqueVide message="Aucune donnée de satisfaction disponible pour cette période." elargir={elargir} />;
   }
 
   return (

@@ -116,4 +116,22 @@ describe('classement des agences : part d’avis négatifs', () => {
     expect(html).toContain('25 %');
     expect(html).toContain('en hausse');
   });
+
+  it('plus de colonne « Tendance » (toujours vide)', () => {
+    const html = rendu(<AgencesRankingTable agences={[agence('Lyon', 20, pn())]} />);
+    expect(html).not.toContain('Tendance');
+  });
+
+  it('comparaison impossible : une seule phrase au-dessus du tableau, aucune mention dans les cellules', () => {
+    const insuffisant = pn({ statut_evolution: 'insuffisant', evolution_pts: null });
+    const html = rendu(<AgencesRankingTable agences={[agence('Lyon', 20, insuffisant), agence('Nice', 12, insuffisant), agence('Lille', 0)]} />);
+    expect(html).toContain('Pour 2 agences, la période précédente compte moins de 5 avis');
+    expect(html).not.toContain('Données insuffisantes pour comparer');
+    expect(html.indexOf('Pour 2 agences')).toBeLessThan(html.indexOf('<table'));
+  });
+
+  it('toutes les agences comparables : aucune phrase ajoutée', () => {
+    const html = rendu(<AgencesRankingTable agences={[agence('Lyon', 20, pn())]} />);
+    expect(html).not.toContain('moins de 5 avis');
+  });
 });

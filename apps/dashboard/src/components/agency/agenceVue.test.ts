@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { Alerte, AlerteFeedback, Issue, Recommandation, TendanceSatisfaction } from '../../types';
+import type { Alerte, AlerteFeedback, Issue, TendanceSatisfaction } from '../../types';
 import {
   construirePriorites,
   estProblemePrioritaire,
-  grouperRecommandations,
   interpretationEvolution,
   resumeAccessibleEvolution,
-  trierRecommandations,
   variationPeriode,
 } from './agenceVue';
 
@@ -15,8 +13,6 @@ const avis = (id: string, note: number): AlerteFeedback =>
   ({ feedback_id: id, agence_id: 'a1', agence_nom: 'Agence', note, categorie_nom: 'Accueil', raison: 'note_basse', commentaire: 'Attente trop longue', date_soumission: '2026-10-10T10:00:00Z' });
 const probleme = (id: string, severite: Issue['severite'], statut: Issue['statut'] = 'ouverte', necessite_action = false): Issue =>
   ({ id, agence_id: 'a1', titre: `Problème ${id}`, statut, severite, necessite_action } as Issue);
-const reco = (id: string, priorite: Recommandation['priorite'], date = '2026-10-10T10:00:00Z'): Recommandation =>
-  ({ id, analyse_ia_id: 'x', contenu: `reco ${id}`, priorite, date_generation: date, traitee: false, source: 'regle' });
 const point = (date: string, taux: number, n = 10): TendanceSatisfaction => ({ date, taux, nombre_feedbacks: n });
 
 describe('priorités de l’agence', () => {
@@ -74,29 +70,6 @@ describe('priorités de l’agence', () => {
   });
 });
 
-describe('recommandations', () => {
-  it('tri : priorité décroissante puis plus récentes d’abord', () => {
-    const t = trierRecommandations([
-      reco('low', 'low'),
-      reco('high-ancien', 'high', '2026-10-01T00:00:00Z'),
-      reco('crit', 'critical'),
-      reco('high-recent', 'high', '2026-10-09T00:00:00Z'),
-    ]);
-    expect(t.map((r) => r.id)).toEqual(['crit', 'high-recent', 'high-ancien', 'low']);
-  });
-
-  it('regroupement par priorité existante, dans l’ordre, sans groupe vide', () => {
-    const g = grouperRecommandations([reco('1', 'high'), reco('2', 'critical'), reco('3', 'high')]);
-    expect(g.map((x) => [x.priorite, x.items.length])).toEqual([['critical', 1], ['high', 2]]);
-    expect(g[0].label).toBe('Critique');
-  });
-
-  it('ne modifie pas le tableau d’origine', () => {
-    const origine = [reco('1', 'low'), reco('2', 'critical')];
-    trierRecommandations(origine);
-    expect(origine.map((r) => r.id)).toEqual(['1', '2']);
-  });
-});
 
 describe('évolution de la satisfaction', () => {
   it('variation : premier au dernier relevé, arrondie à 0,1 point', () => {

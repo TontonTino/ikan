@@ -43,6 +43,8 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
   const isCXOrAdmin = currentUser?.role === 'cx_manager' || currentUser?.role === 'admin';
   // Le sélecteur d'agence n'a de sens que si l'agence n'est pas déjà fixée par le contexte de la page.
   const showAgenceSelector = isCXOrAdmin && !agenceId;
+  // Le Responsable d'agence ne voit que son agence : la répéter à chaque ligne n'apporte rien. Le CX Manager garde date et agence.
+  const afficherAgenceLigne = currentUser?.role !== 'agency_manager';
 
   // Filtres, recherche, onglet et page : un seul état. Tout changement (sauf de page) revient à la page 1.
   const [filtres, dispatch] = useReducer(reduireFiltres, undefined, (): FiltresAvis => ({
@@ -320,7 +322,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                 </select>
               </div>
               <p style={{ margin: '8px 0 0', fontSize: '0.76rem', color: 'var(--color-text-muted)' }}>
-                Avis contradictoires : la note et le ton du texte se contredisent (par exemple 5/5 avec un texte négatif). Cette détection est incluse à partir du forfait Pro ; sans elle, aucun avis n’est signalé.
+                Avis contradictoires : la note et le ton du texte se contredisent (par exemple 5/5 avec un texte négatif).
               </p>
               {themeCatalogError && (
                 <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '8px', color: 'var(--color-text-body)', fontSize: '0.82rem' }}>
@@ -358,7 +360,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #E8ECE6', background: '#F8FAFB' }}>
-                  <th scope="col" style={th}>Date et agence</th>
+                  <th scope="col" style={th}>{afficherAgenceLigne ? 'Date et agence' : 'Date'}</th>
                   <th scope="col" style={th}>Note et ton</th>
                   <th scope="col" style={th}>Commentaire du client</th>
                   <th scope="col" style={th}>Thème</th>
@@ -380,8 +382,8 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                       <tr key={f.id} style={{ borderBottom: '1px solid #F1F4EE', cursor: 'pointer' }} onClick={() => setSelectedFeedbackForTreatment(f)}
                         onMouseEnter={(e) => (e.currentTarget.style.background = '#F8FAFC')} onMouseLeave={(e) => (e.currentTarget.style.background = '#FFFFFF')}>
                         <td style={{ padding: '14px 16px', minWidth: '140px' }}>
-                          <div style={{ fontWeight: 700, color: '#02302D' }}>{f.agence_nom || 'Agence'}</div>
-                          <div style={{ fontSize: '0.74rem', color: '#64748B', marginTop: '2px' }}>{formatDateAvis(f.date_soumission)}</div>
+                          {afficherAgenceLigne && <div style={{ fontWeight: 700, color: '#02302D' }}>{f.agence_nom || 'Agence'}</div>}
+                          <div style={afficherAgenceLigne ? { fontSize: '0.74rem', color: '#64748B', marginTop: '2px' } : { color: '#02302D' }}>{formatDateAvis(f.date_soumission)}</div>
                         </td>
                         <td style={{ padding: '14px 16px', minWidth: '150px' }}><SignauxAvis feedback={f} /></td>
                         <td style={{ padding: '14px 16px', maxWidth: '340px' }}>

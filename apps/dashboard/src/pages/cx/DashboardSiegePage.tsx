@@ -27,6 +27,7 @@ import { RefreshIcon } from '../../components/common/Icons';
 import { buildSurveillance, repartitionReseau } from './siege/siegeData';
 import { issuesIncompletes, useSiegeData } from './siege/useSiegeData';
 import { Action, Evolution, Pourquoi, Reseau, SiegeKpis, Surveillance, type KpiKind } from './siege/SiegeBlocks';
+import { elargirPeriode } from '../../utils/periodeElargie';
 import { AgenceDetail, KPI_TITRE, KpiDetail } from './siege/SiegeDrawers';
 
 const PERIODES = [
@@ -130,7 +131,7 @@ export default function DashboardSiegePage() {
 
         {/* ÉVOLUTION */}
         <BentoItem size="hero" aria-label="Évolution">
-          <Evolution stats={stats} jours={jours} onRetry={data.reloadStats} />
+          <Evolution stats={stats} jours={jours} onRetry={data.reloadStats} elargir={elargirPeriode(jours, PERIODES.map((p) => ({ jours: p.v, label: p.l })), setJours)} />
         </BentoItem>
 
         {/* RÉSEAU */}

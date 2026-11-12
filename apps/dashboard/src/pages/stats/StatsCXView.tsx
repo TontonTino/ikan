@@ -11,6 +11,7 @@ import ThemesBarList from '../../components/stats/ThemesBarList';
 import AgencesRankingTable from '../../components/stats/AgencesRankingTable';
 import { LIBELLE_SCORE_FIABILISE } from '../../utils/scoreFiabilise';
 import { lienAvisReseau } from '../../utils/liensAgence';
+import { elargirPeriode } from '../../utils/periodeElargie';
 import type { AgenceCarte } from '../../components/map/AgencesMap';
 import { statutSeuil, satisfactionTexte, STATUT_SEUIL_LABEL } from '../cx/siege/siegeData';
 
@@ -153,7 +154,7 @@ export default function StatsCXView() {
             return (
               <div className="stats-cx__content">
                 <StatsSectionCard compact title="Évolution de la satisfaction et du traitement" subtitle="La satisfaction concerne tous les avis notés; les volumes ne concernent que les avis négatifs ou critiques. Une interruption indique une période sans avis.">
-                  <SatisfactionVolumeChart satisfaction={data.evolution_satisfaction} volume={data.evolution_volume} height={440} />
+                  <SatisfactionVolumeChart satisfaction={data.evolution_satisfaction} volume={data.evolution_volume} height={440} elargir={elargirPeriode(jours, STATS_CX_PERIOD_OPTIONS, setJours)} />
                 </StatsSectionCard>
                 <StatsSectionCard
                   compact

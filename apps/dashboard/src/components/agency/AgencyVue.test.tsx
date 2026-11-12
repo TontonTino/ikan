@@ -2,9 +2,8 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
-import type { DashboardAgence, Recommandation } from '../../types';
+import type { DashboardAgence } from '../../types';
 import AgencyPriorities, { PRIORITES_VISIBLES, resumePriorites } from './AgencyPriorities';
-import AgencyRecommendations, { RECOMMANDATIONS_VISIBLES } from './AgencyRecommendations';
 import AgencyProblemes from './AgencyProblemes';
 import AgencyDecisionKpis from './AgencyDecisionKpis';
 import { TonDesAvis, ThemesDesAvis } from './AgencyClients';
@@ -17,8 +16,6 @@ const priorite = (i: number, ton: Priorite['ton'] = 'warning', kind: Priorite['k
   id: `p${i}`, kind, ton, type: kind === 'seuil' ? 'Alerte de seuil' : kind === 'probleme' ? 'Problème à traiter' : 'Avis à examiner',
   titre: `Titre ${i}`, detail: `Détail ${i}`, lien: { to: '/feedbacks?tab=critiques', label: 'Examiner' },
 });
-const reco = (i: number, priorite: Recommandation['priorite'] = 'high'): Recommandation =>
-  ({ id: `r${i}`, analyse_ia_id: 'x', contenu: `Contenu reco ${i}`, priorite, date_generation: '2026-10-10T10:00:00Z', traitee: false, source: 'regle' });
 
 const propsPrio = (surcharge = {}) => ({ priorites: [] as Priorite[], loading: false, alertesIndisponibles: false, problemesIndisponibles: false, avisATraiter: 3, onRetry: vi.fn(), ...surcharge });
 
@@ -80,52 +77,6 @@ describe('priorités — états', () => {
 
   it('résumé : décompte par type', () => {
     expect(resumePriorites([priorite(1, 'critical', 'seuil'), priorite(2, 'warning', 'probleme'), priorite(3), priorite(4)])).toBe('1 alerte de seuil · 1 problème à traiter · 2 avis à examiner');
-  });
-});
-
-const propsReco = (surcharge = {}) => ({ recos: [] as Recommandation[], total: 0, loadFailed: false, loading: false, loadingMore: false, actionsEnCours: 2, onMarquerTraitee: vi.fn(), onLoadMore: vi.fn(), onRetry: vi.fn(), ...surcharge });
-
-describe('recommandations — états', () => {
-  it('erreur sans donnée : message et réessai, pas d’état vide', () => {
-    const html = rendu(<AgencyRecommendations {...propsReco({ loadFailed: true })} />);
-    expect(html).toContain('Impossible de charger les recommandations');
-    expect(html).toContain('Réessayer');
-    expect(html).not.toContain('Aucune recommandation en attente');
-  });
-
-  it('succès sans recommandation : vrai état vide, sans prétendre que tout est résolu', () => {
-    const html = rendu(<AgencyRecommendations {...propsReco()} />);
-    expect(html).toContain('Aucune recommandation en attente');
-    expect(html).toContain('ne confirme pas');
-  });
-
-  it('48 recommandations : trois seulement sont affichées, triées par priorité', () => {
-    const recos = [...Array.from({ length: 45 }, (_, i) => reco(i, 'low')), reco(100, 'critical'), reco(101, 'critical'), reco(102, 'high')];
-    const html = rendu(<AgencyRecommendations {...propsReco({ recos, total: 48 })} />);
-    expect((html.match(/agence-reco"/g) || []).length).toBe(RECOMMANDATIONS_VISIBLES);
-    expect(html).toContain('Contenu reco 100');
-    expect(html).not.toContain('Contenu reco 5<');
-    expect(html).toContain('Voir les 45 autres');
-    expect(html).toContain('Recommandations en attente (48)');
-  });
-
-  it('distingue recommandation et action exécutée', () => {
-    const html = rendu(<AgencyRecommendations {...propsReco({ recos: [reco(1)], total: 1 })} />);
-    expect(html).toContain('n’est pas une action exécutée');
-    expect(html).toContain('En attente');
-    expect(html).toContain('href="/actions"');
-    expect(html).toContain('2 actions à mener en cours');
-  });
-
-  it('plus de recommandations côté serveur : bouton de chargement avec le décompte', () => {
-    const html = rendu(<AgencyRecommendations {...propsReco({ recos: [reco(1), reco(2)], total: 68 })} />);
-    expect(html).toContain('Charger les suivantes (2/68)');
-  });
-
-  it('échec d’actualisation avec données : la liste reste affichée', () => {
-    const html = rendu(<AgencyRecommendations {...propsReco({ recos: [reco(1)], total: 1, loadFailed: true })} />);
-    expect(html).toContain('Contenu reco 1');
-    expect(html).toContain('n’ont pas pu être actualisées');
   });
 });
 
@@ -204,17 +155,3 @@ describe('indicateurs et analyses', () => {
   });
 });
 
-describe('recommandations : le préfixe « URGENT — » n’est pas affiché, la priorité reste dans le badge', () => {
-  const avecTexte = (contenu: string) => ({ ...reco(1, 'critical'), contenu });
-  it('préfixe retiré à l’affichage, badge « Priorité critique » conservé, libellé accessible sans préfixe', () => {
-    const html = rendu(<AgencyRecommendations {...propsReco({ recos: [avecTexte('URGENT — Contactez immédiatement le responsable.')], total: 1 })} />);
-    expect(html).toContain('>Contactez immédiatement le responsable.</p>');
-    expect(html).not.toContain('URGENT');
-    expect(html).toContain('Priorité critique');
-    expect(html).toContain('Marquer comme traitée : Contactez immédiatement');
-  });
-  it('texte sans préfixe, ou avec « urgent » ailleurs : inchangé', () => {
-    const html = rendu(<AgencyRecommendations {...propsReco({ recos: [avecTexte('Situation URGENT — à suivre.')], total: 1 })} />);
-    expect(html).toContain('>Situation URGENT — à suivre.</p>');
-  });
-});

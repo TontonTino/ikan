@@ -6,11 +6,14 @@ import {
 import type { EvolutionPoint } from '../../types';
 import { combinerSatisfactionEtVolume, libelleDatePoint } from '../../utils/satisfactionSeries';
 import { formaterPourcentage } from '../../utils/formatNombre';
+import GraphiqueVide, { type ElargirPeriode } from '../ui/GraphiqueVide';
 
 interface Props {
   satisfaction: EvolutionPoint[];
   volume: EvolutionPoint[];
   height?: number;
+  /** Aucune donnée : lien vers une période plus large. */
+  elargir?: ElargirPeriode;
 }
 
 function PointTooltip({ active, payload, label }: any) {
@@ -27,11 +30,11 @@ function PointTooltip({ active, payload, label }: any) {
   );
 }
 
-export default function SatisfactionVolumeChart({ satisfaction, volume, height = 440 }: Props) {
+export default function SatisfactionVolumeChart({ satisfaction, volume, height = 440, elargir }: Props) {
   const rows = useMemo(() => combinerSatisfactionEtVolume(satisfaction, volume), [satisfaction, volume]);
 
   if (!satisfaction.length) {
-    return <div className="stats-cx__chart-empty" style={{ height }}>Aucune donnée de satisfaction disponible pour cette période.</div>;
+    return <GraphiqueVide message="Aucune donnée de satisfaction disponible pour cette période." elargir={elargir} />;
   }
 
   const syncId = 'stats-cx-satisfaction-volume';

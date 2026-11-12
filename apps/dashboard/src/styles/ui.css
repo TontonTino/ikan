@@ -571,3 +571,12 @@
   .kpi-bandeau__liste { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .kpi-bandeau .ui-btn { min-height: var(--touch-target); }
 }
+
+/* ── État vide d'un graphique : une phrase et un lien, sans réserver la hauteur du graphique ── */
+.ui-graphique-vide { margin: 0; padding: var(--space-4) 0; font-size: var(--text-sm); color: var(--color-text-muted); line-height: var(--leading-normal); }
+.ui-graphique-vide__lien {
+  padding: 0; border: 0; background: none; font: inherit; font-weight: var(--weight-medium);
+  color: var(--color-primary); text-decoration: underline; text-underline-offset: 2px; cursor: pointer;
+}
+.ui-graphique-vide__lien:hover { text-decoration-thickness: 2px; }
+.ui-graphique-vide__lien:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: 2px; }

@@ -27,8 +27,23 @@ describe('sidebar du CX Manager', () => {
 
   it('garde ses autres entrées', () => {
     expect(chemins('cx_manager')).toEqual(
-      expect.arrayContaining(['/siege', '/statistiques', '/alertes', '/issues', '/actions', '/veille', '/admin/gestion-agences']),
+      expect.arrayContaining(['/siege', '/statistiques', '/alertes', '/issues', '/actions', '/admin/gestion-agences']),
     );
+  });
+});
+
+describe('veille réseaux sociaux (reportée en V2)', () => {
+  it('n’apparaît plus dans aucun menu ni aucune route protégée', () => {
+    for (const sections of Object.values(ROLE_NAV_SECTIONS)) {
+      for (const section of sections) expect(section.items.map((item) => item.path)).not.toContain('/veille');
+    }
+    expect(ROUTE_ROLES).not.toHaveProperty('/veille');
+  });
+
+  it('la page et ses composants restent dans le code pour la V2', () => {
+    const fichiers = Object.keys(import.meta.glob(['/src/pages/cx/VeillePage.tsx', '/src/components/veille/*.tsx']));
+    expect(fichiers).toContain('/src/pages/cx/VeillePage.tsx');
+    expect(fichiers.length).toBeGreaterThan(1);
   });
 });
 
