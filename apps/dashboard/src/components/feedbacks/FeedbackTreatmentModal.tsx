@@ -12,6 +12,7 @@ import WhatsAppReplyButton from './WhatsAppReplyButton';
 import { CoordonneesMasquees, ConsentementContact, InfoTraitement } from './DemandeContactBlocs';
 import ReponseClientSection from './ReponseClientSection';
 import { libelleAnalyseAbsente } from './avisAffichage';
+import { shortDate } from '../ui/format';
 import { CANAL_LABELS } from '../../utils/brouillonReponse';
 import {
   AlertTriangleIcon,
@@ -50,6 +51,12 @@ const STEPPER_STEPS = [
   { key: 'resolu', label: AVIS_STATUT_LABELS.resolu },
 ];
 
+/** Référence lisible d'un avis (lot 3) : sa date et son agence, à la place d'un identifiant tronqué (« Avis #56536653 »). */
+export function referenceAvis(feedback: Pick<Feedback, 'date_soumission' | 'agence_nom'>): string {
+  const date = shortDate(feedback.date_soumission);
+  return [date ? `Avis du ${date}` : 'Avis', feedback.agence_nom].filter(Boolean).join(' · ');
+}
+
 export default function FeedbackTreatmentModal({
   feedback,
   isOpen,
@@ -76,6 +83,8 @@ export default function FeedbackTreatmentModal({
   const [issueLiee, setIssueLiee] = useState<Issue | null>(null);
   const [issueLieeLoading, setIssueLieeLoading] = useState(false);
   const [issueMode, setIssueMode] = useState<'choix' | 'creer' | 'rattacher'>('choix');
+  // Section « Problème lié » repliée sur une ligne tant qu'aucun problème n'est lié et que l'utilisateur ne l'ouvre pas.
+  const [issueDepliee, setIssueDepliee] = useState(false);
 
   const [categoriesAgence, setCategoriesAgence] = useState<Categorie[]>([]);
   const [creerTitre, setCreerTitre] = useState('');
@@ -479,7 +488,7 @@ export default function FeedbackTreatmentModal({
               </span>
             </div>
             <h2 id="feedback-treatment-title" style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--weight-semibold)', margin: 0, letterSpacing: '-0.02em' }}>
-              Avis #{feedback.id.slice(0, 8)}
+              {referenceAvis(feedback)}
             </h2>
           </div>
 
@@ -921,7 +930,10 @@ export default function FeedbackTreatmentModal({
                     </div>
                   )}
 
-                  {/* Définition ou Confirmation d'Action Corrective */}
+                  {/* Définition ou Confirmation d'Action Corrective — repliée sur une ligne tant qu'il n'y a rien à faire ni à lire */}
+                  {!['en_traitement', 'en_cours', 'resolu'].includes(currentStatut) ? (
+                    <p className="ftm-ligne-repliee"><strong>Action à mener</strong> : aucune définie pour l’instant.</p>
+                  ) : (
                   <div
                     style={{
                       background: 'var(--color-bg)',
@@ -1026,10 +1038,19 @@ export default function FeedbackTreatmentModal({
                       </div>
                     )}
                   </div>
+                  )}
                 </div>
               )}
 
-              {/* 5bis. ISSUE LIÉE (CX Manager & Agency Manager) — créer, rattacher ou détacher */}
+              {/* 5bis. ISSUE LIÉE (CX Manager & Agency Manager) — créer, rattacher ou détacher. Repliée sur une ligne sans problème lié. */}
+              {!issueLieeLoading && !feedback.issue_id && issueMode === 'choix' && !issueDepliee ? (
+                <div className="ftm-ligne-repliee ftm-ligne-repliee--action">
+                  <span><strong>Problème à traiter lié</strong> : aucun.</span>
+                  <button type="button" className="btn-secondary" style={{ padding: '4px 12px', fontSize: 'var(--text-xs)', borderRadius: '8px' }} onClick={() => setIssueDepliee(true)} aria-expanded={false}>
+                    Lier à un problème
+                  </button>
+                </div>
+              ) : (
               <div
                 style={{
                   background: 'var(--color-surface)',
@@ -1216,6 +1237,7 @@ export default function FeedbackTreatmentModal({
                   </div>
                 )}
               </div>
+              )}
 
               {/* 6. Commentaires Internes (Main Courante) */}
               <div
@@ -1417,9 +1439,6 @@ export default function FeedbackTreatmentModal({
             Fermer
           </button>
 
-          <div className="t-xs t-2">
-            Statut : <strong style={{ color: 'var(--color-encre)', textTransform: 'capitalize' }}>{currentStatut}</strong>
-          </div>
         </div>
 
       </div>

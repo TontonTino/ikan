@@ -30,15 +30,12 @@ import { TonDesAvis, ThemesDesAvis } from '../../components/agency/AgencyClients
 import AgencyProblemes, { type ProblemesSnapshot } from '../../components/agency/AgencyProblemes';
 import { construirePriorites, PROBLEMES_OUVERTS } from '../../components/agency/agenceVue';
 import { elargirPeriode } from '../../utils/periodeElargie';
+import { PERIODES as PERIODES_DASHBOARD } from '../../utils/periodes';
 
 const RESULT_ISSUE_STATUSES: IssueStatut[] = ['resolue', 'verifiee'];
 const ISSUE_STATUSES: IssueStatut[] = [...PROBLEMES_OUVERTS, ...RESULT_ISSUE_STATUSES];
 const ISSUE_LIMIT = 200;
-const PERIODES = [
-  { v: 7, l: '7 jours' },
-  { v: 30, l: '30 jours' },
-  { v: 90, l: '90 jours' },
-];
+const PERIODES = PERIODES_DASHBOARD.map((p) => ({ v: p.jours, l: p.label }));
 
 async function loadAgencyIssues(agenceId: string): Promise<ProblemesSnapshot> {
   const responses = await Promise.all(ISSUE_STATUSES.map((statut) =>

@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Outlet, useNavigate, useLocation, matchPath } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import { alertesApi } from '../../services/api';
+import { alertesApi, feedbacksApi } from '../../services/api';
 import type { AlertesResponse, UserRole } from '../../types';
 import UserMenu from './UserMenu';
 import BackButton from './BackButton';
 import Sidebar, { SIDEBAR_ID } from './Sidebar';
-import NotificationCenter from './NotificationCenter';
+import NotificationCenter, { type FileATraiter } from './NotificationCenter';
 import { ROLE_NAV_SECTIONS, type NavSection } from './navigation';
 import YamChatPanel, { YAM_PANEL_ID } from '../agent/YamChatPanel';
 import { useYamStore } from '../../stores/yamStore';
@@ -65,6 +65,7 @@ export default function DashboardLayout() {
   const location = useLocation();
   const [alertes, setAlertes] = useState<AlertesResponse | null>(null);
   const [alertesLoading, setAlertesLoading] = useState(false);
+  const [fileATraiter, setFileATraiter] = useState<FileATraiter | null>(null);
   const yamOpen = useYamStore((s) => s.open);
   const toggleYam = useYamStore((s) => s.toggle);
   const closeYam = useYamStore((s) => s.close);
@@ -195,8 +196,9 @@ export default function DashboardLayout() {
     };
   }, [mobileMenuOpen]);
 
-  // Alertes : une seule requête alimente la cloche (nouveautés) et le badge du menu « Alertes » (alertes actives).
-  // Rafraîchie à chaque changement de page. L'Admin n'a pas d'alertes CX.
+  // Badge du menu « Alertes » : alertes de seuil actives (la page Alertes ne garde qu'elles). Cloche : la file « À traiter »
+  // (même liste que l'onglet de la page Avis, voir utils/fileATraiter.ts). Rafraîchies à chaque changement de page.
+  // L'Admin n'a ni l'une ni l'autre.
   useEffect(() => {
     if (user?.role !== 'cx_manager' && user?.role !== 'agency_manager') return;
     let cancelled = false;
@@ -204,19 +206,27 @@ export default function DashboardLayout() {
     alertesApi
       .list()
       .then((r) => { if (!cancelled) setAlertes(r.data ?? null); })
-      .catch(() => { if (!cancelled) setAlertes(null); })
+      .catch(() => { if (!cancelled) setAlertes(null); });
+    feedbacksApi
+      .list({ a_traiter: true, limit: 8, offset: 0 })
+      .then((r) => {
+        if (cancelled) return;
+        const total = Number(r.headers?.['x-total-count']);
+        const avis = Array.isArray(r.data) ? r.data : [];
+        setFileATraiter({ avis, total: Number.isFinite(total) ? total : avis.length });
+      })
+      .catch(() => { if (!cancelled) setFileATraiter(null); })
       .finally(() => { if (!cancelled) setAlertesLoading(false); });
     return () => { cancelled = true; };
   }, [user?.role, location.pathname]);
-  const alertesActives = (alertes?.alertes_seuil?.length ?? 0) + (alertes?.alertes_feedback?.length ?? 0);
+  const alertesActives = alertes?.alertes_seuil?.length ?? 0;
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
 
-  // Badge « Alertes » du menu = nombre d'alertes actives (charge de travail), distinct du
-  // compteur de la cloche (nouveautés non vues).
+  // Badge « Alertes » du menu = alertes de seuil actives ; la cloche compte la file « À traiter ».
   const navSections: NavSection[] = (user ? ROLE_NAV_SECTIONS[user.role] || [] : []).map((section) => ({
     ...section,
     items: section.items.map((item) =>
@@ -353,7 +363,7 @@ export default function DashboardLayout() {
             {/* Cloche = centre de notifications (événements récents, lien vers l'alerte).
                 Masquée pour l'Admin : aucun flux d'alertes CX pour ce rôle (plus de bouton désactivé inutile). */}
             {user && (user.role === 'cx_manager' || user.role === 'agency_manager') && (
-              <NotificationCenter userId={user.id} data={alertes} loading={alertesLoading} showAgency={user.role === 'cx_manager'} />
+              <NotificationCenter file={fileATraiter} loading={alertesLoading} showAgency={user.role === 'cx_manager'} />
             )}
 
             {/* Menu utilisateur : profil, utilisation du forfait, aide, déconnexion */}

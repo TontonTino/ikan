@@ -60,7 +60,9 @@ def test_cycle_de_traitement_et_avis_a_traiter(ctx):
     assert (d["feedbacks_nouveaux"], d["feedbacks_pris_en_charge"], d["feedbacks_resolus"], d["feedbacks_analyses_ia"]) == (4, 2, 1, 6)
     assert d["feedbacks_nouveaux"] + d["feedbacks_pris_en_charge"] == d["nombre_feedbacks"]
     assert d["taux_prise_en_charge"] == 33.3                               # 2 sur 6
-    assert d["feedbacks_a_traiter"] == 5                                   # tous sauf a1-03 (résolu, sans demande de rappel)
+    # File « À traiter » (lot 3) : non résolus ET critiques ou négatifs -> a1-04, a1-05, a1-06 (ton négatif) ;
+    # a1-01 et a1-02 (positifs, sans rappel) et a1-03 (résolu) n'y entrent pas.
+    assert d["feedbacks_a_traiter"] == 3
 
 
 def test_themes_classes_par_nombre_d_avis(ctx):

@@ -74,7 +74,7 @@ describe('compteur cliquable', () => {
   it('compte les agences ACTUELLEMENT sous leur seuil (pas seulement celles à 48 h) et ouvre le détail', () => {
     const html = compteur({ status: 'ok', data: { items: [], incluses: true, sousSeuil: [PERSISTANTE, RECENTE] } });
     expect(html).toContain('<div class="ui-kpi__value">2</div>');
-    expect(html).toContain('aria-label="Agences sous leur seuil : 2. Voir le détail"');
+    expect(html).toContain('aria-label="Agences sous leur seuil, 7 derniers jours : 2. Voir le détail"');
   });
 
   it('aucune agence sous son seuil : 0 est un vrai résultat', () => {

@@ -50,7 +50,7 @@ import {
 } from './siegeData';
 import type { ActionsTotaux, IssuesOuvertes, Source } from './useSiegeData';
 import type { AlertesSiege } from './siegeData';
-import { AIDE_SCORE_FIABILISE, LIBELLE_SCORE_FIABILISE } from '../../../utils/scoreFiabilise';
+import { PHRASE_TRI_CLASSEMENT } from '../../../utils/scoreFiabilise';
 
 import YamNote from '../../../components/agent/YamNote';
 import { formaterPourcentage } from '../../../utils/formatNombre';
@@ -177,7 +177,9 @@ export function SiegeKpis({
       <BentoItem size="kpi" as="div">
       <KpiCard
         icon={<StoreIcon />}
-        label="Agences sous leur seuil"
+        // Ce compteur ne peut pas suivre la période de la page (alerte calculée sur 7 jours glissants par l'API) :
+        // sa propre période est écrite dans son titre, en toutes lettres (lot 3).
+        label={`Agences sous leur seuil, ${REGLE_ALERTE_SEUIL_API.fenetreJours} derniers jours`}
         hint={alertesIncluses ? `${regleSousSeuilTexte()} C'est un état, pas une évolution.` : 'Les alertes de satisfaction ne sont pas incluses dans le forfait de votre organisation.'}
         loading={alertes.status === 'loading'}
         value={nbSousSeuil == null ? '—' : String(nbSousSeuil)}
@@ -187,7 +189,7 @@ export function SiegeKpis({
             ? 'Alertes indisponibles'
             : !alertesIncluses
             ? 'Non inclus dans votre forfait'
-            : `${nbAgences != null ? `sur ${nbAgences} agences · ` : ''}${REGLE_ALERTE_SEUIL_API.fenetreJours} derniers jours`
+            : nbAgences != null ? `sur ${nbAgences} agences` : undefined
         }
         onClick={alertes.status === 'ok' && alertesIncluses ? () => onOpen('seuil') : undefined}
       />
@@ -441,8 +443,8 @@ export function Reseau({
 }) {
   const extremes = stats.status === 'ok' ? extremesWilson(stats.data.agences_ranking) : null;
   const wilson = (
-    <Tooltip content={AIDE_SCORE_FIABILISE}>
-      <button type="button" className="ui-info-btn" aria-label={`À propos du ${LIBELLE_SCORE_FIABILISE.toLowerCase()}`}>?</button>
+    <Tooltip content={PHRASE_TRI_CLASSEMENT}>
+      <button type="button" className="ui-info-btn" aria-label="Comment ce classement est-il établi ?">?</button>
     </Tooltip>
   );
 
@@ -550,10 +552,7 @@ export function Action({ actions, issues, onRetryActions, onRetryIssues }: { act
   return (
     // Portée explicite : l'API ne filtre pas les actions par date d'action, ces compteurs
     // ne suivent donc PAS le filtre de période (aucun filtrage simulé côté frontend).
-    <Card
-      title="Actions — toutes périodes"
-      subtitle="Ces chiffres ne dépendent pas de la période sélectionnée en haut de page."
-    >
+    <Card title="Actions et problèmes, toutes dates confondues">
       <div className="siege-stats">
         {actions.status === 'loading'
           ? <><Skeleton height={72} /><Skeleton height={72} /></>

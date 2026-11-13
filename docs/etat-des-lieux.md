@@ -56,3 +56,33 @@ Valeurs et contrastes dans `apps/dashboard/src/styles/tokens.css`, vérifiés pa
 Typographie : Poppins auto-hébergée (`apps/dashboard/public/fonts`), 400 et 600 seulement ; échelle 12 / 14 / 15 / 18 / 22 / 28 px.
 Les anciens noms (`--color-primary`, `--color-text-muted`, `--color-success-*`, `--weight-bold`…) restent, en alias vers ces
 jetons : le lot 2b remplace leurs usages un groupe de fichiers à la fois.
+
+## Formulaire client : couleurs d'origine conservées
+
+Décision du 13 novembre 2026 : le formulaire public (`apps/client`) garde ses couleurs d'origine (en-tête vert en dégradé,
+visages colorés, boutons verts). La refonte ne le modifie pas. Ses contrastes restent vérifiés par
+`apps/client/src/utils/accessibilite.test.mjs`.
+
+## Une seule file d'avis et des périodes cohérentes (lot 3)
+
+**File « À traiter »** — une seule règle, écrite côté serveur (`apps/api/app/services/dashboard_helpers.py`,
+`est_a_traiter` / `condition_a_traiter_sql`) : demande de rappel en attente (même si l'avis est résolu), OU avis non résolu
+noté 2 ou moins, au ton négatif, ou de gravité élevée ou critique. Un avis positif sans demande de rappel n'y entre jamais.
+Changement d'API validé pour ce seul point ; statuts, clôture et calculs inchangés.
+
+| Où | Ce qui s'affiche |
+|---|---|
+| Page Avis, onglet « À traiter » (`/feedbacks?filtre=a-traiter`) | la file, triée : sans prise en charge depuis plus de 48 h d'abord (trait `--color-accent-vif` à gauche, dit aussi aux lecteurs d'écran), puis du plus récent au plus ancien |
+| Cloche | le nombre d'avis de la file et ses premiers avis (`utils/fileATraiter.ts`) ; plus d'alertes de seuil |
+| Page Alertes | les alertes de seuil seulement, et un renvoi vers la file avec son compteur |
+| Indicateur « Avis à traiter » de l'agence | la même règle, sur la période du tableau de bord |
+
+L'onglet « À surveiller » est fusionné dans « À traiter » ; les anciens liens `tab=critiques` ouvrent la file.
+
+**Périodes** — une seule liste (`apps/dashboard/src/utils/periodes.ts`) : 7 jours, 30 jours, 90 jours, 12 mois ; 30 jours par
+défaut. « Aujourd'hui », « 14 jours » et « Cette année » disparaissent. Exception : la liste des avis garde « Toutes les dates »
+par défaut (c'est une liste de travail, pas une statistique). Un bloc qui ne peut pas suivre la période de sa page l'écrit dans
+son titre : « Agences sous leur seuil, 7 derniers jours », « Actions et problèmes, toutes dates confondues ».
+
+**Classement des agences** — seule la satisfaction est affichée, suivie du nombre d'avis et d'une fiabilité en un mot
+(faible < 10, moyenne 10 à 29, bonne ≥ 30). L'ordre reste celui de l'API (score de Wilson), expliqué en une phrase.

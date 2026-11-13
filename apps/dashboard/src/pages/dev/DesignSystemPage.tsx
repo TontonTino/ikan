@@ -162,19 +162,19 @@ export default function DesignSystemPage() {
         </div>
       </Section>
 
-      <Section title="Centre de notifications — cloche (étape 3)">
-        <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>Format court + lien vers l'alerte. Les alertes de seuil n'ont pas de date côté API : affichées « En cours ».</p>
+      <Section title="Cloche — file « À traiter » (lot 3)">
+        <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>Compteur = nombre d'avis de la file. Un avis sans prise en charge depuis plus de 48 h porte un trait à gauche et le dit en texte.</p>
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start', maxWidth: 520, minHeight: 470 }}>
           <NotificationCenter
-            userId="demo-notif"
             defaultOpen
             loading={false}
             showAgency
-            data={{
-              alertes_seuil: [{ agence_id: 'a1', agence_nom: 'Agence (exemple) A', taux_actuel: 62, seuil: 70, message: '' }],
-              alertes_feedback: [
-                { feedback_id: 'f1', agence_id: 'a2', agence_nom: 'Agence (exemple) B', note: 1, raison: 'note_basse_et_sentiment_negatif', date_soumission: new Date(Date.now() - 40 * 60e3).toISOString() },
-                { feedback_id: 'f2', agence_id: 'a3', agence_nom: 'Agence (exemple) C', note: 3, raison: 'sentiment_negatif', date_soumission: new Date(Date.now() - 26 * 3600e3).toISOString() },
+            file={{
+              total: 3,
+              avis: [
+                { id: 'f1', qr_code_id: 'q', agence_nom: 'Agence (exemple) B', note: 1, commentaire: 'Attente trop longue au guichet.', statut_traitement: 'nouveau', date_soumission: new Date(Date.now() - 60 * 3600e3).toISOString() },
+                { id: 'f2', qr_code_id: 'q', agence_nom: 'Agence (exemple) C', note: 2, commentaire: 'Personne ne répond au téléphone.', statut_traitement: 'nouveau', date_soumission: new Date(Date.now() - 40 * 60e3).toISOString() },
+                { id: 'f3', qr_code_id: 'q', agence_nom: 'Agence (exemple) A', note: 5, statut_traitement: 'en_traitement', date_soumission: new Date(Date.now() - 26 * 3600e3).toISOString() },
               ],
             }}
           />

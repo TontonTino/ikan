@@ -56,10 +56,22 @@ describe('page « Avis du réseau » (CX Manager, /feedbacks)', () => {
   });
 });
 
-describe('colonne de date : l’agence n’est répétée que pour le CX Manager', () => {
-  it('Responsable d’agence : « Date » seule ; CX Manager : « Date et agence »', () => {
-    expect(rendu('agency_manager')).toMatch(/<th[^>]*>Date<\/th>/);
-    expect(rendu('agency_manager')).not.toContain('Date et agence');
-    expect(rendu('cx_manager')).toContain('Date et agence');
+describe('liste dense (lot 3) : une ligne par avis', () => {
+  it('la date et le thème passent en métadonnées : plus de colonnes « Date » ni « Thème »', () => {
+    for (const role of ['agency_manager', 'cx_manager'] as const) {
+      const entetes = [...rendu(role).matchAll(/<th[^>]*>([\s\S]*?)<\/th>/g)].map((m) => m[1].replace(/<[^>]+>/g, ''));
+      expect(entetes).toEqual(['Note et ton', 'Avis', 'Statut', 'Action']);
+    }
+  });
+
+  it('une seule phrase d’explication sous les onglets, et plus d’onglet « À surveiller »', () => {
+    const html = rendu('cx_manager');
+    expect(html).not.toContain('À surveiller');
+    expect((html.match(/« À traiter » :/g) || []).length).toBe(1);
+  });
+
+  it('filtres repliés par défaut, dépliés quand un filtre arrive par le lien', () => {
+    expect(rendu('cx_manager')).not.toMatch(/<details[^>]*open/);
+    expect(rendu('cx_manager', '/feedbacks?theme=attente')).toMatch(/<details[^>]*open/);
   });
 });

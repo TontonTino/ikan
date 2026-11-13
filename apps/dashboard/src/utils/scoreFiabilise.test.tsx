@@ -4,7 +4,7 @@ import { StaticRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import AgencesRankingTable from '../components/stats/AgencesRankingTable';
 import type { AgenceRankDetail } from '../types';
-import { AIDE_SCORE_FIABILISE, LIBELLE_SCORE_FIABILISE } from './scoreFiabilise';
+import { PHRASE_TRI_CLASSEMENT, mentionAvisEtFiabilite, niveauFiabilite } from './scoreFiabilise';
 
 /** Borne basse de Wilson à 95 %, recalculée ici indépendamment de l'API (même formule que api/app/utils/stats.py). */
 function wilson(positifs: number, total: number, z = 1.96): number {
@@ -19,41 +19,46 @@ const rang = (nom: string, wilsonScore: number): AgenceRankDetail =>
   ({ agence_id: nom, agence_nom: nom, ville: 'Ville', satisfaction_rate: 90, total_feedbacks: 12, feedbacks_traites: 5, taux_traitement: 40, alertes_critiques: 0,
     tendance_val: '+1.0 pts', tendance_positive: true, wilson_score: wilsonScore } as unknown as AgenceRankDetail);
 
-describe('« Score fiabilisé » (CX-03)', () => {
-  it('le libellé est « Score fiabilisé », jamais « score de fiabilité »', () => {
-    expect(LIBELLE_SCORE_FIABILISE).toBe('Score fiabilisé');
-    expect(`${LIBELLE_SCORE_FIABILISE} ${AIDE_SCORE_FIABILISE}`).not.toMatch(/score de fiabilit/i);
+const rangAvis = (nom: string, total: number, sat: number | null = 90): AgenceRankDetail => ({ ...rang(nom, 0.5), total_feedbacks: total, satisfaction_rate: sat } as AgenceRankDetail);
+const tableau = (agences: AgenceRankDetail[]) => renderToStaticMarkup(<StaticRouter location="/statistiques"><AgencesRankingTable agences={agences} /></StaticRouter>);
+
+describe('classement des agences (lot 3) : un seul pourcentage, trié par score fiabilisé', () => {
+  it('fiabilité en un mot : faible (< 10 avis), moyenne (10 à 29), bonne (30 et plus)', () => {
+    expect([0, 9, 10, 29, 30, 500].map(niveauFiabilite)).toEqual(['faible', 'faible', 'moyenne', 'moyenne', 'bonne', 'bonne']);
+    expect(mentionAvisEtFiabilite(12)).toBe('12 avis · fiabilité moyenne');
+    expect(mentionAvisEtFiabilite(1234)).toBe('1\u202f234 avis · fiabilité bonne');
   });
 
-  it('l’aide décrit exactement la formule : borne basse de Wilson à 95 % sur les avis notés 4 ou 5', () => {
-    expect(AIDE_SCORE_FIABILISE).toContain('borne basse');
-    expect(AIDE_SCORE_FIABILISE).toContain('Wilson');
-    expect(AIDE_SCORE_FIABILISE).toContain('95 %');
-    expect(AIDE_SCORE_FIABILISE).toContain('avis notés 4 ou 5');
-    expect(AIDE_SCORE_FIABILISE).toContain('Estimation prudente');
+  it('le tableau n’affiche que la satisfaction, suivie du nombre d’avis et de la fiabilité ; plus de score fiabilisé', () => {
+    const html = tableau([rangAvis('Alpha', 40), rangAvis('Beta', 3)]);
+    expect(html).not.toMatch(/score fiabilis/i);
+    expect(html).not.toContain('Avis collectés');
+    expect(html).toContain('40 avis · fiabilité bonne');
+    expect(html).toContain('3 avis · fiabilité faible');
+    expect(html).not.toContain('80 %'); // la valeur du score (0,8) n’est plus affichée
   });
 
-  it('l’exemple de l’aide est vrai : 100 % sur 2 avis ne passe pas devant 90 % sur 200 avis', () => {
+  it('l’ordre de l’API (score fiabilisé) est conservé et expliqué en une phrase sous le tableau', () => {
+    const html = tableau([rang('Alpha', 0.8), rang('Beta', 0.5)]);
+    expect(html.indexOf('Alpha')).toBeLessThan(html.indexOf('Beta'));
+    expect(html).toContain('#1');
+    expect(html).toContain(PHRASE_TRI_CLASSEMENT.replace(/’/g, '’'));
+    expect(PHRASE_TRI_CLASSEMENT).toContain('Wilson à 95 %');
+  });
+
+  it('l’exemple de la phrase est vrai : 100 % sur 2 avis ne passe pas devant 90 % sur 200 avis', () => {
     expect(wilson(2, 2)).toBeLessThan(wilson(180, 200));
     expect(Math.round(wilson(2, 2) * 100)).toBe(34); // « environ 34 % » dans le commentaire du module
-    // Exemple du cahier des charges : 100 % sur 4 avis derrière 11 avis sur 12.
     expect(wilson(4, 4)).toBeLessThan(wilson(11, 12));
   });
 
-  it('le classement affiche le libellé, un bouton d’aide accessible et l’explication en clair', () => {
-    const html = renderToStaticMarkup(
-      <StaticRouter location="/statistiques">
-        <AgencesRankingTable agences={[rang('Alpha', 0.8), rang('Beta', 0.5)]} />
-      </StaticRouter>,
-    );
-    expect(html).toContain('Score fiabilisé');
-    expect(html).toContain('aria-label="À propos du score fiabilisé"');
-    expect(html).toContain('<strong>Score fiabilisé</strong>');
-    expect(html).toContain('borne basse de l’intervalle de confiance de Wilson à 95 %');
-    expect(html).toContain('80 %'); // valeur du score affichée
+  it('agence sans avis : « Pas d’avis », jamais de mention de fiabilité ni de 0 %', () => {
+    const html = tableau([rangAvis('Gamma', 0, null)]);
+    expect(html).toContain('Pas d&#x27;avis');
+    expect(html).not.toContain('fiabilité');
   });
 
-  it('le libellé n’est écrit qu’à un seul endroit du code : plus de variante ni de texte dupliqué', () => {
+  it('« score fiabilisé » n’est plus écrit que dans le commentaire du module (aucun écran ne l’affiche)', () => {
     const fichiers = Object.entries(SOURCES).filter(([, texte]) => /score fiabilis/i.test(texte)).map(([chemin]) => chemin);
     expect(fichiers).toEqual(['/src/utils/scoreFiabilise.ts']);
   });

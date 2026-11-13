@@ -81,8 +81,10 @@ describe('thèmes : clic vers la liste « Avis du réseau »', () => {
     expect(requete.theme).toBe('accueil');
     expect(requete.date_debut).toBeTruthy();
     expect(requete.sentiment).toBeUndefined();
-    expect(periodeDepuisUrl('1')).toBe('today');
-    expect(periodeDepuisUrl('14')).toBe('14');
+    // liste unique des périodes (lot 3) : 7, 30, 90 jours, 12 mois ; « Aujourd'hui » et 14 jours n'existent plus
+    expect(periodeDepuisUrl('365')).toBe('365');
+    expect(periodeDepuisUrl('1')).toBe('all');
+    expect(periodeDepuisUrl('14')).toBe('all');
     expect(periodeDepuisUrl('999')).toBe('all');
     expect(periodeDepuisUrl(null)).toBe('all');
   });
@@ -91,7 +93,7 @@ describe('thèmes : clic vers la liste « Avis du réseau »', () => {
 describe('onglet Thèmes de la page Avis : mêmes filtres que la liste, sauf le thème', () => {
   it('jours de la période', () => {
     expect(joursPeriode('all')).toBeUndefined();
-    expect(joursPeriode('today')).toBe(1);
+    expect(joursPeriode('365')).toBe(365);
     expect(joursPeriode('90')).toBe(90);
   });
 

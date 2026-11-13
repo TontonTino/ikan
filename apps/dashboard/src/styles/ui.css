@@ -603,3 +603,8 @@
 .t-italique { font-style: italic; }
 .t-majuscules { text-transform: uppercase; letter-spacing: 0.04em; }
 .t-sans-soulignement { text-decoration: none; }
+
+/* Fenêtre de traitement d'un avis (lot 3) : une section sans contenu se replie sur une ligne au lieu d'occuper la hauteur. */
+.ftm-ligne-repliee { margin: 0; padding: 10px 14px; border: 1px dashed var(--color-trait); border-radius: 12px; font-size: var(--text-sm); color: var(--color-text-2); }
+.ftm-ligne-repliee strong { color: var(--color-encre); font-weight: var(--weight-semibold); }
+.ftm-ligne-repliee--action { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

@@ -278,3 +278,50 @@ def _libelles_semaines(cles: Iterable[str], prefixe: str = "Sem") -> dict[str, s
         libelle = f"{prefixe} {int(semaine)}"
         libelles[c] = f"{libelle} {annee}" if plusieurs else libelle
     return libelles
+
+
+# ── File « À traiter » : UNE seule définition (lot 3) ──────────────────────────────────────────
+#
+# Un avis demande un geste s'il a une demande de rappel en attente (même résolu), OU s'il n'est pas résolu et qu'il est
+# critique ou négatif (`est_critique_ou_negatif` : note ≤ 2, ton négatif, gravité élevée ou critique). Un avis positif sans
+# demande de rappel n'y entre jamais. MÊME règle pour la liste (filtre a_traiter), l'indicateur « Avis à traiter » de l'agence
+# et le compteur de notifications du dashboard (qui lit la liste).
+
+DELAI_PRISE_EN_CHARGE_HEURES = 48  # au-delà, un avis encore « nouveau » passe en tête de la file (dashboard : même valeur)
+
+
+def demande_rappel_en_attente(feedback) -> bool:
+    demande = getattr(feedback, "demande_contact", None)
+    return demande is not None and not demande.traitee
+
+
+def est_a_traiter(feedback, analyse=None) -> bool:
+    return demande_rappel_en_attente(feedback) or (not est_resolu(feedback) and est_critique_ou_negatif(feedback, analyse))
+
+
+def condition_a_traiter_sql():
+    """`est_a_traiter` en SQL : MÊME définition ; exige un outer join sur AnalyseIA ET sur DemandeContact."""
+    from sqlalchemy import and_, or_
+    from app.models.analyse_ia import AnalyseIA
+    from app.models.demande_contact import DemandeContact
+    from app.models.feedback import Feedback
+
+    rappel_en_attente = and_(DemandeContact.id.isnot(None), or_(DemandeContact.traitee.is_(None), DemandeContact.traitee.is_(False)))
+    critique_ou_negatif = or_(
+        Feedback.note <= NOTE_FAIBLE_MAX,
+        AnalyseIA.sentiment == SentimentType.NEGATIF,
+        AnalyseIA.criticite.in_([CriticiteType.ELEVEE, CriticiteType.CRITIQUE]),
+    )
+    return or_(rappel_en_attente, and_(Feedback.statut_traitement != STATUT_RESOLU, critique_ou_negatif))
+
+
+def condition_en_retard_sql(maintenant: datetime):
+    """Avis de la file encore « nouveau » plus de DELAI_PRISE_EN_CHARGE_HEURES après sa soumission."""
+    from datetime import timedelta
+    from sqlalchemy import and_
+    from app.models.feedback import Feedback
+
+    return and_(
+        Feedback.statut_traitement == STATUT_NOUVEAU,
+        Feedback.date_soumission < maintenant - timedelta(hours=DELAI_PRISE_EN_CHARGE_HEURES),
+    )

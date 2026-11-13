@@ -146,15 +146,7 @@ export default function PilotageIssuesTab(props: Props) {
       {/* Indicateurs : bandeau court sous la liste ; « Non renseigné » plutôt qu'un chiffre trompeur quand la donnée manque */}
       <div className="pb-indicateurs-tete">
         <span>Indicateurs de la période</span>
-        <PeriodSelector
-          value={issuesJours}
-          onChange={setIssuesJours}
-          options={[
-            { label: '7 jours', jours: 7 },
-            { label: '30 jours', jours: 30 },
-            { label: '90 jours', jours: 90 },
-          ]}
-        />
+        <PeriodSelector value={issuesJours} onChange={setIssuesJours} />
       </div>
       <KpiCoreGrid mode="bandeau" jours={issuesJours} agenceId={issuesAgenceId} refreshToken={issuesKpisRefreshToken} />
     </div>
