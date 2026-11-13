@@ -85,8 +85,12 @@ describe('ordre de lecture de la vue d’ensemble : situation, puis priorités, 
     expect(i, motif).toBeGreaterThan(-1);
     return i;
   };
-  it('AgencyDecisionKpis < AgencyPriorities < AgencyEvolution < Ton et thèmes < Recommandations < Problèmes', () => {
-    const ordre = ['<AgencyDecisionKpis', '<AgencyPriorities', '<AgencyEvolution', '<TonDesAvis', '<ThemesDesAvis', '<AgencyRecommendations', '<AgencyProblemes'].map(position);
+  it('AgencyDecisionKpis < AgencyPriorities < AgencyEvolution < Ton et thèmes < Problèmes', () => {
+    const ordre = ['<AgencyDecisionKpis', '<AgencyPriorities', '<AgencyEvolution', '<TonDesAvis', '<ThemesDesAvis', '<AgencyProblemes'].map(position);
     expect(ordre).toEqual([...ordre].sort((a, b) => a - b));
+  });
+
+  it('les recommandations automatiques ne sont plus affichées (l’API reste)', () => {
+    expect(source).not.toMatch(/AgencyRecommendations|recommandationsApi/);
   });
 });

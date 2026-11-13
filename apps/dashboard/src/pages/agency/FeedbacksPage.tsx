@@ -43,6 +43,8 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
   const isCXOrAdmin = currentUser?.role === 'cx_manager' || currentUser?.role === 'admin';
   // Le sélecteur d'agence n'a de sens que si l'agence n'est pas déjà fixée par le contexte de la page.
   const showAgenceSelector = isCXOrAdmin && !agenceId;
+  // Le Responsable d'agence ne voit que son agence : la répéter à chaque ligne n'apporte rien. Le CX Manager garde date et agence.
+  const afficherAgenceLigne = currentUser?.role !== 'agency_manager';
 
   // Filtres, recherche, onglet et page : un seul état. Tout changement (sauf de page) revient à la page 1.
   const [filtres, dispatch] = useReducer(reduireFiltres, undefined, (): FiltresAvis => ({
@@ -234,12 +236,12 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
     { id: 'thematiques', label: 'Thèmes', icon: <TagIcon size={16} />, badge: filtres.onglet === 'thematiques' && !loading && !loadError ? themes.length : undefined },
   ];
 
-  const th = { textAlign: 'left' as const, padding: '12px 16px', color: '#64748B', fontWeight: 700, fontSize: '0.74rem', textTransform: 'uppercase' as const };
+  const th = { textAlign: 'left' as const, padding: '12px 16px', color: 'var(--color-text-2)', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-xs)', textTransform: 'uppercase' as const };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
       {toast && (
-        <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 1000, background: '#02302D', color: 'white', padding: '12px 20px', borderRadius: '12px', fontWeight: 600 }}>
+        <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 1000, background: 'var(--color-encre)', color: 'white', padding: '12px 20px', borderRadius: '12px', fontWeight: 'var(--weight-semibold)' }}>
           {toast}
         </div>
       )}
@@ -255,14 +257,14 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
       {/* Contexte d'agence et vues : le périmètre précède les résultats. */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
         {!showAgenceSelector && currentUser?.role === 'agency_manager' && (
-          <div aria-label="Périmètre de l’agence" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#334155', fontSize: '0.84rem', fontWeight: 700, padding: '8px 12px' }}>
-            <StoreIcon size={16} color="#3C7730" />
+          <div aria-label="Périmètre de l’agence" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: 'var(--color-encre)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', padding: '8px 12px' }}>
+            <StoreIcon size={16} color="var(--color-bon-texte)" />
             {currentUser.agence_nom || 'Mon agence'}
           </div>
         )}
         <TabsNavigation tabs={tabsConfig} activeTab={filtres.onglet} onChange={(id) => dispatch({ type: 'definir', champ: 'onglet', valeur: id })} style={{ marginBottom: 0, flex: '1 1 auto' }} />
       </div>
-      <p style={{ margin: '-12px 0 0', fontSize: '0.76rem', color: 'var(--color-text-muted)' }}>
+      <p style={{ margin: '-12px 0 0', fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
         « À traiter » : avis non résolus ou avec une demande de rappel en attente. « À surveiller » : avis avec au moins un signal (note de 2 ou moins, ton négatif, gravité élevée ou critique, ou avis contradictoire), chacun compté une seule fois.
       </p>
 
@@ -272,7 +274,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
           <div id="feedbacks-liste"><SectionHeading>Liste des avis</SectionHeading></div>
           <div className="feedbacks-toolbar">
             <div className="feedbacks-search">
-              <SearchIcon size={16} color="#94A3B8" />
+              <SearchIcon size={16} color="var(--color-text-2)" />
               <input
                 type="search"
                 placeholder="Rechercher dans le texte des avis…"
@@ -280,7 +282,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                 maxLength={LONGUEUR_MAX_RECHERCHE}
                 value={saisie}
                 onChange={(e) => setSaisie(e.target.value)}
-                style={{ border: 'none', width: '100%', minWidth: 0, fontSize: '0.84rem', fontFamily: 'inherit', color: '#0F172A' }}
+                style={{ border: 'none', width: '100%', minWidth: 0, fontSize: 'var(--text-sm)', fontFamily: 'inherit', color: 'var(--color-encre)' }}
               />
             </div>
             {showAgenceSelector && (
@@ -319,11 +321,11 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                   {themesDisponibles.map((t) => <option key={t} value={t}>{t === 'non_categorise' ? 'Non catégorisé' : themeLabel(t)}</option>)}
                 </select>
               </div>
-              <p style={{ margin: '8px 0 0', fontSize: '0.76rem', color: 'var(--color-text-muted)' }}>
-                Avis contradictoires : la note et le ton du texte se contredisent (par exemple 5/5 avec un texte négatif). Cette détection est incluse à partir du forfait Pro ; sans elle, aucun avis n’est signalé.
+              <p style={{ margin: '8px 0 0', fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
+                Avis contradictoires : la note et le ton du texte se contredisent (par exemple 5/5 avec un texte négatif).
               </p>
               {themeCatalogError && (
-                <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '8px', color: 'var(--color-text-body)', fontSize: '0.82rem' }}>
+                <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '8px', color: 'var(--color-text-body)', fontSize: 'var(--text-sm)' }}>
                   <span>Impossible de charger la liste complète des thèmes.</span>
                   <button type="button" className="btn-secondary" disabled={loading} onClick={() => setReloadToken((token) => token + 1)}>Réessayer</button>
                 </div>
@@ -333,7 +335,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
 
           {/* Total serveur : nombre d'avis correspondant aux filtres, pas seulement ceux de la page. */}
           {!loadError && (
-            <p role="status" aria-live="polite" className="feedbacks-total" style={{ margin: 0, fontSize: '0.84rem', fontWeight: 700, color: '#334155' }}>
+            <p role="status" aria-live="polite" className="feedbacks-total" style={{ margin: 0, fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>
               {loading ? 'Recherche en cours…' : `${libelleTotal(total)}${filtresOuOnglet ? ' correspondant aux critères' : ''}`}
             </p>
           )}
@@ -342,23 +344,23 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
           {activeFilters.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }} aria-label="Filtres actifs">
               {activeFilters.map((f) => (
-                <span key={f.cle} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--color-active-item)', color: 'var(--color-primary-dark)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-pill)', padding: '4px 6px 4px 12px', fontSize: '0.76rem', fontWeight: 700 }}>
+                <span key={f.cle} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--color-active-item)', color: 'var(--color-primary-dark)', border: '1px solid var(--color-trait)', borderRadius: 'var(--radius-pill)', padding: '4px 6px 4px 12px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)' }}>
                   {f.libelle}
                   <button type="button" onClick={() => retirerFiltre(f.cle)} aria-label={`Retirer le filtre ${f.libelle}`} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', color: 'inherit' }}>
                     <XCloseIcon size={13} />
                   </button>
                 </span>
               ))}
-              <button type="button" onClick={reinitialiser} className="btn-secondary" style={{ padding: '4px 10px', fontSize: '0.78rem' }}>Tout réinitialiser</button>
+              <button type="button" onClick={reinitialiser} className="btn-secondary" style={{ padding: '4px 10px' }}>Tout réinitialiser</button>
             </div>
           )}
 
           {/* Tableau (grands écrans) */}
-          <div className="feedbacks-desktop-table" style={{ background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E8ECE6', boxShadow: '0 2px 12px rgba(20, 60, 40, 0.03)', overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
+          <div className="feedbacks-desktop-table" style={{ background: 'var(--color-surface)', borderRadius: '20px', border: '1px solid var(--color-trait)', overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid #E8ECE6', background: '#F8FAFB' }}>
-                  <th scope="col" style={th}>Date et agence</th>
+                <tr style={{ borderBottom: '1px solid var(--color-trait)', background: 'var(--color-bg)' }}>
+                  <th scope="col" style={th}>{afficherAgenceLigne ? 'Date et agence' : 'Date'}</th>
                   <th scope="col" style={th}>Note et ton</th>
                   <th scope="col" style={th}>Commentaire du client</th>
                   <th scope="col" style={th}>Thème</th>
@@ -369,7 +371,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
               <tbody>
                 {loading ? (
                   [0, 1, 2, 3, 4, 5].map((i) => (
-                    <tr key={i} aria-busy="true" style={{ borderBottom: '1px solid #F1F4EE' }}>
+                    <tr key={i} aria-busy="true" style={{ borderBottom: '1px solid var(--color-trait)' }}>
                       <td colSpan={6} style={{ padding: '14px 16px' }}><SkeletonBlock height={40} radius="var(--radius-md)" /></td>
                     </tr>
                   ))
@@ -377,32 +379,32 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                   avis.map((f) => {
                     const statMeta = STATUT_BADGES[(f.statut_traitement || 'nouveau') as StatutTraitement] || STATUT_BADGES.nouveau;
                     return (
-                      <tr key={f.id} style={{ borderBottom: '1px solid #F1F4EE', cursor: 'pointer' }} onClick={() => setSelectedFeedbackForTreatment(f)}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = '#F8FAFC')} onMouseLeave={(e) => (e.currentTarget.style.background = '#FFFFFF')}>
+                      <tr key={f.id} style={{ borderBottom: '1px solid var(--color-trait)', cursor: 'pointer' }} onClick={() => setSelectedFeedbackForTreatment(f)}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-bg)')} onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--color-surface)')}>
                         <td style={{ padding: '14px 16px', minWidth: '140px' }}>
-                          <div style={{ fontWeight: 700, color: '#02302D' }}>{f.agence_nom || 'Agence'}</div>
-                          <div style={{ fontSize: '0.74rem', color: '#64748B', marginTop: '2px' }}>{formatDateAvis(f.date_soumission)}</div>
+                          {afficherAgenceLigne && <div className="t-semi t-encre">{f.agence_nom || 'Agence'}</div>}
+                          <div style={afficherAgenceLigne ? { fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', marginTop: '2px' } : { color: 'var(--color-encre)' }}>{formatDateAvis(f.date_soumission)}</div>
                         </td>
                         <td style={{ padding: '14px 16px', minWidth: '150px' }}><SignauxAvis feedback={f} /></td>
                         <td style={{ padding: '14px 16px', maxWidth: '340px' }}>
-                          <div style={{ color: '#334155', lineHeight: 1.4, fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                          <div style={{ color: 'var(--color-encre)', lineHeight: 1.4, fontSize: 'var(--text-sm)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                             {f.commentaire || 'Pas de commentaire écrit.'}
                           </div>
                         </td>
                         <td style={{ padding: '14px 16px', minWidth: '140px' }}>
-                          <span style={{ background: '#F1F5F9', color: '#475569', padding: '4px 10px', borderRadius: '8px', fontSize: '0.74rem', fontWeight: 700 }}>
+                          <span style={{ background: 'var(--color-neutre-fond)', color: 'var(--color-text-2)', padding: '4px 10px', borderRadius: '8px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)' }}>
                             {f.analyse_ia?.theme_principal ? themeLabel(f.analyse_ia.theme_principal) : 'Non catégorisé'}
                           </span>
                         </td>
                         <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                          <span style={{ background: statMeta.bg, color: statMeta.text, padding: '3px 10px', borderRadius: '9999px', fontSize: '0.74rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ background: statMeta.bg, color: statMeta.text, padding: '3px 10px', borderRadius: '9999px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                             {statMeta.icon}
                             {statMeta.label}
                           </span>
-                          {f.issue_id && <div style={{ marginTop: '6px', color: '#0369A1', fontSize: '0.70rem', fontWeight: 800 }}>Rattaché à un problème</div>}
+                          {f.issue_id && <div style={{ marginTop: '6px', color: 'var(--color-neutre-texte)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}>Rattaché à un problème</div>}
                         </td>
                         <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                          <button type="button" onClick={(e) => { e.stopPropagation(); setSelectedFeedbackForTreatment(f); }} className="btn-primary" style={{ padding: '6px 12px', fontSize: '0.76rem', borderRadius: '10px' }}>Consulter</button>
+                          <button type="button" onClick={(e) => { e.stopPropagation(); setSelectedFeedbackForTreatment(f); }} className="btn-secondary" style={{ padding: '6px 12px', borderRadius: '10px' }}>Consulter</button>
                         </td>
                       </tr>
                     );
@@ -435,14 +437,14 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
           {/* Pagination serveur */}
           {!loading && !loadError && total > 0 && (
             <nav aria-label="Pagination des avis" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>{debutPage}–{finPage} sur {total}</span>
+              <span className="t-xs t-2 t-semi">{debutPage}–{finPage} sur {total}</span>
               {pages > 1 && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <button type="button" onClick={() => dispatch({ type: 'page', page: pageCourante - 1 })} disabled={pageCourante === 0} className="btn-secondary"
-                    style={{ padding: '6px 14px', fontSize: '0.8rem', minHeight: 44, cursor: pageCourante === 0 ? 'default' : 'pointer', opacity: pageCourante === 0 ? 0.45 : 1 }}>Précédent</button>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-text-main)' }}>Page {pageCourante + 1} / {pages}</span>
+                    style={{ padding: '6px 14px', minHeight: 44, cursor: pageCourante === 0 ? 'default' : 'pointer', opacity: pageCourante === 0 ? 0.45 : 1 }}>Précédent</button>
+                  <span className="t-xs t-semi t-encre">Page {pageCourante + 1} / {pages}</span>
                   <button type="button" onClick={() => dispatch({ type: 'page', page: pageCourante + 1 })} disabled={pageCourante >= pages - 1} className="btn-secondary"
-                    style={{ padding: '6px 14px', fontSize: '0.8rem', minHeight: 44, cursor: pageCourante >= pages - 1 ? 'default' : 'pointer', opacity: pageCourante >= pages - 1 ? 0.45 : 1 }}>Suivant</button>
+                    style={{ padding: '6px 14px', minHeight: 44, cursor: pageCourante >= pages - 1 ? 'default' : 'pointer', opacity: pageCourante >= pages - 1 ? 0.45 : 1 }}>Suivant</button>
                 </div>
               )}
             </nav>
@@ -464,7 +466,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
             <EmptyState illustration="no-data" title="Aucun thème disponible" message={totalThemes === 0 ? 'Aucun avis dans ce périmètre.' : 'Aucun thème analysé pour ces avis.'} />
           )}
           {!loading && !loadError && totalThemes > 0 && (
-            <p role="status" style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.76rem' }}>
+            <p role="status" style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
               {`Analyse basée sur les ${totalThemes} avis correspondant aux filtres, sur toute la période choisie (20 thèmes au plus). `}
               {DEFINITION_NEGATIF}
             </p>
@@ -472,14 +474,14 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
           {!loadError && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: '16px' }}>
               {!loading && themes.map((thm) => (
-                <div key={thm.theme} style={{ background: '#FFFFFF', borderRadius: '20px', padding: '20px 24px', border: '1px solid #E8ECE6', boxShadow: '0 2px 10px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '14px' }}>
+                <div key={thm.theme} style={{ background: 'var(--color-surface)', borderRadius: '20px', padding: '20px 24px', border: '1px solid var(--color-trait)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '14px' }}>
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <span style={{ fontWeight: 800, fontSize: '0.92rem', color: '#02302D' }}>{thm.theme === 'non_categorise' ? 'Non catégorisé' : themeLabel(thm.theme)}</span>
-                      <span style={{ background: '#02302D', color: '#FFFFFF', padding: '2px 8px', borderRadius: '9999px', fontSize: '0.72rem', fontWeight: 800 }}>{thm.count} avis ({thm.pourcentage.toLocaleString('fr-FR')} %)</span>
+                      <span className="t-semi t-base t-encre">{thm.theme === 'non_categorise' ? 'Non catégorisé' : themeLabel(thm.theme)}</span>
+                      <span style={{ background: 'var(--color-encre)', color: 'var(--color-text-inverse)', padding: '2px 8px', borderRadius: '9999px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)' }}>{thm.count} avis ({thm.pourcentage.toLocaleString('fr-FR')} %)</span>
                     </div>
                     <ThemeAgences theme={thm} />
-                    <p style={{ margin: '0 0 8px', color: '#475569', fontSize: '0.78rem' }}>
+                    <p style={{ margin: '0 0 8px', color: 'var(--color-text-2)', fontSize: 'var(--text-sm)' }}>
                       {thm.part_negatifs
                         ? <PartNegatifsTexte pn={thm.part_negatifs} />
                         : <><strong>{thm.negatifs ?? 0}</strong> avis négatif{(thm.negatifs ?? 0) > 1 ? 's' : ''} sur {thm.count}</>}
@@ -488,7 +490,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                     <ThemeVerbatim theme={thm} />
                   </div>
                   <button type="button" onClick={() => { dispatch({ type: 'definir', champ: 'theme', valeur: thm.theme }); dispatch({ type: 'definir', champ: 'onglet', valeur: 'tous' }); }}
-                    className="btn-primary" style={{ padding: '8px', fontSize: '0.76rem', borderRadius: '10px', width: '100%', justifyContent: 'center', minHeight: 44 }}>
+                    className="btn-secondary" style={{ padding: '8px', borderRadius: '10px', width: '100%', justifyContent: 'center', minHeight: 44 }}>
                     Voir les avis de ce thème →
                   </button>
                 </div>

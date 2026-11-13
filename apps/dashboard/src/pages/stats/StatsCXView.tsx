@@ -11,6 +11,7 @@ import ThemesBarList from '../../components/stats/ThemesBarList';
 import AgencesRankingTable from '../../components/stats/AgencesRankingTable';
 import { LIBELLE_SCORE_FIABILISE } from '../../utils/scoreFiabilise';
 import { lienAvisReseau } from '../../utils/liensAgence';
+import { elargirPeriode } from '../../utils/periodeElargie';
 import type { AgenceCarte } from '../../components/map/AgencesMap';
 import { statutSeuil, satisfactionTexte, STATUT_SEUIL_LABEL } from '../cx/siege/siegeData';
 
@@ -153,7 +154,7 @@ export default function StatsCXView() {
             return (
               <div className="stats-cx__content">
                 <StatsSectionCard compact title="Évolution de la satisfaction et du traitement" subtitle="La satisfaction concerne tous les avis notés; les volumes ne concernent que les avis négatifs ou critiques. Une interruption indique une période sans avis.">
-                  <SatisfactionVolumeChart satisfaction={data.evolution_satisfaction} volume={data.evolution_volume} height={440} />
+                  <SatisfactionVolumeChart satisfaction={data.evolution_satisfaction} volume={data.evolution_volume} height={440} elargir={elargirPeriode(jours, STATS_CX_PERIOD_OPTIONS, setJours)} />
                 </StatsSectionCard>
                 <StatsSectionCard
                   compact
@@ -179,7 +180,7 @@ export default function StatsCXView() {
                       lienTheme={(t) => lienAvisReseau({ theme: t.theme, jours, agenceId: selectedAgenceId })}
                     />
                   </div>
-                  <p role="status" style={{ margin: '14px 0 0', fontSize: '0.76rem', color: '#64748B' }}>
+                  <p role="status" style={{ margin: '14px 0 0', fontSize: 'var(--text-xs)', color: 'var(--color-text-2)' }}>
                     {`Pourcentages calculés sur ${data.themes_total_avis ?? 0} occurrences de thèmes classifiées sur la période (et non sur l’ensemble des avis). Cliquez sur un thème pour voir les avis correspondants.`}
                   </p>
                 </StatsSectionCard>

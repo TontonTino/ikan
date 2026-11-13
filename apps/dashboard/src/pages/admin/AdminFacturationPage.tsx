@@ -18,17 +18,16 @@ import { userFacingError } from '../../utils/userFacingError';
 import { formaterPourcentage } from '../../utils/formatNombre';
 
 const SOURCE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-  stripe: { label: 'Stripe', color: '#3C7730', bg: '#EAF5EC' },
-  admin_override: { label: 'Changement manuel (admin)', color: '#B45309', bg: '#FEF3C7' },
-  auto_downgrade: { label: 'Retour automatique au forfait Gratuit', color: '#B91C1C', bg: '#FEE2E2' },
+  stripe: { label: 'Stripe', color: 'var(--color-bon-texte)', bg: 'var(--color-bon-fond)' },
+  admin_override: { label: 'Changement manuel (admin)', color: 'var(--color-surveiller-texte)', bg: 'var(--color-surveiller-fond)' },
+  auto_downgrade: { label: 'Retour automatique au forfait Gratuit', color: 'var(--color-critique-texte)', bg: 'var(--color-critique-fond)' },
 };
 
 function cardStyle(): React.CSSProperties {
   return {
-    background: '#FFFFFF',
+    background: 'var(--color-surface)',
     borderRadius: '18px',
-    border: '1px solid #E8ECE6',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+    border: '1px solid var(--color-trait)',
     padding: '18px 20px',
   };
 }
@@ -101,15 +100,15 @@ function ModaleChangerForfait({
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <div
           style={{
-            background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '10px', padding: '10px 12px',
-            fontSize: '0.8rem', color: '#92400E', display: 'flex', gap: '8px', lineHeight: 1.5,
+            background: 'var(--color-surveiller-fond)', border: '1px solid var(--color-surveiller-fond)', borderRadius: '10px', padding: '10px 12px',
+            fontSize: 'var(--text-xs)', color: 'var(--color-surveiller-texte)', display: 'flex', gap: '8px', lineHeight: 1.5,
           }}
         >
-          <AlertTriangleIcon size={16} color="#B45309" />
+          <AlertTriangleIcon size={16} color="var(--color-surveiller-texte)" />
           <span>Réservé aux cas exceptionnels (ex. partenariat négocié). Ce changement contourne Stripe et est tracé de façon permanente, avec votre nom et la raison saisie.</span>
         </div>
 
-        <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B' }}>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)', color: 'var(--color-encre)' }}>
           Nouveau forfait
           <select value={planId} onChange={(e) => setPlanId(e.target.value)} className="saas-input" style={{ width: '100%', minHeight: 44 }}>
             <option value="">— Choisir —</option>
@@ -121,7 +120,7 @@ function ModaleChangerForfait({
           </select>
         </label>
 
-        <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontWeight: 700, fontSize: '0.82rem', color: '#1E293B' }}>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)', color: 'var(--color-encre)' }}>
           Raison (obligatoire, 10 caractères minimum)
           <textarea
             value={raison}
@@ -134,7 +133,7 @@ function ModaleChangerForfait({
         </label>
 
         {erreur && (
-          <div role="alert" style={{ color: '#B91C1C', fontSize: '0.82rem', fontWeight: 700 }}>{erreur}</div>
+          <div role="alert" className="t-critique t-sm t-semi">{erreur}</div>
         )}
       </div>
     </Modal>
@@ -165,30 +164,30 @@ function ModaleHistorique({ org, onClose }: { org: Organisation; onClose: () => 
     <Modal open onClose={onClose} size="md" title="Historique du forfait" subtitle={org.nom}>
       {erreur ? (
         <div role="alert" style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'flex-start' }}>
-          <span style={{ color: '#B91C1C', fontWeight: 700, fontSize: '0.86rem' }}>{erreur}</span>
-          <span style={{ color: '#64748B', fontSize: '0.8rem' }}>Cela ne signifie pas qu’aucun changement n’a eu lieu.</span>
+          <span className="t-critique t-semi t-sm">{erreur}</span>
+          <span className="t-2 t-xs">Cela ne signifie pas qu’aucun changement n’a eu lieu.</span>
           <Button size="sm" variant="secondary" onClick={() => setRechargement((n) => n + 1)}>Réessayer</Button>
         </div>
       ) : historique === null ? (
-        <div aria-busy="true" style={{ color: '#94A3B8', fontSize: '0.84rem' }}>Chargement…</div>
+        <div aria-busy="true" className="t-2 t-sm">Chargement…</div>
       ) : historique.length === 0 ? (
         <EmptyState title="Aucun changement de forfait" message="Aucun changement de forfait enregistré." />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {historique.map((h) => {
-            const src = SOURCE_LABELS[h.source] || { label: 'Autre origine', color: '#475569', bg: '#F1F5F9' };
+            const src = SOURCE_LABELS[h.source] || { label: 'Autre origine', color: 'var(--color-text-2)', bg: 'var(--color-neutre-fond)' };
             return (
-              <div key={h.id} style={{ border: '1px solid #E8ECE6', borderRadius: '12px', padding: '10px 12px' }}>
+              <div key={h.id} style={{ border: '1px solid var(--color-trait)', borderRadius: '12px', padding: '10px 12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '8px', flexWrap: 'wrap' }}>
-                  <span style={{ fontWeight: 700, fontSize: '0.84rem', color: '#02302D' }}>
+                  <span className="t-semi t-sm t-encre">
                     {h.ancien_plan_nom || '—'} → {h.nouveau_plan_nom}
                   </span>
-                  <span style={{ background: src.bg, color: src.color, fontWeight: 700, fontSize: '0.7rem', padding: '2px 8px', borderRadius: '9999px' }}>
+                  <span style={{ background: src.bg, color: src.color, fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-xs)', padding: '2px 8px', borderRadius: '9999px' }}>
                     {src.label}
                   </span>
                 </div>
-                {h.raison && <div style={{ fontSize: '0.8rem', color: '#475569', marginBottom: '4px' }}>{h.raison}</div>}
-                <div style={{ fontSize: '0.74rem', color: '#64748B' }}>
+                {h.raison && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', marginBottom: '4px' }}>{h.raison}</div>}
+                <div className="t-xs t-2">
                   {new Date(h.created_at).toLocaleString('fr-FR')}
                   {h.modifie_par_nom && ` · ${h.modifie_par_nom}`}
                 </div>
@@ -244,7 +243,7 @@ function AdminFacturationPageContenu() {
   }, []);
 
   if (loading) {
-    return <div style={{ color: '#64748B', padding: '32px', fontWeight: 600 }}>Chargement de la facturation…</div>;
+    return <div style={{ color: 'var(--color-text-2)', padding: '32px', fontWeight: 'var(--weight-semibold)' }}>Chargement de la facturation…</div>;
   }
 
   return (
@@ -270,22 +269,22 @@ function AdminFacturationPageContenu() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '14px' }}>
         {vueEnsemble?.repartition.map((r) => (
           <div key={r.code} style={cardStyle()}>
-            <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+            <div style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text-2)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
               {r.nom}
             </div>
-            <div style={{ fontSize: '1.7rem', fontWeight: 800, color: '#02302D', marginTop: '4px' }}>{r.nombre}</div>
+            <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', marginTop: '4px' }}>{r.nombre}</div>
           </div>
         ))}
-        <div style={{ ...cardStyle(), background: '#EAF5EC', border: '1px solid #CFE3D3' }}>
-          <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#3C7730', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+        <div style={{ ...cardStyle(), background: 'var(--color-bon-fond)', border: '1px solid var(--color-trait)' }}>
+          <div style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-bon-texte)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
             Passage du forfait Gratuit à un forfait payant (30 jours)
           </div>
-          <div style={{ fontSize: '1.7rem', fontWeight: 800, color: '#02302D', marginTop: '4px' }}>
+          <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', marginTop: '4px' }}>
             {vueEnsemble?.taux_conversion_30j === null || vueEnsemble?.taux_conversion_30j === undefined
               ? '—'
               : formaterPourcentage(Math.round(vueEnsemble.taux_conversion_30j * 100), 0)}
           </div>
-          <div style={{ fontSize: '0.72rem', color: '#3C7730', marginTop: '2px' }}>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-bon-texte)', marginTop: '2px' }}>
             {vueEnsemble?.nb_conversions_30j ?? 0} conversion(s) / {vueEnsemble?.nb_base_calcul_30j ?? 0} organisation(s)
           </div>
         </div>
@@ -293,16 +292,16 @@ function AdminFacturationPageContenu() {
 
       {/* ── Paiements en échec ── */}
       <div style={cardStyle()}>
-        <h3 style={{ margin: '0 0 4px', fontSize: '0.95rem', fontWeight: 800, color: '#02302D', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <AlertTriangleIcon size={18} color="#DC2626" />
+        <h3 style={{ margin: '0 0 4px', fontSize: 'var(--text-base)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <AlertTriangleIcon size={18} color="var(--color-critique-texte)" />
           Paiements en échec
         </h3>
-        <p style={{ margin: '0 0 14px', fontSize: '0.8rem', color: '#64748B' }}>
+        <p style={{ margin: '0 0 14px', fontSize: 'var(--text-xs)', color: 'var(--color-text-2)' }}>
           Triés par date du retour automatique au forfait Gratuit (7 jours de délai après l’échec).
         </p>
 
         {!paiementsEchoues ? (
-          <p style={{ margin: 0, fontSize: '0.84rem', color: '#64748B' }}>
+          <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text-2)' }}>
             Les paiements en échec n’ont pas pu être chargés : cela ne signifie pas qu’il n’y en a aucun.
           </p>
         ) : paiementsEchoues.length === 0 ? (
@@ -323,16 +322,16 @@ function AdminFacturationPageContenu() {
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '10px 14px', borderRadius: '10px',
-                    background: critique ? '#FEF2F2' : '#FFFBEB',
-                    border: `1px solid ${critique ? '#FECACA' : '#FDE68A'}`,
+                    background: critique ? 'var(--color-critique-fond)' : 'var(--color-surveiller-fond)',
+                    border: `1px solid ${critique ? 'var(--color-critique-fond)' : 'var(--color-surveiller-fond)'}`,
                   }}
                 >
                   <div>
-                    <span style={{ fontWeight: 700, color: '#1E293B', fontSize: '0.86rem' }}>{p.organisation_nom}</span>
-                    <span style={{ marginLeft: '10px', color: '#64748B', fontSize: '0.78rem' }}>Forfait {p.plan_nom}</span>
+                    <span className="t-semi t-encre t-sm">{p.organisation_nom}</span>
+                    <span style={{ marginLeft: '10px', color: 'var(--color-text-2)', fontSize: 'var(--text-xs)' }}>Forfait {p.plan_nom}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: critique ? '#B91C1C' : '#B45309', fontWeight: 700, fontSize: '0.8rem' }}>
-                    <ClockIcon size={14} color={critique ? '#B91C1C' : '#B45309'} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: critique ? 'var(--color-critique-texte)' : 'var(--color-surveiller-texte)', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-xs)' }}>
+                    <ClockIcon size={14} color={critique ? 'var(--color-critique-texte)' : 'var(--color-surveiller-texte)'} />
                     {p.jours_restants_avant_degradation <= 0
                       ? 'Retour au forfait Gratuit imminent'
                       : `${p.jours_restants_avant_degradation} jour(s) avant le retour au forfait Gratuit`}
@@ -346,15 +345,15 @@ function AdminFacturationPageContenu() {
 
       {/* ── Organisations : forfait actuel + override manuel ── */}
       <div style={{ ...cardStyle(), padding: 0, overflow: 'hidden' }}>
-        <h3 style={{ margin: 0, padding: '18px 20px 4px', fontSize: '0.95rem', fontWeight: 800, color: '#02302D' }}>
+        <h3 style={{ margin: 0, padding: '18px 20px 4px', fontSize: 'var(--text-base)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>
           Organisations
         </h3>
         <div style={{ width: '100%', overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.86rem' }}>
-          <thead style={{ background: '#F8FAFB', borderBottom: '1px solid #E8ECE6' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
+          <thead style={{ background: 'var(--color-bg)', borderBottom: '1px solid var(--color-trait)' }}>
             <tr>
               {['Organisation', 'Forfait actuel', 'Actions'].map((h) => (
-                <th key={h} style={{ textAlign: 'left', padding: '12px 20px', color: '#64748B', fontWeight: 700, fontSize: '0.76rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                <th key={h} style={{ textAlign: 'left', padding: '12px 20px', color: 'var(--color-text-2)', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
                   {h}
                 </th>
               ))}
@@ -363,16 +362,16 @@ function AdminFacturationPageContenu() {
           <tbody>
             {organisations.length === 0 && (
               <tr>
-                <td colSpan={3} style={{ padding: '24px 20px', color: '#64748B' }}>
+                <td colSpan={3} style={{ padding: '24px 20px', color: 'var(--color-text-2)' }}>
                   {erreurChargement ? 'Liste non chargée.' : 'Aucune organisation pour le moment.'}
                 </td>
               </tr>
             )}
             {organisations.map((o) => (
-              <tr key={o.id} style={{ borderBottom: '1px solid #F1F4EE' }}>
-                <td style={{ padding: '12px 20px', fontWeight: 700, color: '#02302D' }}>{o.nom}</td>
+              <tr key={o.id} style={{ borderBottom: '1px solid var(--color-trait)' }}>
+                <td style={{ padding: '12px 20px', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>{o.nom}</td>
                 <td style={{ padding: '12px 20px' }}>
-                  <span style={{ background: '#EAF5EC', color: '#3C7730', fontWeight: 700, fontSize: '0.76rem', padding: '3px 10px', borderRadius: '9999px' }}>
+                  <span style={{ background: 'var(--color-bon-fond)', color: 'var(--color-bon-texte)', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-xs)', padding: '3px 10px', borderRadius: '9999px' }}>
                     {o.plan?.nom || '—'}
                   </span>
                 </td>
@@ -381,14 +380,14 @@ function AdminFacturationPageContenu() {
                     <button
                       onClick={() => setOrgPourChangement(o)}
                       className="btn-primary"
-                      style={{ padding: '6px 12px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'inherit' }}
+                      style={{ padding: '6px 12px', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', fontFamily: 'inherit' }}
                     >
                       Changer le forfait
                     </button>
                     <button
                       onClick={() => setOrgPourHistorique(o)}
                       className="btn-secondary"
-                      style={{ padding: '6px 12px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'inherit' }}
+                      style={{ padding: '6px 12px', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', fontFamily: 'inherit' }}
                     >
                       Historique
                     </button>

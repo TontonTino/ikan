@@ -25,7 +25,7 @@ export function EtiquetteJour({ jour }: { jour: string }) {
 export default function VeilleDailyChart({ data }: { data: VeilleSyntheseJour[] }) {
   if (data.length === 0) {
     return (
-      <div style={{ padding: '32px 16px', textAlign: 'center', fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>
+      <div style={{ padding: '32px 16px', textAlign: 'center', fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
         Aucune mention datée sur la période sélectionnée.
       </div>
     );
@@ -41,14 +41,14 @@ export default function VeilleDailyChart({ data }: { data: VeilleSyntheseJour[] 
       <div role="img" aria-label={description} style={{ width: '100%', height: 260 }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-            <XAxis dataKey="date" tickFormatter={(v) => formaterDateAxe(v)} tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} />
-            <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-trait)" />
+            <XAxis dataKey="date" tickFormatter={(v) => formaterDateAxe(v)} tick={{ fontSize: 'var(--text-xs)', fill: 'var(--color-text-muted)' }} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 'var(--text-xs)', fill: 'var(--color-text-muted)' }} />
             <Tooltip
               labelFormatter={(jour) => <EtiquetteJour jour={String(jour)} />}
-              contentStyle={{ background: 'var(--color-primary-dark)', borderRadius: '10px', border: 'none', color: '#FFFFFF', fontSize: '0.78rem' }}
+              contentStyle={{ background: 'var(--color-primary-dark)', borderRadius: '10px', border: 'none', color: 'var(--color-text-inverse)', fontSize: 'var(--text-xs)' }}
             />
-            <Legend wrapperStyle={{ fontSize: '0.78rem' }} />
+            <Legend wrapperStyle={{ fontSize: 'var(--text-xs)' }} />
             <Bar dataKey="positif" name="Positif" stackId="sentiment" fill="var(--color-success)" />
             <Bar dataKey="neutre" name="Neutre" stackId="sentiment" fill="var(--color-text-muted)" />
             <Bar dataKey="negatif" name="Négatif" stackId="sentiment" fill="var(--color-error)" />

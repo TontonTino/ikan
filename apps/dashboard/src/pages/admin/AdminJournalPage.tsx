@@ -23,7 +23,7 @@ const COLONNES: DataTableColumn<JournalAuditEntree>[] = [
     render: (l) => (
       <>
         <div>{l.acteur_email ?? '—'}</div>
-        <div style={{ fontSize: 12, color: '#5F6B5F' }}>{libelleRoleJournal(l.acteur_role)}</div>
+        <div className="t-xs t-2">{libelleRoleJournal(l.acteur_role)}</div>
       </>
     ),
   },
@@ -107,7 +107,7 @@ export default function AdminJournalPage() {
     setPage(0);
   };
   const pages = Math.max(1, Math.ceil(total / TAILLE_PAGE));
-  const champ: React.CSSProperties = { minHeight: 44, padding: '0 10px', borderRadius: 10, border: '1px solid #D5DBD2', width: '100%', boxSizing: 'border-box' };
+  const champ: React.CSSProperties = { minHeight: 44, padding: '0 10px', borderRadius: 10, border: '1px solid var(--color-trait)', width: '100%', boxSizing: 'border-box' };
 
   return (
     <div>

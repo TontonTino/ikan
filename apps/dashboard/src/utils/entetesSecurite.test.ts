@@ -29,8 +29,9 @@ describe('en-têtes de sécurité du dashboard (fonction pure)', () => {
     const csp = h['Content-Security-Policy-Report-Only'];
     expect(csp).toContain("default-src 'self'");
     expect(csp).toContain("script-src 'self';");
-    expect(csp).toContain('https://fonts.googleapis.com');
-    expect(csp).toContain('https://fonts.gstatic.com');
+    // Poppins est auto-hébergée : plus aucune source Google Fonts autorisée.
+    expect(csp).not.toMatch(/fonts\.googleapis\.com|fonts\.gstatic\.com/);
+    expect(csp).toContain("font-src 'self' data:");
     expect(csp).toMatch(/connect-src 'self' https:\/\/api\.exemple\.io https:\/\/yam\.exemple\.io https:\/\/nominatim\.openstreetmap\.org/);
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("object-src 'none'");

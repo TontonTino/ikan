@@ -35,10 +35,9 @@ import QrCodeSvg from '../../components/qr/QrCodeSvg';
 import FicheQrImpression, { PHRASE_INVITATION_QR, imprimerFicheQr } from '../../components/qr/FicheQrImpression';
 
 const cardStyle: React.CSSProperties = {
-  background: '#FFFFFF',
+  background: 'var(--color-surface)',
   borderRadius: '20px',
-  border: '1px solid #E8ECE6',
-  boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+  border: '1px solid var(--color-trait)',
   padding: '24px',
 };
 
@@ -49,11 +48,11 @@ const boutonStyle: React.CSSProperties = {
   gap: '8px',
   padding: '10px 16px',
   borderRadius: '12px',
-  border: '1px solid #E2E8F0',
-  background: '#FFFFFF',
-  color: '#02302D',
-  fontWeight: 700,
-  fontSize: '0.84rem',
+  border: '1px solid var(--color-trait)',
+  background: 'var(--color-surface)',
+  color: 'var(--color-encre)',
+  fontWeight: 'var(--weight-semibold)',
+  fontSize: 'var(--text-sm)',
   fontFamily: 'inherit',
   cursor: 'pointer',
 };
@@ -262,13 +261,13 @@ export default function MonAgencePage() {
     return <Navigate to="/siege" replace />;
   }
   if (!agenceId) {
-    return <div style={{ color: '#B91C1C', padding: '32px', fontWeight: 600 }}>Aucune agence n'est rattachée à votre compte.</div>;
+    return <div style={{ color: 'var(--color-critique-texte)', padding: '32px', fontWeight: 'var(--weight-semibold)' }}>Aucune agence n'est rattachée à votre compte.</div>;
   }
   if (loading) {
-    return <div style={{ color: '#64748B', padding: '32px', fontWeight: 600 }}>Chargement de l'agence…</div>;
+    return <div style={{ color: 'var(--color-text-2)', padding: '32px', fontWeight: 'var(--weight-semibold)' }}>Chargement de l'agence…</div>;
   }
   if (erreur || !agence) {
-    return <div style={{ color: '#B91C1C', padding: '32px', fontWeight: 600 }}>{erreur || 'Agence introuvable.'}</div>;
+    return <div style={{ color: 'var(--color-critique-texte)', padding: '32px', fontWeight: 'var(--weight-semibold)' }}>{erreur || 'Agence introuvable.'}</div>;
   }
 
   const lien = lienFeedbackAgence(agence);
@@ -470,14 +469,14 @@ export default function MonAgencePage() {
               <img
                 src={agence.photo}
                 alt={`Photo de ${agence.nom}`}
-                style={{ width: '84px', height: '84px', borderRadius: '16px', objectFit: 'cover', border: '1px solid #E8ECE6', display: 'block' }}
+                style={{ width: '84px', height: '84px', borderRadius: '16px', objectFit: 'cover', border: '1px solid var(--color-trait)', display: 'block' }}
               />
             ) : (
               <div
                 style={{
                   width: '84px', height: '84px', borderRadius: '16px',
-                  background: '#F1F5F2', border: '1px solid #E8ECE6',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8',
+                  background: 'var(--color-bg)', border: '1px solid var(--color-trait)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-2)',
                 }}
               >
                 <StoreIcon size={32} />
@@ -507,24 +506,24 @@ export default function MonAgencePage() {
 
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              <h1 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: '#02302D' }}>{agence.nom}</h1>
+              <h1 style={{ margin: 0, fontSize: 'var(--text-xl)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>{agence.nom}</h1>
               <span
                 style={{
-                  fontSize: '0.70rem', fontWeight: 800, padding: '3px 10px', borderRadius: '9999px',
-                  background: agence.active ? '#EBF6ED' : '#F1F5F9',
-                  color: agence.active ? '#3C7730' : '#64748B',
+                  fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', padding: '3px 10px', borderRadius: '9999px',
+                  background: agence.active ? 'var(--color-bon-fond)' : 'var(--color-neutre-fond)',
+                  color: agence.active ? 'var(--color-bon-texte)' : 'var(--color-text-2)',
                 }}
               >
                 {agence.active ? 'Active' : 'Inactive'}
               </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap', marginTop: '8px', fontSize: '0.84rem', color: '#64748B' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap', marginTop: '8px', fontSize: 'var(--text-sm)', color: 'var(--color-text-2)' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <MapPinIcon size={15} color="#94A3B8" />
+                <MapPinIcon size={15} color="var(--color-text-2)" />
                 {agence.ville || 'Ville non renseignée'}
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <UsersIcon size={15} color="#94A3B8" />
+                <UsersIcon size={15} color="var(--color-text-2)" />
                 {agence.manager_nom || 'Aucun manager assigné'}
               </span>
             </div>
@@ -533,7 +532,7 @@ export default function MonAgencePage() {
                 type="button"
                 onClick={retirerPhoto}
                 disabled={photoEnCours}
-                style={{ marginTop: '8px', background: 'none', border: 'none', color: '#DC2626', cursor: photoEnCours ? 'default' : 'pointer', fontSize: '0.78rem', fontWeight: 700, padding: 0, opacity: photoEnCours ? 0.6 : 1 }}
+                style={{ marginTop: '8px', background: 'none', border: 'none', color: 'var(--color-critique-texte)', cursor: photoEnCours ? 'default' : 'pointer', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', padding: 0, opacity: photoEnCours ? 0.6 : 1 }}
               >
                 ✕ Retirer la photo
               </button>
@@ -543,8 +542,8 @@ export default function MonAgencePage() {
       </div>
 
       {message && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '10px', background: '#EAF5EC', border: '1px solid #CFE3D3', color: '#3C7730', fontSize: '0.84rem', fontWeight: 600 }}>
-          <CheckCircleIcon size={16} color="#3C7730" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '10px', background: 'var(--color-bon-fond)', color: 'var(--color-bon-texte)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}>
+          <CheckCircleIcon size={16} color="var(--color-bon-texte)" />
           {message}
         </div>
       )}
@@ -552,8 +551,8 @@ export default function MonAgencePage() {
       {/* ── QR code (toujours visible, hors onglets) ── */}
       <div style={cardStyle}>
         <FicheQrImpression nom={agence.nom} url={lien} />
-        <h3 style={{ margin: '0 0 4px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D' }}>QR code de l'agence</h3>
-        <p style={{ margin: '0 0 16px', fontSize: '0.82rem', color: '#64748B' }}>
+        <h3 style={{ margin: '0 0 4px', fontSize: 'var(--text-base)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>QR code de l'agence</h3>
+        <p style={{ margin: '0 0 16px', fontSize: 'var(--text-sm)', color: 'var(--color-text-2)' }}>
           Vos clients le scannent pour laisser leur avis. Lecture seule : il est géré par le CX Manager.
         </p>
         <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -561,10 +560,10 @@ export default function MonAgencePage() {
             url={lien}
             taille={150}
             titre={`QR code de ${agence.nom}`}
-            style={{ borderRadius: '12px', border: '1px solid #E8ECE6', background: '#FFFFFF', flexShrink: 0 }}
+            style={{ borderRadius: '12px', border: '1px solid var(--color-trait)', background: 'var(--color-surface)', flexShrink: 0 }}
           />
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: '0.78rem', color: '#64748B', wordBreak: 'break-all' }}>{lien}</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', wordBreak: 'break-all' }}>{lien}</div>
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
               <button type="button" onClick={copierLien} style={boutonStyle}>
                 <CopyIcon size={16} /> Copier le lien
@@ -578,7 +577,7 @@ export default function MonAgencePage() {
               <button
                 type="button"
                 onClick={telechargerImagePng}
-                style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', padding: '4px' }}
+                style={{ background: 'transparent', border: 'none', color: 'var(--color-text-2)', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', padding: '4px' }}
               >
                 ou l'image PNG seule
               </button>
@@ -593,25 +592,25 @@ export default function MonAgencePage() {
       {activeTab === 'informations' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '18px' }}>
           <div style={cardStyle}>
-            <h3 style={{ margin: '0 0 14px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D' }}>Coordonnées</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.86rem', color: '#334155' }}>
+            <h3 style={{ margin: '0 0 14px', fontSize: 'var(--text-base)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>Coordonnées</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: 'var(--text-sm)', color: 'var(--color-encre)' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                <MapPinIcon size={17} color="#94A3B8" />
+                <MapPinIcon size={17} color="var(--color-text-2)" />
                 <span>{agence.adresse || 'Adresse non renseignée'}{agence.ville ? ` — ${agence.ville}` : ''}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <PhoneIcon size={17} color="#94A3B8" />
+                <PhoneIcon size={17} color="var(--color-text-2)" />
                 <span>{agence.telephone || 'Téléphone non renseigné'}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <MailIcon size={17} color="#94A3B8" />
+                <MailIcon size={17} color="var(--color-text-2)" />
                 <span>{agence.email || 'E-mail non renseigné'}</span>
               </div>
             </div>
           </div>
 
           <div style={cardStyle}>
-            <h3 style={{ margin: '0 0 14px', fontSize: '0.98rem', fontWeight: 800, color: '#02302D' }}>Performances clés (30 derniers jours)</h3>
+            <h3 style={{ margin: '0 0 14px', fontSize: 'var(--text-base)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>Performances clés (30 derniers jours)</h3>
             <PerformancesCles stats={stats} erreur={statsErreur} onRetry={() => setStatsRecharge((n) => n + 1)} />
           </div>
         </div>
@@ -621,8 +620,8 @@ export default function MonAgencePage() {
       {activeTab === 'categories' && (
         <div style={cardStyle}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px', marginBottom: '4px' }}>
-            <h3 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 800, color: '#02302D', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <TagIcon size={18} color="#3C7730" />
+            <h3 style={{ margin: 0, fontSize: 'var(--text-base)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <TagIcon size={18} color="var(--color-bon-texte)" />
               Catégories actives ({categories.length})
             </h3>
             <button
@@ -632,16 +631,16 @@ export default function MonAgencePage() {
                 setErreurCategorie('');
               }}
               style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px', background: formulaireOuvert ? '#F1F5F9' : '#EAF5EC',
-                color: formulaireOuvert ? '#64748B' : '#3C7730', border: 'none', borderRadius: '9999px', padding: '6px 12px',
-                fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit',
+                display: 'inline-flex', alignItems: 'center', gap: '6px', background: formulaireOuvert ? 'var(--color-neutre-fond)' : 'var(--color-bon-fond)',
+                color: formulaireOuvert ? 'var(--color-text-2)' : 'var(--color-bon-texte)', border: 'none', borderRadius: '9999px', padding: '6px 12px',
+                fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit',
               }}
             >
               {formulaireOuvert ? <XCloseIcon size={14} /> : <PlusIcon size={14} />}
               {formulaireOuvert ? 'Annuler' : 'Ajouter une catégorie'}
             </button>
           </div>
-          <p style={{ margin: '0 0 14px', fontSize: '0.82rem', color: '#64748B' }}>
+          <p style={{ margin: '0 0 14px', fontSize: 'var(--text-sm)', color: 'var(--color-text-2)' }}>
             Les thèmes proposés aux clients dans le formulaire. Une catégorie « suggestion » déclenche une alerte dédiée
             (voir Alertes) lorsqu'un avis qui lui est associé reste non traité.
           </p>
@@ -657,25 +656,25 @@ export default function MonAgencePage() {
                   placeholder="Ex: Accueil, Propreté..."
                   maxLength={100}
                   autoFocus
-                  style={{ flex: 1, padding: '9px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', boxSizing: 'border-box', fontSize: '0.84rem' }}
+                  style={{ flex: 1, padding: '9px 12px', borderRadius: '10px', border: '1px solid var(--color-trait)', boxSizing: 'border-box', fontSize: 'var(--text-sm)' }}
                 />
                 <button
                   type="button"
                   onClick={ajouterCategorie}
                   disabled={ajoutEnCours || !nouveauNom.trim()}
-                  style={{ background: '#02302D', color: '#FFFFFF', border: 'none', borderRadius: '10px', padding: '9px 16px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', opacity: ajoutEnCours || !nouveauNom.trim() ? 0.6 : 1, fontFamily: 'inherit' }}
+                  style={{ background: 'var(--color-encre)', color: 'var(--color-text-inverse)', border: 'none', borderRadius: '10px', padding: '9px 16px', fontWeight: 'var(--weight-semibold)', cursor: 'pointer', whiteSpace: 'nowrap', opacity: ajoutEnCours || !nouveauNom.trim() ? 0.6 : 1, fontFamily: 'inherit' }}
                 >
                   {ajoutEnCours ? 'Ajout…' : 'Ajouter'}
                 </button>
               </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: '#334155', fontWeight: 600, cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: 'var(--text-xs)', color: 'var(--color-encre)', fontWeight: 'var(--weight-semibold)', cursor: 'pointer' }}>
                 <input type="checkbox" checked={nouveauEstSuggestion} onChange={(e) => setNouveauEstSuggestion(e.target.checked)} />
                 Catégorie « suggestion » (déclenche une alerte dédiée)
               </label>
             </div>
           )}
           {erreurCategorie && (
-            <div style={{ color: '#B91C1C', fontSize: '0.78rem', fontWeight: 600, marginBottom: '12px' }}>{erreurCategorie}</div>
+            <div style={{ color: 'var(--color-critique-texte)', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', marginBottom: '12px' }}>{erreurCategorie}</div>
           )}
 
           {categoriesErreur ? (
@@ -701,7 +700,7 @@ export default function MonAgencePage() {
               }
             />
           ) : categories.length === 0 ? (
-            <div style={{ color: '#64748B', fontSize: '0.86rem', fontWeight: 600 }}>
+            <div className="t-2 t-sm t-semi">
               Aucune catégorie personnalisée : le formulaire utilise la catégorie « Général » par défaut.
             </div>
           ) : (
@@ -714,7 +713,7 @@ export default function MonAgencePage() {
                     key={c.id}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px',
-                      padding: '9px 12px', background: '#F8FAF8', border: '1px solid #E2EFE1', borderRadius: '12px',
+                      padding: '9px 12px', background: 'var(--color-bg)', border: '1px solid var(--color-trait)', borderRadius: '12px',
                     }}
                   >
                     {enEdition ? (
@@ -725,22 +724,22 @@ export default function MonAgencePage() {
                         onKeyDown={(e) => e.key === 'Enter' && enregistrerEdition(c)}
                         maxLength={100}
                         autoFocus
-                        style={{ flex: 1, padding: '5px 8px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.82rem', boxSizing: 'border-box' }}
+                        style={{ flex: 1, padding: '5px 8px', borderRadius: '8px', border: '1px solid var(--color-trait)', fontSize: 'var(--text-sm)', boxSizing: 'border-box' }}
                       />
                     ) : (
                       <span style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0F172A' }}>{c.nom}</span>
+                        <span className="t-sm t-semi t-encre">{c.nom}</span>
                         <span
                           style={{
-                            fontSize: '0.66rem', fontWeight: 700, padding: '2px 8px', borderRadius: '9999px', whiteSpace: 'nowrap',
-                            background: c.cree_par_role === 'agency_manager' ? '#EFF6FF' : '#F1F5F9',
-                            color: c.cree_par_role === 'agency_manager' ? '#2563EB' : '#475569',
+                            fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', padding: '2px 8px', borderRadius: '9999px', whiteSpace: 'nowrap',
+                            background: c.cree_par_role === 'agency_manager' ? 'var(--color-neutre-fond)' : 'var(--color-neutre-fond)',
+                            color: c.cree_par_role === 'agency_manager' ? 'var(--color-neutre-texte)' : 'var(--color-text-2)',
                           }}
                         >
                           {c.cree_par_role === 'agency_manager' ? 'Ajoutée par le responsable d’agence' : 'Ajoutée par le CX Manager'}
                         </span>
                         {c.est_categorie_suggestion && (
-                          <span style={{ fontSize: '0.66rem', fontWeight: 700, padding: '2px 8px', borderRadius: '9999px', whiteSpace: 'nowrap', background: '#FEF3E2', color: '#B45309' }}>
+                          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', padding: '2px 8px', borderRadius: '9999px', whiteSpace: 'nowrap', background: 'var(--color-neutre-fond)', color: 'var(--color-neutre-texte)' }}>
                             Suggestion
                           </span>
                         )}
@@ -754,7 +753,7 @@ export default function MonAgencePage() {
                             type="button"
                             onClick={() => enregistrerEdition(c)}
                             disabled={actionEnCours === c.id}
-                            style={{ background: '#EAF5EC', color: '#3C7730', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                            style={{ background: 'var(--color-bon-fond)', color: 'var(--color-bon-texte)', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', cursor: 'pointer', fontFamily: 'inherit' }}
                           >
                             Enregistrer
                           </button>
@@ -763,7 +762,7 @@ export default function MonAgencePage() {
                             type="button"
                             onClick={() => demarrerEdition(c)}
                             title="Modifier"
-                            style={{ background: '#F1F5F9', color: '#334155', border: 'none', borderRadius: '8px', padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                            style={{ background: 'var(--color-neutre-fond)', color: 'var(--color-encre)', border: 'none', borderRadius: '8px', padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                           >
                             <EditIcon size={13} />
                           </button>
@@ -773,7 +772,7 @@ export default function MonAgencePage() {
                           onClick={() => toggleEstSuggestion(c)}
                           disabled={actionEnCours === c.id}
                           title="Basculer le type suggestion"
-                          style={{ background: c.est_categorie_suggestion ? '#FEF3E2' : '#F1F5F9', color: c.est_categorie_suggestion ? '#B45309' : '#475569', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                          style={{ background: c.est_categorie_suggestion ? 'var(--color-neutre-fond)' : 'var(--color-bg)', color: c.est_categorie_suggestion ? 'var(--color-neutre-texte)' : 'var(--color-text-2)', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', cursor: 'pointer', fontFamily: 'inherit' }}
                         >
                           {c.est_categorie_suggestion ? 'Suggestion ✓' : 'Marquer suggestion'}
                         </button>
@@ -781,7 +780,7 @@ export default function MonAgencePage() {
                           type="button"
                           onClick={() => desactiverCategorie(c)}
                           disabled={actionEnCours === c.id}
-                          style={{ background: '#FEE2E2', color: '#B91C1C', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                          style={{ background: 'var(--color-critique-fond)', color: 'var(--color-critique-texte)', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', cursor: 'pointer', fontFamily: 'inherit' }}
                         >
                           Désactiver
                         </button>

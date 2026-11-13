@@ -4,7 +4,7 @@ import { StaticRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import type { Alerte, AlerteFeedback } from '../../types';
 import PilotageAlertesActionsTab from './PilotageAlertesActionsTab';
-import type { AlertesData, RecosData } from './AlertesView';
+import type { AlertesData } from './AlertesView';
 import type { EtatSource } from './alertesVue';
 import { AVIS_VISIBLES } from './alertesVue';
 
@@ -17,7 +17,6 @@ const avis = (i: number, note = 1, agence = 'a1'): AlerteFeedback => ({
 const etatAlertes = (donnees: Partial<AlertesData> = {}, extra: Partial<EtatSource<AlertesData>> = {}): EtatSource<AlertesData> => ({
   statut: 'pret', charge: true, donnees: { seuil: [], avis: [], incluses: true, ...donnees }, ...extra,
 });
-const etatRecos = (extra: Partial<EtatSource<RecosData>> = {}): EtatSource<RecosData> => ({ statut: 'pret', charge: true, donnees: { items: [], total: 0 }, ...extra });
 
 const rendu = (surcharge: Partial<React.ComponentProps<typeof PilotageAlertesActionsTab>> = {}, location = '/alertes') =>
   renderToStaticMarkup(
@@ -25,16 +24,11 @@ const rendu = (surcharge: Partial<React.ComponentProps<typeof PilotageAlertesAct
       <PilotageAlertesActionsTab
         isAgencyManager
         alertes={etatAlertes()}
-        recos={etatRecos()}
-        recosLoadingMore={false}
         nomForfait={null}
         agences={[]}
         selectedAgenceId={null}
         onSelectAgence={vi.fn()}
         onRefresh={vi.fn()}
-        onRetryRecos={vi.fn()}
-        onLoadMoreRecos={vi.fn()}
-        onMarquerRecoTraitee={vi.fn()}
         {...surcharge}
       />
     </StaticRouter>,
@@ -135,7 +129,7 @@ describe('page /alertes — hiérarchie, volume et filtres', () => {
     expect(rendu({ isAgencyManager: true })).not.toContain('<select');
     const cx = rendu({ isAgencyManager: false, agences: [{ id: 'a1', nom: 'Agence a1' } as never] });
     expect(cx).toContain('<select');
-    expect(cx).toContain('aria-label="Filtrer les alertes et recommandations par agence"');
+    expect(cx).toContain('aria-label="Filtrer les alertes par agence"');
   });
 
   it('filtre d’agence sans résultat alors que des alertes existent : message distinct avec le total', () => {
@@ -200,21 +194,21 @@ describe('page /alertes — niveau écrit, aide repliée, aucun résultat, sous-
 
   it('aucun résultat : icône neutre de filtre (pas la coche verte) et message qui dit que le filtre masque les alertes', () => {
     const html = rendu({ isAgencyManager: false, selectedAgenceId: 'autre', alertes: etatAlertes({ avis: [avis(1)] }) });
-    const alertes = html.split('Recommandations automatiques')[0];
+    const alertes = html;
     expect(alertes).toContain('alerte-vide-filtre');
     expect(alertes).not.toContain('var(--color-success)');
     expect(html).toContain('Ces filtres masquent les alertes');
   });
 
   it('aucune alerte active : la coche positive est conservée', () => {
-    const alertes = rendu().split('Recommandations automatiques')[0];
+    const alertes = rendu();
     expect(alertes).not.toContain('alerte-vide-filtre');
     expect(alertes).toContain('var(--color-success)');
   });
 
   it('plus de sous-titre sous « Alertes actives » : les volumes ne sont pas répétés dans la carte', () => {
     const html = rendu({ alertes: etatAlertes({ seuil: [seuil()], avis: [avis(1, 1), avis(2, 2)] }) });
-    const carte = html.split('Recommandations automatiques')[0];
+    const carte = html;
     expect(carte).toContain('Alertes actives');
     expect(carte).not.toContain('ui-card__subtitle');
     expect(carte).not.toContain('tous critiques');
@@ -222,16 +216,11 @@ describe('page /alertes — niveau écrit, aide repliée, aucun résultat, sous-
   });
 });
 
-describe('page /alertes — recommandations (suggestions, pas des alertes)', () => {
-  it('liste vide, erreur et résultats sont distincts', () => {
-    expect(rendu()).toContain('Aucune recommandation en attente');
-    const erreur = rendu({ recos: etatRecos({ statut: 'erreur', charge: false }) });
-    expect(erreur).toContain('Impossible de charger les recommandations');
-    expect(erreur).not.toContain('Aucune recommandation en attente');
-  });
-
-  it('précise qu’une recommandation n’est pas une action exécutée', () => {
-    expect(rendu()).toContain('n’est pas une action exécutée');
+describe('page /alertes — sans recommandations automatiques', () => {
+  it('ni bloc ni chargement de recommandations : la page ne montre que les alertes', () => {
+    for (const html of [rendu(), rendu({ isAgencyManager: false })]) {
+      expect(html).not.toMatch(/[Rr]ecommandation/);
+    }
   });
 });
 
@@ -349,7 +338,7 @@ describe('page /alertes — ligne d’alerte : ordre de lecture, une pastille, n
 describe('page /alertes — rouge : le badge de niveau est le seul signal', () => {
   it('ni bordure rose sur la carte, ni liseré de couleur sur les lignes, même avec des alertes critiques', () => {
     const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ seuil: [{ ...seuil(), gravite: 'critique' }], avis: [avis(1, 1), avis(2, 2)] }) });
-    const alertes = html.split('Recommandations automatiques')[0];
+    const alertes = html;
     expect(alertes).not.toContain('ui-card--critical');
     expect(alertes).not.toContain('agence-prio__item--critical');
     expect(alertes).not.toContain('agence-prio__item--warning');
@@ -358,7 +347,7 @@ describe('page /alertes — rouge : le badge de niveau est le seul signal', () =
 
   it('le rouge n’apparaît que dans les badges de niveau (une pastille « critique » par ligne critique)', () => {
     const html = rendu({ alertes: etatAlertes({ seuil: [{ ...seuil(), gravite: 'critique' }], avis: [avis(1, 1), avis(2, 2)] }) });
-    const alertes = html.split('Recommandations automatiques')[0];
+    const alertes = html;
     expect((alertes.match(/critical/g) || []).length).toBe((alertes.match(/ui-badge--critical/g) || []).length);
     expect((alertes.match(/ui-badge--critical/g) || []).length).toBe(3);
   });

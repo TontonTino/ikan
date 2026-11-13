@@ -16,21 +16,21 @@ interface Permission {
 }
 
 const ROLE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  admin: { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A' },
-  cx_manager: { bg: '#E0F2FE', text: '#0369A1', border: '#BAE6FD' },
-  agency_manager: { bg: '#EBF5E9', text: '#3C7730', border: '#D5E8D3' },
+  admin: { bg: 'var(--color-surveiller-fond)', text: 'var(--color-surveiller-texte)', border: 'var(--color-surveiller-fond)' },
+  cx_manager: { bg: 'var(--color-neutre-fond)', text: 'var(--color-neutre-texte)', border: 'var(--color-neutre-fond)' },
+  agency_manager: { bg: 'var(--color-bon-fond)', text: 'var(--color-bon-texte)', border: 'var(--color-bon-fond)' },
 };
 
 const getRoleIcon = (role: string, size = 22) => {
   switch (role) {
     case 'admin':
-      return <ShieldCheckIcon size={size} color="#92400E" />;
+      return <ShieldCheckIcon size={size} color="var(--color-surveiller-texte)" />;
     case 'cx_manager':
-      return <BarChartIcon size={size} color="#0369A1" />;
+      return <BarChartIcon size={size} color="var(--color-neutre-texte)" />;
     case 'agency_manager':
-      return <StoreIcon size={size} color="#3C7730" />;
+      return <StoreIcon size={size} color="var(--color-bon-texte)" />;
     default:
-      return <UsersIcon size={size} color="#475569" />;
+      return <UsersIcon size={size} color="var(--color-text-2)" />;
   }
 };
 
@@ -64,7 +64,7 @@ function AdminPermissionsPageContenu() {
       .finally(() => setLoading(false));
   }, [rechargement]);
 
-  if (loading) return <div style={{ color: '#64748B', padding: '32px', fontWeight: 600 }}>Chargement des permissions…</div>;
+  if (loading) return <div style={{ color: 'var(--color-text-2)', padding: '32px', fontWeight: 'var(--weight-semibold)' }}>Chargement des permissions…</div>;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -102,16 +102,15 @@ function AdminPermissionsPageContenu() {
         }}
       >
         {permissions.map((p) => {
-          const colors = ROLE_COLORS[p.role] || { bg: '#F8FAFB', text: '#475569', border: '#E2E8F0' };
+          const colors = ROLE_COLORS[p.role] || { bg: 'var(--color-bg)', text: 'var(--color-text-2)', border: 'var(--color-trait)' };
           return (
             <div
               key={p.role}
               style={{
-                background: '#FFFFFF',
-                border: '1px solid #E8ECE6',
+                background: 'var(--color-surface)',
+                border: '1px solid var(--color-trait)',
                 borderRadius: '24px',
                 padding: '24px',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '12px',
@@ -134,18 +133,18 @@ function AdminPermissionsPageContenu() {
                   {getRoleIcon(p.role, 22)}
                 </div>
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#02302D' }}>
+                  <div className="t-semi t-lg t-encre">
                     {p.nom_affichage}
                   </div>
                 </div>
               </div>
               <p
                 style={{
-                  fontSize: '0.84rem',
-                  color: '#64748B',
+                  fontSize: 'var(--text-sm)',
+                  color: 'var(--color-text-2)',
                   margin: 0,
                   lineHeight: 1.4,
-                  fontWeight: 500,
+                  fontWeight: 'var(--weight-normal)',
                 }}
               >
                 {p.description}
@@ -158,42 +157,41 @@ function AdminPermissionsPageContenu() {
       {/* ── Tableau Comparatif des Droits par Rôle ── */}
       <div
         style={{
-          background: '#FFFFFF',
+          background: 'var(--color-surface)',
           borderRadius: '24px',
-          border: '1px solid #E8ECE6',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+          border: '1px solid var(--color-trait)',
           overflow: 'hidden',
         }}
       >
         <div
           style={{
             padding: '20px 24px',
-            borderBottom: '1px solid #E8ECE6',
-            background: '#F8FAFB',
+            borderBottom: '1px solid var(--color-trait)',
+            background: 'var(--color-bg)',
           }}
         >
-          <h2 style={{ fontWeight: 800, fontSize: '1.05rem', color: '#02302D', margin: 0 }}>
+          <h2 style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-lg)', color: 'var(--color-encre)', margin: 0 }}>
             Droits d'accès détaillés par rôle
           </h2>
         </div>
         {permissions.map((p, idx) => {
-          const colors = ROLE_COLORS[p.role] || { bg: '#F8FAFB', text: '#475569', border: '#E2E8F0' };
+          const colors = ROLE_COLORS[p.role] || { bg: 'var(--color-bg)', text: 'var(--color-text-2)', border: 'var(--color-trait)' };
           return (
-            <div key={p.role} style={{ borderTop: idx > 0 ? '1px solid #F1F4EE' : undefined }}>
+            <div key={p.role} style={{ borderTop: idx > 0 ? '1px solid var(--color-trait)' : undefined }}>
               <div
                 style={{
                   padding: '16px 24px',
-                  background: '#FFFFFF',
+                  background: 'var(--color-surface)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '10px',
-                  borderBottom: '1px solid #F8FAFB',
+                  borderBottom: '1px solid var(--color-trait)',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   {getRoleIcon(p.role, 18)}
                 </div>
-                <span style={{ fontWeight: 800, color: '#02302D', fontSize: '0.95rem' }}>
+                <span className="t-semi t-encre t-base">
                   {p.nom_affichage}
                 </span>
               </div>
@@ -215,12 +213,12 @@ function AdminPermissionsPageContenu() {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '8px',
-                        fontSize: '0.86rem',
-                        color: '#1E293B',
-                        fontWeight: 500,
+                        fontSize: 'var(--text-sm)',
+                        color: 'var(--color-encre)',
+                        fontWeight: 'var(--weight-normal)',
                       }}
                     >
-                      <CheckIcon size={14} color="#3C7730" strokeWidth={3} />
+                      <CheckIcon size={14} color="var(--color-bon-texte)" strokeWidth={3} />
                       <span>{droit}</span>
                     </li>
                   ))}
@@ -234,8 +232,8 @@ function AdminPermissionsPageContenu() {
       {/* ── Note d'information ── */}
       <div
         style={{
-          background: '#FEF3C7',
-          border: '1px solid #FDE68A',
+          background: 'var(--color-surveiller-fond)',
+          border: '1px solid var(--color-surveiller-fond)',
           borderRadius: '16px',
           padding: '16px 20px',
           display: 'flex',
@@ -243,8 +241,8 @@ function AdminPermissionsPageContenu() {
           alignItems: 'center',
         }}
       >
-        <ShieldCheckIcon size={20} color="#92400E" />
-        <div style={{ fontSize: '0.84rem', color: '#92400E', fontWeight: 600 }}>
+        <ShieldCheckIcon size={20} color="var(--color-surveiller-texte)" />
+        <div className="t-sm t-surveiller t-semi">
           <strong>Sécurité :</strong> les droits sont attribués par rôle et ne peuvent pas être personnalisés utilisateur par utilisateur.
           Pour toute demande particulière, contactez le support IKAN AI.
         </div>

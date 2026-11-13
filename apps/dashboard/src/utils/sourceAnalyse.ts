@@ -7,6 +7,3 @@ import type { SourceAnalyse } from '../types';
 
 export const contientIA = (items: { source?: SourceAnalyse }[]) =>
   items.some((i) => i.source === 'llm' || i.source === 'hybride');
-
-export const libelleRecommandations = (items: { source?: SourceAnalyse }[]) =>
-  contientIA(items) ? 'Recommandations IA' : 'Recommandations automatiques';

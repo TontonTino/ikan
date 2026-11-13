@@ -38,7 +38,7 @@ export default function ActionsDuProbleme({ issue, role, utilisateurs, moiId, no
     >
       <span className="ui-sr-only" role="status">{nouvelleActionId ? 'Action ajoutée.' : ''}</span>
       {sansAction ? (
-        <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>
+        <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
           {peutDefinir
             ? 'Aucune action définie. Décidez de la première action à mener pour régler ce problème.'
             : issue.statut === 'resolue' || issue.statut === 'verifiee'
@@ -53,17 +53,17 @@ export default function ActionsDuProbleme({ issue, role, utilisateurs, moiId, no
               id={`action-${action.id}`}
               tabIndex={-1}
               className={nouvelleActionId === action.id ? 'action-probleme is-nouvelle' : undefined}
-              style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}
+              style={{ background: 'var(--color-surface)', border: '1px solid var(--color-trait)', borderRadius: 'var(--radius-md)', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}
             >
               <div style={{ minWidth: 0, flex: '1 1 220px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--color-text-main)' }}>{action.titre}</span>
+                  <span className="t-sm t-semi t-encre">{action.titre}</span>
                   <Badge label={libelleEtatAction(action.statut)} variant={action.statut === 'terminee' ? 'positif' : 'neutral'} />
                 </div>
                 {action.description && (
-                  <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>{action.description}</p>
+                  <p style={{ margin: '4px 0 0', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>{action.description}</p>
                 )}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '6px', fontSize: '0.74rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '6px', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', fontWeight: 'var(--weight-semibold)' }}>
                   {/* responsable_id existe mais l'API n'expose aucun nom : seul le CX Manager peut résoudre un id en nom (GET /utilisateurs/,
                       Agency Managers). Sinon « Vous » ou « Assigné » : jamais un nom inventé. */}
                   <span>Responsable : {libelleResponsable(action.responsable_id, utilisateurs, moiId, action.responsable_nom)}</span>

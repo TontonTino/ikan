@@ -24,9 +24,9 @@ export default function PriseEnChargeBanner({
       <div
         role="region"
         aria-label="Prise en charge de l’avis"
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', padding: '12px 28px', background: '#FFF7ED', borderBottom: '1px solid #FED7AA' }}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', padding: '12px 28px', background: 'var(--color-surveiller-fond)' }}
       >
-        <p style={{ margin: 0, fontSize: '0.84rem', color: '#7C2D12', fontWeight: 600, flex: '1 1 280px' }}>
+        <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-surveiller-texte)', fontWeight: 'var(--weight-semibold)', flex: '1 1 280px' }}>
           Cet avis n’a pas encore été pris en charge. Le consulter ne le modifie pas : prenez-le en charge pour vous l’attribuer et le traiter.
         </p>
         <Button size="sm" loading={chargement} onClick={onPrendreEnCharge}>
@@ -37,7 +37,7 @@ export default function PriseEnChargeBanner({
   }
 
   return (
-    <div role="status" style={{ padding: '10px 28px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', fontSize: '0.82rem', color: '#475569', fontWeight: 600 }}>
+    <div role="status" style={{ padding: '10px 28px', background: 'var(--color-bg)', borderBottom: '1px solid var(--color-trait)', fontSize: 'var(--text-sm)', color: 'var(--color-text-2)', fontWeight: 'var(--weight-semibold)' }}>
       Cet avis n’a pas encore été pris en charge par le Responsable d’agence.
     </div>
   );

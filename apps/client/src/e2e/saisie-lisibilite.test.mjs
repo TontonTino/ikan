@@ -84,7 +84,6 @@ const attendreCategories = (page) => page.waitForFunction(() => { const s = docu
 const visible = (page, id) => page.$eval(`#${id}`, (e) => getComputedStyle(e).display !== 'none' && !e.hidden);
 
 async function remplirNote(page, { categorie = 'c2', niveau = 'mauvais', commentaire = 'Attente trop longue au guichet' } = {}) {
-  await page.tap('#btnChoixNote');
   await attendreCategories(page);
   await page.select('#categorieSelect', categorie);
   await page.tap(`.sentiment-tile[data-sentiment="${niveau}"]`);
@@ -92,7 +91,6 @@ async function remplirNote(page, { categorie = 'c2', niveau = 'mauvais', comment
 }
 const etatFormulaire = (page) => page.evaluate(() => ({
   ecranFormulaire: getComputedStyle(document.getElementById('screen-sentiment')).display !== 'none',
-  ecranAccueil: getComputedStyle(document.getElementById('screen-accueil')).display !== 'none',
   categorie: document.getElementById('categorieSelect').value,
   niveau: document.querySelector('.sentiment-tile[aria-checked=true]')?.dataset.sentiment ?? null,
   commentaire: document.getElementById('inputCommentaire').value,
@@ -128,8 +126,7 @@ for (const largeur of [320, 360, 412]) {
   test(`écran de note à ${largeur} px : étiquettes ≥ 12 px entières dans leur case, cases ≥ 44 px, grille dans l'écran, aucun défilement horizontal`, { skip: SKIP }, async () => {
     const { page, fermer } = await ouvrir('QR-LONG80', largeur);
     try {
-      await page.tap('#btnChoixNote');
-      await attendreCategories(page);
+          await attendreCategories(page);
       const m = await page.evaluate(() => {
         const tuiles = [...document.querySelectorAll('.sentiment-tile')];
         const g = document.getElementById('sentimentsGrid').getBoundingClientRect();
@@ -178,7 +175,6 @@ test('chemin « Noter » en échec réseau : message, saisie conservée, recharg
     await attendreCategories(page);
     const apres = await etatFormulaire(page);
     assert.equal(apres.ecranFormulaire, true, 'replacé sur le formulaire');
-    assert.equal(apres.ecranAccueil, false);
     assert.equal(apres.categorie, 'c2');
     assert.equal(apres.niveau, 'mauvais');
     assert.equal(apres.commentaire, 'Attente trop longue au guichet');
@@ -215,7 +211,7 @@ test('le contact et le consentement ne sont JAMAIS stockés ni restaurés ; sess
   } finally { await fermer(); }
 });
 
-test('après un envoi confirmé : mémoire effacée, un rechargement ramène à l\'accueil, formulaire vide', { skip: SKIP }, async () => {
+test('après un envoi confirmé : mémoire effacée, un rechargement ramène au formulaire vide', { skip: SKIP }, async () => {
   const { page, fermer } = await ouvrir('QR-OK');
   try {
     await remplirNote(page);
@@ -225,7 +221,7 @@ test('après un envoi confirmé : mémoire effacée, un rechargement ramène à 
     await page.reload({ waitUntil: 'networkidle0' });
     await attendreCategories(page);
     const apres = await etatFormulaire(page);
-    assert.equal(apres.ecranAccueil, true);
+    assert.equal(apres.ecranFormulaire, true); // premier écran : le formulaire noté, vide
     assert.equal(apres.niveau, null);
     assert.equal(apres.commentaire, '');
   } finally { await fermer(); }
@@ -239,7 +235,7 @@ test('une saisie mémorisée pour un autre QR n\'est jamais restaurée', { skip:
     await page.goto(`http://127.0.0.1:${PORT_CLIENT}/feedback/QR-AUTRE`, { waitUntil: 'networkidle0' });
     await attendreCategories(page);
     const apres = await etatFormulaire(page);
-    assert.equal(apres.ecranAccueil, true);
+    assert.equal(apres.ecranFormulaire, true); // premier écran : le formulaire noté, vide
     assert.equal(apres.commentaire, '');
     assert.equal(apres.niveau, null);
     assert.equal(apres.categorie, '');
@@ -253,7 +249,7 @@ test('saisie périmée (plus de 30 minutes) : ignorée et effacée', { skip: SKI
     await page.reload({ waitUntil: 'networkidle0' });
     await attendreCategories(page);
     const apres = await etatFormulaire(page);
-    assert.equal(apres.ecranAccueil, true);
+    assert.equal(apres.ecranFormulaire, true); // premier écran : le formulaire noté, vide
     assert.equal(apres.commentaire, '');
     assert.equal((await stockage(page)).session, null);
   } finally { await fermer(); }

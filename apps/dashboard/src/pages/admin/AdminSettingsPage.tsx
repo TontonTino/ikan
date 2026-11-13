@@ -31,26 +31,25 @@ interface Settings {
 // supprimée) mais aucun code ne les lit : ils ne sont ni affichés ni envoyés d'ici (voir le README de l'API, « Paramètres système »).
 
 const carte: React.CSSProperties = {
-  background: '#FFFFFF',
+  background: 'var(--color-surface)',
   borderRadius: '24px',
   padding: '24px 28px',
-  border: '1px solid #E8ECE6',
-  boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+  border: '1px solid var(--color-trait)',
 };
 const titreCarte: React.CSSProperties = {
-  fontWeight: 800,
-  fontSize: '1.05rem',
+  fontWeight: 'var(--weight-semibold)',
+  fontSize: 'var(--text-lg)',
   marginBottom: '16px',
-  color: '#02302D',
-  borderBottom: '1px solid #F1F4EE',
+  color: 'var(--color-encre)',
+  borderBottom: '1px solid var(--color-trait)',
   paddingBottom: '12px',
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
 };
-const etiquette: React.CSSProperties = { display: 'block', fontWeight: 700, marginBottom: '6px', fontSize: '0.84rem', color: '#1E293B' };
-const aide: React.CSSProperties = { fontSize: '0.78rem', color: '#64748B', marginTop: '6px', margin: 0 };
-const erreurStyle: React.CSSProperties = { fontSize: '0.8rem', color: '#B91C1C', fontWeight: 700, marginTop: '6px' };
+const etiquette: React.CSSProperties = { display: 'block', fontWeight: 'var(--weight-semibold)', marginBottom: '6px', fontSize: 'var(--text-sm)', color: 'var(--color-encre)' };
+const aide: React.CSSProperties = { fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', marginTop: '6px', margin: 0 };
+const erreurStyle: React.CSSProperties = { fontSize: 'var(--text-xs)', color: 'var(--color-critique-texte)', fontWeight: 'var(--weight-semibold)', marginTop: '6px' };
 
 export type ErreursParametres = Partial<Record<ChampParametre, string>>;
 
@@ -83,8 +82,8 @@ export function ParametresVue({ settings, nom, retentionTexte, erreurs, saving, 
       <div
         role="note"
         style={{
-          background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E',
-          borderRadius: '16px', padding: '12px 16px', fontSize: '0.84rem', lineHeight: 1.5,
+          background: 'var(--color-surveiller-fond)', border: '1px solid var(--color-surveiller-fond)', color: 'var(--color-surveiller-texte)',
+          borderRadius: '16px', padding: '12px 16px', fontSize: 'var(--text-sm)', lineHeight: 1.5,
         }}
       >
         <strong>À savoir :</strong> la durée de conservation est affichée aux clients dans la case de consentement, mais aucune suppression
@@ -93,7 +92,7 @@ export function ParametresVue({ settings, nom, retentionTexte, erreurs, saving, 
 
       <div style={carte}>
         <h2 style={titreCarte}>
-          <TagIcon size={18} color="#3C7730" />
+          <TagIcon size={18} color="var(--color-bon-texte)" />
           <span>Identité de la plateforme</span>
         </h2>
         <div>
@@ -114,7 +113,7 @@ export function ParametresVue({ settings, nom, retentionTexte, erreurs, saving, 
 
       <div style={carte}>
         <h2 style={titreCarte}>
-          <BarChartIcon size={18} color="#3C7730" />
+          <BarChartIcon size={18} color="var(--color-bon-texte)" />
           <span>Conservation des données</span>
         </h2>
         <div>
@@ -220,7 +219,7 @@ function AdminSettingsPageContenu() {
     }
   };
 
-  if (loading) return <div style={{ color: '#64748B', padding: '32px', fontWeight: 600 }}>Chargement des paramètres...</div>;
+  if (loading) return <div style={{ color: 'var(--color-text-2)', padding: '32px', fontWeight: 'var(--weight-semibold)' }}>Chargement des paramètres...</div>;
 
   // Sans paramètres chargés, le formulaire serait vide : l'enregistrer enverrait des valeurs absentes.
   if (erreurChargement || !settings) {
@@ -242,8 +241,8 @@ function AdminSettingsPageContenu() {
         <div
           role="status"
           style={{
-            position: 'fixed', top: '24px', right: '24px', zIndex: 1000, background: '#02302D', color: 'white',
-            padding: '12px 20px', borderRadius: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.15)', fontSize: '0.88rem', fontWeight: 700,
+            position: 'fixed', top: '24px', right: '24px', zIndex: 1000, background: 'var(--color-encre)', color: 'white',
+            padding: '12px 20px', borderRadius: '12px', boxShadow: 'var(--shadow-dropdown)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)',
           }}
         >
           {toast}

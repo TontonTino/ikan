@@ -31,7 +31,7 @@ export default function AgencesMap({ agences, onVoirAgence }: { agences: AgenceC
 
   return (
     <>
-      <div style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
+      <div style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--color-trait)' }}>
         <MapContainer {...(bounds ? { bounds, boundsOptions: { padding: [32, 32] } } : { center, zoom: 12 })} style={{ height: 420, width: '100%' }}>
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
           {agences.map((a) => (
@@ -43,15 +43,15 @@ export default function AgencesMap({ agences, onVoirAgence }: { agences: AgenceC
             >
               <Popup>
                 <div style={{ minWidth: 170 }}>
-                  <strong style={{ color: 'var(--color-text-main)' }}>{a.nom}</strong>
-                  {a.ville && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>{a.ville}</div>}
+                  <strong className="t-encre">{a.nom}</strong>
+                  {a.ville && <div className="t-xs t-2">{a.ville}</div>}
                   <div style={{ marginTop: 'var(--space-2)', fontSize: 'var(--text-sm)' }}>
                     Satisfaction : <strong>{satisfactionTexte(a.satisfaction, a.avis)}</strong>
                     {a.seuil != null && a.avis > 0 && <> (seuil {formaterPourcentage(a.seuil)})</>}
                   </div>
-                  <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700 }}>Statut : {STATUT_SEUIL_LABEL[a.statut]}</div>
-                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>{STATUT_EXPLICATION[a.statut]}</div>
-                  <div style={{ fontSize: 'var(--text-xs)' }}>Avis : {a.avis}</div>
+                  <div className="t-xs t-semi">Statut : {STATUT_SEUIL_LABEL[a.statut]}</div>
+                  <div className="t-xs t-2">{STATUT_EXPLICATION[a.statut]}</div>
+                  <div className="t-xs">Avis : {a.avis}</div>
                   <button type="button" onClick={() => onVoirAgence(a.id)} className="ui-btn ui-btn--primary ui-btn--sm" style={{ marginTop: 'var(--space-2)' }}>
                     Voir l'agence
                   </button>

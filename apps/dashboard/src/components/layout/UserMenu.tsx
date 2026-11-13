@@ -49,37 +49,37 @@ const itemStyle: React.CSSProperties = {
   border: 'none',
   textAlign: 'left',
   fontFamily: 'inherit',
-  fontSize: '0.84rem',
-  fontWeight: 600,
-  color: '#1E293B',
+  fontSize: 'var(--text-sm)',
+  fontWeight: 'var(--weight-semibold)',
+  color: 'var(--color-encre)',
   cursor: 'pointer',
   textDecoration: 'none',
   boxSizing: 'border-box',
 };
 
 function Separator() {
-  return <div style={{ height: '1px', background: '#E8EEE9', margin: '6px 0' }} />;
+  return <div style={{ height: '1px', background: 'var(--color-trait)', margin: '6px 0' }} />;
 }
 
 function QuotaBar({ label, quota }: { label: string; quota: QuotaUtilisation }) {
   const illimite = quota.max === null;
   const ratio = illimite || !quota.max ? 0 : quota.actuel / quota.max;
-  const couleur = ratio > 1 ? '#DC2626' : ratio >= 0.8 ? '#D97706' : '#3C7730';
+  const couleur = ratio > 1 ? 'var(--color-critique-texte)' : ratio >= 0.8 ? 'var(--color-surveiller-texte)' : 'var(--color-marque)';
 
   return (
     <div style={{ marginBottom: '10px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text-2)', marginBottom: '4px' }}>
         <span>{label}</span>
-        <span style={{ color: '#02302D', fontWeight: 700 }}>
+        <span style={{ color: 'var(--color-encre)', fontWeight: 'var(--weight-semibold)' }}>
           {quota.actuel} {illimite ? '· illimité' : `/ ${quota.max}`}
         </span>
       </div>
-      <div style={{ height: '6px', background: '#E8EEE9', borderRadius: '9999px', overflow: 'hidden' }}>
+      <div style={{ height: '6px', background: 'var(--color-neutre-fond)', borderRadius: '9999px', overflow: 'hidden' }}>
         <div
           style={{
             height: '100%',
             width: illimite ? '100%' : `${Math.min(ratio, 1) * 100}%`,
-            background: illimite ? '#CFE3D3' : couleur,
+            background: illimite ? 'var(--color-trait)' : couleur,
             borderRadius: '9999px',
           }}
         />
@@ -187,23 +187,22 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
           gap: '10px',
           padding: '4px 10px 4px 8px',
           borderRadius: '9999px',
-          background: '#FFFFFF',
-          border: `1px solid ${open ? '#3C7730' : '#E2E8F0'}`,
-          boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+          background: 'var(--color-surface)',
+          border: `1px solid ${open ? 'var(--color-encre)' : 'var(--color-border)'}`,
           cursor: 'pointer',
           fontFamily: 'inherit',
         }}
       >
         <div
           style={{
-            width: '30px', height: '30px', borderRadius: '50%', background: '#EAF5EC', color: '#3C7730',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.78rem',
+            width: '30px', height: '30px', borderRadius: '50%', background: 'var(--color-bon-fond)', color: 'var(--color-bon-texte)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-xs)',
           }}
         >
           {initials}
         </div>
-        <span className="user-menu__nom" style={{ fontSize: '0.84rem', fontWeight: 700, color: '#1E293B' }}>{fullName}</span>
-        <ChevronDownIcon size={14} color="#64748B" />
+        <span className="user-menu__nom" style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>{fullName}</span>
+        <ChevronDownIcon size={14} color="var(--color-text-2)" />
       </button>
 
       {open && (
@@ -216,18 +215,18 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
             width: '330px',
             maxHeight: 'calc(100vh - 100px)',
             overflowY: 'auto',
-            background: '#FFFFFF',
-            border: '1px solid #E2E8F0',
+            background: 'var(--color-surface)',
+            border: '1px solid var(--color-trait)',
             borderRadius: '16px',
-            boxShadow: '0 12px 32px rgba(2, 48, 45, 0.14)',
+            boxShadow: 'var(--shadow-dropdown)',
             padding: '8px 0',
             zIndex: 60,
           }}
         >
           {/* En-tête : nom + email */}
           <div style={{ padding: '10px 16px 12px' }}>
-            <div style={{ fontWeight: 800, color: '#02302D', fontSize: '0.92rem' }}>{fullName}</div>
-            <div style={{ color: '#64748B', fontSize: '0.78rem', wordBreak: 'break-all' }}>{user.email}</div>
+            <div style={{ fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', fontSize: 'var(--text-base)' }}>{fullName}</div>
+            <div style={{ color: 'var(--color-text-2)', fontSize: 'var(--text-xs)', wordBreak: 'break-all' }}>{user.email}</div>
           </div>
           <Separator />
 
@@ -241,7 +240,7 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
               navigate(isAdmin ? '/admin/settings' : '/parametres');
             }}
           >
-            <SettingsIcon size={16} color="#64748B" />
+            <SettingsIcon size={16} color="var(--color-text-2)" />
             Paramètres
           </button>
 
@@ -261,16 +260,16 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
                 }}
               >
                 <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontWeight: 800, fontSize: '0.84rem', color: '#02302D' }}>Utilisation</span>
+                  <span style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)', color: 'var(--color-encre)' }}>Utilisation</span>
                   {utilisation?.plan && (
-                    <span style={{ background: '#EAF5EC', color: '#3C7730', fontWeight: 800, fontSize: '0.72rem', padding: '3px 10px', borderRadius: '9999px' }}>
+                    <span style={{ background: 'var(--color-bon-fond)', color: 'var(--color-bon-texte)', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-xs)', padding: '3px 10px', borderRadius: '9999px' }}>
                       Forfait {utilisation.plan.nom}
                     </span>
                   )}
                 </span>
                 <ChevronDownIcon
                   size={14}
-                  color="#64748B"
+                  color="var(--color-text-2)"
                   style={{ transform: utilisationOuverte ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}
                 />
               </button>
@@ -283,25 +282,25 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
                       <QuotaBar label="Avis reçus ce mois-ci" quota={utilisation.feedbacks_ce_mois} />
                       <QuotaBar label="CX Managers" quota={utilisation.cx_managers} />
 
-                      <div style={{ marginTop: '12px', fontWeight: 700, fontSize: '0.76rem', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <div style={{ marginTop: '12px', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         Fonctionnalités
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
                         {utilisation.fonctionnalites.map((f) => (
-                          <div key={f.code} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.80rem' }}>
-                            {f.statut === 'disponible' && <CheckIcon size={14} color="#3C7730" />}
-                            {f.statut === 'verrouille' && <LockIcon size={14} color="#94A3B8" />}
-                            {f.statut === 'a_venir' && <ClockIcon size={14} color="#6B7FA3" />}
-                            <span style={{ color: f.statut === 'disponible' ? '#1E293B' : '#94A3B8', fontWeight: 600 }}>{f.libelle}</span>
+                          <div key={f.code} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: 'var(--text-xs)' }}>
+                            {f.statut === 'disponible' && <CheckIcon size={14} color="var(--color-bon-texte)" />}
+                            {f.statut === 'verrouille' && <LockIcon size={14} color="var(--color-text-2)" />}
+                            {f.statut === 'a_venir' && <ClockIcon size={14} color="var(--color-text-2)" />}
+                            <span style={{ color: f.statut === 'disponible' ? 'var(--color-encre)' : 'var(--color-text-2)', fontWeight: 'var(--weight-semibold)' }}>{f.libelle}</span>
                             {f.statut === 'disponible' && (
-                              <span style={{ marginLeft: 'auto', color: '#3C7730', fontSize: '0.70rem', fontWeight: 700 }}>Disponible</span>
+                              <span style={{ marginLeft: 'auto', color: 'var(--color-bon-texte)', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)' }}>Disponible</span>
                             )}
                             {f.statut === 'verrouille' && (offres.length > 0 ? (
                               <button
                                 type="button"
                                 onClick={() => setOffresOuvertes(true)}
                                 style={{
-                                  marginLeft: 'auto', color: '#D97706', fontSize: '0.70rem', fontWeight: 700,
+                                  marginLeft: 'auto', color: 'var(--color-surveiller-texte)', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)',
                                   background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit',
                                 }}
                               >
@@ -310,7 +309,7 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
                             ) : (
                               <a
                                 href={mailtoNiveau}
-                                style={{ marginLeft: 'auto', color: '#D97706', fontSize: '0.70rem', fontWeight: 700, textDecoration: 'none' }}
+                                style={{ marginLeft: 'auto', color: 'var(--color-surveiller-texte)', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', textDecoration: 'none' }}
                               >
                                 Verrouillé · Mettre à niveau
                               </a>
@@ -319,8 +318,8 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
                             {f.statut === 'a_venir' && (
                               <span
                                 style={{
-                                  marginLeft: 'auto', color: '#4B5F86', background: '#EEF2F9', border: '1px solid #DCE4F2',
-                                  fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: '9999px',
+                                  marginLeft: 'auto', color: 'var(--color-neutre-texte)', background: 'var(--color-neutre-fond)',
+                                  fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', padding: '2px 8px', borderRadius: '9999px',
                                 }}
                               >
                                 À venir
@@ -331,7 +330,7 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
                       </div>
                     </>
                   ) : (
-                    <div style={{ color: '#94A3B8', fontSize: '0.78rem', padding: '4px 0 8px' }}>
+                    <div style={{ color: 'var(--color-text-2)', fontSize: 'var(--text-xs)', padding: '4px 0 8px' }}>
                       {utilisationErreur ? 'Utilisation momentanément indisponible.' : 'Chargement…'}
                     </div>
                   )}
@@ -355,12 +354,12 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
                 type="button"
                 onClick={() => setOffresOuvertes((o) => !o)}
                 aria-expanded={offresOuvertes}
-                style={{ ...itemStyle, color: '#3C7730', fontWeight: 700, justifyContent: 'space-between' }}
+                style={{ ...itemStyle, color: 'var(--color-bon-texte)', fontWeight: 'var(--weight-semibold)', justifyContent: 'space-between' }}
               >
                 <span>Mettre le forfait à niveau</span>
                 <ChevronDownIcon
                   size={14}
-                  color="#3C7730"
+                  color="var(--color-bon-texte)"
                   style={{ transform: offresOuvertes ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}
                 />
               </button>
@@ -374,15 +373,15 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
                       <div
                         key={code}
                         style={{
-                          border: '1px solid #E8EEE9', borderRadius: '12px', padding: '10px 12px',
-                          background: '#FAFDFB',
+                          border: '1px solid var(--color-trait)', borderRadius: '12px', padding: '10px 12px',
+                          background: 'var(--color-bg)',
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <span style={{ fontWeight: 800, fontSize: '0.82rem', color: '#02302D' }}>{offre.nom}</span>
-                          <span style={{ fontWeight: 700, fontSize: '0.76rem', color: '#3C7730' }}>{offre.prix}</span>
+                          <span style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)', color: 'var(--color-encre)' }}>{offre.nom}</span>
+                          <span style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-xs)', color: 'var(--color-bon-texte)' }}>{offre.prix}</span>
                         </div>
-                        <ul style={{ margin: '0 0 8px', paddingLeft: '16px', fontSize: '0.74rem', color: '#64748B' }}>
+                        <ul style={{ margin: '0 0 8px', paddingLeft: '16px', fontSize: 'var(--text-xs)', color: 'var(--color-text-2)' }}>
                           {offre.limites.map((l) => (
                             <li key={l}>{l}</li>
                           ))}
@@ -393,7 +392,7 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
                           onClick={() => lancerCheckout(code)}
                           style={{
                             width: '100%', padding: '7px 0', borderRadius: '8px', border: 'none',
-                            background: '#3C7730', color: '#FFFFFF', fontWeight: 700, fontSize: '0.78rem',
+                            background: 'var(--color-accent)', color: 'var(--color-text-inverse)', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-xs)',
                             fontFamily: 'inherit', cursor: checkoutEnCoursPour !== null ? 'default' : 'pointer',
                             opacity: checkoutEnCoursPour !== null && !enCours ? 0.5 : 1,
                           }}
@@ -408,7 +407,7 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
             </>
           )}
           {isCX && entrepriseProposable && (
-            <a role="menuitem" href={mailtoNiveau} style={{ ...itemStyle, color: '#3C7730', fontWeight: 700 }}>
+            <a role="menuitem" href={mailtoNiveau} style={{ ...itemStyle, color: 'var(--color-bon-texte)', fontWeight: 'var(--weight-semibold)' }}>
               Passer à Entreprise (devis)
             </a>
           )}
@@ -417,13 +416,13 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
 
           <button
             role="menuitem"
-            style={{ ...itemStyle, color: '#DC2626', fontWeight: 700 }}
+            style={{ ...itemStyle, color: 'var(--color-critique-texte)', fontWeight: 'var(--weight-semibold)' }}
             onClick={() => {
               setOpen(false);
               onLogout();
             }}
           >
-            <LogOutIcon size={15} color="#DC2626" />
+            <LogOutIcon size={15} color="var(--color-critique-texte)" />
             Se déconnecter
           </button>
         </div>

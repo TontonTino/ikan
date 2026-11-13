@@ -17,10 +17,16 @@ jamais déjà rattachés à une autre Issue (Feedback.issue_id IS NULL). Renseig
 nps_note sur ~30 feedbacks de démo (distribution réaliste), marqués individuellement
 (HistoriqueFeedback.type_evenement="nps_demo_seed") pour un retrait précis et sélectif.
 
-Idempotent : refuse de s'exécuter si des Issues de démo (titre marqué) existent déjà pour
-Orange Burkina Faso, sauf --force. --supprimer retire UNIQUEMENT ce que ce script a créé
-(détection par le marqueur de titre et le marqueur d'historique nps — jamais par un fichier
-local, qui pourrait être absent ou désynchronisé).
+Titres : de vraies phrases, sans suffixe technique visible à l'écran, et jamais deux problèmes
+du même nom dans la même agence (titres déjà présents en base compris). Une Issue de démo se
+reconnaît à son titre, qui appartient au catalogue TITRES_PAR_CLE ci-dessous (ou porte l'ancien
+suffixe « [Démo pack telecom] » des versions précédentes de ce script).
+
+Idempotent : refuse de s'exécuter si des Issues de démo existent déjà pour Orange Burkina Faso,
+sauf --force. --supprimer retire UNIQUEMENT ce que ce script a créé (détection par le titre du
+catalogue et le marqueur d'historique nps — jamais par un fichier local, qui pourrait être
+absent ou désynchronisé). Limite assumée : un problème créé à la main dans l'organisation de démo
+avec exactement un titre du catalogue serait aussi retiré par --supprimer.
 
 Prérequis : Organisation.secteur_code="telecom" et categories_agence.cle renseignées pour
 Orange (migrations 024 à 027) — le script vérifie ce prérequis et s'arrête sinon.
@@ -37,6 +43,8 @@ import random
 import sys
 import uuid
 from datetime import datetime, timedelta, timezone
+
+from sqlalchemy import or_
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -68,7 +76,8 @@ from app.services.kpi.packs_telecom import PERIMETRE_CATEGORIES, PERIMETRE_AGENC
 random.seed(2026)  # reproductible si on doit relancer avant la démo
 
 ORGANISATION_NOM = "Orange Burkina Faso"
-MARQUEUR_TITRE = " [Démo pack telecom]"
+# Suffixe des versions précédentes : n'est plus écrit, mais reste reconnu par --supprimer.
+ANCIEN_MARQUEUR_TITRE = " [Démo pack telecom]"
 MARQUEUR_NPS = "nps_demo_seed"
 
 NOW = datetime.now(timezone.utc)
@@ -123,18 +132,41 @@ TITRES_PAR_CLE = {
     ],
 }
 
-TITRES_UTILISES: set[str] = set()
+TITRES_DEMO = frozenset(t for titres in TITRES_PAR_CLE.values() for t in titres)
+
+TITRES_UTILISES: set[str] = set()                 # dans toute l'exécution (préférence : varier d'une agence à l'autre)
+TITRES_PRIS_PAR_AGENCE: dict[uuid.UUID, set[str]] = {}  # en base ET dans cette exécution, par agence (interdit : doublon)
 
 
-def titre_pour(cle: str, rng: random.Random) -> str:
-    """Un titre non encore utilisé dans cette exécution quand c'est possible (peu de
-    doublons visibles sur ~24 Issues), sinon un titre réutilisé plutôt qu'une erreur."""
-    candidats = [t for t in TITRES_PAR_CLE[cle] if t not in TITRES_UTILISES]
-    if not candidats:
-        candidats = TITRES_PAR_CLE[cle]
+def titres_pris(db, agence_id) -> set[str]:
+    if agence_id not in TITRES_PRIS_PAR_AGENCE:
+        TITRES_PRIS_PAR_AGENCE[agence_id] = {
+            (t or "").strip() for (t,) in db.query(Issue.titre).filter(Issue.agence_id == agence_id).all()
+        }
+    return TITRES_PRIS_PAR_AGENCE[agence_id]
+
+
+def titre_pour(db, cle: str, agence_id, rng: random.Random) -> str | None:
+    """Un titre du catalogue que cette agence n'a pas encore (en base ou dans cette exécution),
+    de préférence inutilisé ailleurs dans l'exécution. None si l'agence les a tous : on n'en crée
+    pas un second du même nom."""
+    pris = titres_pris(db, agence_id)
+    libres = [t for t in TITRES_PAR_CLE[cle] if t not in pris]
+    if not libres:
+        return None
+    candidats = [t for t in libres if t not in TITRES_UTILISES] or libres
     titre = rng.choice(candidats)
     TITRES_UTILISES.add(titre)
-    return titre + MARQUEUR_TITRE
+    pris.add(titre)
+    return titre
+
+
+def filtre_issues_demo(organisation_id):
+    """Issues créées par ce script : titre du catalogue, ou ancien suffixe des versions précédentes."""
+    return (
+        Issue.organisation_id == organisation_id,
+        or_(Issue.titre.in_(TITRES_DEMO), Issue.titre.ilike(f"%{ANCIEN_MARQUEUR_TITRE}%")),
+    )
 
 
 # ============================================================================
@@ -144,7 +176,7 @@ def titre_pour(cle: str, rng: random.Random) -> str:
 def issues_demo_existent(db, organisation_id) -> int:
     return (
         db.query(Issue)
-        .filter(Issue.organisation_id == organisation_id, Issue.titre.ilike(f"%{MARQUEUR_TITRE}%"))
+        .filter(*filtre_issues_demo(organisation_id))
         .count()
     )
 
@@ -176,7 +208,7 @@ def verifier_prerequis(db, org: Organisation) -> None:
 def supprimer(db, org: Organisation) -> dict:
     issue_ids = [
         row.id for row in db.query(Issue.id)
-        .filter(Issue.organisation_id == org.id, Issue.titre.ilike(f"%{MARQUEUR_TITRE}%"))
+        .filter(*filtre_issues_demo(org.id))
         .all()
     ]
     nb_issues = len(issue_ids)
@@ -321,9 +353,15 @@ def _backdater_historique(db, issue_id, type_evenement: str, date_evenement: dat
 def creer_une_issue(
     db, cx_user, agence_id, agence_nom, categorie_id, cle: str, feedback_ids: list,
     detection_date: datetime, statut_cible: str, sla: str | None, origine_id=None,
-) -> Issue:
+) -> Issue | None:
     """statut_cible : 'ouverte' | 'action_en_cours' | 'resolue' | 'verifiee'.
-    sla : None | 'respectee' | 'manquee' — ignoré si statut_cible == 'ouverte'."""
+    sla : None | 'respectee' | 'manquee' — ignoré si statut_cible == 'ouverte'.
+    None : l'agence a déjà tous les titres de cette clé (aucun doublon de nom n'est créé)."""
+    titre = titre_pour(db, cle, agence_id, random)
+    if titre is None:
+        print(f"[AVERTISSEMENT] {agence_nom} a déjà tous les titres de '{cle}' : problème ignoré (pas de doublon de nom).")
+        return None
+
     date_limite_sla = None
     if sla == "respectee":
         date_limite_sla = detection_date + timedelta(hours=random.randint(36, 96))
@@ -331,7 +369,7 @@ def creer_une_issue(
         date_limite_sla = detection_date + timedelta(hours=random.randint(4, 10))
 
     data = IssueCreate(
-        titre=titre_pour(cle, random),
+        titre=titre,
         agence_id=agence_id,
         categorie_id=categorie_id,
         severite=random.choice([CriticiteType.FAIBLE, CriticiteType.FAIBLE, CriticiteType.MOYENNE, CriticiteType.CRITIQUE]),
@@ -358,7 +396,7 @@ def creer_une_issue(
     action_date = detection_date + timedelta(hours=random.randint(2, 20))
     action_reponse = creer_action_corrective(
         issue_id=issue.id,
-        data=ActionCorrectiveCreate(titre=f"Traitement — {issue.titre.replace(MARQUEUR_TITRE, '')}"[:200]),
+        data=ActionCorrectiveCreate(titre=f"Traitement — {issue.titre}"[:200]),
         db=db, current_user=cx_user,
     )
     action = db.query(ActionCorrective).filter(ActionCorrective.id == action_reponse.id).first()
@@ -474,7 +512,7 @@ def main():
         force = "--force" in sys.argv
         existantes = issues_demo_existent(db, org.id)
         if existantes and not force:
-            print(f"[REFUS] {existantes} Issue(s) de démo (titre marqué) existent déjà pour "
+            print(f"[REFUS] {existantes} Issue(s) de démo (titre du catalogue) existent déjà pour "
                   f"{org.nom}. Relancer avec --force pour régénérer quand même (créera un "
                   f"second lot), ou --supprimer pour retirer l'existant d'abord.")
             return
@@ -516,6 +554,8 @@ def main():
                 db, cx_user, agence_id, agence_nom, categorie_id, cle, fb_ids,
                 detection_origine, statut_cible="resolue", sla=None,
             )
+            if origine is None:
+                continue
             issues_creees.append((origine, groupe, cle, agence_nom, "origine"))
 
             # Occurrence : plus récente, référence l'origine, statut varié.
@@ -529,7 +569,8 @@ def main():
                 detection_occurrence, statut_cible=random.choice(["resolue", "resolue", "verifiee"]),
                 sla=random.choice([None, "respectee"]), origine_id=origine.id,
             )
-            issues_creees.append((occurrence, groupe, cle, agence_nom, "occurrence"))
+            if occurrence is not None:
+                issues_creees.append((occurrence, groupe, cle, agence_nom, "occurrence"))
 
         # ---- 2. Issues standalone — complète chaque cible jusqu'au compte visé ----
         # "Quelques-unes sont ouvertes" doit être GARANTI, pas laissé à un tirage aléatoire
@@ -566,7 +607,8 @@ def main():
                         db, cx_user, agence_id, agence_nom, categorie_id, cle, fb_ids,
                         detection, statut_cible=statut_cible, sla=sla,
                     )
-                    issues_creees.append((issue, groupe, cle, agence_nom, "standalone"))
+                    if issue is not None:
+                        issues_creees.append((issue, groupe, cle, agence_nom, "standalone"))
 
         generer_standalone(CIBLES_HORS_AGENCE, "hors_agence")
         generer_standalone(CIBLES_AGENCE, "agence")

@@ -6,11 +6,14 @@ import {
 import type { EvolutionPoint } from '../../types';
 import { combinerSatisfactionEtVolume, libelleDatePoint } from '../../utils/satisfactionSeries';
 import { formaterPourcentage } from '../../utils/formatNombre';
+import GraphiqueVide, { type ElargirPeriode } from '../ui/GraphiqueVide';
 
 interface Props {
   satisfaction: EvolutionPoint[];
   volume: EvolutionPoint[];
   height?: number;
+  /** Aucune donnée : lien vers une période plus large. */
+  elargir?: ElargirPeriode;
 }
 
 function PointTooltip({ active, payload, label }: any) {
@@ -27,11 +30,11 @@ function PointTooltip({ active, payload, label }: any) {
   );
 }
 
-export default function SatisfactionVolumeChart({ satisfaction, volume, height = 440 }: Props) {
+export default function SatisfactionVolumeChart({ satisfaction, volume, height = 440, elargir }: Props) {
   const rows = useMemo(() => combinerSatisfactionEtVolume(satisfaction, volume), [satisfaction, volume]);
 
   if (!satisfaction.length) {
-    return <div className="stats-cx__chart-empty" style={{ height }}>Aucune donnée de satisfaction disponible pour cette période.</div>;
+    return <GraphiqueVide message="Aucune donnée de satisfaction disponible pour cette période." elargir={elargir} />;
   }
 
   const syncId = 'stats-cx-satisfaction-volume';
@@ -52,11 +55,11 @@ export default function SatisfactionVolumeChart({ satisfaction, volume, height =
         <div className="stats-cx__chart-plot stats-cx__chart-plot--satisfaction">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart {...sharedChartProps}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E6EBE8" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--dataviz-grid)" vertical={false} />
               <XAxis dataKey="label" hide />
-              <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tickFormatter={(value) => formaterPourcentage(Number(value), 0)} stroke="#52625E" fontSize={11} tickLine={false} axisLine={false} width={48} />
-              <Tooltip content={<PointTooltip />} cursor={{ stroke: '#62736E', strokeDasharray: '3 3' }} />
-              <Line dataKey="satisfaction" name="Satisfaction" type="linear" stroke="#367A32" strokeWidth={3} connectNulls={false} dot={{ r: 4, fill: '#367A32', stroke: '#FFFFFF', strokeWidth: 2 }} activeDot={{ r: 6, fill: '#245D25', stroke: '#FFFFFF', strokeWidth: 2 }} isAnimationActive={false} />
+              <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tickFormatter={(value) => formaterPourcentage(Number(value), 0)} stroke="var(--color-text-2)" fontSize={12} tickLine={false} axisLine={false} width={48} />
+              <Tooltip content={<PointTooltip />} cursor={{ stroke: 'var(--color-border)', strokeDasharray: '3 3' }} />
+              <Line dataKey="satisfaction" name="Satisfaction" type="linear" stroke="var(--dataviz-positive)" strokeWidth={3} connectNulls={false} dot={{ r: 4, fill: 'var(--dataviz-positive)', stroke: 'var(--color-text-inverse)', strokeWidth: 2 }} activeDot={{ r: 6, fill: 'var(--color-encre)', stroke: 'var(--color-text-inverse)', strokeWidth: 2 }} isAnimationActive={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -73,12 +76,12 @@ export default function SatisfactionVolumeChart({ satisfaction, volume, height =
         <div className="stats-cx__chart-plot stats-cx__chart-plot--volume">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart {...sharedChartProps} barCategoryGap="24%">
-              <CartesianGrid strokeDasharray="3 3" stroke="#E6EBE8" vertical={false} />
-              <XAxis dataKey="label" stroke="#52625E" fontSize={11} tickLine={false} minTickGap={24} axisLine={{ stroke: '#CBD5D1' }} height={30} />
-              <YAxis allowDecimals={false} stroke="#52625E" fontSize={11} tickLine={false} axisLine={false} width={48} />
-              <Tooltip content={<PointTooltip />} cursor={{ fill: '#EEF3F0' }} />
-              <Bar dataKey="recus" name="Avis négatifs ou critiques reçus" fill="#B42318" radius={[3, 3, 0, 0]} maxBarSize={22} isAnimationActive={false} />
-              <Bar dataKey="traites" name="Pris en charge" fill="#086B67" radius={[3, 3, 0, 0]} maxBarSize={22} isAnimationActive={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--dataviz-grid)" vertical={false} />
+              <XAxis dataKey="label" stroke="var(--color-text-2)" fontSize={12} tickLine={false} minTickGap={24} axisLine={{ stroke: 'var(--color-trait)' }} height={30} />
+              <YAxis allowDecimals={false} stroke="var(--color-text-2)" fontSize={12} tickLine={false} axisLine={false} width={48} />
+              <Tooltip content={<PointTooltip />} cursor={{ fill: 'var(--color-bg)' }} />
+              <Bar dataKey="recus" name="Avis négatifs ou critiques reçus" fill="var(--dataviz-critical)" radius={[3, 3, 0, 0]} maxBarSize={22} isAnimationActive={false} />
+              <Bar dataKey="traites" name="Pris en charge" fill="var(--dataviz-info)" radius={[3, 3, 0, 0]} maxBarSize={22} isAnimationActive={false} />
             </BarChart>
           </ResponsiveContainer>
         </div>

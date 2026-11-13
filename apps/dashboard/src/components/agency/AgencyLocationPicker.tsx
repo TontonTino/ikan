@@ -49,11 +49,11 @@ const createCustomPinIcon = () => {
           position: absolute;
           width: 36px;
           height: 36px;
-          background: #02302D;
-          border: 3px solid #75B72A;
+          background: var(--color-encre);
+          border: 3px solid var(--color-surface);
           border-radius: 50% 50% 50% 0;
           transform: rotate(-45deg);
-          box-shadow: 0 6px 18px rgba(2, 48, 45, 0.45);
+          box-shadow: var(--shadow-dropdown);
           top: 0;
           left: 1px;
           display: flex;
@@ -63,7 +63,7 @@ const createCustomPinIcon = () => {
           <div style="
             width: 12px;
             height: 12px;
-            background: #BCCF00;
+            background: var(--color-citron);
             border-radius: 50%;
             transform: rotate(45deg);
           "></div>
@@ -389,23 +389,23 @@ export const AgencyLocationPicker: React.FC<AgencyLocationPickerProps> = ({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <label
           style={{
-            fontWeight: 700,
-            fontSize: '0.86rem',
-            color: '#1E293B',
+            fontWeight: 'var(--weight-semibold)',
+            fontSize: 'var(--text-sm)',
+            color: 'var(--color-encre)',
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
           }}
         >
-          <MapPinIcon size={16} color="#3C7730" />
+          <MapPinIcon size={16} color="var(--color-bon-texte)" />
           <span>Localisation</span>
         </label>
         {isPositionValid && (
           <span
             style={{
-              fontSize: '0.74rem',
-              color: '#3C7730',
-              fontWeight: 700,
+              fontSize: 'var(--text-xs)',
+              color: 'var(--color-bon-texte)',
+              fontWeight: 'var(--weight-semibold)',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
@@ -427,7 +427,7 @@ export const AgencyLocationPicker: React.FC<AgencyLocationPickerProps> = ({
                 left: '12px',
                 top: '50%',
                 transform: 'translateY(-50%)',
-                color: '#94A3B8',
+                color: 'var(--color-text-2)',
                 pointerEvents: 'none',
                 display: 'flex',
                 alignItems: 'center',
@@ -451,9 +451,9 @@ export const AgencyLocationPicker: React.FC<AgencyLocationPickerProps> = ({
                 paddingLeft: '36px',
                 paddingRight: '12px',
                 height: '40px',
-                fontSize: '0.86rem',
+                fontSize: 'var(--text-sm)',
                 borderRadius: '12px',
-                backgroundColor: '#FFFFFF',
+                backgroundColor: 'var(--color-surface)',
               }}
             />
           </div>
@@ -464,11 +464,11 @@ export const AgencyLocationPicker: React.FC<AgencyLocationPickerProps> = ({
             style={{
               height: '40px',
               padding: '0 16px',
-              fontSize: '0.84rem',
+              fontSize: 'var(--text-sm)',
               whiteSpace: 'nowrap',
               borderRadius: '12px',
-              backgroundColor: '#02302D',
-              color: '#FFFFFF',
+              backgroundColor: 'var(--color-encre)',
+              color: 'var(--color-text-inverse)',
               border: 'none',
               cursor: isSearching || !searchQuery.trim() ? 'not-allowed' : 'pointer',
               opacity: isSearching || !searchQuery.trim() ? 0.65 : 1,
@@ -489,10 +489,10 @@ export const AgencyLocationPicker: React.FC<AgencyLocationPickerProps> = ({
               top: 'calc(100% + 4px)',
               left: 0,
               right: 0,
-              backgroundColor: '#FFFFFF',
+              backgroundColor: 'var(--color-surface)',
               borderRadius: '14px',
-              border: '1px solid #E2E8F0',
-              boxShadow: '0 12px 28px rgba(2, 48, 45, 0.16)',
+              border: '1px solid var(--color-trait)',
+              boxShadow: 'var(--shadow-sm)',
               zIndex: 1000,
               maxHeight: '200px',
               overflowY: 'auto',
@@ -504,29 +504,29 @@ export const AgencyLocationPicker: React.FC<AgencyLocationPickerProps> = ({
                 onClick={() => handleSelectSearchResult(item)}
                 style={{
                   padding: '10px 14px',
-                  borderBottom: '1px solid #F1F5F2',
+                  borderBottom: '1px solid var(--color-trait)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: '10px',
-                  fontSize: '0.84rem',
-                  color: '#1E293B',
+                  fontSize: 'var(--text-sm)',
+                  color: 'var(--color-encre)',
                   transition: 'background-color 0.15s ease',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F8FAFB')}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-bg)')}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
-                <div style={{ color: '#3C7730', marginTop: '2px', flexShrink: 0 }}>
+                <div style={{ color: 'var(--color-bon-texte)', marginTop: '2px', flexShrink: 0 }}>
                   <MapPinIcon size={16} />
                 </div>
                 <div style={{ flex: 1, overflow: 'hidden' }}>
-                  <div style={{ fontWeight: 700, color: '#02302D' }}>
+                  <div className="t-semi t-encre">
                     {item.name || item.display_name.split(',')[0]}
                   </div>
                   <div
                     style={{
-                      fontSize: '0.75rem',
-                      color: '#64748B',
+                      fontSize: 'var(--text-xs)',
+                      color: 'var(--color-text-2)',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -544,15 +544,15 @@ export const AgencyLocationPicker: React.FC<AgencyLocationPickerProps> = ({
           <div
             style={{
               marginTop: '6px',
-              fontSize: '0.78rem',
-              color: '#DC2626',
-              fontWeight: 600,
+              fontSize: 'var(--text-xs)',
+              color: 'var(--color-critique-texte)',
+              fontWeight: 'var(--weight-semibold)',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
             }}
           >
-            <AlertTriangleIcon size={14} color="#DC2626" />
+            <AlertTriangleIcon size={14} color="var(--color-critique-texte)" />
             <span>{searchError}</span>
           </div>
         )}
@@ -568,30 +568,29 @@ export const AgencyLocationPicker: React.FC<AgencyLocationPickerProps> = ({
             width: '100%',
             height: '38px',
             padding: '0 14px',
-            backgroundColor: '#F8FAFB',
-            color: '#02302D',
-            border: '1.5px solid #E2E8F0',
+            backgroundColor: 'var(--color-bg)',
+            color: 'var(--color-encre)',
+            border: '1.5px solid var(--color-trait)',
             borderRadius: '12px',
-            fontSize: '0.84rem',
-            fontWeight: 700,
+            fontSize: 'var(--text-sm)',
+            fontWeight: 'var(--weight-semibold)',
             cursor: isLocating ? 'wait' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
             transition: 'all 0.15s ease',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#EAF5EC';
-            e.currentTarget.style.borderColor = '#3C7730';
+            e.currentTarget.style.backgroundColor = 'var(--color-bon-fond)';
+            e.currentTarget.style.borderColor = 'var(--color-accent)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#F8FAFB';
-            e.currentTarget.style.borderColor = '#E2E8F0';
+            e.currentTarget.style.backgroundColor = 'var(--color-bg)';
+            e.currentTarget.style.borderColor = 'var(--color-trait)';
           }}
         >
-          <TargetIcon size={16} color="#3C7730" />
+          <TargetIcon size={16} color="var(--color-bon-texte)" />
           <span>{isLocating ? 'Localisation en cours...' : 'Utiliser ma position actuelle'}</span>
         </button>
 
@@ -599,18 +598,18 @@ export const AgencyLocationPicker: React.FC<AgencyLocationPickerProps> = ({
           <div
             style={{
               marginTop: '6px',
-              fontSize: '0.78rem',
-              color: '#EA580C',
-              backgroundColor: '#FFF7ED',
+              fontSize: 'var(--text-xs)',
+              color: 'var(--color-surveiller-texte)',
+              backgroundColor: 'var(--color-surveiller-fond)',
               padding: '8px 12px',
               borderRadius: '10px',
-              border: '1px solid #FFEDD5',
+              border: '1px solid var(--color-surveiller-fond)',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
             }}
           >
-            <AlertTriangleIcon size={15} color="#EA580C" />
+            <AlertTriangleIcon size={15} color="var(--color-surveiller-texte)" />
             <span>{geoError}</span>
           </div>
         )}
@@ -624,8 +623,7 @@ export const AgencyLocationPicker: React.FC<AgencyLocationPickerProps> = ({
           width: '100%',
           borderRadius: '16px',
           overflow: 'hidden',
-          border: '1.5px solid #E8ECE6',
-          boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.04)',
+          border: '1.5px solid var(--color-trait)',
         }}
       >
         <MapContainer
@@ -661,22 +659,22 @@ export const AgencyLocationPicker: React.FC<AgencyLocationPickerProps> = ({
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 400,
-            backgroundColor: 'rgba(2, 48, 45, 0.88)',
-            color: '#FFFFFF',
+            backgroundColor: 'var(--color-encre)',
+            color: 'var(--color-text-inverse)',
             backdropFilter: 'blur(4px)',
             padding: '4px 14px',
             borderRadius: '9999px',
-            fontSize: '0.74rem',
-            fontWeight: 600,
+            fontSize: 'var(--text-xs)',
+            fontWeight: 'var(--weight-semibold)',
             pointerEvents: 'none',
             whiteSpace: 'nowrap',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+            boxShadow: 'var(--shadow-sm)',
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
           }}
         >
-          <MapPinIcon size={13} color="#BCCF00" />
+          <MapPinIcon size={13} color="var(--sidebar-text)" />
           <span>
             {isReverseGeocoding
               ? 'Récupération de l’adresse...'
@@ -689,14 +687,13 @@ export const AgencyLocationPicker: React.FC<AgencyLocationPickerProps> = ({
       {isPositionValid && (
         <div
           style={{
-            background: 'linear-gradient(135deg, #F4FAF3 0%, #EBF5E9 100%)',
-            border: '1.5px solid #D5E7D3',
+            background: 'var(--color-bg)',
+            border: '1.5px solid var(--color-trait)',
             borderRadius: '16px',
             padding: '16px 18px',
             display: 'flex',
             flexDirection: 'column',
             gap: '8px',
-            boxShadow: '0 2px 8px rgba(60, 119, 48, 0.06)',
             animation: 'fadeIn 0.2s ease-out',
           }}
         >
@@ -705,15 +702,15 @@ export const AgencyLocationPicker: React.FC<AgencyLocationPickerProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              borderBottom: '1px solid #D5E7D3',
+              borderBottom: '1px solid var(--color-trait)',
               paddingBottom: '8px',
             }}
           >
             <div
               style={{
-                fontSize: '0.78rem',
-                fontWeight: 800,
-                color: '#3C7730',
+                fontSize: 'var(--text-xs)',
+                fontWeight: 'var(--weight-semibold)',
+                color: 'var(--color-bon-texte)',
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px',
                 display: 'flex',
@@ -721,15 +718,15 @@ export const AgencyLocationPicker: React.FC<AgencyLocationPickerProps> = ({
                 gap: '6px',
               }}
             >
-              <MapPinIcon size={14} color="#3C7730" />
+              <MapPinIcon size={14} color="var(--color-bon-texte)" />
               <span>Position de l'agence</span>
             </div>
             <span
               style={{
-                backgroundColor: '#3C7730',
-                color: '#FFFFFF',
-                fontSize: '0.72rem',
-                fontWeight: 800,
+                backgroundColor: 'var(--color-bon-fond)',
+                color: 'var(--color-bon-texte)',
+                fontSize: 'var(--text-xs)',
+                fontWeight: 'var(--weight-semibold)',
                 padding: '2px 10px',
                 borderRadius: '9999px',
                 display: 'inline-flex',
@@ -744,19 +741,15 @@ export const AgencyLocationPicker: React.FC<AgencyLocationPickerProps> = ({
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingTop: '2px' }}>
             <div
-              style={{
-                fontSize: '1rem',
-                fontWeight: 800,
-                color: '#02302D',
-              }}
+              className="t-base t-semi t-encre"
             >
               {displayAgencyName}
             </div>
             <div
               style={{
-                fontSize: '0.84rem',
-                color: '#4B5563',
-                fontWeight: 500,
+                fontSize: 'var(--text-sm)',
+                color: 'var(--color-text-2)',
+                fontWeight: 'var(--weight-normal)',
                 lineHeight: 1.35,
               }}
             >

@@ -3,17 +3,18 @@
  *
  * « Où en est mon agence ? Qu'est-ce qui demande mon attention ? Que faire ensuite ? »
  * Ordre de lecture (= ordre du DOM = ordre clavier), même composition que la vue réseau du CX Manager :
- *   SITUATION → PRIORITÉS → ÉVOLUTION → CE QUE DISENT LES CLIENTS → RECOMMANDATIONS → SUIVI DES PROBLÈMES
+ *   SITUATION → PRIORITÉS → ÉVOLUTION → CE QUE DISENT LES CLIENTS → SUIVI DES PROBLÈMES
  *
- * Toutes les données sont celles d'UNE seule agence (dashboardApi.agence, recommandationsApi.listAgence, issuesApi,
+ * Toutes les données sont celles d'UNE seule agence (dashboardApi.agence, issuesApi,
  * alertes filtrées par rôle côté API — voir verifier_acces_agence). Aucune donnée simulée, aucun KPI inventé,
  * aucune comparaison que l'API ne fournit pas. Une source en échec est signalée : jamais présentée comme « rien à signaler ».
- * Règles de lecture (priorités, tri des recommandations) : components/agency/agenceVue.ts.
+ * Règles de lecture (priorités) : components/agency/agenceVue.ts. Les recommandations automatiques ne sont plus affichées
+ * (texte générique identique partout) : l'API et les données restent.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { dashboardApi, recommandationsApi, alertesApi, issuesApi } from '../../services/api';
+import { dashboardApi, alertesApi, issuesApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
-import type { DashboardAgence, Recommandation, Alerte, AlerteFeedback, IssueStatut } from '../../types';
+import type { DashboardAgence, Alerte, AlerteFeedback, IssueStatut } from '../../types';
 import PageTitle from '../../components/ui/PageTitle';
 import IconButton from '../../components/ui/IconButton';
 import Alert from '../../components/ui/Alert';
@@ -21,15 +22,14 @@ import Button from '../../components/ui/Button';
 import EmptyState from '../../components/ui/EmptyState';
 import KpiCard from '../../components/ui/KpiCard';
 import { BentoGrid, BentoItem } from '../../components/ui/BentoGrid';
-import { useToast } from '../../components/ui/Toast';
 import { RefreshIcon, SmileIcon, MessageSquareIcon, AlertTriangleIcon, ClockIcon } from '../../components/common/Icons';
 import AgencyDecisionKpis from '../../components/agency/AgencyDecisionKpis';
 import AgencyPriorities from '../../components/agency/AgencyPriorities';
 import AgencyEvolution from '../../components/agency/AgencyEvolution';
 import { TonDesAvis, ThemesDesAvis } from '../../components/agency/AgencyClients';
-import AgencyRecommendations from '../../components/agency/AgencyRecommendations';
 import AgencyProblemes, { type ProblemesSnapshot } from '../../components/agency/AgencyProblemes';
 import { construirePriorites, PROBLEMES_OUVERTS } from '../../components/agency/agenceVue';
+import { elargirPeriode } from '../../utils/periodeElargie';
 
 const RESULT_ISSUE_STATUSES: IssueStatut[] = ['resolue', 'verifiee'];
 const ISSUE_STATUSES: IssueStatut[] = [...PROBLEMES_OUVERTS, ...RESULT_ISSUE_STATUSES];
@@ -58,15 +58,11 @@ async function loadAgencyIssues(agenceId: string): Promise<ProblemesSnapshot> {
 
 export default function DashboardAgencePage() {
   const user = useAuthStore((s) => s.user);
-  const toast = useToast();
   const [data, setData] = useState<DashboardAgence | null>(null);
   const [alertes, setAlertes] = useState<Alerte[]>([]);
   const [feedbackAlerts, setFeedbackAlerts] = useState<AlerteFeedback[]>([]);
   const [issues, setIssues] = useState<ProblemesSnapshot | null>(null);
-  const [sourceErrors, setSourceErrors] = useState({ dashboard: false, recommendations: false, alerts: false, issues: false });
-  const [recos, setRecos] = useState<Recommandation[]>([]);
-  const [recosTotal, setRecosTotal] = useState(0);
-  const [recosLoadingMore, setRecosLoadingMore] = useState(false);
+  const [sourceErrors, setSourceErrors] = useState({ dashboard: false, alerts: false, issues: false });
   const [jours, setJours] = useState(30);
   const [loading, setLoading] = useState(true);
   const requestIdRef = useRef(0);
@@ -77,23 +73,17 @@ export default function DashboardAgencePage() {
     if (!agenceId) return;
     const requestId = ++requestIdRef.current;
     setLoading(true);
-    setRecosLoadingMore(false);
-    setSourceErrors({ dashboard: false, recommendations: false, alerts: false, issues: false });
+    setSourceErrors({ dashboard: false, alerts: false, issues: false });
     Promise.allSettled([
       dashboardApi.agence(agenceId, jours),
-      recommandationsApi.listAgence(agenceId, { limit: 50, offset: 0 }),
       alertesApi.list(),
       loadAgencyIssues(agenceId),
     ])
-      .then(([dashboard, recommendations, alerts, issuesResult]) => {
+      .then(([dashboard, alerts, issuesResult]) => {
         if (requestId !== requestIdRef.current) return;
         // En cas d'échec, les données déjà affichées sont conservées : seule la source en erreur est signalée.
         if (dashboard.status === 'fulfilled') setData(dashboard.value.data);
         else { console.error('Erreur chargement du dashboard agence:', dashboard.reason); setSourceErrors((current) => ({ ...current, dashboard: true })); }
-        if (recommendations.status === 'fulfilled') {
-          setRecos(recommendations.value.data ?? []);
-          setRecosTotal(Number(recommendations.value.headers?.['x-total-count'] ?? recommendations.value.data?.length ?? 0));
-        } else { setSourceErrors((current) => ({ ...current, recommendations: true })); }
         if (alerts.status === 'fulfilled') {
           const response = alerts.value.data;
           setAlertes((response?.alertes_seuil ?? []).filter((item: Alerte) => item.agence_id === agenceId));
@@ -111,36 +101,6 @@ export default function DashboardAgencePage() {
     load();
     return () => { requestIdRef.current += 1; };
   }, [load]);
-
-  const marquerTraitee = async (id: string) => {
-    try {
-      await recommandationsApi.marquerTraitee(id);
-      toast.show({ message: 'Recommandation marquée comme traitée', tone: 'success' });
-      load();
-    } catch {
-      toast.show({ message: 'Impossible d’enregistrer la modification. Réessayez.', tone: 'critical' });
-    }
-  };
-
-  const loadMoreRecos = async () => {
-    if (!agenceId || recosLoadingMore || recos.length >= recosTotal) return;
-    const requestId = requestIdRef.current;
-    setRecosLoadingMore(true);
-    try {
-      const response = await recommandationsApi.listAgence(agenceId, { limit: 50, offset: recos.length });
-      if (requestId === requestIdRef.current) {
-        const connues = new Set(recos.map((r) => r.id));
-        setRecos((current) => [...current, ...((response.data || []) as Recommandation[]).filter((r) => !connues.has(r.id))]);
-      }
-    } catch (error) {
-      if (requestId === requestIdRef.current) {
-        console.error('Erreur chargement des recommandations suivantes:', error);
-        toast.show({ message: 'Impossible de charger les recommandations suivantes', tone: 'critical' });
-      }
-    } finally {
-      if (requestId === requestIdRef.current) setRecosLoadingMore(false);
-    }
-  };
 
   const priorites = useMemo(
     () =>
@@ -188,7 +148,7 @@ export default function DashboardAgencePage() {
       {indicateursEnEchec && (
         <Alert
           tone="warning"
-          title={data ? 'Les indicateurs n’ont pas pu être actualisés : les dernières données chargées restent affichées.' : 'Impossible de charger les indicateurs de l’agence. Les priorités et recommandations disponibles restent affichées.'}
+          title={data ? 'Les indicateurs n’ont pas pu être actualisés : les dernières données chargées restent affichées.' : 'Impossible de charger les indicateurs de l’agence. Les priorités disponibles restent affichées.'}
           action={<Button size="sm" variant="secondary" onClick={load}>Réessayer</Button>}
         />
       )}
@@ -230,7 +190,7 @@ export default function DashboardAgencePage() {
         {/* ÉVOLUTION */}
         {data && (
           <BentoItem size="hero" aria-label="Évolution de la satisfaction">
-            <AgencyEvolution points={data.tendances} periode={data.periode} />
+            <AgencyEvolution points={data.tendances} periode={data.periode} elargir={elargirPeriode(jours, PERIODES.map((p) => ({ jours: p.v, label: p.l })), setJours)} />
           </BentoItem>
         )}
 
@@ -245,21 +205,6 @@ export default function DashboardAgencePage() {
             </BentoItem>
           </>
         )}
-
-        {/* RECOMMANDATIONS */}
-        <BentoItem size="full" aria-label="Recommandations">
-          <AgencyRecommendations
-            recos={recos}
-            total={recosTotal}
-            loadFailed={sourceErrors.recommendations}
-            loading={loading}
-            loadingMore={recosLoadingMore}
-            actionsEnCours={data?.actions_ouvertes ?? 0}
-            onMarquerTraitee={marquerTraitee}
-            onLoadMore={loadMoreRecos}
-            onRetry={load}
-          />
-        </BentoItem>
 
         {/* SUIVI DES PROBLÈMES */}
         <BentoItem size="full" aria-label="Suivi des problèmes">

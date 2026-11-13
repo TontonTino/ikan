@@ -105,31 +105,6 @@ if (erreur) Astro.response.status = 404;
               <button type="button" class="btn-secondary" id="btnReessayerQr" hidden>Réessayer</button>
             </section>
 
-            <!-- ÉCRAN D'ACCUEIL : nom de l'agence et deux choix -->
-            <section id="screen-accueil" class="screen-view accueil-view">
-              <p class="accueil-agence" id="accueilAgenceNom">{agenceInfo?.agence_nom || 'Votre agence'}</p>
-              <h2 class="accueil-titre">Que souhaitez-vous faire ?</h2>
-              <button type="button" class="choix-carte" id="btnChoixNote">
-                <svg class="choix-icone" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                </svg>
-                <span class="choix-texte">
-                  <span class="choix-titre">Noter l'expérience</span>
-                  <span class="choix-sous">Dites-nous comment s'est passée votre visite</span>
-                </span>
-              </button>
-              <button type="button" class="choix-carte" id="btnChoixIdee">
-                <svg class="choix-icone" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M9 18h6"/><path d="M10 22h4"/>
-                  <path d="M12 2a7 7 0 0 0-4 12.75c.64.46 1 1.2 1 2V17h6v-.25c0-.8.36-1.54 1-2A7 7 0 0 0 12 2z"/>
-                </svg>
-                <span class="choix-texte">
-                  <span class="choix-titre">Partager une idée</span>
-                  <span class="choix-sous">Une suggestion pour améliorer l'agence</span>
-                </span>
-              </button>
-            </section>
-
             <!-- ÉCRAN IDÉE : un seul champ texte, aucun contact -->
             <section id="screen-idee" class="screen-view idee-view" style="display:none;">
               <button type="button" class="lien-retour" id="btnRetourIdee">
@@ -186,15 +161,15 @@ if (erreur) Astro.response.status = 404;
                 <h2 class="success-title">Merci pour votre idée !</h2>
                 <p class="success-message">Votre idée a bien été transmise à l'agence. Toute l'équipe vous remercie de contribuer à l'améliorer.</p>
                 <div class="success-actions">
-                  <button type="button" class="btn-secondary" id="btnIdeeAccueil">
-                    <span>Retour à l'accueil</span>
+                  <button type="button" class="btn-secondary" id="btnIdeeNouvelAvis">
+                    <span>Donner un autre avis</span>
                   </button>
                 </div>
               </div>
             </section>
 
-            <!-- ÉCRAN 1 : FORMULAIRE -->
-            <section id="screen-sentiment" class="screen-view" style="display:none;">
+            <!-- ÉCRAN 1 : FORMULAIRE (premier écran : le client note directement, sans écran de choix) -->
+            <section id="screen-sentiment" class="screen-view">
 
               <!-- SECTION 0 : CATÉGORIE DE L'AVIS (obligatoire, définie par l'agence) -->
               <div class="form-section categorie-section">
@@ -419,23 +394,14 @@ if (erreur) Astro.response.status = 404;
                   <span>Transmis en direct à l'agence</span>
                 </div>
 
-                <!-- Question NPS facultative, révélée en JS après succès de l'envoi
-                     principal (uniquement si un nps_token a été reçu, voir le script) -->
-                <div class="nps-block" id="npsBlock" style="display:none;">
-                  <p class="nps-question" id="npsQuestionText">
-                    Une dernière question, facultative : sur une échelle de 0 à 10,
-                    recommanderiez-vous <strong id="npsAgenceNom">cette agence</strong> à un proche ?
-                  </p>
-                  <div class="nps-scale" id="npsScale" role="group" aria-label="Note de recommandation, de 0 à 10"></div>
-                  <div class="nps-scale-labels" aria-hidden="true">
-                    <span>Pas du tout probable</span>
-                    <span>Très probable</span>
-                  </div>
-                  <button type="button" class="nps-skip-link" id="btnNpsSkip">Passer</button>
-                  <p class="nps-thanks" id="npsThanks" style="display:none;" role="status">Merci pour votre réponse !</p>
-                </div>
-
                 <div class="success-actions">
+                  <button type="button" class="btn-secondary" id="btnSuccesIdee">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M9 18h6"/><path d="M10 22h4"/>
+                      <path d="M12 2a7 7 0 0 0-4 12.75c.64.46 1 1.2 1 2V17h6v-.25c0-.8.36-1.54 1-2A7 7 0 0 0 12 2z"/>
+                    </svg>
+                    <span>Partager une idée</span>
+                  </button>
                   <button type="button" class="btn-secondary" id="btnNewFeedback">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
@@ -1504,103 +1470,6 @@ if (erreur) Astro.response.status = 404;
     border: 1px solid rgba(46, 125, 50, 0.2);
   }
 
-  /* ========== Question NPS facultative (après succès de l'envoi) ========== */
-  .nps-block {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
-    margin-top: 6px;
-    padding-top: 18px;
-    border-top: 1px solid rgba(60, 119, 48, 0.14);
-  }
-
-  .nps-question {
-    margin: 0;
-    font-size: 0.82rem;
-    line-height: 1.5;
-    color: #02302D;
-    text-align: center;
-  }
-
-  .nps-question strong {
-    color: #3C7730;
-  }
-
-  /* Mobile d'abord : la grille s'enroule naturellement sur petit écran, chaque bouton
-     reste tappable (>= 44px dans les deux dimensions, recommandation d'accessibilité
-     tactile) quel que soit le nombre de boutons par ligne. */
-  .nps-scale {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 6px;
-    width: 100%;
-  }
-
-  .nps-scale :global(.nps-btn) {
-    min-width: 44px;
-    min-height: 44px;
-    flex: 1 1 44px;
-    max-width: 56px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 12px;
-    border: 1.5px solid rgba(60, 119, 48, 0.3);
-    background: #FFFFFF;
-    color: #02302D;
-    font-size: 0.9rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
-  }
-
-  .nps-scale :global(.nps-btn):hover,
-  .nps-scale :global(.nps-btn):focus-visible {
-    background: #3C7730;
-    color: #FFFFFF;
-    outline: 2px solid #3C7730;
-    outline-offset: 2px;
-  }
-
-  .nps-scale :global(.nps-btn):active {
-    transform: scale(0.94);
-  }
-
-  .nps-scale :global(.nps-btn):disabled {
-    opacity: 0.5;
-    cursor: default;
-    transform: none;
-  }
-
-  .nps-scale-labels {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-    font-size: 0.68rem;
-    color: #64748B;
-  }
-
-  .nps-skip-link {
-    background: none;
-    border: none;
-    padding: 6px 10px;
-    min-height: 44px;
-    font-size: 0.78rem;
-    color: #64748B;
-    text-decoration: underline;
-    cursor: pointer;
-  }
-
-  .nps-thanks {
-    margin: 0;
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: #2E7D32;
-  }
-
   .live-dot-green {
     width: 6px;
     height: 6px;
@@ -1751,12 +1620,7 @@ if (erreur) Astro.response.status = 404;
   .segment,
   .mic-btn,
   .btn-secondary,
-  .btn-submit,
-  .nps-skip-link {
-    min-width: 44px;
-    min-height: 44px;
-  }
-  .nps-scale :global(.nps-btn) {
+  .btn-submit {
     min-width: 44px;
     min-height: 44px;
   }
@@ -1871,73 +1735,11 @@ if (erreur) Astro.response.status = 404;
     display: none;
   }
 
-  /* Écran d'accueil : nom de l'agence et deux grands choix (zones tactiles très supérieures à 44 px) */
-  .accueil-view,
+  /* Écran « Partager une idée », proposé après l'envoi d'un avis */
   .idee-view {
     flex-direction: column;
     gap: 14px;
     padding: 22px 20px 26px;
-  }
-  .accueil-agence {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #1F5A25;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin: 0;
-  }
-  .accueil-titre {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #02302D;
-    margin: 0 0 4px;
-  }
-  .choix-carte {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    width: 100%;
-    min-width: 44px;
-    min-height: 88px;
-    padding: 16px 18px;
-    text-align: left;
-    background: #FFFFFF;
-    border: 2px solid #CBD5E1;
-    border-radius: 18px;
-    color: #02302D;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
-  }
-  .choix-carte:hover {
-    border-color: #1F5A25;
-    box-shadow: 0 6px 18px -8px rgba(2, 48, 45, 0.25);
-  }
-  .choix-carte:active {
-    transform: scale(0.99);
-  }
-  .choix-carte:focus-visible {
-    outline: 3px solid #1F5A25;
-    outline-offset: 2px;
-  }
-  .choix-icone {
-    flex: 0 0 28px;
-    color: #1F5A25;
-  }
-  .choix-texte {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .choix-titre {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #02302D;
-  }
-  .choix-sous {
-    font-size: 0.85rem;
-    line-height: 1.35;
-    color: #475569;
   }
   .lien-retour {
     align-self: flex-start;
@@ -2031,10 +1833,9 @@ if (erreur) Astro.response.status = 404;
   const QR_CODE = extraireCodeQr(window.location.pathname, window.location.search) || '';
 
   // ================= ÉCRANS : formulaire / chargement / erreur / succès =================
-  type NomEcran = 'accueil' | 'idee' | 'idee_merci' | 'formulaire' | 'chargement' | 'erreur' | 'succes';
+  type NomEcran = 'idee' | 'idee_merci' | 'formulaire' | 'chargement' | 'erreur' | 'succes';
   function montrerEcran(nom: NomEcran) {
     const ecrans: Record<NomEcran, string> = {
-      accueil: 'screen-accueil',
       idee: 'screen-idee',
       idee_merci: 'screen-idee-merci',
       formulaire: 'screen-sentiment',
@@ -2220,9 +2021,6 @@ if (erreur) Astro.response.status = 404;
     return 'general';
   }
 
-  // Nom de l'agence courante, réutilisé par la question NPS après l'envoi.
-  let agenceNomCourant = 'cette agence';
-
   // Durée de conservation (mois) lue dans la configuration de la plateforme via /validate : texte de la case de
   // consentement. Inconnue => le recontact n'est pas proposé (jamais de durée écrite en dur).
   const consentTextEl = document.getElementById('consentText');
@@ -2241,13 +2039,10 @@ if (erreur) Astro.response.status = 404;
       if (res.ok) {
         const data = await res.json();
         const agencyName = data.agence_nom || 'AGENCE';
-        agenceNomCourant = agencyName;
         const agencyBadge = document.getElementById('agencyBadgeText');
         if (agencyBadge) {
           agencyBadge.textContent = agencyName;
         }
-        const accueilAgence = document.getElementById('accueilAgenceNom');
-        if (accueilAgence) accueilAgence.textContent = agencyName;
         document.title = `Votre avis — ${agencyName}`;
         appliquerRetention(data.retention_mois);
         setSector(detectSectorFromText(`${agencyName} ${QR_CODE}`));
@@ -2269,9 +2064,7 @@ if (erreur) Astro.response.status = 404;
       );
       return;
     }
-    if (qrDejaValideParServeur) {
-      agenceNomCourant = document.getElementById('agencyBadgeText')?.textContent?.trim() || agenceNomCourant;
-    } else {
+    if (!qrDejaValideParServeur) {
       montrerEcran('chargement');
       const etat = await validerQr();
       if (etat === 'invalide') {
@@ -2295,7 +2088,7 @@ if (erreur) Astro.response.status = 404;
         return;
       }
     }
-    montrerEcran('accueil');
+    montrerEcran('formulaire');
     await loadCategories();
     restaurerSaisie();
   }
@@ -2303,8 +2096,8 @@ if (erreur) Astro.response.status = 404;
   // Restaure note, catégorie et commentaire mémorisés pour CE QR et replace la personne sur le formulaire (jamais sur un écran
   // d'erreur ni après l'envoi). Le contact et le consentement ne sont jamais restaurés : le recontact reste sur « Non ».
   function restaurerSaisie() {
-    const accueilVisible = document.getElementById('screen-accueil')?.style.display !== 'none';
-    if (accueilVisible && !sentimentSelectionne && !commentInput?.value) {
+    const formulaireVisible = document.getElementById('screen-sentiment')?.style.display !== 'none';
+    if (formulaireVisible && !sentimentSelectionne && !commentInput?.value) {
       const saisie = memoire.lire(QR_CODE);
       if (saisie) {
         if (saisie.categorieId && categoriesDisponibles.some((c) => c.id === saisie.categorieId)) {
@@ -2737,10 +2530,6 @@ if (erreur) Astro.response.status = 404;
         saisieCloturee = true;
         montrerEcran('succes');
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        const created = issue.cree;
-        if (created?.id && created?.nps_token) {
-          afficherQuestionNPS(created.id, created.nps_token);
-        }
       } else if (issue.type === 'telephone_invalide') {
         afficherErreurTelephone(MESSAGE_TELEPHONE_INVALIDE);
       } else {
@@ -2762,59 +2551,7 @@ if (erreur) Astro.response.status = 404;
     }
   });
 
-  function afficherQuestionNPS(feedbackId: string, token: string) {
-    const block = document.getElementById('npsBlock');
-    const nomSpan = document.getElementById('npsAgenceNom');
-    const scale = document.getElementById('npsScale');
-    if (nomSpan) nomSpan.textContent = agenceNomCourant;
-    if (block) block.style.display = 'flex';
-
-    if (scale && !scale.dataset.rendered) {
-      for (let note = 0; note <= 10; note++) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'nps-btn';
-        btn.textContent = String(note);
-        btn.setAttribute(
-          'aria-label',
-          note === 0 ? '0 — Pas du tout probable' : note === 10 ? '10 — Très probable' : `Note ${note} sur 10`
-        );
-        btn.addEventListener('click', () => envoyerNPS(feedbackId, token, note));
-        scale.appendChild(btn);
-      }
-      scale.dataset.rendered = '1';
-    }
-
-    document.getElementById('btnNpsSkip')?.addEventListener(
-      'click',
-      () => { if (block) block.style.display = 'none'; },
-      { once: true }
-    );
-  }
-
-  async function envoyerNPS(feedbackId: string, token: string, note: number) {
-    const scale = document.getElementById('npsScale');
-    const skip = document.getElementById('btnNpsSkip');
-    const thanks = document.getElementById('npsThanks');
-
-    scale?.querySelectorAll('button').forEach((b) => ((b as HTMLButtonElement).disabled = true));
-
-    try {
-      await fetchAPI(`/feedbacks/${feedbackId}/nps`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nps_note: note, token }),
-      });
-    } catch (e) {
-      console.warn('Envoi NPS non bloquant (réseau ou jeton expiré) :', e);
-      // Tout échec est ignoré : on affiche quand même "Merci", jamais d'erreur visible.
-    } finally {
-      if (skip) skip.style.display = 'none';
-      if (thanks) thanks.style.display = 'block';
-    }
-  }
-
-  // ================= ACCUEIL ET « PARTAGER UNE IDÉE » =================
+  // ================= « PARTAGER UNE IDÉE » (proposé après l'envoi d'un avis) =================
   const inputIdee = document.getElementById('inputIdee') as HTMLTextAreaElement | null;
   const ideeCharCount = document.getElementById('ideeCharCount');
   const ideeErrorEl = document.getElementById('ideeError');
@@ -2828,23 +2565,17 @@ if (erreur) Astro.response.status = 404;
     }
   }
 
-  document.getElementById('btnChoixNote')?.addEventListener('click', () => {
-    montrerEcran('formulaire');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
-  document.getElementById('btnChoixIdee')?.addEventListener('click', () => {
+  document.getElementById('btnSuccesIdee')?.addEventListener('click', () => {
     montrerEcran('idee');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     inputIdee?.focus({ preventScroll: true });
   });
+  // « Retour » ramène à la confirmation de l'avis, d'où l'idée a été proposée.
   document.getElementById('btnRetourIdee')?.addEventListener('click', () => {
     afficherErreurIdee(null);
-    montrerEcran('accueil');
+    montrerEcran('succes');
   });
-  document.getElementById('btnIdeeAccueil')?.addEventListener('click', () => {
-    montrerEcran('accueil');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
+  document.getElementById('btnIdeeNouvelAvis')?.addEventListener('click', () => nouvelAvis());
   inputIdee?.addEventListener('input', () => {
     afficherErreurIdee(null);
     if (ideeCharCount) ideeCharCount.textContent = libelleCompteur(inputIdee.value.length);
@@ -2899,8 +2630,8 @@ if (erreur) Astro.response.status = 404;
     }
   });
 
-  // Nouveau retour
-  document.getElementById('btnNewFeedback')?.addEventListener('click', () => {
+  // Nouveau retour (depuis la confirmation d'un avis ou celle d'une idée)
+  function nouvelAvis() {
     memoire.effacer();
     saisieCloturee = false;
     sentimentBtns.forEach(b => {
@@ -2932,7 +2663,6 @@ if (erreur) Astro.response.status = 404;
     pointEntreeNiveaux(niveauxListe[0]);
     afficherErreurEnvoi(null);
     afficherErreurCategorie(null);
-    document.getElementById('npsBlock')!.style.display = 'none';
 
     if (btnSubmit) {
       btnSubmit.disabled = false;
@@ -2947,7 +2677,8 @@ if (erreur) Astro.response.status = 404;
 
     montrerEcran('formulaire');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
+  }
+  document.getElementById('btnNewFeedback')?.addEventListener('click', () => nouvelAvis());
 
   setSector('telecom');
   void demarrer();

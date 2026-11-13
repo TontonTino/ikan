@@ -225,10 +225,10 @@ export default function VeillePage() {
       {/* ── En-tête ── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: 'var(--color-text-main)' }}>
+          <h1 style={{ margin: 0, fontSize: 'var(--text-xl)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text-main)' }}>
             Veille réseaux sociaux
           </h1>
-          <p style={{ margin: '4px 0 0', fontSize: '0.86rem', color: 'var(--color-text-muted)', maxWidth: '560px' }}>
+          <p style={{ margin: '4px 0 0', fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', maxWidth: '560px' }}>
             Mentions publiques (Facebook) analysées automatiquement par IKAN AI.
           </p>
         </div>
@@ -302,8 +302,8 @@ export default function VeillePage() {
       {error && !loading && !synthese && mentions.length === 0 && (
         <div className="saas-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center', padding: '40px 20px' }}>
           <AlertTriangleIcon size={28} color="var(--color-error)" />
-          <p style={{ margin: 0, fontWeight: 700, color: 'var(--color-text-main)' }}>Impossible de charger les mentions</p>
-          <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>{error}</p>
+          <p style={{ margin: 0, fontWeight: 'var(--weight-semibold)', color: 'var(--color-text-main)' }}>Impossible de charger les mentions</p>
+          <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>{error}</p>
           <button type="button" className="btn-primary" onClick={fetchData}>
             <RefreshCwIcon size={14} /> Réessayer
           </button>
@@ -360,7 +360,7 @@ export default function VeillePage() {
 
                   {totalPages > 1 && (
                     <nav aria-label="Pagination des mentions" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                      <span className="t-xs t-2 t-semi">
                         {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} sur {total}
                       </span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -369,11 +369,11 @@ export default function VeillePage() {
                           onClick={() => setPage((p) => p - 1)}
                           disabled={page === 0}
                           className="btn-secondary"
-                          style={{ padding: '6px 14px', fontSize: '0.8rem', opacity: page === 0 ? 0.45 : 1 }}
+                          style={{ padding: '6px 14px', fontSize: 'var(--text-xs)', opacity: page === 0 ? 0.45 : 1 }}
                         >
                           Précédent
                         </button>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-text-main)' }}>
+                        <span className="t-xs t-semi t-encre">
                           Page {page + 1} / {totalPages}
                         </span>
                         <button
@@ -381,7 +381,7 @@ export default function VeillePage() {
                           onClick={() => setPage((p) => p + 1)}
                           disabled={page >= totalPages - 1}
                           className="btn-secondary"
-                          style={{ padding: '6px 14px', fontSize: '0.8rem', opacity: page >= totalPages - 1 ? 0.45 : 1 }}
+                          style={{ padding: '6px 14px', fontSize: 'var(--text-xs)', opacity: page >= totalPages - 1 ? 0.45 : 1 }}
                         >
                           Suivant
                         </button>

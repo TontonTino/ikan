@@ -11,22 +11,22 @@ export function StatsLoadingState({ message = 'Calcul des statistiques en cours.
         alignItems: 'center',
         justifyContent: 'center',
         gap: '16px',
-        background: '#FFFFFF',
+        background: 'var(--color-surface)',
         borderRadius: '24px',
-        border: '1px solid #E8ECE6',
+        border: '1px solid var(--color-trait)',
       }}
     >
       <div
         style={{
           width: '40px',
           height: '40px',
-          border: '3px solid #EBF6ED',
-          borderTopColor: '#3C7730',
+          border: '3px solid var(--color-neutre-fond)',
+          borderTopColor: 'var(--color-marque)',
           borderRadius: '50%',
           animation: 'spin 0.8s linear infinite',
         }}
       />
-      <div style={{ fontSize: '0.90rem', color: '#64748B', fontWeight: 600 }}>{message}</div>
+      <div className="t-sm t-2 t-semi">{message}</div>
       <style>{`
         @keyframes spin {
           to { transform: rotate(360deg); }
@@ -55,9 +55,9 @@ export function StatsErrorState({
         alignItems: 'center',
         justifyContent: 'center',
         gap: '14px',
-        background: '#FFFBFB',
+        background: 'var(--color-surface)',
         borderRadius: '24px',
-        border: '1px solid #FECACA',
+        border: '1px solid var(--color-critique-fond)',
         textAlign: 'center',
       }}
     >
@@ -66,8 +66,8 @@ export function StatsErrorState({
           width: '48px',
           height: '48px',
           borderRadius: '14px',
-          background: '#FEE2E2',
-          color: '#DC2626',
+          background: 'var(--color-critique-fond)',
+          color: 'var(--color-critique-texte)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -75,10 +75,10 @@ export function StatsErrorState({
       >
         <AlertTriangleIcon size={24} />
       </div>
-      <div style={{ fontSize: '0.96rem', fontWeight: 800, color: '#0F172A' }}>
+      <div className="t-base t-semi t-encre">
         {title}
       </div>
-      <p style={{ fontSize: '0.84rem', color: '#64748B', maxWidth: '420px', margin: 0 }}>
+      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-2)', maxWidth: '420px', margin: 0 }}>
         {message}
       </p>
       {onRetry && (
@@ -111,9 +111,9 @@ export function StatsEmptyState({
         alignItems: 'center',
         justifyContent: 'center',
         gap: '12px',
-        background: '#FFFFFF',
+        background: 'var(--color-surface)',
         borderRadius: '24px',
-        border: '1px dashed #D6E8D9',
+        border: '1px dashed var(--color-trait)',
         textAlign: 'center',
       }}
     >
@@ -122,17 +122,17 @@ export function StatsEmptyState({
           width: '48px',
           height: '48px',
           borderRadius: '14px',
-          background: '#EBF6ED',
-          color: '#3C7730',
+          background: 'var(--color-bon-fond)',
+          color: 'var(--color-bon-texte)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        <BarChartIcon size={22} color="#3C7730" />
+        <BarChartIcon size={22} color="var(--color-bon-texte)" />
       </div>
-      <div style={{ fontSize: '0.96rem', fontWeight: 800, color: '#02302D' }}>{title}</div>
-      <p style={{ fontSize: '0.84rem', color: '#64748B', maxWidth: '420px', margin: 0 }}>
+      <div className="t-base t-semi t-encre">{title}</div>
+      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-2)', maxWidth: '420px', margin: 0 }}>
         {description}
       </p>
     </div>
@@ -155,11 +155,10 @@ export function StatsSectionCard({
   return (
     <div
       style={{
-        background: '#FFFFFF',
+        background: 'var(--color-surface)',
         borderRadius: compact ? '18px' : '24px',
         padding: compact ? '18px 20px' : '24px 28px',
-        boxShadow: '0 2px 12px rgba(20, 60, 40, 0.03)',
-        border: '1px solid #E8ECE6',
+        border: '1px solid var(--color-trait)',
         width: '100%',
         boxSizing: 'border-box',
         transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
@@ -178,9 +177,9 @@ export function StatsSectionCard({
         <div>
           <h3
             style={{
-              fontSize: '1.05rem',
-              fontWeight: 800,
-              color: '#02302D',
+              fontSize: 'var(--text-lg)',
+              fontWeight: 'var(--weight-semibold)',
+              color: 'var(--color-encre)',
               margin: 0,
               letterSpacing: '-0.01em',
             }}
@@ -190,10 +189,10 @@ export function StatsSectionCard({
           {subtitle && (
             <p
               style={{
-                fontSize: '0.78rem',
-                color: '#64748B',
+                fontSize: 'var(--text-xs)',
+                color: 'var(--color-text-2)',
                 margin: '3px 0 0',
-                fontWeight: 500,
+                fontWeight: 'var(--weight-normal)',
               }}
             >
               {subtitle}

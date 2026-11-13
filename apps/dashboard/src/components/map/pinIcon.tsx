@@ -13,7 +13,7 @@ export function pinIcon(color: string, symbole?: string): L.DivIcon {
   let icon = pinIconCache.get(cle);
   if (!icon) {
     const symboleHtml = symbole
-      ? `<span aria-hidden="true" style="position:absolute;left:0;top:7px;width:100%;text-align:center;color:#fff;font:800 15px/1 system-ui,sans-serif;">${symbole}</span>`
+      ? `<span aria-hidden="true" style="position:absolute;left:0;top:7px;width:100%;text-align:center;color:var(--color-text-inverse);font:600 15px/1 var(--font-main);">${symbole}</span>`
       : '';
     icon = L.divIcon({
       className: 'siege-pin',

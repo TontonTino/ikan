@@ -4,7 +4,8 @@ import type { StatsAgenceResponse } from '../../types';
 import PageHeader from '../../components/ui/PageHeader';
 import KpiCard from '../../components/ui/KpiCard';
 import TabsNavigation from '../../components/ui/TabsNavigation';
-import PeriodSelector from '../../components/stats/PeriodSelector';
+import PeriodSelector, { PERIOD_OPTIONS } from '../../components/stats/PeriodSelector';
+import { elargirPeriode } from '../../utils/periodeElargie';
 import SatisfactionEvolutionChart from '../../components/stats/SatisfactionEvolutionChart';
 import VolumeEvolutionChart from '../../components/stats/VolumeEvolutionChart';
 import SentimentDonutChart from '../../components/stats/SentimentDonutChart';
@@ -188,7 +189,7 @@ export default function StatsAgencyView() {
                 title="Évolution de la satisfaction"
                 subtitle="Part des avis notés 4 ou 5 sur 5, période par période"
               >
-                <SatisfactionEvolutionChart data={data.evolution_satisfaction} height={260} />
+                <SatisfactionEvolutionChart data={data.evolution_satisfaction} height={260} elargir={elargirPeriode(jours, PERIOD_OPTIONS, setJours)} />
               </StatsSectionCard>
 
               <StatsSectionCard

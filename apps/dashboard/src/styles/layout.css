@@ -40,10 +40,10 @@
 .dashboard-role-label {
   padding: 3px var(--space-2);
   border-radius: var(--radius-pill);
-  border: 1px solid rgba(188, 207, 0, 0.35);
-  background: rgba(188, 207, 0, 0.14);
-  color: var(--color-lime); /* ≈ 8:1 sur --sidebar-bg-from */
-  font-size: var(--text-2xs);
+  border: 1px solid var(--sidebar-active-border);
+  background: transparent;
+  color: var(--sidebar-text); /* 10,6:1 sur l'encre ; le citron reste décoratif, jamais du texte */
+  font-size: var(--text-xs);
   font-weight: var(--weight-black);
   letter-spacing: 0.05em;
   white-space: nowrap;
@@ -106,7 +106,7 @@
   .dashboard-sidebar--collapsed .ikan-yam-button-label,
   .dashboard-sidebar--collapsed .ikan-yam-subtitle,
   .dashboard-sidebar--collapsed .ikan-yam-chevron { display: none; }
-  .dashboard-sidebar--collapsed .dashboard-nav-section + .dashboard-nav-section { padding-top: var(--space-3); border-top: 1px solid rgba(255, 255, 255, 0.08); }
+  .dashboard-sidebar--collapsed .dashboard-nav-section + .dashboard-nav-section { padding-top: var(--space-3); border-top: 1px solid var(--sidebar-active-border); }
   /* Le menu continue de défiler en mode réduit : les tooltips sont en portail, rien à laisser déborder. */
   .dashboard-sidebar--collapsed .dashboard-primary-nav { gap: var(--space-3); }
   .dashboard-sidebar--collapsed .dashboard-nav-list > li > span { width: 100%; }
@@ -196,7 +196,7 @@
   border: 2px solid var(--color-surface);
   background: var(--color-critical-text); /* blanc dessus : 6.47:1 */
   color: var(--color-text-inverse);
-  font-size: var(--text-2xs); font-weight: var(--weight-black); line-height: 1;
+  font-size: var(--text-xs); font-weight: var(--weight-black); line-height: 1;
 }
 .notif__panel {
   position: absolute; z-index: var(--z-dropdown);
@@ -205,13 +205,13 @@
   width: min(380px, calc(100vw - 2 * var(--space-4)));
   max-height: min(70vh, 560px);
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-trait);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-overlay);
   overflow: hidden;
   animation: ui-pop-in var(--duration-base) var(--ease-enter);
 }
-.notif__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-4) var(--space-4) var(--space-3); border-bottom: 1px solid var(--color-border); }
+.notif__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-4) var(--space-4) var(--space-3); border-bottom: 1px solid var(--color-trait); }
 .notif__title { margin: 0; font-size: var(--text-lg); font-weight: var(--weight-black); color: var(--color-text-main); }
 .notif__new { font-size: var(--text-xs); font-weight: var(--weight-bold); color: var(--color-critical-text); }
 .notif__empty { margin: 0; padding: var(--space-5) var(--space-4); font-size: var(--text-md); color: var(--color-text-muted); text-align: center; }
@@ -228,7 +228,7 @@
 .notif__link { display: inline-block; margin-top: var(--space-1); font-size: var(--text-xs); font-weight: var(--weight-bold); color: var(--color-primary); text-decoration: none; }
 .notif__link:hover { text-decoration: underline; text-underline-offset: 2px; }
 .notif__dot { position: absolute; top: var(--space-4); right: var(--space-4); width: 8px; height: 8px; border-radius: var(--radius-pill); background: var(--color-critical-solid); }
-.notif__foot { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--color-border); text-align: center; }
+.notif__foot { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--color-trait); text-align: center; }
 .notif__all { display: inline-flex; align-items: center; min-height: var(--control-sm); font-size: var(--text-sm); font-weight: var(--weight-bold); color: var(--color-primary); text-decoration: none; }
 .notif__all:hover { text-decoration: underline; text-underline-offset: 2px; }
 @media (max-width: 640px) {

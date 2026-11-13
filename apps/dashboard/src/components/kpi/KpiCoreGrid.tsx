@@ -45,7 +45,7 @@ const GRILLE_STYLE: React.CSSProperties = {
 
 function SectionTitre({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '18px 0 8px' }}>
+    <div style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text-2)', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '18px 0 8px' }}>
       {children}
     </div>
   );
@@ -162,7 +162,7 @@ export default function KpiCoreGrid({ jours, agenceId, refreshToken, mode = 'com
       )}
 
       {secteurSansPack && (
-        <div style={{ marginTop: '14px', fontSize: '0.82rem', color: '#94A3B8', fontStyle: 'italic' }}>
+        <div style={{ marginTop: '14px', fontSize: 'var(--text-sm)', color: 'var(--color-text-2)', fontStyle: 'italic' }}>
           Les indicateurs propres à votre secteur seront bientôt disponibles.
         </div>
       )}

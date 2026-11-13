@@ -20,8 +20,8 @@ export type PilotageSection = 'alertes' | 'suggestions' | 'actions' | 'issues';
 const SECTION_HEADER: Record<PilotageSection, { title: string; cx: string; agency: string }> = {
   alertes: {
     title: 'Alertes',
-    cx: 'Agences sous leur seuil de satisfaction, avis à risque et recommandations du réseau.',
-    agency: 'Ce qui demande votre attention dans votre agence : satisfaction sous le seuil, avis à risque, recommandations.',
+    cx: 'Agences sous leur seuil de satisfaction et avis à risque du réseau.',
+    agency: 'Ce qui demande votre attention dans votre agence : satisfaction sous le seuil et avis à risque.',
   },
   suggestions: {
     title: 'Suggestions',

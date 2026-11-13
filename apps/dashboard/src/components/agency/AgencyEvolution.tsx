@@ -5,6 +5,7 @@ import Chart, { ChartTooltip, DATAVIZ, chartAxisProps, chartGridProps } from '..
 import { FAIBLE_VOLUME_POINT } from '../../pages/cx/siege/siegeData';
 import { interpretationEvolution, resumeAccessibleEvolution } from './agenceVue';
 import YamNote from '../agent/YamNote';
+import type { ElargirPeriode } from '../ui/GraphiqueVide';
 import { formaterDateAxe, formaterPourcentage } from '../../utils/formatNombre';
 
 /** Point plein si le volume est suffisant, creux sinon : l'information ne repose pas sur la couleur seule. */
@@ -30,7 +31,7 @@ export function TableauEvolution({ points }: { points: TendanceSatisfaction[] })
         <tbody>
           {points.map((p) => (
             <tr key={p.date} style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
-              <th scope="row" style={{ textAlign: 'left', padding: 'var(--space-2)', fontWeight: 600 }}>{p.date}</th>
+              <th scope="row" style={{ textAlign: 'left', padding: 'var(--space-2)', fontWeight: 'var(--weight-semibold)' }}>{p.date}</th>
               <td style={{ textAlign: 'right', padding: 'var(--space-2)' }}>{formaterPourcentage(p.taux)}</td>
               <td style={{ textAlign: 'right', padding: 'var(--space-2)' }}>
                 {p.nombre_feedbacks}
@@ -44,7 +45,7 @@ export function TableauEvolution({ points }: { points: TendanceSatisfaction[] })
   );
 }
 
-export default function AgencyEvolution({ points, periode }: { points: TendanceSatisfaction[]; periode: string }) {
+export default function AgencyEvolution({ points, periode, elargir }: { points: TendanceSatisfaction[]; periode: string; elargir?: ElargirPeriode }) {
   return (
     <>
     <Chart
@@ -56,8 +57,8 @@ export default function AgencyEvolution({ points, periode }: { points: TendanceS
       }
       height={240}
       isEmpty={points.length === 0}
-      emptyTitle="Aucune donnée d’évolution"
-      emptyMessage={`Aucun relevé de satisfaction sur ${periode}.`}
+      emptyTitle={`Aucun relevé de satisfaction sur ${periode}.`}
+      emptyAction={elargir}
       table={<TableauEvolution points={points} />}
     >
       {() => (

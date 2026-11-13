@@ -1,5 +1,4 @@
 /* Design System IKAN AI — Style Visuel SaaS Moderne & Épuré (Inspiré de Bolt.new) */
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
 @import './tokens.css';
 @import './ui.css';
 @import './layout.css';
@@ -23,9 +22,11 @@ html, body {
 
 body {
   font-family: var(--font-main);
+  font-size: var(--text-base);
+  font-weight: var(--weight-normal);
   background: var(--color-bg);
   color: var(--color-text-body);
-  line-height: 1.5;
+  line-height: var(--leading-normal);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -39,19 +40,16 @@ body {
    :where() garde une spécificité nulle pour ne jamais écraser les règles de
    composants existantes (.saas-input:focus, .yam-input:focus,
    .yam-panel :focus-visible notamment, non touchées).
-   var(--color-primary) et non var(--color-accent) : le lime vif de
-   --color-accent (#75B72A) ne passe qu'à 2.45:1 de contraste sur blanc,
-   sous le minimum WCAG 1.4.11 de 3:1 pour un indicateur de focus ;
-   --color-primary (#3C7730) passe à 5.4:1. */
+   var(--color-primary) = l'accent corail : 4,85:1 sur blanc, 4,53:1 sur la
+   crème, au-dessus du minimum WCAG 1.4.11 de 3:1 pour un indicateur de focus. */
 :where(a, button, [role="button"], [tabindex]:not([tabindex="-1"]), summary, select, input, textarea):focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
 /* Variante zones sombres (ex. .saas-card--critical, ou tout conteneur avec
-   className="on-dark") : le vert forêt --color-primary est illisible sur un
-   fond sombre --color-primary-dark, le lime --color-lime (~8:1 sur
-   #02302D) prend le relais. */
+   className="on-dark") : sur l'encre, l'accent ne fait que 3,07:1 ; le citron
+   (8,24:1) prend le relais pour l'anneau de focus (indicateur graphique, pas du texte). */
 .saas-card--critical :focus-visible,
 .on-dark :focus-visible {
   outline-color: var(--color-lime);
@@ -66,11 +64,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #D9DFD8;
+  background: var(--color-trait);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #BAC3B9;
+  background: var(--color-border);
 }
 
 /* Utilitaires Typographiques */
@@ -84,14 +82,14 @@ body {
 .saas-card {
   background: var(--color-surface);
   border-radius: var(--radius-2xl);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-trait);
   box-shadow: var(--shadow-card);
   padding: 24px;
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .saas-card:hover {
-  border-color: #DDE4DB;
+  border-color: var(--color-trait);
   box-shadow: var(--shadow-hover);
 }
 
@@ -101,9 +99,9 @@ body {
    pour --critical, les couleurs de texte. */
 .saas-card--critical {
   background: var(--color-primary-dark);
-  border: 1px solid #0A4A44;
-  box-shadow: 0 4px 20px rgba(2, 48, 45, 0.25);
-  color: #FFFFFF;
+  border: 1px solid var(--color-encre);
+  box-shadow: var(--shadow-card);
+  color: var(--color-text-inverse);
 }
 /* Texte secondaire (ex. .text-muted) à l'intérieur d'une carte --critical :
    le gris habituel de .text-muted est illisible sur ce fond sombre. */
@@ -114,63 +112,57 @@ body {
 .saas-card--success {
   /* Simple teinte de fond, pas un fond sombre : le texte par défaut reste lisible tel quel. */
   background: var(--color-success-bg);
-  border: 1px solid #D5E8D3;
+  border: 1px solid var(--color-bon-fond);
 }
 
 /* Inputs & Formulaires */
 .saas-input {
-  background: #FFFFFF;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 10px 14px;
   color: var(--color-text-body);
   font-family: inherit;
-  font-size: 0.88rem;
+  font-size: var(--text-sm);
   outline: none;
   transition: all 0.15s ease;
   width: 100%;
 }
 
 .saas-input:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(60, 119, 48, 0.12);
+  border-color: var(--color-accent);
 }
 
 /* Boutons */
 .btn-primary {
   background: var(--color-accent);
-  /* IMPORTANT : texte blanc sur --color-accent ne passe qu'à 2.45:1 de
-     contraste (sous le seuil WCAG AA de 4.5:1) — ne jamais repasser en blanc. */
-  color: var(--color-primary-dark);
+  /* Accent corail : texte blanc, 4,85:1. */
+  color: var(--color-text-inverse);
   border: none;
   border-radius: var(--radius-md);
   padding: 10px 18px;
-  font-size: 0.88rem;
-  font-weight: 700;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
   font-family: inherit;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.15s ease;
-  box-shadow: 0 2px 6px rgba(117, 183, 42, 0.25);
+  transition: background var(--duration-fast) var(--ease-standard);
 }
 
 .btn-primary:hover {
-  /* filter plutôt qu'une couleur en dur : garde le contraste texte/fond
-     sous contrôle automatiquement, quelle que soit la couleur de base. */
-  filter: brightness(0.92);
-  box-shadow: 0 4px 12px rgba(117, 183, 42, 0.35);
+  background: var(--color-accent-hover);
 }
 
 .btn-secondary {
-  background: #FFFFFF;
+  background: var(--color-surface);
   color: var(--color-text-body);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 10px 16px;
-  font-size: 0.88rem;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
   font-family: inherit;
   cursor: pointer;
   display: inline-flex;
@@ -181,7 +173,7 @@ body {
 
 .btn-secondary:hover {
   background: var(--color-bg-hover);
-  border-color: #D5DCD2;
+  border-color: var(--color-trait);
 }
 
 /* Badges */
@@ -191,8 +183,8 @@ body {
   gap: 4px;
   padding: 4px 10px;
   border-radius: var(--radius-pill);
-  font-size: 0.76rem;
-  font-weight: 700;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
   line-height: 1.2;
 }
 
@@ -200,31 +192,31 @@ body {
 .badge-warning { background: var(--color-warning-bg); color: var(--color-warning); }
 .badge-error { background: var(--color-error-bg); color: var(--color-critical-text); }
 .badge-info { background: var(--color-info-bg); color: var(--color-info); }
-.badge-neutral { background: #F1F5F9; color: #475569; }
+.badge-neutral { background: var(--color-neutre-fond); color: var(--color-text-2); }
 
 /* Indicateur En direct / Pulse */
 .live-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--color-accent);
+  background: var(--color-marque);
   display: inline-block;
-  box-shadow: 0 0 0 0 rgba(117, 183, 42, 0.7);
+  box-shadow: 0 0 0 0 rgba(60, 120, 48, 0.7);
   animation: pulse 2s infinite;
 }
 
 @keyframes pulse {
   0% {
     transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(117, 183, 42, 0.7);
+    box-shadow: 0 0 0 0 rgba(60, 120, 48, 0.7);
   }
   70% {
     transform: scale(1);
-    box-shadow: 0 0 0 6px rgba(117, 183, 42, 0);
+    box-shadow: 0 0 0 6px rgba(60, 120, 48, 0);
   }
   100% {
     transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(117, 183, 42, 0);
+    box-shadow: 0 0 0 0 rgba(60, 120, 48, 0);
   }
 }
 
@@ -239,10 +231,10 @@ body {
   z-index: 60; /* au-dessus de la sidebar (30) et du contenu */
   display: flex;
   flex-direction: column;
-  background: #FFFFFF;
-  border: 1px solid #DCE8DF;
-  border-radius: 20px;
-  box-shadow: 0 12px 40px rgba(2, 45, 42, 0.18);
+  background: var(--color-surface);
+  border: 1px solid var(--color-trait);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-overlay);
   overflow: hidden;
   transform: translateX(calc(100% + 40px));
   visibility: hidden;
@@ -259,41 +251,41 @@ body {
 .yam-header {
   display: flex; align-items: center; gap: 12px;
   padding: 16px 16px 14px 18px;
-  background: #F3F8F4;
-  border-bottom: 1px solid #DCE8DF;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-trait);
 }
-.yam-title { font-size: 1.02rem; font-weight: 800; color: #022D2A; line-height: 1.2; }
-.yam-subtitle { font-size: 0.74rem; color: #64748B; font-weight: 600; }
+.yam-title { font-size: var(--text-base); font-weight: var(--weight-semibold); color: var(--color-encre); line-height: 1.2; }
+.yam-subtitle { font-size: var(--text-xs); color: var(--color-text-2); font-weight: var(--weight-semibold); }
 .yam-icon-btn {
-  width: 34px; height: 34px; border-radius: 10px; border: 1px solid #DCE8DF; background: #FFFFFF;
-  color: #64748B; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+  width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--color-border); background: var(--color-surface);
+  color: var(--color-text-2); display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
   transition: all 0.15s ease;
 }
-.yam-icon-btn:hover:not(:disabled) { color: #3C7730; border-color: #3C7730; background: #EAF5EC; }
+.yam-icon-btn:hover:not(:disabled) { color: var(--color-encre); border-color: var(--color-encre); background: var(--color-bg); }
 .yam-icon-btn:disabled { opacity: 0.4; cursor: default; }
 .yam-messages {
   flex: 1; overflow-y: auto; padding: 18px 16px; display: flex; flex-direction: column; gap: 14px;
-  background: #FBFDFB;
+  background: var(--color-bg);
 }
 .yam-row { display: flex; align-items: flex-end; gap: 8px; }
 .yam-row-user { justify-content: flex-end; }
 .yam-row-assistant { justify-content: flex-start; }
 .yam-bubble {
-  max-width: 86%; padding: 10px 14px; border-radius: 16px; font-size: 0.88rem; line-height: 1.5;
+  max-width: 86%; padding: 10px 14px; border-radius: 16px; font-size: var(--text-sm); line-height: 1.5;
   overflow-wrap: anywhere; word-break: break-word;
 }
-.yam-bubble-user { background: #3C7730; color: #FFFFFF; border-bottom-right-radius: 5px; white-space: pre-wrap; }
-.yam-bubble-assistant { background: #EEF5EF; color: #1E293B; border-bottom-left-radius: 5px; }
-.yam-bubble-error { background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; border-bottom-left-radius: 5px; }
+.yam-bubble-user { background: var(--color-encre); color: var(--color-text-inverse); border-bottom-right-radius: 5px; white-space: pre-wrap; }
+.yam-bubble-assistant { background: var(--color-neutre-fond); color: var(--color-encre); border-bottom-left-radius: 5px; }
+.yam-bubble-error { background: var(--color-critique-fond); color: var(--color-critique-texte); border-bottom-left-radius: 5px; }
 .yam-paragraph { margin: 0 0 8px; }
 .yam-paragraph:last-child, .yam-list:last-child, .yam-heading:last-child { margin-bottom: 0; }
-.yam-heading { margin: 4px 0 6px; font-weight: 800; color: #022D2A; }
+.yam-heading { margin: 4px 0 6px; font-weight: var(--weight-semibold); color: var(--color-encre); }
 .yam-list { margin: 0 0 8px; padding-left: 20px; }
 .yam-list li { margin-bottom: 3px; }
-.yam-table-wrap { overflow-x: auto; margin: 4px 0 10px; border-radius: 10px; border: 1px solid #D5E8D3; background: #FFFFFF; }
-.yam-table { border-collapse: collapse; width: 100%; font-size: 0.78rem; }
-.yam-table th { background: #E2F2E5; color: #022D2A; text-align: left; font-weight: 700; }
-.yam-table th, .yam-table td { padding: 6px 9px; border-bottom: 1px solid #E8F0EA; vertical-align: top; }
+.yam-table-wrap { overflow-x: auto; margin: 4px 0 10px; border-radius: 10px; border: 1px solid var(--color-bon-fond); background: var(--color-surface); }
+.yam-table { border-collapse: collapse; width: 100%; font-size: var(--text-xs); }
+.yam-table th { background: var(--color-neutre-fond); color: var(--color-encre); text-align: left; font-weight: var(--weight-semibold); }
+.yam-table th, .yam-table td { padding: 6px 9px; border-bottom: 1px solid var(--color-trait); vertical-align: top; }
 .yam-table tr:last-child td { border-bottom: none; }
 /* Pas de coupure au milieu d'un mot : le tableau défile horizontalement dans son cadre. */
 .yam-table th, .yam-table td { overflow-wrap: normal; word-break: normal; hyphens: none; }
@@ -301,42 +293,42 @@ body {
 .yam-table td { min-width: 4.5em; }
 .yam-suggestions { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
 .yam-chip {
-  text-align: left; padding: 8px 12px; border-radius: 12px; border: 1px solid #C9DFCC; background: #FFFFFF;
-  color: #2F5F26; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease;
+  text-align: left; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--color-border); background: var(--color-surface);
+  color: var(--color-bon-texte); font-size: var(--text-sm); font-weight: var(--weight-semibold); cursor: pointer; transition: all 0.15s ease;
 }
-.yam-chip:hover:not(:disabled) { background: #E2F2E5; border-color: #3C7730; }
+.yam-chip:hover:not(:disabled) { background: var(--color-bg); border-color: var(--color-accent); }
 .yam-chip:disabled { opacity: 0.5; cursor: default; }
 .yam-retry {
-  margin-top: 8px; padding: 5px 12px; border-radius: 9999px; border: 1px solid #DC2626; background: #FFFFFF;
-  color: #DC2626; font-weight: 700; font-size: 0.78rem; cursor: pointer;
+  margin-top: 8px; padding: 5px 12px; border-radius: 9999px; border: 1px solid var(--color-critique-texte); background: var(--color-surface);
+  color: var(--color-critique-texte); font-weight: var(--weight-semibold); font-size: var(--text-xs); cursor: pointer;
 }
-.yam-retry:hover:not(:disabled) { background: #FEE2E2; }
+.yam-retry:hover:not(:disabled) { background: var(--color-critique-fond); }
 .yam-retry:disabled { opacity: 0.5; cursor: default; }
-.yam-thinking { display: inline-flex; align-items: center; gap: 4px; color: #3C7730; font-weight: 700; }
+.yam-thinking { display: inline-flex; align-items: center; gap: 4px; color: var(--color-bon-texte); font-weight: var(--weight-semibold); }
 .yam-dots { display: inline-flex; gap: 3px; margin-left: 2px; }
-.yam-dot { width: 5px; height: 5px; border-radius: 50%; background: #3C7730; animation: yam-bounce 1.2s infinite ease-in-out; }
+.yam-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--color-marque); animation: yam-bounce 1.2s infinite ease-in-out; }
 .yam-dot:nth-child(2) { animation-delay: 0.15s; }
 .yam-dot:nth-child(3) { animation-delay: 0.3s; }
 @keyframes yam-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.45; } 30% { transform: translateY(-4px); opacity: 1; } }
-.yam-slow-hint { margin-top: 6px; font-size: 0.76rem; color: #64748B; }
+.yam-slow-hint { margin-top: 6px; font-size: var(--text-xs); color: var(--color-text-2); }
 .yam-composer {
   display: flex; align-items: flex-end; gap: 10px; padding: 12px 14px 14px;
-  border-top: 1px solid #DCE8DF; background: #FFFFFF;
+  border-top: 1px solid var(--color-trait); background: var(--color-surface);
 }
 .yam-input {
   flex: 1; resize: none; max-height: 120px; min-height: 40px; padding: 10px 14px; border-radius: 14px;
-  border: 1px solid #D5E0D8; background: #F8FAF8; font: inherit; font-size: 0.88rem; color: #1E293B;
+  border: 1px solid var(--color-border); background: var(--color-surface); font: inherit; font-size: var(--text-sm); color: var(--color-encre);
   outline: none; transition: border-color 0.15s ease, box-shadow 0.15s ease; field-sizing: content;
 }
-.yam-input:focus { border-color: #3C7730; box-shadow: 0 0 0 3px rgba(60, 119, 48, 0.15); background: #FFFFFF; }
+.yam-input:focus { border-color: var(--color-accent); background: var(--color-surface); }
 .yam-send {
-  width: 40px; height: 40px; border-radius: 12px; border: none; background: #3C7730; color: #FFFFFF;
+  width: 40px; height: 40px; border-radius: 12px; border: none; background: var(--color-accent); color: var(--color-text-inverse);
   display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
   transition: background 0.15s ease, opacity 0.15s ease;
 }
-.yam-send:hover:not(:disabled) { background: #2F5F26; }
+.yam-send:hover:not(:disabled) { background: var(--color-accent-hover); }
 .yam-send:disabled { opacity: 0.4; cursor: default; }
-.yam-panel :focus-visible { outline: 2px solid #3C7730; outline-offset: 2px; }
+.yam-panel :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   .yam-panel, .yam-panel-open { transition: none; }
   .yam-dot { animation: none; opacity: 0.8; }
@@ -348,8 +340,8 @@ body {
   flex-shrink: 0;
   border-radius: 50%;
   overflow: hidden;
-  background: #EAF5EC; /* fond menthe de la charte derrière le détourage : aucun liseré clair visible */
-  border: 1px solid #D5E8D3;
+  background: var(--color-bon-fond); /* fond menthe de la charte derrière le détourage : aucun liseré clair visible */
+  border: 1px solid var(--color-bon-fond);
   box-sizing: border-box;
 }
 .yam-avatar img {
@@ -394,15 +386,15 @@ body {
   box-sizing: border-box;
   color: var(--color-text-muted);
   background: var(--color-bg);
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
 }
 .route-loading__spinner {
   width: 22px;
   height: 22px;
   flex: 0 0 22px;
   box-sizing: border-box;
-  border: 2px solid #D6E8D9;
+  border: 2px solid var(--color-trait);
   border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: route-loading-spin 0.8s linear infinite;
@@ -446,18 +438,15 @@ body {
    tiroir mobile) : radius/largeur/position restent en styles inline sur
    le <aside>, cette classe ne fournit que fond/bordure/ombre. */
 .ikan-sidebar--dark {
-  /* Filigrane décoratif (3 courbes ondulées, 1px, blanc à 5% d'opacité)
-     posé au-dessus du dégradé, ancré en bas de la sidebar. */
-  background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='270' height='160' viewBox='0 0 270 160'%3E%3Cpath d='M0 100 Q 67 70 135 100 T 270 100' stroke='rgba(255,255,255,0.05)' stroke-width='1' fill='none'/%3E%3Cpath d='M0 125 Q 67 95 135 125 T 270 125' stroke='rgba(255,255,255,0.05)' stroke-width='1' fill='none'/%3E%3Cpath d='M0 150 Q 67 120 135 150 T 270 150' stroke='rgba(255,255,255,0.05)' stroke-width='1' fill='none'/%3E%3C/svg%3E") no-repeat bottom / 100% auto,
-    linear-gradient(180deg, var(--sidebar-bg-from), var(--sidebar-bg-to));
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 28px rgba(2, 48, 45, 0.28);
+  /* Encre unie : ni dégradé ni filigrane décoratif (kanso). */
+  background: var(--color-encre);
+  border: 1px solid var(--sidebar-active-border);
+  box-shadow: var(--shadow-card);
 }
 
 .ikan-nav-section-title {
-  font-size: 0.72rem;
-  font-weight: 800;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
   color: var(--sidebar-muted);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -473,8 +462,8 @@ body {
   border: 1px solid transparent;
   color: var(--sidebar-text);
   text-decoration: none;
-  font-weight: 600;
-  font-size: 0.88rem;
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-sm);
   transition: color 0.15s ease, background 0.15s ease;
 }
 .ikan-nav-link:hover {
@@ -485,7 +474,7 @@ body {
   background: var(--sidebar-active-bg);
   border-color: var(--sidebar-active-border);
   color: var(--sidebar-text-strong);
-  font-weight: 700;
+  font-weight: var(--weight-semibold);
 }
 .ikan-nav-icon {
   color: var(--sidebar-muted);
@@ -500,18 +489,16 @@ body {
 
 .ikan-nav-badge {
   background: rgba(255, 255, 255, 0.12);
-  color: #E6EFEC;
-  font-size: 0.72rem;
-  font-weight: 700;
+  color: var(--sidebar-text);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
   padding: 2px 8px;
   border-radius: var(--radius-pill);
 }
 .ikan-nav-badge--urgent {
-  background: #FEE2E2;
-  /* #DC2626 (rouge standard de la charte) sur #FEE2E2 ne passe qu'à
-     3.95:1 — sous 4.5:1. #B91C1C (déjà utilisé ailleurs dans l'app pour
-     le même badge "négatif") passe à 5.3:1, même fond conservé. */
-  color: #B91C1C;
+  background: var(--color-critique-fond);
+  /* Statut critique : texte et fond du même statut (6,48:1, voir contraste.test.ts). */
+  color: var(--color-critique-texte);
 }
 
 .ikan-yam-button {
@@ -522,16 +509,16 @@ body {
   width: 100%;
   padding: 11px 12px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sidebar-active-border);
+  background: var(--sidebar-hover-bg);
   cursor: pointer;
   text-align: left;
   font-family: inherit;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 .ikan-yam-button[aria-expanded="true"] {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(188, 207, 0, 0.5);
+  background: var(--sidebar-active-bg);
+  border-color: var(--sidebar-active-border);
 }
 .ikan-yam-chevron {
   margin-left: auto;
@@ -543,7 +530,7 @@ body {
 /* Contraste ~6.2:1 au pire cas (fond translucide sur le dégradé sidebar),
    contre ~4.77:1 avec --sidebar-muted : marge insuffisante pour un sous-titre. */
 .ikan-yam-subtitle {
-  color: #B9C7C2;
+  color: var(--sidebar-text);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -555,18 +542,18 @@ body {
 
 
 /* ── YAM : rubriques de réponse, périmètre, mentions ── */
-.yam-section { margin: 0 0 10px; padding: 8px 10px; border-radius: 10px; border-left: 3px solid #B6D4B9; background: rgba(255,255,255,0.55); }
+.yam-section { margin: 0 0 10px; padding: 8px 10px; border-radius: 10px; border-left: 3px solid var(--color-trait); background: rgba(255,255,255,0.55); }
 .yam-section:last-child { margin-bottom: 0; }
-.yam-section-title { margin: 0 0 4px; font-size: 0.78rem; font-weight: 800; color: #3C7730; }
-.yam-section--hypothese { border-left-color: #D9A441; background: #FFFAEB; }
-.yam-section--hypothese .yam-section-title { color: #92400E; }
-.yam-section--reco { border-left-color: #3C7730; background: #F0F8F1; }
-.yam-section--donnees { border-left-color: #CBD5E1; }
-.yam-section--donnees .yam-section-title { color: #64748B; }
+.yam-section-title { margin: 0 0 4px; font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--color-bon-texte); }
+.yam-section--hypothese { border-left-color: var(--color-surveiller-texte); background: var(--color-surveiller-fond); }
+.yam-section--hypothese .yam-section-title { color: var(--color-surveiller-texte); }
+.yam-section--reco { border-left-color: var(--color-accent-vif); background: var(--color-bg); }
+.yam-section--donnees { border-left-color: var(--color-trait); }
+.yam-section--donnees .yam-section-title { color: var(--color-text-2); }
 .yam-section .yam-paragraph:last-child, .yam-section .yam-list:last-child { margin-bottom: 0; }
-.yam-scope { margin: 0; padding: 6px 16px; font-size: 0.74rem; color: #475569; background: #F8FAFB; border-bottom: 1px solid #E8ECE6; }
-.yam-suggestions-title { font-size: 0.76rem; font-weight: 700; color: #475569; }
-.yam-footnote { margin: 0; padding: 6px 16px 10px; font-size: 0.7rem; line-height: 1.4; color: #64748B; text-align: center; }
+.yam-scope { margin: 0; padding: 6px 16px; font-size: var(--text-xs); color: var(--color-text-2); background: var(--color-bg); border-bottom: 1px solid var(--color-trait); }
+.yam-suggestions-title { font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--color-text-2); }
+.yam-footnote { margin: 0; padding: 6px 16px 10px; font-size: var(--text-xs); line-height: 1.4; color: var(--color-text-2); text-align: center; }
 
 @media (pointer: coarse) {
   .yam-icon-btn, .yam-send, .yam-chip, .yam-retry { min-width: var(--touch-target); min-height: var(--touch-target); }

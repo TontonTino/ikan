@@ -56,10 +56,9 @@ export default function PageHeader({
     <div
       className="page-header-shell"
       style={{
-        background: 'linear-gradient(135deg, #F4FAF5 0%, #EBF6ED 100%)',
+        background: 'var(--color-surface)',
         borderRadius: '24px',
-        border: '1px solid #D6E8D9',
-        boxShadow: '0 4px 20px rgba(2, 48, 45, 0.04)',
+        border: '1px solid var(--color-trait)',
         padding: '24px 28px',
         display: 'flex',
         flexDirection: 'row',
@@ -81,9 +80,9 @@ export default function PageHeader({
         {!greetingUser && (
           <div
             style={{
-              fontSize: '0.74rem',
-              fontWeight: 800,
-              color: '#6B8E6A',
+              fontSize: 'var(--text-xs)',
+              fontWeight: 'var(--weight-semibold)',
+              color: 'var(--color-text-2)',
               letterSpacing: '0.08em',
               textTransform: 'uppercase',
               marginBottom: '4px',
@@ -96,9 +95,9 @@ export default function PageHeader({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <h1
             style={{
-              fontSize: '1.85rem',
-              fontWeight: 800,
-              color: '#02302D',
+              fontSize: 'var(--text-2xl)',
+              fontWeight: 'var(--weight-semibold)',
+              color: 'var(--color-encre)',
               margin: 0,
               letterSpacing: '-0.02em',
               lineHeight: 1.2,
@@ -110,11 +109,11 @@ export default function PageHeader({
 
         <p
           style={{
-            color: '#64748B',
-            fontSize: '0.92rem',
+            color: 'var(--color-text-2)',
+            fontSize: 'var(--text-base)',
             marginTop: '6px',
             marginBottom: 0,
-            fontWeight: 500,
+            fontWeight: 'var(--weight-normal)',
           }}
         >
           {subtitle}
@@ -127,20 +126,19 @@ export default function PageHeader({
         {showDateBesideActions && (
           <div
             style={{
-              background: '#FFFFFF',
-              border: '1px solid #E2E8F0',
+              background: 'var(--color-surface)',
+              border: '1px solid var(--color-trait)',
               borderRadius: '9999px',
               padding: '8px 14px',
-              fontSize: '0.82rem',
-              color: '#334155',
-              fontWeight: 700,
+              fontSize: 'var(--text-sm)',
+              color: 'var(--color-encre)',
+              fontWeight: 'var(--weight-semibold)',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
             }}
           >
-            <CalendarIcon size={14} color="#64748B" />
+            <CalendarIcon size={14} color="var(--color-text-2)" />
             <span>{displayDate}</span>
           </div>
         )}
@@ -153,23 +151,22 @@ export default function PageHeader({
             aria-label="Actualiser les données"
             title="Actualiser les données"
             style={{
-              background: '#FFFFFF',
-              border: '1px solid #E2E8F0',
+              background: 'var(--color-surface)',
+              border: '1px solid var(--color-trait)',
               borderRadius: '9999px',
               padding: '8px 14px',
-              fontSize: '0.82rem',
-              color: '#334155',
-              fontWeight: 700,
+              fontSize: 'var(--text-sm)',
+              color: 'var(--color-encre)',
+              fontWeight: 'var(--weight-semibold)',
               fontFamily: 'inherit',
               display: 'flex',
               alignItems: 'center',
               gap: '7px',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
               cursor: 'pointer',
               transition: 'background 0.15s ease, border-color 0.15s ease',
             }}
           >
-            <RefreshIcon size={15} color="#3C7730" />
+            <RefreshIcon size={15} color="var(--color-bon-texte)" />
             <span>Actualiser</span>
           </button>
         )}
@@ -179,25 +176,24 @@ export default function PageHeader({
           <button
             onClick={onExport}
             style={{
-              background: '#FFFFFF',
-              border: '1px solid #E2E8F0',
+              background: 'var(--color-surface)',
+              border: '1px solid var(--color-trait)',
               borderRadius: '12px',
               padding: '9px 16px',
-              fontSize: '0.84rem',
-              color: '#1E293B',
-              fontWeight: 700,
+              fontSize: 'var(--text-sm)',
+              color: 'var(--color-encre)',
+              fontWeight: 'var(--weight-semibold)',
               fontFamily: 'inherit',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
               transition: 'background 0.15s ease',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = '#F8FAFB')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = '#FFFFFF')}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-bg)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--color-surface)')}
           >
-            <DownloadIcon size={15} color="#1E293B" />
+            <DownloadIcon size={15} color="var(--color-encre)" />
             Exporter
           </button>
         )}
@@ -207,31 +203,28 @@ export default function PageHeader({
           <button
             onClick={primaryAction.onClick}
             style={{
-              background: '#3C7730',
-              color: '#FFFFFF',
+              background: 'var(--color-accent)',
+              color: 'var(--color-text-inverse)',
               border: 'none',
               borderRadius: '12px',
               padding: '10px 18px',
-              fontSize: '0.86rem',
-              fontWeight: 700,
+              fontSize: 'var(--text-sm)',
+              fontWeight: 'var(--weight-semibold)',
               fontFamily: 'inherit',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              boxShadow: '0 2px 8px rgba(60, 119, 48, 0.25)',
               transition: 'all 0.15s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#02302D';
-              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.background = 'var(--color-accent-hover)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#3C7730';
-              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.background = 'var(--color-accent)';
             }}
           >
-            {primaryAction.icon || <LightningIcon size={15} color="#FFFFFF" />}
+            {primaryAction.icon || <LightningIcon size={15} color="var(--color-text-inverse)" />}
             {primaryAction.label}
           </button>
         )}
@@ -256,16 +249,16 @@ export default function PageHeader({
             justify-content: center;
           }
           .page-refresh-button:focus-visible {
-            outline: 3px solid #75B72A;
+            outline: 2px solid var(--color-accent);
             outline-offset: 2px;
           }
         }
         .page-refresh-button:hover {
-          background: #F4FAF5 !important;
-          border-color: #B7D7B5 !important;
+          background: var(--color-bg) !important;
+          border-color: var(--color-border) !important;
         }
         .page-refresh-button:focus-visible {
-          outline: 3px solid #75B72A;
+          outline: 2px solid var(--color-accent);
           outline-offset: 2px;
         }
       `}</style>

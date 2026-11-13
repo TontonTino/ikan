@@ -57,7 +57,7 @@ export function PiedProbleme({ issue, role, onVerifier }: PiedProps) {
   if (peutVerifierResolution(role as never)) {
     return (
       <>
-        <span style={{ flex: 1, fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+        <span style={{ flex: 1, fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
           Confirmez uniquement après avoir constaté que le problème est réellement réglé.
         </span>
         <Button icon={<CheckCircleIcon size={16} />} onClick={() => onVerifier(issue.id)}>Confirmer la résolution</Button>
@@ -65,7 +65,7 @@ export function PiedProbleme({ issue, role, onVerifier }: PiedProps) {
     );
   }
   return (
-    <span style={{ flex: 1, fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+    <span style={{ flex: 1, fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
       Toutes les actions sont terminées. Le CX Manager confirmera que le problème est réellement réglé.
     </span>
   );
@@ -132,12 +132,12 @@ export default function IssueDetailContenu({ issue, loading, onNaviguer, onActio
   const avisVisibles = issue.feedbacks.slice(0, AVIS_VISIBLES);
   const avisReplies = issue.feedbacks.slice(AVIS_VISIBLES);
   const carteAvis = (fb: IssueDetail['feedbacks'][number]) => (
-    <li key={fb.id} style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '12px 14px' }}>
+    <li key={fb.id} style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-trait)', borderRadius: 'var(--radius-md)', padding: '12px 14px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '8px' }}>
-        <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--color-text-main)' }}>Note {fb.note}/5</span>
-        <time dateTime={fb.date_soumission} title={fullDate(fb.date_soumission)} style={{ fontSize: '0.74rem', color: 'var(--color-text-muted)' }}>{shortDate(fb.date_soumission)}</time>
+        <span className="t-xs t-semi t-encre">Note {fb.note}/5</span>
+        <time dateTime={fb.date_soumission} title={fullDate(fb.date_soumission)} className="t-xs t-2">{shortDate(fb.date_soumission)}</time>
       </div>
-      <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--color-text-body)', lineHeight: 1.5 }}>{fb.commentaire || 'Aucun commentaire.'}</p>
+      <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text-body)', lineHeight: 1.5 }}>{fb.commentaire || 'Aucun commentaire.'}</p>
     </li>
   );
 
@@ -150,12 +150,12 @@ export default function IssueDetailContenu({ issue, loading, onNaviguer, onActio
             <Badge label={GRAVITE_LABELS[issue.severite]} value={issue.severite} size="md" />
             <Badge label={PROBLEME_STATUT_LABELS[issue.statut]} variant={STATUT_BADGE_VARIANT[issue.statut]} size="md" />
           </div>
-          <strong style={{ fontSize: '0.84rem', color: 'var(--color-text-main)' }}>{prochainGeste(issue.statut)}</strong>
+          <strong className="t-sm t-encre">{prochainGeste(issue.statut)}</strong>
 
           {issue.description ? (
-            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-text-body)', lineHeight: 1.6 }}>{issue.description}</p>
+            <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text-body)', lineHeight: 1.6 }}>{issue.description}</p>
           ) : (
-            <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>Aucune description renseignée.</p>
+            <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>Aucune description renseignée.</p>
           )}
 
           <ol aria-label="Étapes du traitement" style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
@@ -169,11 +169,11 @@ export default function IssueDetailContenu({ issue, loading, onNaviguer, onActio
                   style={{
                     padding: '4px 12px',
                     borderRadius: 'var(--radius-pill)',
-                    fontSize: '0.76rem',
-                    fontWeight: actuelle ? 800 : 600,
-                    border: '1px solid var(--color-border)',
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: actuelle ? 'var(--weight-semibold)' : 'var(--weight-semibold)',
+                    border: '1px solid var(--color-trait)',
                     background: actuelle ? 'var(--color-primary)' : passee ? 'var(--color-bg-subtle)' : 'transparent',
-                    color: actuelle ? '#FFFFFF' : passee ? 'var(--color-text-main)' : 'var(--color-text-muted)',
+                    color: actuelle ? 'var(--color-text-inverse)' : passee ? 'var(--color-text-main)' : 'var(--color-text-muted)',
                   }}
                 >
                   {passee ? '✓ ' : ''}{etape}
@@ -182,35 +182,35 @@ export default function IssueDetailContenu({ issue, loading, onNaviguer, onActio
             })}
           </ol>
           {issue.statut === 'reouverte' && (
-            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+            <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
               Ce problème a été rouvert après une résolution : il repart du début du cycle.
             </p>
           )}
 
-          <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '10px 20px', fontSize: '0.8rem' }}>
+          <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '10px 20px', fontSize: 'var(--text-xs)' }}>
             <div>
-              <dt style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Enregistré le</dt>
-              <dd style={{ margin: 0, fontWeight: 700 }}>
+              <dt className="t-2 t-semi">Enregistré le</dt>
+              <dd style={{ margin: 0, fontWeight: 'var(--weight-semibold)' }}>
                 {fullDate(issue.premiere_detection)}
                 {estEnAttente(issue.statut) ? ` · ${ilYA(joursDepuis(issue.premiere_detection, maintenant))}` : ''}
               </dd>
             </div>
             {issue.derniere_detection && (
               <div>
-                <dt style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Dernier avis rattaché le</dt>
-                <dd style={{ margin: 0, fontWeight: 700 }}>{fullDate(issue.derniere_detection)}</dd>
+                <dt className="t-2 t-semi">Dernier avis rattaché le</dt>
+                <dd style={{ margin: 0, fontWeight: 'var(--weight-semibold)' }}>{fullDate(issue.derniere_detection)}</dd>
               </div>
             )}
             {issue.date_resolution && (
               <div>
-                <dt style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Résolu le</dt>
-                <dd style={{ margin: 0, fontWeight: 700 }}>{fullDate(issue.date_resolution)}</dd>
+                <dt className="t-2 t-semi">Résolu le</dt>
+                <dd style={{ margin: 0, fontWeight: 'var(--weight-semibold)' }}>{fullDate(issue.date_resolution)}</dd>
               </div>
             )}
             {issue.date_verification && (
               <div>
-                <dt style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Résolution vérifiée le</dt>
-                <dd style={{ margin: 0, fontWeight: 700 }}>{fullDate(issue.date_verification)}</dd>
+                <dt className="t-2 t-semi">Résolution vérifiée le</dt>
+                <dd style={{ margin: 0, fontWeight: 'var(--weight-semibold)' }}>{fullDate(issue.date_verification)}</dd>
               </div>
             )}
           </dl>
@@ -233,7 +233,7 @@ export default function IssueDetailContenu({ issue, loading, onNaviguer, onActio
         {/* 3. Avis liés (repliés au-delà de trois) */}
         <Section titre={`Avis clients liés (${issue.feedbacks.length})`}>
           {issue.feedbacks.length === 0 ? (
-            <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--color-text-muted)' }}>Aucun avis rattaché.</p>
+            <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>Aucun avis rattaché.</p>
           ) : (
             <>
               <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>{avisVisibles.map(carteAvis)}</ul>

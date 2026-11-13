@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Card from './Card';
 import Button from './Button';
 import EmptyState from './EmptyState';
+import GraphiqueVide, { type ElargirPeriode } from './GraphiqueVide';
 import Skeleton from './Skeleton';
 
 /**
@@ -23,7 +24,7 @@ export type DatavizColor = keyof typeof DATAVIZ;
 /** Props communes des axes Recharts : grille et axes discrets, texte lisible. */
 export const chartAxisProps = {
   stroke: 'var(--dataviz-grid)',
-  tick: { fill: 'var(--dataviz-axis)', fontSize: 12, fontWeight: 600 },
+  tick: { fill: 'var(--dataviz-axis)', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)' },
   tickLine: false,
   axisLine: false,
 } as const;
@@ -53,6 +54,8 @@ export interface ChartProps {
   isEmpty?: boolean;
   emptyTitle?: string;
   emptyMessage?: string;
+  /** Graphique vide : lien vers une période plus large, quand la page en propose une. */
+  emptyAction?: ElargirPeriode;
   granularity?: {
     value: Granularity;
     options?: Granularity[];
@@ -82,6 +85,7 @@ export default function Chart({
   isEmpty = false,
   emptyTitle = 'Aucune donnée sur cette période.',
   emptyMessage,
+  emptyAction,
   granularity,
   table,
   actions,
@@ -136,11 +140,8 @@ export default function Chart({
       </div>
     );
   } else if (isEmpty) {
-    body = (
-      <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <EmptyState compact title={emptyTitle} message={emptyMessage} />
-      </div>
-    );
+    // Une phrase et, si possible, un lien vers une période plus large : pas de cadre vide de pleine hauteur.
+    body = <GraphiqueVide message={emptyMessage ? `${emptyTitle} ${emptyMessage}` : emptyTitle} elargir={emptyAction} />;
   } else if (showTable && table) {
     body = table;
   } else {

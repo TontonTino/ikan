@@ -5,8 +5,8 @@
   gap: var(--space-4);
   padding: var(--space-3) var(--space-4);
   margin-bottom: var(--space-4);
-  background: var(--color-surface, #fff);
-  border: 1px solid var(--color-border, #e8ece6);
+  background: var(--color-surface, var(--color-surface));
+  border: 1px solid var(--color-border, var(--color-trait));
   border-radius: var(--radius-lg, 16px);
 }
 .yam-synthese svg { flex: 0 0 auto; }
@@ -27,7 +27,7 @@
   gap: var(--space-3);
   margin-top: var(--space-3);
   padding: var(--space-3);
-  background: var(--color-bg-subtle, #f5f8f2);
+  background: var(--color-bg-subtle);
   border-radius: var(--radius-md, 12px);
   color: var(--color-text-body, var(--color-text-main));
   font-size: var(--text-sm, 0.875rem);
@@ -47,6 +47,6 @@
 .yam-etat-vide__texte { margin: 0; max-width: 46ch; color: var(--color-text-muted); }
 
 .yam-hero { display: flex; justify-content: center; padding: var(--space-2) 0 var(--space-3); }
-.yam-attente { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 0.85rem; }
+.yam-attente { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; font-size: var(--text-sm); }
 .yam-attente svg, .yam-erreur-mascotte svg { flex: 0 0 auto; }
 .yam-erreur-mascotte { display: inline-flex; vertical-align: middle; margin-right: 8px; }

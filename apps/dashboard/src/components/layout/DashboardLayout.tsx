@@ -247,7 +247,6 @@ export default function DashboardLayout() {
     if (location.pathname.includes('/alertes')) return 'Alertes';
     if (location.pathname.includes('/actions')) return 'Actions à mener';
     if (location.pathname.includes('/issues')) return 'Problèmes à traiter';
-    if (location.pathname.includes('/veille')) return 'Veille réseaux sociaux';
     if (location.pathname.includes('/suggestions')) return 'Suggestions';
     if (location.pathname.includes('/demandes-rappel')) return 'Demandes de rappel';
     return 'Tableau de bord';
@@ -316,8 +315,8 @@ export default function DashboardLayout() {
                 width: '44px',
                 height: '44px',
                 borderRadius: '10px',
-                background: '#FFFFFF',
-                border: '1px solid #E2E8F0',
+                background: 'var(--color-surface)',
+                border: '1px solid var(--color-trait)',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
@@ -326,12 +325,12 @@ export default function DashboardLayout() {
               }}
             >
               {mobileMenuOpen ? (
-                <XCloseIcon size={18} color="#02302D" />
+                <XCloseIcon size={18} color="var(--color-encre)" />
               ) : (
                 <span style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '16px' }}>
-                  <span style={{ height: '2px', borderRadius: '1px', background: '#02302D' }} />
-                  <span style={{ height: '2px', borderRadius: '1px', background: '#02302D' }} />
-                  <span style={{ height: '2px', borderRadius: '1px', background: '#02302D' }} />
+                  <span style={{ height: '2px', borderRadius: '1px', background: 'var(--color-encre)' }} />
+                  <span style={{ height: '2px', borderRadius: '1px', background: 'var(--color-encre)' }} />
+                  <span style={{ height: '2px', borderRadius: '1px', background: 'var(--color-encre)' }} />
                 </span>
               )}
             </button>
@@ -340,10 +339,10 @@ export default function DashboardLayout() {
             {hideBreadcrumb ? (
               <div />
             ) : (
-              <div className="dashboard-fil" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', minWidth: 0, overflow: 'hidden' }}>
-                <span className="dashboard-fil__racine" style={{ color: 'var(--color-text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>IKAN AI</span>
-                <span className="dashboard-fil__sep" style={{ color: '#CBD5E1' }}>/</span>
-                <span className="dashboard-fil__page" title={getBreadcrumb()} style={{ color: '#02302D', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getBreadcrumb()}</span>
+              <div className="dashboard-fil" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: 'var(--text-sm)', minWidth: 0, overflow: 'hidden' }}>
+                <span className="dashboard-fil__racine" style={{ color: 'var(--color-text-muted)', fontWeight: 'var(--weight-semibold)', whiteSpace: 'nowrap' }}>IKAN AI</span>
+                <span className="dashboard-fil__sep" style={{ color: 'var(--color-border)' }}>/</span>
+                <span className="dashboard-fil__page" title={getBreadcrumb()} style={{ color: 'var(--color-encre)', fontWeight: 'var(--weight-semibold)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getBreadcrumb()}</span>
               </div>
             )}
           </div>

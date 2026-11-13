@@ -72,7 +72,7 @@ export default function Sidebar({ user, sections, collapsed, mobileOpen, onClose
             className="dashboard-mobile-close yam-icon-btn"
             onClick={onCloseMobile}
             aria-label="Fermer le menu"
-            style={{ background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.18)', color: 'var(--sidebar-text-strong)' }}
+            style={{ background: 'var(--sidebar-hover-bg)', borderColor: 'var(--sidebar-active-border)', color: 'var(--sidebar-text-strong)' }}
           >
             <XCloseIcon size={18} />
           </button>
@@ -131,10 +131,10 @@ export default function Sidebar({ user, sections, collapsed, mobileOpen, onClose
           >
             <YamAvatar size={34} />
             <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25, minWidth: 0 }}>
-              <span className="ikan-yam-button-label" style={{ fontWeight: 800, fontSize: 'var(--text-md)', color: 'var(--sidebar-text-strong)' }}>
+              <span className="ikan-yam-button-label" style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-md)', color: 'var(--sidebar-text-strong)' }}>
                 Demander à YAM
               </span>
-              <span className="ikan-yam-subtitle" style={{ fontWeight: 600, fontSize: 'var(--text-xs)' }}>Assistant IA</span>
+              <span className="ikan-yam-subtitle" style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-xs)' }}>Assistant IA</span>
             </span>
             <span className="ikan-yam-chevron" aria-hidden="true">
               <ChevronRightIcon size={14} />

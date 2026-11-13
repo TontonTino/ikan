@@ -9,7 +9,7 @@ export default function AlerteRow({ alerte }: { alerte: Alerte }) {
     <div
       style={{
         background: 'var(--color-surface)',
-        border: '1px solid #FECACA',
+        border: '1px solid var(--color-critique-fond)',
         borderLeft: '6px solid var(--color-error)',
         borderRadius: '16px',
         padding: '16px 20px',
@@ -37,16 +37,16 @@ export default function AlerteRow({ alerte }: { alerte: Alerte }) {
           <AlertTriangleIcon size={18} />
         </div>
         <div>
-          <h3 style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: 'var(--color-text-body)' }}>
+          <h3 style={{ margin: 0, fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)', color: 'var(--color-text-body)' }}>
             {alerte.agence_nom}
           </h3>
-          <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', marginTop: '2px' }}>{alerte.message}</div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginTop: '2px' }}>{alerte.message}</div>
         </div>
       </div>
       <span
         style={{
-          fontSize: '0.76rem',
-          fontWeight: 800,
+          fontSize: 'var(--text-xs)',
+          fontWeight: 'var(--weight-semibold)',
           padding: '4px 12px',
           borderRadius: 'var(--radius-pill)',
           background: 'var(--color-error-bg)',

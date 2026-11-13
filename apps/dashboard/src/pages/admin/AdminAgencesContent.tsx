@@ -276,7 +276,7 @@ export default function AdminAgencesContent() {
     });
   }, [agences, managersParAgence, search, filtreSansManager]);
 
-  if (loading) return <div style={{ padding: '32px', color: '#64748B', fontWeight: 600 }}>Chargement des agences…</div>;
+  if (loading) return <div style={{ padding: '32px', color: 'var(--color-text-2)', fontWeight: 'var(--weight-semibold)' }}>Chargement des agences…</div>;
 
   if (erreurChargement) {
     return (
@@ -293,7 +293,7 @@ export default function AdminAgencesContent() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
       {toast && (
-        <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 1300, background: '#02302D', color: 'white', padding: '12px 20px', borderRadius: '12px', fontWeight: 700 }}>
+        <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 1300, background: 'var(--color-encre)', color: 'white', padding: '12px 20px', borderRadius: '12px', fontWeight: 'var(--weight-semibold)' }}>
           {toast}
         </div>
       )}
@@ -301,10 +301,10 @@ export default function AdminAgencesContent() {
       {/* Barre d'outils de l'onglet (titre + action, sans dupliquer le grand PageHeader de la page parente) */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#02302D' }}>
+          <h2 style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>
             Répertoire des agences ({agences.length})
           </h2>
-          <p style={{ margin: '4px 0 0', fontSize: '0.84rem', color: '#64748B' }}>
+          <p style={{ margin: '4px 0 0', fontSize: 'var(--text-sm)', color: 'var(--color-text-2)' }}>
             Agences, QR codes et responsables d’agence du réseau
           </p>
         </div>
@@ -315,15 +315,15 @@ export default function AdminAgencesContent() {
             className="btn-secondary"
             style={{
               padding: '10px 18px',
-              fontSize: '0.86rem',
-              fontWeight: 700,
+              fontSize: 'var(--text-sm)',
+              fontWeight: 'var(--weight-semibold)',
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
             }}
           >
-            <UsersIcon size={16} color="#02302D" />
+            <UsersIcon size={16} color="var(--color-encre)" />
             Ajouter un responsable d’agence
           </button>
           <button
@@ -332,13 +332,12 @@ export default function AdminAgencesContent() {
             className="btn-primary"
             style={{
               padding: '10px 18px',
-              fontSize: '0.86rem',
-              fontWeight: 700,
+              fontSize: 'var(--text-sm)',
+              fontWeight: 'var(--weight-semibold)',
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              boxShadow: '0 2px 8px rgba(60, 119, 48, 0.25)',
             }}
           >
             <PlusIcon size={16} />
@@ -365,26 +364,26 @@ export default function AdminAgencesContent() {
           <div id="repertoire-agences"><SectionHeading>Agences et responsables d’agence</SectionHeading></div>
 
           {managersIndisponibles && (
-            <div role="alert" style={{ background: '#FEF3C7', border: '1px solid #FDE68A', color: '#92400E', borderRadius: '12px', padding: '10px 14px', fontSize: '0.82rem', fontWeight: 600 }}>
+            <div role="alert" style={{ background: 'var(--color-surveiller-fond)', border: '1px solid var(--color-surveiller-fond)', color: 'var(--color-surveiller-texte)', borderRadius: '12px', padding: '10px 14px', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}>
               Les responsables d’agence n’ont pas pu être chargés : leur section peut être incomplète.
             </div>
           )}
 
           {/* Chefs d'agence sans agence : sinon invisibles (aucune carte pour les porter) */}
           {managersSansAgence.length > 0 && (
-            <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '16px', padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <strong style={{ fontSize: '0.86rem', color: '#92400E' }}>Responsables d’agence sans agence ({managersSansAgence.length})</strong>
+            <div style={{ background: 'var(--color-surveiller-fond)', border: '1px solid var(--color-surveiller-fond)', borderRadius: '16px', padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <strong className="t-sm t-surveiller">Responsables d’agence sans agence ({managersSansAgence.length})</strong>
               {managersSansAgence.map((m) => (
                 <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.84rem', color: '#0F172A', fontWeight: 600 }}>
-                    {m.prenom} {m.nom} <span style={{ color: '#64748B', fontWeight: 500 }}>— {m.email}</span>
-                    {!m.active && <span style={{ marginLeft: '8px', fontSize: '0.7rem', fontWeight: 800, color: '#64748B' }}>(suspendu)</span>}
+                  <span className="t-sm t-encre t-semi">
+                    {m.prenom} {m.nom} <span className="t-2 t-normal">— {m.email}</span>
+                    {!m.active && <span style={{ marginLeft: '8px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text-2)' }}>(suspendu)</span>}
                   </span>
                   <button
                     type="button"
                     onClick={() => setManagerModal({ manager: m })}
-                    className="btn-primary"
-                    style={{ padding: '6px 12px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 700 }}
+                    className="btn-secondary"
+                    style={{ padding: '6px 12px', cursor: 'pointer' }}
                   >
                     Assigner
                   </button>
@@ -394,15 +393,15 @@ export default function AdminAgencesContent() {
           )}
 
           {/* Recherche + filtre */}
-          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', rowGap: '8px', background: '#FFFFFF', borderRadius: '16px', padding: '12px 18px', border: '1px solid #E2E8F0' }}>
-            <SearchIcon size={16} color="#94A3B8" />
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', rowGap: '8px', background: 'var(--color-surface)', borderRadius: '16px', padding: '12px 18px', border: '1px solid var(--color-trait)' }}>
+            <SearchIcon size={16} color="var(--color-text-2)" />
             <input
               type="text"
               placeholder="Rechercher par agence, ville, adresse ou responsable d’agence (nom, e-mail)…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               aria-label="Rechercher dans le répertoire"
-              style={{ border: 'none', marginLeft: '10px', flex: '1 1 200px', minWidth: 0, fontSize: '0.86rem' }}
+              style={{ border: 'none', marginLeft: '10px', flex: '1 1 200px', minWidth: 0, fontSize: 'var(--text-sm)' }}
             />
             <button
               type="button"
@@ -411,13 +410,13 @@ export default function AdminAgencesContent() {
               style={{
                 flexShrink: 0,
                 marginLeft: '10px',
-                background: filtreSansManager ? '#02302D' : '#F1F5F9',
-                color: filtreSansManager ? '#FFFFFF' : '#334155',
+                background: filtreSansManager ? 'var(--color-encre)' : 'var(--color-neutre-fond)',
+                color: filtreSansManager ? 'var(--color-text-inverse)' : 'var(--color-encre)',
                 border: 'none',
                 borderRadius: '9999px',
                 padding: '6px 14px',
-                fontSize: '0.76rem',
-                fontWeight: 700,
+                fontSize: 'var(--text-xs)',
+                fontWeight: 'var(--weight-semibold)',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
               }}
@@ -440,11 +439,10 @@ export default function AdminAgencesContent() {
               <div
                 key={a.id}
                 style={{
-                  background: '#FFFFFF',
+                  background: 'var(--color-surface)',
                   borderRadius: '20px',
                   padding: '20px 22px',
-                  border: '1px solid #E8ECE6',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                  border: '1px solid var(--color-trait)',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
@@ -454,43 +452,43 @@ export default function AdminAgencesContent() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <h4 style={{ margin: 0, fontSize: '0.96rem', fontWeight: 800, color: '#02302D' }}>{a.nom}</h4>
-                      <div style={{ fontSize: '0.78rem', color: '#64748B', marginTop: '2px' }}>
+                      <h4 style={{ margin: 0, fontSize: 'var(--text-base)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>{a.nom}</h4>
+                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', marginTop: '2px' }}>
                         📍 {a.ville || 'Ville non renseignée'}
                       </div>
                     </div>
                     <span
                       style={{
-                        fontSize: '0.70rem',
-                        fontWeight: 800,
+                        fontSize: 'var(--text-xs)',
+                        fontWeight: 'var(--weight-semibold)',
                         padding: '3px 8px',
                         borderRadius: '9999px',
-                        background: a.active !== false ? '#EBF6ED' : '#F1F5F9',
-                        color: a.active !== false ? '#3C7730' : '#64748B',
+                        background: a.active !== false ? 'var(--color-bon-fond)' : 'var(--color-neutre-fond)',
+                        color: a.active !== false ? 'var(--color-bon-texte)' : 'var(--color-text-2)',
                       }}
                     >
                       {a.active !== false ? 'Active' : 'Inactive'}
                     </span>
                   </div>
 
-                  <p style={{ fontSize: '0.80rem', color: '#475569', margin: '10px 0 0' }}>
+                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', margin: '10px 0 0' }}>
                     {a.adresse || 'Aucune adresse spécifiée'}
                   </p>
                 </div>
 
                 {/* Chef d'agence */}
-                <div style={{ paddingTop: '12px', borderTop: '1px solid #F1F5F9' }}>
-                  <div style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: '8px' }}>
+                <div style={{ paddingTop: '12px', borderTop: '1px solid var(--color-trait)' }}>
+                  <div style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: '8px' }}>
                     Responsable d’agence
                   </div>
                   {(managersParAgence.get(a.id) || []).length === 0 ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-                      <span style={{ fontSize: '0.82rem', color: '#64748B', fontWeight: 600 }}>Aucun responsable d’agence</span>
+                      <span className="t-sm t-2 t-semi">Aucun responsable d’agence</span>
                       <button
                         type="button"
                         onClick={() => setManagerModal({ defaultAgenceId: a.id })}
-                        className="btn-primary"
-                        style={{ padding: '6px 12px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 700 }}
+                        className="btn-secondary"
+                        style={{ padding: '6px 12px', cursor: 'pointer' }}
                       >
                         Assigner
                       </button>
@@ -500,28 +498,28 @@ export default function AdminAgencesContent() {
                       <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' }}>
                         <div style={{ minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0F172A' }}>{m.prenom} {m.nom}</span>
+                            <span className="t-sm t-semi t-encre">{m.prenom} {m.nom}</span>
                             <span
                               style={{
-                                fontSize: '0.68rem',
-                                fontWeight: 800,
+                                fontSize: 'var(--text-xs)',
+                                fontWeight: 'var(--weight-semibold)',
                                 padding: '2px 8px',
                                 borderRadius: '9999px',
-                                background: m.active ? '#EBF6ED' : '#FEE2E2',
-                                color: m.active ? '#3C7730' : '#DC2626',
+                                background: m.active ? 'var(--color-bon-fond)' : 'var(--color-critique-fond)',
+                                color: m.active ? 'var(--color-bon-texte)' : 'var(--color-critique-texte)',
                               }}
                             >
                               {m.active ? 'Actif' : 'Suspendu'}
                             </span>
                           </div>
-                          <div style={{ fontSize: '0.76rem', color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.email}</div>
+                          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.email}</div>
                         </div>
                         <div style={{ display: 'flex', gap: '6px' }}>
                           <button
                             type="button"
                             onClick={() => setManagerModal({ manager: m })}
                             className="btn-secondary"
-                            style={{ padding: '5px 10px', cursor: 'pointer', fontSize: '0.74rem', fontWeight: 700 }}
+                            style={{ padding: '5px 10px', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)' }}
                           >
                             Modifier
                           </button>
@@ -529,7 +527,7 @@ export default function AdminAgencesContent() {
                             type="button"
                             onClick={() => toggleManagerActive(m)}
                             className="btn-secondary"
-                            style={{ padding: '5px 10px', cursor: 'pointer', fontSize: '0.74rem', fontWeight: 600 }}
+                            style={{ padding: '5px 10px', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)' }}
                           >
                             {m.active ? 'Suspendre' : 'Réactiver'}
                           </button>
@@ -539,13 +537,13 @@ export default function AdminAgencesContent() {
                   )}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', paddingTop: '12px', borderTop: '1px solid #F1F5F9' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', paddingTop: '12px', borderTop: '1px solid var(--color-trait)' }}>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
                       type="button"
                       onClick={() => openEdit(a)}
                       className="btn-secondary"
-                      style={{ padding: '6px 10px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 700 }}
+                      style={{ padding: '6px 10px', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)' }}
                     >
                       Modifier
                     </button>
@@ -553,7 +551,7 @@ export default function AdminAgencesContent() {
                       type="button"
                       onClick={() => handleToggleActive(a)}
                       className="btn-secondary"
-                      style={{ padding: '6px 10px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 600 }}
+                      style={{ padding: '6px 10px', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)' }}
                     >
                       {a.active !== false ? 'Désactiver' : 'Activer'}
                     </button>
@@ -563,7 +561,7 @@ export default function AdminAgencesContent() {
                     <Link
                       to={`/agences/${a.id}/apercu?tab=categories`}
                       state={{ retour: 'Répertoire' }}
-                      style={{ background: '#FEF3E2', color: '#B45309', textDecoration: 'none', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      style={{ background: 'var(--color-surface)', color: 'var(--color-encre)', border: '1px solid var(--color-border)', textDecoration: 'none', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                     >
                       <TagIcon size={14} />
                       Catégories
@@ -571,7 +569,7 @@ export default function AdminAgencesContent() {
                     <button
                       type="button"
                       onClick={() => setQrModalTarget(a)}
-                      style={{ background: '#EBF6ED', color: '#3C7730', border: 'none', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      style={{ background: 'var(--color-bon-fond)', color: 'var(--color-bon-texte)', border: 'none', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                     >
                       <QrCodeIcon size={14} />
                       QR Code
@@ -586,15 +584,15 @@ export default function AdminAgencesContent() {
       {/* Modal Création / Édition avec Geolocation Leaflet */}
       {showModal && (
         <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}
+          style={{ position: 'fixed', inset: 0, background: 'var(--overlay-scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}
           onClick={() => setShowModal(false)}
         >
           <div
-            style={{ background: '#FFFFFF', borderRadius: '24px', padding: '28px', maxWidth: '520px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}
+            style={{ background: 'var(--color-surface)', borderRadius: '24px', padding: '28px', maxWidth: '520px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#02302D' }}>
+              <h3 style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>
                 {editTarget ? "Modifier l'agence" : 'Créer une nouvelle agence'}
               </h3>
               <button
@@ -603,81 +601,81 @@ export default function AdminAgencesContent() {
                 aria-label="Fermer"
                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', flexShrink: 0 }}
               >
-                <XCloseIcon size={18} color="#94A3B8" />
+                <XCloseIcon size={18} color="var(--color-text-2)" />
               </button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Nom de l'agence *</label>
+                <label style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text-2)', display: 'block', marginBottom: '4px' }}>Nom de l'agence *</label>
                 <input
                   type="text"
                   value={form.nom}
                   onChange={(e) => setForm({ ...form, nom: e.target.value })}
                   placeholder="Ex: Agence Tunis Bourguiba"
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1px solid var(--color-trait)', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Ville</label>
+                <label style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text-2)', display: 'block', marginBottom: '4px' }}>Ville</label>
                 <input
                   type="text"
                   value={form.ville}
                   onChange={(e) => setForm({ ...form, ville: e.target.value })}
                   placeholder="Ex: Tunis"
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1px solid var(--color-trait)', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Adresse complète</label>
+                <label style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text-2)', display: 'block', marginBottom: '4px' }}>Adresse complète</label>
                 <input
                   type="text"
                   value={form.adresse}
                   onChange={(e) => setForm({ ...form, adresse: e.target.value })}
                   placeholder="Ex: Avenue Habib Bourguiba"
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1px solid var(--color-trait)', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Téléphone</label>
+                  <label style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text-2)', display: 'block', marginBottom: '4px' }}>Téléphone</label>
                   <input
                     type="tel"
                     value={form.telephone}
                     onChange={(e) => setForm({ ...form, telephone: e.target.value })}
                     placeholder="Ex: +226 70 00 00 00"
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1px solid var(--color-trait)', boxSizing: 'border-box' }}
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>E-mail</label>
+                  <label style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text-2)', display: 'block', marginBottom: '4px' }}>E-mail</label>
                   <input
                     type="email"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
                     placeholder="Ex: agence@orange.bf"
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1px solid var(--color-trait)', boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
 
               <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '4px' }}>Seuil d’alerte de satisfaction (%)</label>
+                <label style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text-2)', display: 'block', marginBottom: '4px' }}>Seuil d’alerte de satisfaction (%)</label>
                 <input
                   type="number"
                   value={Number.isFinite(form.seuil_alerte) ? form.seuil_alerte : ''}
                   onChange={(e) => setForm({ ...form, seuil_alerte: e.target.value === '' ? NaN : Number(e.target.value) })}
                   min={0}
                   max={100}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1px solid var(--color-trait)', boxSizing: 'border-box' }}
                 />
               </div>
 
               <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>Géolocalisation</label>
+                <label style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text-2)', display: 'block', marginBottom: '6px' }}>Géolocalisation</label>
                 <AgencyLocationPicker
                   agencyName={form.nom}
                   value={{
@@ -696,7 +694,7 @@ export default function AdminAgencesContent() {
                 type="button"
                 onClick={() => setShowModal(false)}
                 className="btn-secondary"
-                style={{ padding: '10px 18px', fontWeight: 700, cursor: 'pointer' }}
+                style={{ padding: '10px 18px', fontWeight: 'var(--weight-semibold)', cursor: 'pointer' }}
               >
                 Annuler
               </button>
@@ -705,7 +703,7 @@ export default function AdminAgencesContent() {
                 onClick={handleSave}
                 disabled={saving}
                 className="btn-primary"
-                style={{ padding: '10px 20px', fontWeight: 700, cursor: 'pointer' }}
+                style={{ padding: '10px 20px', fontWeight: 'var(--weight-semibold)', cursor: 'pointer' }}
               >
                 {saving ? 'Enregistrement...' : 'Enregistrer'}
               </button>
@@ -722,10 +720,10 @@ export default function AdminAgencesContent() {
           : `http://${effectiveHost}:4321/feedback/${qrModalTarget.qr_code_token || qrModalTarget.id}`;
 
         return (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-            <div style={{ background: '#FFFFFF', borderRadius: '24px', padding: '28px', maxWidth: '360px', width: '100%', textAlign: 'center' }}>
-              <h3 style={{ margin: '0 0 4px', fontSize: '1.1rem', fontWeight: 800, color: '#02302D' }}>{qrModalTarget.nom}</h3>
-              <p style={{ margin: '0 0 16px', fontSize: '0.78rem', color: '#64748B' }}>QR code de collecte des avis</p>
+          <div style={{ position: 'fixed', inset: 0, background: 'var(--overlay-scrim)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+            <div style={{ background: 'var(--color-surface)', borderRadius: '24px', padding: '28px', maxWidth: '360px', width: '100%', textAlign: 'center' }}>
+              <h3 style={{ margin: '0 0 4px', fontSize: 'var(--text-lg)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>{qrModalTarget.nom}</h3>
+              <p style={{ margin: '0 0 16px', fontSize: 'var(--text-xs)', color: 'var(--color-text-2)' }}>QR code de collecte des avis</p>
 
               <QrCodeSvg url={modalQrUrl} taille={180} titre={`QR code de ${qrModalTarget.nom}`} style={{ display: 'block', margin: '0 auto 16px' }} />
               <FicheQrImpression nom={qrModalTarget.nom} url={modalQrUrl} />
@@ -735,7 +733,7 @@ export default function AdminAgencesContent() {
                   type="button"
                   onClick={() => copyQrUrl(modalQrUrl)}
                   className="btn-primary"
-                  style={{ padding: '10px', fontWeight: 700, cursor: 'pointer' }}
+                  style={{ padding: '10px', fontWeight: 'var(--weight-semibold)', cursor: 'pointer' }}
                 >
                   Copier le lien
                 </button>
@@ -743,7 +741,7 @@ export default function AdminAgencesContent() {
                   type="button"
                   onClick={imprimerFicheQr}
                   className="btn-secondary"
-                  style={{ padding: '10px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                  style={{ padding: '10px', fontWeight: 'var(--weight-semibold)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                 >
                   <PrinterIcon size={16} /> Imprimer
                 </button>
@@ -751,7 +749,7 @@ export default function AdminAgencesContent() {
                   type="button"
                   onClick={() => setQrModalTarget(null)}
                   className="btn-secondary"
-                  style={{ padding: '10px', fontWeight: 700, cursor: 'pointer' }}
+                  style={{ padding: '10px', fontWeight: 'var(--weight-semibold)', cursor: 'pointer' }}
                 >
                   Fermer
                 </button>

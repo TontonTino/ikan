@@ -7,8 +7,8 @@ export default function SectionHeading({ children, id }: { children: React.React
       id={id}
       style={{
         margin: 0,
-        fontSize: '0.78rem',
-        fontWeight: 800,
+        fontSize: 'var(--text-xs)',
+        fontWeight: 'var(--weight-semibold)',
         letterSpacing: '0.06em',
         textTransform: 'uppercase',
         color: 'var(--color-text-muted)',

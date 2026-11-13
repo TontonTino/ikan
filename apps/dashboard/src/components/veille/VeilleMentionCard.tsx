@@ -39,7 +39,7 @@ export default function VeilleMentionCard({ mention }: { mention: VeilleMention 
           {themeLabel(mention.theme_principal)}
         </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.76rem', color: 'var(--color-text-muted)', fontWeight: 600, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', fontWeight: 'var(--weight-semibold)', flexWrap: 'wrap' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
             <ClockIcon size={12} /> {formatDate(mention.date_publication)}
           </span>
@@ -55,7 +55,7 @@ export default function VeilleMentionCard({ mention }: { mention: VeilleMention 
       <p
         style={{
           margin: 0,
-          fontSize: '0.88rem',
+          fontSize: 'var(--text-sm)',
           color: 'var(--color-text-body)',
           lineHeight: 1.5,
           ...(expanded
@@ -73,7 +73,7 @@ export default function VeilleMentionCard({ mention }: { mention: VeilleMention 
               type="button"
               onClick={() => setExpanded((e) => !e)}
               className="btn-secondary"
-              style={{ padding: '4px 12px', fontSize: '0.76rem' }}
+              style={{ padding: '4px 12px', fontSize: 'var(--text-xs)' }}
             >
               {expanded ? 'Voir moins' : 'Voir plus'}
             </button>
@@ -85,7 +85,7 @@ export default function VeilleMentionCard({ mention }: { mention: VeilleMention 
               href={mention.url_source}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-primary)', textDecoration: 'none' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-primary)', textDecoration: 'none' }}
             >
               Voir la source <ExternalLinkIcon size={12} />
             </a>

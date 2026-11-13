@@ -21,10 +21,10 @@ export const STATUS_LABELS: Record<IdeaStatus, string> = {
 };
 
 export const STATUS_STYLE: Record<IdeaStatus, { bg: string; text: string; border: string }> = {
-  nouveau: { bg: '#E0F2FE', text: '#0369A1', border: '#BAE6FD' },
-  en_cours: { bg: '#FEF3C7', text: '#B45309', border: '#FDE68A' },
-  traite: { bg: '#EBF5E9', text: '#3C7730', border: '#D5E8D3' },
-  rejete: { bg: '#FEE2E2', text: '#B91C1C', border: '#FCA5A5' },
+  nouveau: { bg: 'var(--color-neutre-fond)', text: 'var(--color-neutre-texte)', border: 'var(--color-neutre-fond)' },
+  en_cours: { bg: 'var(--color-surveiller-fond)', text: 'var(--color-surveiller-texte)', border: 'var(--color-surveiller-fond)' },
+  traite: { bg: 'var(--color-bon-fond)', text: 'var(--color-bon-texte)', border: 'var(--color-bon-fond)' },
+  rejete: { bg: 'var(--color-critique-fond)', text: 'var(--color-critique-texte)', border: 'var(--color-critique-fond)' },
 };
 
 export const NEXT_STATUS: Record<IdeaStatus, IdeaStatus | null> = {
