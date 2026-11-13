@@ -8,6 +8,12 @@ import YamNote from '../agent/YamNote';
 import type { ElargirPeriode } from '../ui/GraphiqueVide';
 import { formaterDateAxe, formaterPourcentage } from '../../utils/formatNombre';
 
+/**
+ * Date d'un relevé en toutes lettres. L'API écrit un jour « AAAA-MM-JJ », ou pour une semaine la date de son lundi déjà en clair
+ * (« 4 août ») : celle-ci se lit « Semaine du 4 août », pour ne pas la confondre avec un jour.
+ */
+export const dateReleve = (date: string): string => (/^\d{4}-\d{2}-\d{2}/.test(date) ? formaterDateAxe(date, true) : `Semaine du ${date}`);
+
 /** Point plein si le volume est suffisant, creux sinon : l'information ne repose pas sur la couleur seule. */
 function Point(props: { cx?: number; cy?: number; payload?: TendanceSatisfaction }) {
   const { cx, cy, payload } = props;
@@ -31,7 +37,7 @@ export function TableauEvolution({ points }: { points: TendanceSatisfaction[] })
         <tbody>
           {points.map((p) => (
             <tr key={p.date} style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
-              <th scope="row" style={{ textAlign: 'left', padding: 'var(--space-2)', fontWeight: 'var(--weight-semibold)' }}>{p.date}</th>
+              <th scope="row" style={{ textAlign: 'left', padding: 'var(--space-2)', fontWeight: 'var(--weight-semibold)' }}>{dateReleve(p.date)}</th>
               <td style={{ textAlign: 'right', padding: 'var(--space-2)' }}>{formaterPourcentage(p.taux)}</td>
               <td style={{ textAlign: 'right', padding: 'var(--space-2)' }}>
                 {p.nombre_feedbacks}
@@ -77,7 +83,7 @@ export default function AgencyEvolution({ points, periode, elargir }: { points: 
               <Tooltip
                 content={
                   <ChartTooltip
-                    labelFormatter={(l) => formaterDateAxe(l, true)}
+                    labelFormatter={(l) => dateReleve(String(l))}
                     formatter={(v) => formaterPourcentage(Number(v))}
                   />
                 }

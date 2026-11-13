@@ -256,7 +256,7 @@ function AdminOrgsPageContenu() {
               </label>
               <input
                 type="email"
-                placeholder="ex: contact@orange.tn"
+                placeholder="contact@entreprise.com"
                 value={form.email_pro}
                 onChange={(e) => setForm({ ...form, email_pro: e.target.value })}
                 required

@@ -54,6 +54,7 @@ import { PHRASE_TRI_CLASSEMENT } from '../../../utils/scoreFiabilise';
 
 import YamNote from '../../../components/agent/YamNote';
 import { formaterPourcentage } from '../../../utils/formatNombre';
+import { libelleDatePoint } from '../../../utils/satisfactionSeries';
 import { LIBELLES } from '../../../utils/vocabulaire';
 
 export type KpiKind = 'satisfaction' | 'volume' | 'critiques' | 'seuil';
@@ -332,7 +333,7 @@ function EvolutionTooltip({ active, payload }: { active?: boolean; payload?: { p
   const p = payload[0].payload;
   return (
     <div className="ui-chart-tooltip">
-      <p className="ui-chart-tooltip__label">{p.label}</p>
+      <p className="ui-chart-tooltip__label">{libelleDatePoint(p.date, p.label)}</p>
       <div className="ui-chart-tooltip__row">
         <span>Satisfaction</span>
         <span className="ui-chart-tooltip__value">{formaterPourcentage(p.satisfaction, 3)}</span>

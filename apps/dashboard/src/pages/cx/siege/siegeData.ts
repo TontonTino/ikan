@@ -10,7 +10,7 @@
  *  - aucun delta n'est affiché si la période précédente n'a aucun avis
  *    (l'API renvoie alors une évolution null et un taux null / status "no_data").
  */
-import { ESPACE_INSECABLE, formaterNombre, formaterPourcentage } from '../../../utils/formatNombre';
+import { ESPACE_INSECABLE, cleSemaineIso, dateCourte, formaterNombre, formaterPourcentage, lundiSemaineIso } from '../../../utils/formatNombre';
 import { estSansActionEnCours } from '../../../utils/issueSuivi';
 import type { AgenceRankDetail, AgenceSousSeuil, Alerte, EvolutionPoint, Issue, StatKPI } from '../../../types';
 
@@ -194,15 +194,11 @@ export function sortEvolution(points: EvolutionPoint[]): EvolutionPoint[] {
 
 export const isDailyPoint = (p: EvolutionPoint) => /^\d{4}-\d{2}-\d{2}$/.test(p.date);
 
-/** Lundi de la semaine ISO d'une date « AAAA-MM-JJ » (calcul en UTC, sans dérive de fuseau). */
+/** Semaine ISO d'une date « AAAA-MM-JJ » : clé « AAAA-Www » (comme l'API) et date de son lundi en clair (« 4 août »). */
 function isoWeekStart(day: string): { key: string; label: string } {
-  const [y, m, d] = day.split('-').map(Number);
-  const date = new Date(Date.UTC(y, m - 1, d));
-  const dow = (date.getUTCDay() + 6) % 7; // 0 = lundi
-  date.setUTCDate(date.getUTCDate() - dow);
-  const dd = String(date.getUTCDate()).padStart(2, '0');
-  const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
-  return { key: date.toISOString().slice(0, 10), label: `Sem. du ${dd}/${mm}` };
+  const key = cleSemaineIso(day);
+  const lundi = lundiSemaineIso(key) as Date;
+  return { key, label: dateCourte(lundi.getUTCFullYear(), lundi.getUTCMonth() + 1, lundi.getUTCDate()) };
 }
 
 /**

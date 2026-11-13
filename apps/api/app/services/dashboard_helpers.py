@@ -10,7 +10,7 @@ Conventions de données (5B-2) :
 - Les périodes hebdomadaires utilisent une clé ISO « AAAA-Www » (année ISO), triable
   chronologiquement et sans fusion de semaines de deux années différentes.
 """
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Iterable, Optional
 
 from sqlalchemy import func
@@ -266,18 +266,21 @@ def _cle_heure_utc(dt: datetime) -> str:
     return instant.strftime("%Y-%m-%d-%H")
 
 
-def _libelles_semaines(cles: Iterable[str], prefixe: str = "Sem") -> dict[str, str]:
-    """Libellés lisibles des clés « AAAA-Www » : « Sem 9 », avec l'année ajoutée
-    (« Sem 9 2026 ») uniquement quand la série couvre plusieurs années ISO."""
-    cles = list(cles)
-    annees = {c.split("-W")[0] for c in cles}
-    plusieurs = len(annees) > 1
-    libelles = {}
-    for c in cles:
-        annee, semaine = c.split("-W")
-        libelle = f"{prefixe} {int(semaine)}"
-        libelles[c] = f"{libelle} {annee}" if plusieurs else libelle
-    return libelles
+# Mois abrégés tels que les écrit le dashboard (Intl fr-FR, mois « short ») : « 4 août », « 1 sept. ».
+MOIS_COURTS_FR = ("janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc.")
+
+
+def date_courte(jour: date) -> str:
+    """« 4 août » : une date lisible sur un axe, sans zéro initial ni numéro de semaine (lot 6)."""
+    return f"{jour.day} {MOIS_COURTS_FR[jour.month - 1]}"
+
+
+def _libelles_semaines(cles: Iterable[str]) -> dict[str, str]:
+    """Libellés lisibles des clés « AAAA-Www » : la date du lundi de la semaine (« 4 août »), jamais un numéro de
+    semaine. L'année est ajoutée (« 29 déc. 2025 ») uniquement quand les lundis de la série couvrent plusieurs années."""
+    lundis = {c: date.fromisocalendar(int(c.split("-W")[0]), int(c.split("-W")[1]), 1) for c in cles}
+    plusieurs = len({lundi.year for lundi in lundis.values()}) > 1
+    return {c: f"{date_courte(lundi)} {lundi.year}" if plusieurs else date_courte(lundi) for c, lundi in lundis.items()}
 
 
 # ── File « À traiter » : UNE seule définition (lot 3) ──────────────────────────────────────────

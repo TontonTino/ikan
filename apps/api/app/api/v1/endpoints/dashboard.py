@@ -468,7 +468,8 @@ def _compute_tendances(feedbacks: list, jours: int) -> list[TendanceSatisfaction
     Les semaines sont regroupées par clé « AAAA-Www » (année ISO) et triées
     chronologiquement : la semaine 52 de 2025 précède la semaine 1 de 2026, et deux
     semaines de même numéro d'années différentes ne sont jamais fusionnées. `date`
-    porte le libellé affiché (« Semaine 9 », avec l'année si la série en couvre deux).
+    porte le libellé affiché : la date du jour (« AAAA-MM-JJ »), ou pour une semaine la date de son lundi en clair
+    (« 4 août », avec l'année si la série en couvre deux) ; le dashboard la présente comme « Semaine du 4 août ».
     Seules les périodes contenant au moins un avis sont renvoyées (taux toujours défini).
     """
     from collections import defaultdict
@@ -479,7 +480,7 @@ def _compute_tendances(feedbacks: list, jours: int) -> list[TendanceSatisfaction
         key = _cle_semaine_iso(f.date_soumission) if hebdomadaire else f.date_soumission.strftime("%Y-%m-%d")
         bucket[key].append(f.note)
 
-    libelles = _libelles_semaines(bucket.keys(), prefixe="Semaine") if hebdomadaire else {}
+    libelles = _libelles_semaines(bucket.keys()) if hebdomadaire else {}
     return [
         TendanceSatisfaction(
             date=libelles.get(key, key),

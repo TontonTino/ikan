@@ -514,14 +514,14 @@ export default function AdminAgencesContent() {
                           </div>
                           <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.email}</div>
                         </div>
-                        <div style={{ display: 'flex', gap: '6px' }}>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                           <button
                             type="button"
                             onClick={() => setManagerModal({ manager: m })}
                             className="btn-secondary"
                             style={{ padding: '5px 10px', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)' }}
                           >
-                            Modifier
+                            Modifier le responsable
                           </button>
                           <button
                             type="button"
@@ -537,44 +537,43 @@ export default function AdminAgencesContent() {
                   )}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', paddingTop: '12px', borderTop: '1px solid var(--color-trait)' }}>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      type="button"
-                      onClick={() => openEdit(a)}
-                      className="btn-secondary"
-                      style={{ padding: '6px 10px', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)' }}
-                    >
-                      Modifier
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleActive(a)}
-                      className="btn-secondary"
-                      style={{ padding: '6px 10px', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)' }}
-                    >
-                      {a.active !== false ? 'Désactiver' : 'Activer'}
-                    </button>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <Link
-                      to={`/agences/${a.id}/apercu?tab=categories`}
-                      state={{ retour: 'Répertoire' }}
-                      style={{ background: 'var(--color-surface)', color: 'var(--color-encre)', border: '1px solid var(--color-border)', textDecoration: 'none', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                    >
-                      <TagIcon size={14} />
-                      Catégories
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => setQrModalTarget(a)}
-                      style={{ background: 'var(--color-bon-fond)', color: 'var(--color-bon-texte)', border: 'none', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                    >
-                      <QrCodeIcon size={14} />
-                      QR Code
-                    </button>
-                  </div>
+                {/* Lot 6 : chaque bouton nomme son objet ; « Désactiver » est tenu à l'écart des actions courantes (trait + espace)
+                    et passe par une confirmation qui nomme l'agence. */}
+                <div className="fiche-agence__actions">
+                  <button
+                    type="button"
+                    onClick={() => openEdit(a)}
+                    className="btn-secondary"
+                    style={{ padding: '6px 10px', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)' }}
+                  >
+                    Modifier l’agence
+                  </button>
+                  <Link
+                    to={`/agences/${a.id}/apercu?tab=categories`}
+                    state={{ retour: 'Répertoire' }}
+                    style={{ background: 'var(--color-surface)', color: 'var(--color-encre)', border: '1px solid var(--color-border)', textDecoration: 'none', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <TagIcon size={14} />
+                    Catégories
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setQrModalTarget(a)}
+                    style={{ background: 'var(--color-bon-fond)', color: 'var(--color-bon-texte)', border: 'none', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <QrCodeIcon size={14} />
+                    QR Code
+                  </button>
+                </div>
+                <div className="fiche-agence__zone-sensible">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleActive(a)}
+                    className={a.active !== false ? 'fiche-agence__desactiver' : 'btn-secondary'}
+                    style={a.active !== false ? undefined : { padding: '6px 10px', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)' }}
+                  >
+                    {a.active !== false ? 'Désactiver l’agence' : 'Réactiver l’agence'}
+                  </button>
                 </div>
               </div>
             ))}

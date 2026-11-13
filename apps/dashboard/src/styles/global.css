@@ -559,3 +559,62 @@ body {
   .yam-icon-btn, .yam-send, .yam-chip, .yam-retry { min-width: var(--touch-target); min-height: var(--touch-target); }
   .yam-input { min-height: var(--touch-target); }
 }
+
+/* ── Connexion : « Mot de passe oublié ? » (lot 6) ──
+   Lien de texte en encre souligné, pas en corail : l'accent de l'écran reste le bouton « Se connecter ». */
+.login-oubli {
+  display: block; margin: var(--space-2) 0 0 auto; padding: var(--space-1) 0; min-height: 24px;
+  background: none; border: 0; cursor: pointer; font: inherit; font-size: var(--text-sm); font-weight: var(--weight-semibold);
+  color: var(--color-encre); text-decoration: underline; text-underline-offset: 3px;
+}
+.login-oubli:hover { text-decoration-thickness: 2px; }
+.login-oubli:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius-sm); }
+.login-oubli__qui { margin: 0; display: grid; gap: var(--space-1); }
+.login-oubli__qui dt { font-weight: var(--weight-semibold); color: var(--color-encre); }
+.login-oubli__qui dd { margin: 0 0 var(--space-3); color: var(--color-text-2); }
+.login-oubli__qui dd:last-child { margin-bottom: 0; }
+.login-oubli__qui a { color: var(--color-encre); font-weight: var(--weight-semibold); }
+@media (pointer: coarse) { .login-oubli { min-height: var(--touch-target); } }
+
+/* ── Gestion des agences : actions d'une fiche (lot 6) ──
+   Actions courantes groupées ; « Désactiver l'agence » seule, après un trait et un espace, en lien discret (jamais un bouton
+   plein) : on ne la clique pas par mégarde en visant « Modifier l'agence ». Le libellé porte le sens, pas la couleur. */
+.fiche-agence__actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 12px; border-top: 1px solid var(--color-trait); }
+.fiche-agence__zone-sensible { display: flex; justify-content: flex-end; margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-trait); }
+.fiche-agence__desactiver {
+  background: none; border: 0; padding: var(--space-1) 0; min-height: 24px; cursor: pointer;
+  font: inherit; font-size: var(--text-xs); font-weight: var(--weight-semibold);
+  color: var(--color-critique-texte); text-decoration: underline; text-underline-offset: 3px;
+}
+.fiche-agence__desactiver:hover { text-decoration-thickness: 2px; }
+.fiche-agence__desactiver:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius-sm); }
+@media (pointer: coarse) { .fiche-agence__desactiver { min-height: var(--touch-target); } }
+
+/* ── Demandes de rappel (lot 6) : ancienneté, et retard marqué comme les avis du lot 3 ──
+   Trait à gauche (même couleur que la file « À traiter ») + phrase « En attente depuis plus de 48 h » : jamais la couleur seule. */
+.demande-rappel.is-late { box-shadow: inset 3px 0 0 var(--color-accent-vif); }
+.demande-rappel__age {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+  font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--color-text-2); white-space: nowrap;
+}
+.demande-rappel__age time { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
+.demande-rappel__retard { color: var(--color-critique-texte); }
+
+/* ── Carte du réseau : groupes d'agences proches (lot 6) ── */
+/* Leaflet impose « display: block » à l'icône : la mise en forme est sur la pastille intérieure. */
+.carte-groupe { border-radius: 50%; cursor: pointer; }
+.carte-groupe:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.carte-groupe__pastille {
+  display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; box-sizing: border-box; border-radius: 50%;
+  background: var(--color-encre); color: var(--color-text-inverse); border: 3px solid var(--color-surface);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35); font: var(--weight-bold) var(--text-sm)/1 var(--font-main);
+}
+.carte-groupe__alerte {
+  position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--color-critique-texte); color: var(--color-text-inverse); border: 2px solid var(--color-surface);
+  font: var(--weight-bold) 11px/1 var(--font-main);
+}
+.carte-groupe__liste { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-3); max-height: 260px; overflow-y: auto; }
+.carte-groupe__liste > li + li { padding-top: var(--space-3); border-top: 1px solid var(--color-trait); }
+.carte-aide { margin: var(--space-2) 0 0; text-align: center; font-size: var(--text-xs); color: var(--color-text-2); }

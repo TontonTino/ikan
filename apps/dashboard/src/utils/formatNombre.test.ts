@@ -3,7 +3,10 @@ import sourceAgence from '../components/agency/AgencyEvolution.tsx?raw';
 import sourceVeille from '../components/veille/VeilleDailyChart.tsx?raw';
 import { construireSynthese } from '../components/agent/construireSynthese';
 import { satisfactionTexte } from '../pages/cx/siege/siegeData';
-import { ESPACE_INSECABLE, formaterDateAxe, formaterNombre, formaterPourcentage, formaterValeurApi } from './formatNombre';
+import {
+  ESPACE_INSECABLE, MOIS_COURTS, cleSemaineIso, formaterDateAxe, formaterNombre, formaterPourcentage, formaterValeurApi, libelleSemaine,
+  lundiSemaineIso,
+} from './formatNombre';
 
 const NB = ' ';
 
@@ -50,36 +53,62 @@ describe('formaterNombre', () => {
   });
 });
 
-describe('formaterDateAxe', () => {
-  it('« 2026-10-06 » devient « 06/10 »', () => {
-    expect(formaterDateAxe('2026-10-06')).toBe('06/10');
-    expect(formaterDateAxe('2026-12-31T08:00:00Z')).toBe('31/12');
-    expect(formaterDateAxe('2026-01-05 10:00')).toBe('05/01');
+describe('formaterDateAxe (lot 6 : des dates en clair)', () => {
+  it('« 2026-08-04 » devient « 4 août » : jour sans zéro initial, mois abrégé', () => {
+    expect(formaterDateAxe('2026-08-04')).toBe('4 août');
+    expect(formaterDateAxe('2026-08-11')).toBe('11 août');
+    expect(formaterDateAxe('2026-12-31T08:00:00Z')).toBe('31 déc.');
+    expect(formaterDateAxe('2026-01-05 10:00')).toBe('5 janv.');
+    expect(formaterDateAxe('2026-09-01')).toBe('1 sept.');
   });
 
-  it('infobulle : avec l’année, « 06/10/2026 » (même formateur, pas de second format)', () => {
-    expect(formaterDateAxe('2026-10-06', true)).toBe('06/10/2026');
-    expect(formaterDateAxe('2026-12-31T08:00:00Z', true)).toBe('31/12/2026');
-    expect(formaterDateAxe('S41', true)).toBe('S41');
-    expect(formaterDateAxe('06/10', true)).toBe('06/10');
+  it('infobulle : avec l’année, « 4 août 2026 » (même formateur, pas de second format)', () => {
+    expect(formaterDateAxe('2026-08-04', true)).toBe('4 août 2026');
+    expect(formaterDateAxe('2026-12-31T08:00:00Z', true)).toBe('31 déc. 2026');
   });
 
-  it('toute autre valeur est rendue telle quelle (libellés déjà courts, semaines, etc.)', () => {
-    expect(formaterDateAxe('06/10')).toBe('06/10');
-    expect(formaterDateAxe('S41')).toBe('S41');
+  it('toute autre valeur est rendue telle quelle (libellés déjà lisibles)', () => {
+    expect(formaterDateAxe('4 août')).toBe('4 août');
+    expect(formaterDateAxe('4 août', true)).toBe('4 août');
     expect(formaterDateAxe('')).toBe('');
     expect(formaterDateAxe(42)).toBe('42');
+  });
+
+  it('mêmes mois abrégés qu’Intl fr-FR', () => {
+    MOIS_COURTS.forEach((mois, i) => {
+      const intl = new Date(Date.UTC(2026, i, 15)).toLocaleDateString('fr-FR', { month: 'short', timeZone: 'UTC' });
+      expect(mois).toBe(intl);
+    });
+  });
+});
+
+describe('semaines ISO', () => {
+  it('cleSemaineIso et lundiSemaineIso sont réciproques, y compris au passage d’année', () => {
+    expect(cleSemaineIso('2026-08-04')).toBe('2026-W32');
+    expect(cleSemaineIso('2026-08-09')).toBe('2026-W32');
+    expect(cleSemaineIso('2025-12-29')).toBe('2026-W01');
+    expect(cleSemaineIso('2027-01-03')).toBe('2026-W53');
+    expect(cleSemaineIso('2026-01-01')).toBe('2026-W01');
+    expect(lundiSemaineIso('2026-W32')?.toISOString().slice(0, 10)).toBe('2026-08-03');
+    expect(lundiSemaineIso('2026-W01')?.toISOString().slice(0, 10)).toBe('2025-12-29');
+    expect(lundiSemaineIso('pas une semaine')).toBeNull();
+  });
+
+  it('libelleSemaine : « Semaine du 3 au 9 août 2026 »', () => {
+    expect(libelleSemaine(new Date(Date.UTC(2026, 7, 3)))).toBe('Semaine du 3 au 9 août 2026');
+    expect(libelleSemaine(new Date(Date.UTC(2026, 7, 31)))).toBe('Semaine du 31 août au 6 sept. 2026');
+    expect(libelleSemaine(new Date(Date.UTC(2025, 11, 29)))).toBe('Semaine du 29 déc. 2025 au 4 janv. 2026');
   });
 });
 
 describe('axes de graphique', () => {
-  it('Agency Manager et Veille : dates d’axe au format jj/mm', () => {
+  it('Agency Manager et Veille : dates d’axe en clair', () => {
     expect(sourceAgence).toContain('<XAxis dataKey="date" tickFormatter={(v) => formaterDateAxe(v)}');
     expect(sourceVeille).toContain('<XAxis dataKey="date" tickFormatter={(v) => formaterDateAxe(v)}');
   });
 
-  it('infobulle du graphique de l’Agency Manager : date « jj/mm/aaaa » (plus la date brute)', () => {
-    expect(sourceAgence).toContain('labelFormatter={(l) => formaterDateAxe(l, true)}');
+  it('infobulle du graphique de l’Agency Manager : date du relevé en toutes lettres (plus la date brute)', () => {
+    expect(sourceAgence).toContain('labelFormatter={(l) => dateReleve(String(l))}');
     expect(sourceAgence).not.toContain('labelFormatter={(l) => String(l)}');
   });
 });

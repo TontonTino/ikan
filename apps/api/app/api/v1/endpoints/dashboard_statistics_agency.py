@@ -56,7 +56,7 @@ from app.schemas.dashboard import (
 from app.services.dashboard_helpers import (
     _calc_kpi_trend, _cle_semaine_iso, _compter_utilisateurs_actifs, _kpi_taux, compter_negatifs, est_negatif,
     est_pris_en_charge, kpis_satisfaction_et_volume,
-    _libelles_semaines, _period_label, _repartition_forfaits, _taux,
+    _libelles_semaines, _period_label, date_courte, _repartition_forfaits, _taux,
 )
 from app.services.ai.recommandations import SOURCE_RECOMMANDATIONS
 
@@ -244,10 +244,10 @@ def get_statistics_agency(
             label = f"{_JOURS_FR[dt.weekday()]} {dt.day}"
         elif jours <= 60:
             key = dt.strftime("%Y-%m-%d")
-            label = dt.strftime("%d/%m")
+            label = date_courte(dt)
         else:
             key = _cle_semaine_iso(dt)
-            label = ""  # « Sem N » attribué après coup (année ajoutée si la série en couvre deux)
+            label = ""  # date du lundi (« 4 août ») attribuée après coup, année ajoutée si la série en couvre deux
 
         timeline_map[key]["feedbacks"] += 1
         timeline_map[key]["notes"].append(f.note)

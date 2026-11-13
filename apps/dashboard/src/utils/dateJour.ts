@@ -33,3 +33,18 @@ export function jourComplet(valeur: string | Date): string {
   const date = lireJour(valeur);
   return date ? format(date, 'd MMMM yyyy', { locale: fr }) : '';
 }
+
+/**
+ * Ancienneté d'une demande, en jours de calendrier : « aujourd’hui », « hier », « il y a 35 jours ». Contrairement à
+ * `jourRelatifOuAbsolu`, pas de bascule en date absolue après 30 jours : ici le nombre de jours EST l'information (depuis
+ * combien de temps un client attend). La date exacte reste au survol (`jourComplet`). Vide si la date est invalide ou future.
+ */
+export function anciennete(valeur: string | Date, maintenant: Date = new Date()): string {
+  const date = lireJour(valeur);
+  if (!date) return '';
+  const jours = differenceInCalendarDays(maintenant, date);
+  if (jours < 0) return '';
+  if (jours === 0) return 'aujourd’hui';
+  if (jours === 1) return 'hier';
+  return `il y a ${jours} jours`;
+}

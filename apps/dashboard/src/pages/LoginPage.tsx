@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { AlertTriangleIcon } from '../components/common/Icons';
 import { userFacingError } from '../utils/userFacingError';
+import MotDePasseOublie from './MotDePasseOublie';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -306,7 +307,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="ex: cx@orange.tn"
+                  placeholder="prenom.nom@entreprise.com"
                   style={{
                     width: '100%',
                     height: '48px',
@@ -383,7 +384,6 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  placeholder="••••••••"
                   style={{
                     width: '100%',
                     height: '48px',
@@ -461,6 +461,7 @@ export default function LoginPage() {
                   )}
                 </button>
               </div>
+              <MotDePasseOublie />
             </div>
 
             {/* Message d'Erreur éventuel */}

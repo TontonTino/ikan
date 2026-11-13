@@ -148,10 +148,18 @@ describe('indicateurs et analyses', () => {
 
   it('tableau d’évolution : les mêmes données que le graphique, avec le volume', () => {
     const html = rendu(<TableauEvolution points={[{ date: '2026-10-01', taux: 60, nombre_feedbacks: 2 }, { date: '2026-10-02', taux: 80, nombre_feedbacks: 12 }]} />);
-    expect(html).toContain('2026-10-01');
+    // Lot 6 : la date en clair (« 1 oct. 2026 »), plus la clé brute « 2026-10-01 ».
+    expect(html).toContain('>1 oct. 2026</th>');
+    expect(html).not.toContain('2026-10-01');
     expect(html).toContain('60 %');
     expect(html).toContain('(faible volume)');
     expect(html).toContain('scope="col"');
+  });
+
+  it('tableau d’évolution : une semaine (libellé « 4 août » de l’API) se lit « Semaine du 4 août », jamais un numéro', () => {
+    const html = rendu(<TableauEvolution points={[{ date: '4 août', taux: 60, nombre_feedbacks: 7 }]} />);
+    expect(html).toContain('>Semaine du 4 août</th>');
+    expect(html).not.toMatch(/Sem(aine)? \d/);
   });
 });
 

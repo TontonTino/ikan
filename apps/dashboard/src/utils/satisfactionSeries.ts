@@ -1,4 +1,5 @@
 import type { EvolutionPoint } from '../types';
+import { formaterDateAxe, dateCourte, libelleSemaine, lundiSemaineIso } from './formatNombre';
 
 export interface SatisfactionChartPoint extends Omit<EvolutionPoint, 'satisfaction'> {
   satisfaction: number | null;
@@ -43,13 +44,13 @@ function cleSuivante(cle: string): string | null {
   return null;
 }
 
-function libelleVide(cle: string): string {
+/** Libellé d'un point vide inséré dans un trou : même forme que ceux de l'API (« 14h », « 4 août », lundi de la semaine). */
+function libelleVide(cle: string, avecAnnee: boolean): string {
   const heure = /^(\d{4})-(\d{2})-(\d{2})-(\d{2})$/.exec(cle);
   if (heure) return `${heure[4]}h`;
-  const jour = /^(\d{4})-(\d{2})-(\d{2})$/.exec(cle);
-  if (jour) return `${jour[3]}/${jour[2]}`;
-  const semaine = /^(\d{4})-W(\d{2})$/.exec(cle);
-  if (semaine) return `Sem ${Number(semaine[2])} ${semaine[1]}`;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(cle)) return formaterDateAxe(cle);
+  const lundi = lundiSemaineIso(cle);
+  if (lundi) return dateCourte(lundi.getUTCFullYear(), lundi.getUTCMonth() + 1, lundi.getUTCDate(), avecAnnee);
   return cle;
 }
 
@@ -61,6 +62,8 @@ function libelleVide(cle: string): string {
 export function insererPeriodesSansAvis(points: EvolutionPoint[]): SatisfactionChartPoint[] {
   if (points.length < 2) return points;
 
+  // L'API ajoute l'année aux libellés (« 29 déc. 2025 ») quand la série couvre deux années : les trous la portent aussi.
+  const avecAnnee = points.some((p) => / \d{4}$/.test(p.label));
   const resultat: SatisfactionChartPoint[] = [];
   points.forEach((point, index) => {
     resultat.push(point);
@@ -72,7 +75,7 @@ export function insererPeriodesSansAvis(points: EvolutionPoint[]): SatisfactionC
     for (let garde = 0; prochaine && prochaine < cleCible && garde < 400; garde += 1) {
       resultat.push({
         date: prochaine,
-        label: libelleVide(prochaine),
+        label: libelleVide(prochaine, avecAnnee),
         feedbacks: 0,
         traites: 0,
         satisfaction: null,
@@ -103,22 +106,15 @@ export function combinerSatisfactionEtVolume(
   });
 }
 
+/** Infobulle : « 4 août 2026 », « 4 août 2026 · 14h », « Semaine du 3 au 9 août 2026 ». Jamais de numéro de semaine. */
 export function libelleDatePoint(cle: string, libelle: string): string {
-  const date = /^(\d{4})-(\d{2})-(\d{2})$/.exec(cle);
-  if (date) return `${date[3]}/${date[2]}/${date[1]}`;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(cle)) return formaterDateAxe(cle, true);
 
-  const heure = /^(\d{4})-(\d{2})-(\d{2})-(\d{2})$/.exec(cle);
-  if (heure) return `${heure[3]}/${heure[2]}/${heure[1]} · ${heure[4]}h`;
+  const heure = /^(\d{4}-\d{2}-\d{2})-(\d{2})$/.exec(cle);
+  if (heure) return `${formaterDateAxe(heure[1], true)} · ${heure[2]}h`;
 
-  const semaine = /^(\d{4})-W(\d{2})$/.exec(cle);
-  if (semaine) {
-    const lundi = new Date(Date.UTC(Number(semaine[1]), 0, 4 + (Number(semaine[2]) - 1) * 7));
-    lundi.setUTCDate(lundi.getUTCDate() - ((lundi.getUTCDay() + 6) % 7));
-    const dimanche = new Date(lundi);
-    dimanche.setUTCDate(dimanche.getUTCDate() + 6);
-    const format = (d: Date) => `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-    return `${libelle} · ${format(lundi)}–${format(dimanche)} ${dimanche.getUTCFullYear()}`;
-  }
+  const lundi = lundiSemaineIso(cle);
+  if (lundi) return libelleSemaine(lundi);
 
   return libelle || cle;
 }

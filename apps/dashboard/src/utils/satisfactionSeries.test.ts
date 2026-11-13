@@ -33,6 +33,21 @@ describe('série de satisfaction', () => {
 
     expect(serie.map((p) => p.date)).toEqual(['2025-W52', '2026-W01', '2026-W02']);
     expect(serie[1].satisfaction).toBeNull();
+    // Lot 6 : le trou porte la date de son lundi, comme les points de l'API, jamais « Sem 1 ».
+    expect(serie[1].label).toBe('29 déc.');
+  });
+
+  it('un trou prend l’année quand les libellés de l’API la portent (série sur deux années)', () => {
+    const serie = insererPeriodesSansAvis([
+      { ...point('2025-W52', 20), label: '22 déc. 2025' },
+      { ...point('2026-W02', 80), label: '5 janv. 2026' },
+    ]);
+    expect(serie[1].label).toBe('29 déc. 2025');
+  });
+
+  it('un jour manquant se lit « 11 oct. », comme les jours de l’API', () => {
+    const serie = insererPeriodesSansAvis([point('2026-10-10', 50), point('2026-10-12', 50)]);
+    expect(serie[1].label).toBe('11 oct.');
   });
 
   it('conserve la date dans les buckets horaires et présente une date lisible au survol', () => {
@@ -43,11 +58,14 @@ describe('série de satisfaction', () => {
 
     expect(serie.map((p) => p.date)).toEqual(['2026-10-12-23', '2026-10-13-00', '2026-10-13-01']);
     expect(serie[1].satisfaction).toBeNull();
-    expect(libelleDatePoint('2026-10-13-01', '13/10 01h')).toBe('13/10/2026 · 01h');
+    expect(libelleDatePoint('2026-10-13-01', '01h')).toBe('13 oct. 2026 · 01h');
   });
 
-  it('explicite l’intervalle d’une semaine et la date exacte d’un jour', () => {
-    expect(libelleDatePoint('2026-W01', 'Sem 1')).toBe('Sem 1 · 29/12–04/01 2026');
-    expect(libelleDatePoint('2026-10-13', '13/10')).toBe('13/10/2026');
+  it('explicite l’intervalle d’une semaine en dates (jamais son numéro) et la date exacte d’un jour', () => {
+    expect(libelleDatePoint('2026-W32', '3 août')).toBe('Semaine du 3 au 9 août 2026');
+    expect(libelleDatePoint('2026-W36', '31 août')).toBe('Semaine du 31 août au 6 sept. 2026');
+    expect(libelleDatePoint('2026-W01', '29 déc.')).toBe('Semaine du 29 déc. 2025 au 4 janv. 2026');
+    expect(libelleDatePoint('2026-10-13', '13 oct.')).toBe('13 oct. 2026');
+    expect(libelleDatePoint('2026-W32', '3 août')).not.toMatch(/Sem\b|S\d/);
   });
 });
