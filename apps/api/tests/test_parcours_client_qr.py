@@ -144,6 +144,16 @@ def test_uuid_d_une_agence_inactive_n_est_pas_un_point_d_entree(ctx):
     assert r.status_code == 404 and ctx.feedbacks() == []
 
 
+def test_un_avis_sans_categorie_est_accepte_et_rattache_a_son_agence(ctx):
+    """Lot 5 : la catégorie est facultative (bouton « Autres ») ; une note seule suffit."""
+    r = ctx.client.post("/feedbacks/", params={"qr_code": ctx.a1.code}, json={"note": 2})
+    assert r.status_code == 201, r.text
+    en_base = ctx.feedbacks()
+    assert len(en_base) == 1 and en_base[0].qr == ctx.a1.qr
+    r = ctx.client.post("/feedbacks/", params={"qr_code": ctx.a1.code}, json={"categorie_id": None, "note": 5})
+    assert r.status_code == 201, r.text
+
+
 def test_categorie_d_une_autre_agence_est_refusee(ctx):
     r = ctx.client.post(
         "/feedbacks/", params={"qr_code": ctx.a1.code},

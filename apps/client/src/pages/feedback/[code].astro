@@ -171,17 +171,12 @@ if (erreur) Astro.response.status = 404;
             <!-- ÉCRAN 1 : FORMULAIRE (premier écran : le client note directement, sans écran de choix) -->
             <section id="screen-sentiment" class="screen-view">
 
-              <!-- SECTION 0 : CATÉGORIE DE L'AVIS (obligatoire, définie par l'agence) -->
-              <div class="form-section categorie-section">
-                <div class="section-head">
-                  <label class="field-label" for="categorieSelect">Quelle catégorie concerne votre avis ?</label>
-                </div>
-                <select id="categorieSelect" class="styled-select" disabled aria-describedby="categorieError">
-                  <option value="" disabled selected>Chargement des catégories...</option>
-                </select>
-                <p class="field-error" id="categorieError" role="alert" hidden></p>
-                <button type="button" class="btn-secondary" id="btnRecharger" hidden>Réessayer</button>
-              </div>
+              <!-- RETOUR : même bouton, même place et même comportement que sur l'écran d'idée (lot 5). Affiché seulement
+                   quand il y a un écran où revenir (confirmation précédente, ou page d'où vient le client). -->
+              <button type="button" class="lien-retour" id="btnRetourNotation" hidden>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                <span>Retour</span>
+              </button>
 
               <!-- SECTION 1 : ÉVALUATION (5 EMOJIS) -->
               <div class="form-section sentiment-section">
@@ -261,6 +256,17 @@ if (erreur) Astro.response.status = 404;
 
               </div>
 
+              <!-- SECTION 2 : CATÉGORIE (facultative, après la note : lot 5). Un bouton par catégorie de l'agence, et « Autres »
+                   qui laisse le champ vide. Un client qui ne lit pas le français n'est jamais bloqué ici. -->
+              <div class="form-section categorie-section" id="categorieSection">
+                <p class="field-label" id="categorieLabel">Quelle catégorie concerne votre avis ? <span class="optional">(facultatif)</span></p>
+                <div class="categorie-choix" id="categorieChoix" role="radiogroup" aria-labelledby="categorieLabel" aria-describedby="categorieError">
+                  <span class="categorie-attente">Chargement des catégories…</span>
+                </div>
+                <p class="field-error" id="categorieError" role="status" hidden></p>
+                <button type="button" class="btn-secondary" id="btnRecharger" hidden>Réessayer</button>
+              </div>
+
               <!-- SECTION 3 : COMMENTAIRE & DICTÉE VOCALE -->
               <div class="form-section comment-section">
                 <label class="field-label" for="inputCommentaire">Un commentaire ? <span class="optional">(facultatif)</span></label>
@@ -326,14 +332,15 @@ if (erreur) Astro.response.status = 404;
                       <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
                       </svg>
+                      <span class="indicatif-fixe" aria-hidden="true">+226</span>
                       <input
                         type="tel"
                         inputmode="tel"
                         autocomplete="tel"
                         id="contactTelInput"
-                        aria-label="Numéro de téléphone pour être recontacté"
-                        placeholder="+ indicatif et numéro"
-                        class="styled-input"
+                        aria-label="Numéro de téléphone pour être recontacté (indicatif +226 déjà indiqué)"
+                        placeholder="70 12 34 56"
+                        class="styled-input styled-input--indicatif"
                         aria-describedby="contactTelError"
                       />
                     </div>
@@ -542,8 +549,10 @@ if (erreur) Astro.response.status = 404;
     position: absolute;
     width: 250px;
     height: 250px;
-    right: -30px;
+    /* Contenu dans l'en-tête (lot 5) : à « right: -30px » il débordait et décalait l'écran de 22 px à 375 px de large. */
+    right: 0;
     bottom: -85px;
+    max-width: 100%;
     pointer-events: none;
     z-index: 0;
     user-select: none;
@@ -987,6 +996,73 @@ if (erreur) Astro.response.status = 404;
     box-shadow: 0 4px 10px rgba(2, 48, 45, 0.22);
     font-weight: 600;
     transform: scale(1.02);
+  }
+
+  /* Choix de catégorie (lot 5) : mêmes couleurs que les puces .theme-chip, en plus grand (cible tactile 44 px). */
+  .categorie-choix {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  /* Éléments créés par le script : hors du périmètre des styles Astro, d'où :global(). */
+  :global(.categorie-attente) {
+    font-size: 0.875rem;
+    color: #64748B;
+  }
+  :global(.categorie-btn) {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    min-width: 44px;
+    max-width: 100%;
+    padding: 8px 14px;
+    background: #F8FAFC;
+    border: 1.5px solid #CBD5E1;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #334155;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  :global(.categorie-btn:hover) {
+    background: #F1F5F9;
+  }
+  :global(.categorie-btn[aria-checked='true']) {
+    background: #02302D;
+    border-color: #02302D;
+    color: #FFFFFF;
+    font-weight: 600;
+  }
+  :global(.categorie-btn .chip-check) {
+    display: none;
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+  :global(.categorie-btn[aria-checked='true'] .chip-check) {
+    display: inline-block;
+  }
+  :global(.categorie-btn:focus-visible) {
+    outline: 3px solid #1F5A25;
+    outline-offset: 2px;
+  }
+
+  /* Indicatif +226 fixe, non modifiable, à gauche du numéro (lot 5). */
+  .indicatif-fixe {
+    position: absolute;
+    left: 32px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #334155;
+    pointer-events: none;
+  }
+  .styled-input.styled-input--indicatif {
+    padding-left: 76px;
   }
 
   .theme-chip .chip-check {
@@ -1757,6 +1833,9 @@ if (erreur) Astro.response.status = 404;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
   }
+  .lien-retour[hidden] {
+    display: none;
+  }
   .lien-retour:focus-visible {
     outline: 3px solid #1F5A25;
     outline-offset: 2px;
@@ -1788,7 +1867,7 @@ if (erreur) Astro.response.status = 404;
 </style>
 
 <script>
-  import { normaliserTelephone, MESSAGE_TELEPHONE_INVALIDE } from '../../utils/telephone';
+  import { formaterSaisieTelephone, MESSAGE_TELEPHONE_INVALIDE } from '../../utils/telephone';
   import {
     DELAI_ENVOI_MS,
     DELAI_VALIDATION_MS,
@@ -1931,27 +2010,61 @@ if (erreur) Astro.response.status = 404;
   let categoriesDisponibles: Categorie[] = [];
   let selectedCategorieId: string | null = null;
 
-  const categorieSelect = document.getElementById('categorieSelect') as HTMLSelectElement | null;
+  const categorieChoix = document.getElementById('categorieChoix');
+  const categorieSection = document.getElementById('categorieSection');
+  // « Autres » : choix explicite qui laisse la catégorie vide (valeur interne, jamais envoyée).
+  const CATEGORIE_AUTRES = 'autres';
+  let categorieAutresChoisie = false;
 
+  function messageAttenteCategories(texte: string) {
+    if (!categorieChoix) return;
+    categorieChoix.innerHTML = '';
+    const el = document.createElement('span');
+    el.className = 'categorie-attente';
+    el.textContent = texte;
+    categorieChoix.appendChild(el);
+  }
+
+  // Un bouton par catégorie renvoyée par /qr-codes/{code}/categories (son nom tel que l'agence l'a écrit, pictogramme compris),
+  // puis « Autres ». Groupe de boutons radio : une seule tabulation d'entrée, flèches pour parcourir.
   function renderCategorieOptions() {
-    if (!categorieSelect) return;
-    categorieSelect.innerHTML = '';
-    categorieSelect.disabled = false;
-
-    const placeholder = document.createElement('option');
-    placeholder.value = '';
-    placeholder.disabled = true;
-    placeholder.selected = !selectedCategorieId;
-    placeholder.textContent = 'Sélectionnez une catégorie';
-    categorieSelect.appendChild(placeholder);
-
-    categoriesDisponibles.forEach(cat => {
-      const option = document.createElement('option');
-      option.value = cat.id;
-      option.textContent = cat.nom;
-      option.selected = selectedCategorieId === cat.id;
-      categorieSelect.appendChild(option);
+    if (!categorieChoix) return;
+    categorieChoix.innerHTML = '';
+    const choix = [...categoriesDisponibles.map((c) => ({ id: c.id, nom: c.nom })), { id: CATEGORIE_AUTRES, nom: 'Autres' }];
+    const choisi = selectedCategorieId ?? (categorieAutresChoisie ? CATEGORIE_AUTRES : null);
+    choix.forEach((c, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'categorie-btn';
+      btn.setAttribute('role', 'radio');
+      btn.dataset.categorie = c.id;
+      const actif = choisi === c.id;
+      btn.setAttribute('aria-checked', actif ? 'true' : 'false');
+      btn.tabIndex = actif || (!choisi && i === 0) ? 0 : -1;
+      btn.innerHTML = '<svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+      const libelle = document.createElement('span');
+      libelle.textContent = c.nom;
+      btn.appendChild(libelle);
+      btn.addEventListener('click', () => choisirCategorie(c.id));
+      btn.addEventListener('keydown', (e) => {
+        const boutons = Array.from(categorieChoix.querySelectorAll<HTMLButtonElement>('.categorie-btn'));
+        const suivant = indexNiveauSuivant(boutons.indexOf(btn), e.key, boutons.length);
+        if (suivant === null) return;
+        e.preventDefault();
+        boutons.forEach((b, j) => { b.tabIndex = j === suivant ? 0 : -1; });
+        boutons[suivant].focus();
+      });
+      categorieChoix.appendChild(btn);
     });
+  }
+
+  function choisirCategorie(id: string) {
+    categorieAutresChoisie = id === CATEGORIE_AUTRES;
+    selectedCategorieId = categorieAutresChoisie ? null : id;
+    renderCategorieOptions();
+    categorieChoix?.querySelector<HTMLButtonElement>(`.categorie-btn[data-categorie="${CSS.escape(id)}"]`)?.focus();
+    afficherErreurCategorie(null);
+    memoriser();
   }
 
   const categorieErrorEl = document.getElementById('categorieError');
@@ -1965,17 +2078,11 @@ if (erreur) Astro.response.status = 404;
     if (btnRecharger) btnRecharger.hidden = !message || !message.startsWith('Impossible');
   }
 
-  categorieSelect?.addEventListener('change', () => {
-    selectedCategorieId = categorieSelect.value || null;
-    afficherErreurCategorie(null);
-    memoriser();
-  });
-
+  // Catégorie facultative : un échec de chargement n'empêche jamais d'envoyer l'avis (le client peut réessayer, ou pas).
   async function loadCategories() {
-    if (!categorieSelect) return;
+    if (!categorieChoix) return;
     afficherErreurCategorie(null);
-    categorieSelect.disabled = true;
-    categorieSelect.innerHTML = '<option value="" disabled selected>Chargement des catégories...</option>';
+    messageAttenteCategories('Chargement des catégories…');
     try {
       const res = await fetchAPI(`/qr-codes/${encodeURIComponent(QR_CODE)}/categories`);
       if (res.status === 404) {
@@ -1987,21 +2094,18 @@ if (erreur) Astro.response.status = 404;
         return;
       }
       if (res.status === 429) {
-        categorieSelect.innerHTML = '<option value="" disabled selected>Catégories indisponibles</option>';
-        afficherErreurCategorie(`Impossible de charger les catégories : ${messageEchecEnvoi('trop_de_demandes')}`);
+        messageAttenteCategories('');
+        afficherErreurCategorie(`Impossible de charger les catégories : ${messageEchecEnvoi('trop_de_demandes')} Vous pouvez envoyer votre avis sans catégorie.`);
         return;
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       categoriesDisponibles = await res.json();
-      // Une seule catégorie : inutile de demander au client de la choisir.
-      if (categoriesDisponibles.length === 1) selectedCategorieId = categoriesDisponibles[0].id;
+      // Aucune catégorie définie par l'agence : la question n'a pas lieu d'être.
+      if (categorieSection) categorieSection.hidden = categoriesDisponibles.length === 0;
       renderCategorieOptions();
-      if (categoriesDisponibles.length === 0) {
-        afficherErreurCategorie("Impossible de charger les catégories de cette agence. Appuyez sur Réessayer.");
-      }
     } catch (e) {
-      categorieSelect.innerHTML = '<option value="" disabled selected>Catégories indisponibles</option>';
-      afficherErreurCategorie('Impossible de charger les catégories. Vérifiez votre connexion puis appuyez sur Réessayer.');
+      messageAttenteCategories('');
+      afficherErreurCategorie('Impossible de charger les catégories. Vous pouvez envoyer votre avis sans catégorie, ou appuyer sur Réessayer.');
     }
   }
 
@@ -2448,7 +2552,16 @@ if (erreur) Astro.response.status = 404;
     }
   }
 
-  contactTelInputEl?.addEventListener('input', () => afficherErreurTelephone(null));
+  // Groupes de deux chiffres pendant la saisie (« 70 12 34 56 ») ; l'indicatif +226 est affiché devant le champ.
+  contactTelInputEl?.addEventListener('input', () => {
+    afficherErreurTelephone(null);
+    const formate = formaterSaisieTelephone(contactTelInputEl.value);
+    if (formate !== contactTelInputEl.value) {
+      const finDeChamp = contactTelInputEl.selectionStart === contactTelInputEl.value.length;
+      contactTelInputEl.value = formate;
+      if (finDeChamp) contactTelInputEl.setSelectionRange(formate.length, formate.length);
+    }
+  });
 
   const consentCheckbox = document.getElementById('consentCheckbox') as HTMLInputElement | null;
   const consentErrorEl = document.getElementById('consentError');
@@ -2489,9 +2602,6 @@ if (erreur) Astro.response.status = 404;
         afficherErreurConsentement(probleme.message);
       } else if (probleme.champ === 'telephone') {
         afficherErreurTelephone(probleme.message);
-      } else if (probleme.champ === 'categorie') {
-        afficherErreurCategorie(probleme.message);
-        categorieSelect?.focus();
       } else {
         afficherErreurNote(probleme.message);
         (sentimentBtns[0] as HTMLElement | undefined)?.focus();
@@ -2631,7 +2741,30 @@ if (erreur) Astro.response.status = 404;
   });
 
   // Nouveau retour (depuis la confirmation d'un avis ou celle d'une idée)
+  // ================= RETOUR DEPUIS L'ÉCRAN DE NOTATION (même comportement que celui de l'écran d'idée) =================
+  // Ramène à l'écran d'où la personne est arrivée : la confirmation précédente (« Donner un autre avis »), sinon la page
+  // précédente du navigateur. Sans écran où revenir (QR scanné directement), le bouton n'est pas affiché.
+  const btnRetourNotation = document.getElementById('btnRetourNotation') as HTMLButtonElement | null;
+  let ecranAvantNotation: NomEcran | null = null;
+  const pagePrecedente = () => window.history.length > 1 && !!document.referrer;
+  function majRetourNotation() {
+    if (btnRetourNotation) btnRetourNotation.hidden = !ecranAvantNotation && !pagePrecedente();
+  }
+  btnRetourNotation?.addEventListener('click', () => {
+    if (ecranAvantNotation) {
+      montrerEcran(ecranAvantNotation);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (pagePrecedente()) {
+      window.history.back();
+    }
+  });
+  majRetourNotation();
+
   function nouvelAvis() {
+    // L'écran visible au moment du clic (confirmation d'avis ou d'idée) est celui où « Retour » ramènera.
+    ecranAvantNotation = document.getElementById('screen-idee-merci')?.style.display === 'flex' ? 'idee_merci'
+      : document.getElementById('screen-success')?.style.display === 'flex' ? 'succes' : null;
+    majRetourNotation();
     memoire.effacer();
     saisieCloturee = false;
     sentimentBtns.forEach(b => {
@@ -2644,7 +2777,8 @@ if (erreur) Astro.response.status = 404;
     selectedThemes.clear();
     renderThemesChips();
 
-    selectedCategorieId = categoriesDisponibles.length === 1 ? categoriesDisponibles[0].id : null;
+    selectedCategorieId = null;
+    categorieAutresChoisie = false;
     renderCategorieOptions();
 
     if (commentInput) {

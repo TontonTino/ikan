@@ -110,3 +110,19 @@ Source unique : `apps/dashboard/src/utils/vocabulaire.ts`.
   sont affichés en majuscule initiale (`enMajusculeInitiale`) sans modifier la base.
 - Vouvoiement partout, y compris les questions suggérées de YAM ; une seule mention « réponses générées automatiquement ».
 - Titre de page = entrée de menu = fil d'Ariane.
+
+## Formulaire client : un avis possible sans lire ni remplir (lot 5)
+
+Couleurs du formulaire inchangées (décision du 13 novembre) ; seuls l'ordre, la catégorie, le téléphone et le retour changent.
+
+- **Note d'abord.** La catégorie vient après, **facultative**, en boutons côte à côte (un par catégorie de
+  `/qr-codes/{code}/categories`, nom tel que l'agence l'a écrit) et un bouton **« Autres »** qui laisse le champ vide.
+  API : `categorie_id` facultatif à la création (la colonne était déjà nullable, aucune migration). Un avis sans catégorie a le
+  thème « autre » à l'analyse (avant : « accueil », qui inventait une catégorie).
+- **Débordement corrigé** : le filigrane de l'en-tête restait à `right: -30px`. Vérifié à 360 et 375 px sur les cinq écrans
+  du parcours (`document.documentElement.scrollWidth` = largeur de la fenêtre), test de bout en bout à l'appui.
+- **Téléphone** : indicatif « +226 » fixe devant le champ ; 8 chiffres acceptés avec ou sans espaces, affichés par deux
+  pendant la saisie, envoyés au format international (`+22670123456`). `+226…`, `00226…` et les autres numéros
+  internationaux restent acceptés (`utils/telephone.ts`).
+- **Retour** sur l'écran de notation : même bouton, même place et même comportement que sur l'écran d'idée (retour à l'écran
+  d'où l'on vient). Il n'apparaît pas quand il n'y a nulle part où revenir (QR scanné directement).

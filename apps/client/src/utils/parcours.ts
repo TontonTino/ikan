@@ -3,7 +3,7 @@
  * Le formulaire ([code].astro) s'appuie dessus pour : lire le code QR, valider avant envoi, construire la requête,
  * formuler les erreurs et générer la clé d'idempotence d'un envoi.
  */
-import { MESSAGE_TELEPHONE_INVALIDE, normaliserTelephone } from './telephone.ts';
+import { MESSAGE_TELEPHONE_INVALIDE, normaliserTelephone, telephoneInternational } from './telephone.ts';
 
 /** Limite du commentaire, alignée sur l'API (FeedbackCreate.commentaire, max 1000 caractères). */
 export const MAX_COMMENTAIRE = 1000;
@@ -60,6 +60,7 @@ export function nouvelleCleEnvoi(): string {
 
 export interface EntreeEnvoi {
   niveau: string | null;
+  /** Facultative (lot 5) : null quand le client choisit « Autres » ou ne choisit rien. */
   categorieId: string | null;
   souhaiteEtreRappele: boolean;
   telephone: string;
@@ -68,7 +69,7 @@ export interface EntreeEnvoi {
 }
 
 export interface ProblemeSaisie {
-  champ: 'note' | 'categorie' | 'telephone' | 'consentement';
+  champ: 'note' | 'telephone' | 'consentement';
   message: string;
 }
 
@@ -114,9 +115,9 @@ export function indexNiveauSuivant(courant: number, touche: string, total: numbe
   }
 }
 
-/** Premier problème de saisie bloquant l'envoi, ou null. Ordre = ordre d'affichage du formulaire. */
+/** Premier problème de saisie bloquant l'envoi, ou null. Ordre = ordre d'affichage du formulaire (la note d'abord).
+ *  La catégorie n'est plus exigée (lot 5) : un avis avec seulement une note doit partir. */
 export function verifierSaisie(e: EntreeEnvoi): ProblemeSaisie | null {
-  if (!e.categorieId) return { champ: 'categorie', message: 'Choisissez la catégorie de votre avis.' };
   if (!e.niveau || !NIVEAUX[e.niveau]) return { champ: 'note', message: MESSAGE_NOTE_REQUISE };
   if (e.souhaiteEtreRappele) {
     const tel = e.telephone.trim();
@@ -137,16 +138,17 @@ export interface EntreePayload extends EntreeEnvoi {
 /** Corps de POST /feedbacks. Le commentaire est borné ; le téléphone (et son consentement) n'est transmis que si le client demande à être rappelé. */
 export function construirePayload(e: EntreePayload) {
   const niveau = NIVEAUX[e.niveau ?? ''];
-  if (!niveau || !e.categorieId) throw new Error('Saisie incomplète : verifierSaisie() doit être appelée avant.');
+  if (!niveau) throw new Error('Saisie incomplète : verifierSaisie() doit être appelée avant.');
   const commentaire = e.commentaire.trim().slice(0, MAX_COMMENTAIRE);
   return {
-    categorie_id: e.categorieId,
+    categorie_id: e.categorieId || null,
     sentiment: niveau.apiSentiment,
     note: niveau.note,
     commentaire: commentaire || null,
     idempotency_key: e.cleEnvoi,
     souhaite_etre_rappele: e.souhaiteEtreRappele,
-    contact_telephone: e.souhaiteEtreRappele ? e.telephone.trim() : null,
+    // Format international reconstitué (« 70 12 34 56 » devient « +22670123456 »).
+    contact_telephone: e.souhaiteEtreRappele ? telephoneInternational(e.telephone) : null,
     consentement_contact: e.souhaiteEtreRappele && !!e.consentement,
     website: e.piege ?? '',
   };

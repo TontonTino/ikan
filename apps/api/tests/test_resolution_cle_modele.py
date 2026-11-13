@@ -207,7 +207,7 @@ def _recommandations(db, avis_id):
     ("Accueil", None, "accueil"),
     ("Internet & Réseau Mobile", "internet_reseau_mobile", "reseau"),
     ("Caisse", None, "autre"),
-    (None, None, "accueil"),                                              # avis sans catégorie : comportement historique (accueil)
+    (None, None, "autre"),                                                # avis sans catégorie (« Autres », lot 5) : thème « autre », rien d'inventé
 ])
 def test_l_analyse_d_un_avis_choisit_le_bon_modele(db, nom, cle, famille):
     avis_id = _avis(db, nom, cle)
@@ -216,7 +216,7 @@ def test_l_analyse_d_un_avis_choisit_le_bon_modele(db, nom, cle, famille):
     assert analyse.criticite in (CriticiteType.ELEVEE, CriticiteType.CRITIQUE)
     niveau = "critique" if analyse.criticite == CriticiteType.CRITIQUE else "elevee"
     assert contenus[0] == MODELES[famille][niveau]
-    assert analyse.theme_principal == (nom if nom is not None else "accueil")          # le thème affiché reste le nom de la catégorie
+    assert analyse.theme_principal == (nom if nom is not None else "autre")          # le thème affiché reste le nom de la catégorie
 
 
 def test_une_analyse_existante_n_est_jamais_recalculee(db):
