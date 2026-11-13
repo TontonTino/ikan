@@ -37,7 +37,7 @@ describe('fenêtre de traitement d’un avis (lot 3)', () => {
 
   it('sections vides repliées sur une ligne : aucune action définie, aucun problème lié', () => {
     const html = fenetre(avis());
-    expect(html).toContain('<strong>Action à mener</strong> : aucune définie pour l’instant.');
+    expect(html).toContain('<strong>Action</strong> : aucune définie pour l’instant.');
     expect(html).toContain('<strong>Problème à traiter lié</strong> : aucun.');
     expect(html).toContain('Lier à un problème');
     expect(html).not.toContain('Créer un nouveau problème');

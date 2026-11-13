@@ -1,4 +1,5 @@
 import type { ActionProbleme, Feedback, UserRole } from '../types';
+import { RESPONSABLE_CX } from './vocabulaire';
 
 /**
  * Page « Actions à mener » : une liste unique qui agrège les actions décidées sur un AVIS (champ « action à prendre » d'un avis) et les actions d'un PROBLÈME
@@ -124,7 +125,7 @@ export function libelleChargement(charges: number, total: number): string | null
 export const TEXTE_VIDE_EN_COURS_RESEAU =
   'Aucune action n’est en cours. Une action apparaît ici quand vous la définissez sur un problème (« Définir une action »), ou sur un avis déjà pris en charge par le Responsable d’agence. Elle passe dans « Terminées » une fois réalisée.';
 export const TEXTE_VIDE_EN_COURS_AGENCE =
-  'Aucune action n’est en cours dans votre agence. Une action apparaît ici quand votre CX Manager la définit sur un problème de votre agence, ou sur un avis que vous avez pris en charge. Elle passe dans « Terminées » une fois réalisée.';
+  `Aucune action n’est en cours dans votre agence. Une action apparaît ici quand votre ${RESPONSABLE_CX} la définit sur un problème de votre agence, ou sur un avis que vous avez pris en charge. Elle passe dans « Terminées » une fois réalisée.`;
 export const TEXTE_VIDE_TERMINEES = 'Les actions terminées, sur un problème ou sur un avis, apparaîtront ici.';
 export const NOTE_EN_RETARD = 'Les actions sur un avis n’ont pas d’échéance : elles ne sont pas concernées par « En retard ».';
 export const NOTE_MES_ACTIONS = '« Mes actions » ne concerne que les actions de problème : une action sur un avis n’a pas de responsable désigné.';

@@ -1,9 +1,10 @@
 import React from 'react';
 import type { ThemeStatsDetail } from '../../types';
+import { GRAVITE_LABELS } from '../../utils/vocabulaire';
 
-/* Informations d'une carte de l'onglet « Thèmes » de la page Avis : agences concernées, ton et gravité, extrait d'un avis. */
+/* Informations d'une carte de l'onglet « Thèmes » de la page Avis : agences concernées, ton et urgence, extrait d'un avis. */
 
-const GRAVITE_LIBELLE: Record<string, string> = { critique: 'critique', elevee: 'élevée', moyenne: 'moyenne', faible: 'faible' };
+const GRAVITE_LIBELLE: Record<string, string> = Object.fromEntries(Object.entries(GRAVITE_LABELS).map(([k, v]) => [k, v.toLowerCase()]));
 const TON_LIBELLE: Record<string, string> = { positif: 'positif', neutre: 'neutre', negatif: 'négatif' };
 
 export function ThemeAgences({ theme }: { theme: ThemeStatsDetail }) {
@@ -16,7 +17,7 @@ export function ThemeTonGravite({ theme }: { theme: ThemeStatsDetail }) {
   return (
     <p style={{ margin: '0 0 10px', color: 'var(--color-text-2)', fontSize: 'var(--text-xs)' }}>
       Ton dominant : {TON_LIBELLE[theme.sentiment_predominant] ?? 'non évalué'}
-      {theme.gravite_frequente ? ` · Gravité la plus fréquente : ${GRAVITE_LIBELLE[theme.gravite_frequente] ?? theme.gravite_frequente}` : ' · Aucune gravité disponible'}
+      {theme.gravite_frequente ? ` · Urgence la plus fréquente : ${GRAVITE_LIBELLE[theme.gravite_frequente] ?? 'non précisée'}` : ' · Aucune urgence disponible'}
     </p>
   );
 }

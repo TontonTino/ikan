@@ -1,8 +1,9 @@
 import type { Alerte, AlerteFeedback, Issue, IssueStatut, TendanceSatisfaction } from '../../types';
 import { LIEN_FILE_A_TRAITER } from '../../utils/fileATraiter';
-import { GRAVITE_LABELS, PROBLEME_STATUT_LABELS, libelleRaisonAlerte } from '../../utils/vocabulaire';
+import { GRAVITE_LABELS, PROBLEME_STATUT_LABELS, libelleRaisonAlerte, libelleUrgence } from '../../utils/vocabulaire';
 import { formaterPourcentage } from '../../utils/formatNombre';
 import { estSansActionEnCours } from '../../utils/issueSuivi';
+import { enMajusculeInitiale } from '../../utils/themeLabels';
 
 /**
  * Règles de lecture de la vue d'ensemble du Responsable d'agence (/agence).
@@ -46,7 +47,7 @@ export function construirePriorites(entrees: { alertes: Alerte[]; avis: AlerteFe
     id: `seuil-${a.agence_id}`,
     kind: 'seuil',
     ton: 'critical',
-    type: a.gravite ? `Alerte de seuil · ${a.gravite === 'critique' ? 'Critique' : 'Important'}` : 'Alerte de seuil',
+    type: a.gravite ? `Alerte de seuil · ${a.gravite === 'critique' ? GRAVITE_LABELS.critique : GRAVITE_LABELS.elevee}` : 'Alerte de seuil',
     titre: 'Satisfaction sous le seuil de l’agence',
     detail: `Taux actuel ${formaterPourcentage(a.taux_actuel)} pour un seuil de ${formaterPourcentage(a.seuil)}.`,
     lien: { to: '/statistiques', label: 'Analyser la tendance' },
@@ -58,7 +59,7 @@ export function construirePriorites(entrees: { alertes: Alerte[]; avis: AlerteFe
     ton: p.severite === 'critique' ? 'critical' : 'warning',
     type: 'Problème à traiter',
     titre: p.titre,
-    detail: `Gravité ${(GRAVITE_LABELS[p.severite] ?? 'non précisée').toLowerCase()} · ${PROBLEME_STATUT_LABELS[p.statut] ?? 'statut inconnu'}`,
+    detail: `${libelleUrgence(p.severite)} · ${PROBLEME_STATUT_LABELS[p.statut] ?? 'statut inconnu'}`,
     lien: { to: '/issues', label: 'Voir les problèmes' },
   }));
 
@@ -67,7 +68,7 @@ export function construirePriorites(entrees: { alertes: Alerte[]; avis: AlerteFe
     kind: 'avis',
     ton: a.note <= 2 ? 'critical' : 'warning',
     type: 'Avis à examiner',
-    titre: `Note ${a.note}/5${a.categorie_nom ? ` · ${a.categorie_nom}` : ''}`,
+    titre: `Note ${a.note}/5${a.categorie_nom ? ` · ${enMajusculeInitiale(a.categorie_nom)}` : ''}`,
     detail: `${libelleRaisonAlerte(a.raison)}${a.commentaire ? ` · « ${extrait(a.commentaire)} »` : ''}`,
     lien: { to: LIEN_FILE_A_TRAITER, label: 'Examiner les avis' },
   }));

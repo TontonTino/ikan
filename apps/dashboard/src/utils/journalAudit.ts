@@ -1,3 +1,4 @@
+import { ROLE_LABELS } from './vocabulaire';
 /**
  * Libellés français du journal d'audit (AD-08). Un code d'action technique (« compte.cree ») n'est jamais affiché tel quel :
  * chaque code de l'API a son libellé ici ; un code inconnu (version plus récente de l'API) s'affiche « Action non répertoriée ».
@@ -30,9 +31,7 @@ export const LIBELLES_ACTION: Record<string, string> = {
 export const LIBELLES_RESULTAT: Record<string, string> = { succes: 'Réussie', refus: 'Refusée' };
 
 export const LIBELLES_ROLE_JOURNAL: Record<string, string> = {
-  admin: 'Administrateur',
-  cx_manager: 'CX Manager',
-  agency_manager: 'Responsable d’agence',
+  ...ROLE_LABELS,
   anonyme: 'Visiteur non connecté',
   systeme: 'Système',
 };

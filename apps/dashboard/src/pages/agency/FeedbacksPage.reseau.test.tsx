@@ -30,7 +30,7 @@ describe('page « Avis du réseau » (CX Manager, /feedbacks)', () => {
     expect(html).toContain('Toutes les agences');
     expect(html).toContain('aria-label="Filtrer les avis contradictoires"');
     expect(html).toContain('Avis contradictoires uniquement');
-    for (const filtre of ['Filtrer par période', 'Filtrer par note', 'Filtrer par ton', 'Filtrer par gravité', 'Filtrer par thème']) {
+    for (const filtre of ['Filtrer par période', 'Filtrer par note', 'Filtrer par ton', 'Filtrer par urgence', 'Filtrer par thème']) {
       expect(html).toContain(`aria-label="${filtre}"`);
     }
     expect(html).toContain('Rechercher dans le texte des avis');

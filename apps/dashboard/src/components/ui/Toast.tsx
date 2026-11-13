@@ -102,7 +102,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={api}>
       {children}
       <div className="ui-toast-region">
-        <ol className="ui-toast-list" aria-live="polite" aria-label="Notifications">
+        <ol className="ui-toast-list" aria-live="polite" aria-label="Messages">
           {polite.map((t) => <ToastView key={t.id} item={t} onDismiss={dismiss} />)}
         </ol>
         <ol className="ui-toast-list" aria-live="assertive" aria-label="Erreurs">

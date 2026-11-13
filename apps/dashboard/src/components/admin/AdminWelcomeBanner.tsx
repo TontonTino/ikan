@@ -1,5 +1,6 @@
 import React from 'react';
 import DashboardIllustration from '../common/DashboardIllustration';
+import { ROLE_LABELS_PLURIEL } from '../../utils/vocabulaire';
 
 interface AdminWelcomeBannerProps {
   userName?: string;
@@ -8,7 +9,7 @@ interface AdminWelcomeBannerProps {
 
 export default function AdminWelcomeBanner({
   userName = 'Système',
-  subtitle = 'Voici un aperçu de vos organisations et CX Managers sur la plateforme IKAN AI.',
+  subtitle = `Voici un aperçu de vos organisations et ${ROLE_LABELS_PLURIEL.cx_manager.toLowerCase()} sur la plateforme IKAN AI.`,
 }: AdminWelcomeBannerProps) {
   // Formatage de la date en français, ex : "JEUDI 27 AOÛT 2026"
   const formattedDate = React.useMemo(() => {
@@ -74,7 +75,7 @@ export default function AdminWelcomeBanner({
               lineHeight: 1.2,
             }}
           >
-            Bonjour {userName}
+            Tableau de bord
           </h1>
         </div>
 
@@ -88,7 +89,7 @@ export default function AdminWelcomeBanner({
             lineHeight: 1.45,
           }}
         >
-          {subtitle}
+          Bonjour {userName}. {subtitle}
         </p>
       </div>
 

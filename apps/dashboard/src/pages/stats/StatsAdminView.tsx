@@ -13,6 +13,7 @@ import {
 } from '../../components/stats/StatsStates';
 import { BuildingIcon, StoreIcon, UsersIcon, TrendingUpIcon } from '../../components/common/Icons';
 import { userFacingError } from '../../utils/userFacingError';
+import { ROLE_LABELS_PLURIEL } from '../../utils/vocabulaire';
 
 export default function StatsAdminView() {
   const [activeTab, setActiveTab] = useState<'overview' | 'organisations'>('overview');
@@ -59,7 +60,7 @@ export default function StatsAdminView() {
   return (
     <div style={{ padding: '0 36px 48px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
       <PageHeader
-        title="Statistiques de la plateforme"
+        title="Statistiques"
         subtitle="Vue structurelle : organisations, agences, comptes et forfaits"
         onRefresh={fetchData}
         onExport={handleExport}
@@ -78,7 +79,7 @@ export default function StatsAdminView() {
                 <KpiCard icon={<BuildingIcon size={20} />} label="Organisations actives" value={kpis.organisations_actives?.valeur ?? 0} compact subtitle={kpis.organisations_actives?.sous_titre || undefined} />
                 <KpiCard icon={<StoreIcon size={20} />} label="Agences" value={kpis.total_agences?.valeur ?? 0} compact subtitle={kpis.total_agences?.sous_titre || undefined} />
                 <KpiCard icon={<UsersIcon size={20} />} label="Utilisateurs actifs" value={kpis.utilisateurs_actifs?.valeur ?? 0} compact subtitle={kpis.utilisateurs_actifs?.sous_titre || undefined} />
-                <KpiCard icon={<UsersIcon size={20} />} label="CX Managers" value={kpis.cx_managers?.valeur ?? 0} compact subtitle={kpis.cx_managers?.sous_titre || undefined} />
+                <KpiCard icon={<UsersIcon size={20} />} label={ROLE_LABELS_PLURIEL.cx_manager} value={kpis.cx_managers?.valeur ?? 0} compact subtitle={kpis.cx_managers?.sous_titre || undefined} />
                 <KpiCard icon={<UsersIcon size={20} />} label="Responsables d’agence" value={kpis.agency_managers?.valeur ?? 0} compact subtitle={kpis.agency_managers?.sous_titre || undefined} />
               </div>
               <RepartitionForfaitsCard repartition={data.repartition_forfaits} />

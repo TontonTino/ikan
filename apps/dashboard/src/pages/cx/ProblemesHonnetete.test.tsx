@@ -212,7 +212,7 @@ describe('« Actions à mener » : état vide exact', () => {
   it('Agency Manager : son CX Manager définit l’action sur un problème de l’agence ou sur un avis qu’il a pris en charge', () => {
     const html = rendre({ isAgencyManager: true });
     expect(html).toContain(TEXTE_VIDE_EN_COURS_AGENCE);
-    expect(TEXTE_VIDE_EN_COURS_AGENCE).toContain('votre CX Manager la définit sur un problème de votre agence');
+    expect(TEXTE_VIDE_EN_COURS_AGENCE).toContain('votre responsable expérience client la définit sur un problème de votre agence');
     expect(TEXTE_VIDE_EN_COURS_AGENCE).toContain('sur un avis que vous avez pris en charge');
   });
 

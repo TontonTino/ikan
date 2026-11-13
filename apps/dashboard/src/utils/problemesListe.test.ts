@@ -32,7 +32,7 @@ describe('paramètres envoyés au serveur : seuls les filtres actifs', () => {
     expect(aDesFiltresActifs(FILTRES_PAR_DEFAUT)).toBe(false);
     expect(aDesFiltresActifs({ ...FILTRES_PAR_DEFAUT, tri: 'ancien', agenceId: 'ag1' })).toBe(false);
     expect(aDesFiltresActifs({ ...FILTRES_PAR_DEFAUT, statut: 'ouverte' })).toBe(true);
-    expect(aDesFiltresActifs({ ...FILTRES_PAR_DEFAUT, gravite: 'faible' })).toBe(true);
+    expect(aDesFiltresActifs({ ...FILTRES_PAR_DEFAUT, gravite: 'normale' })).toBe(true);
     expect(aDesFiltresActifs({ ...FILTRES_PAR_DEFAUT, enRetard: true })).toBe(true);
   });
 });

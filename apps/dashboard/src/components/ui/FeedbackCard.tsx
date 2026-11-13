@@ -67,7 +67,7 @@ export default function FeedbackCard({ feedback, showAgency = false, onOpen, act
         <Rating note={feedback.note} />
         {ia && <Badge value={ia.sentiment} label={SENTIMENT_LABEL[ia.sentiment]} />}
         {ia && (ia.criticite === 'critique' || ia.criticite === 'elevee') && (
-          <Badge value={ia.criticite} label={`Gravité ${CRITICITE_LABEL[ia.criticite].toLowerCase()}`} />
+          <Badge value={ia.criticite} label={`Urgence ${CRITICITE_LABEL[ia.criticite].toLowerCase()}`} />
         )}
         <span className="ui-item__spacer" />
         {statut && <Badge variant={STATUT_TONE[statut]} label={STATUT_LABEL[statut]} />}

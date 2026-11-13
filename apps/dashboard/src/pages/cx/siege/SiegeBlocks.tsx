@@ -54,6 +54,7 @@ import { PHRASE_TRI_CLASSEMENT } from '../../../utils/scoreFiabilise';
 
 import YamNote from '../../../components/agent/YamNote';
 import { formaterPourcentage } from '../../../utils/formatNombre';
+import { LIBELLES } from '../../../utils/vocabulaire';
 
 export type KpiKind = 'satisfaction' | 'volume' | 'critiques' | 'seuil';
 
@@ -165,7 +166,7 @@ export function SiegeKpis({
       <KpiCard
         icon={<AlertTriangleIcon />}
         label="Avis critiques"
-        hint="Avis dont la gravité, calculée automatiquement, est « critique » sur la période."
+        hint="Avis dont l’urgence, calculée automatiquement, est « critique » sur la période."
         loading={statsLoading}
         value={k ? nbCritiques.toLocaleString('fr-FR') : '—'}
         tone={nbCritiques > 0 ? 'critical' : 'neutral'}
@@ -243,14 +244,14 @@ export function Surveillance({
       <br />1. sous son seuil configuré (alerte active)
       <br />2. avis critiques sur la période
       <br />3. baisse ≥ {SURVEILLANCE.BAISSE_MIN_PTS} pts vs période précédente (≥ {SURVEILLANCE.BAISSE_MIN_AVIS} avis)
-      <br />4. problèmes de gravité critique ou élevée, ouverts ou rouverts, sans action en cours
+      <br />4. problèmes d’urgence critique ou élevée, ouverts ou rouverts, sans action en cours
       <br />Les critères 3 et 4 sont provisoires. Aucune note globale n’est calculée.
     </span>
   );
 
   return (
     <Card
-      title="À surveiller"
+      title="Agences à suivre"
       subtitle={loading ? 'Analyse des signaux…' : lignes.length ? `${total} agence${total > 1 ? 's' : ''} présente${total > 1 ? 'nt' : ''} au moins un signal` : undefined}
       tone={lignes.some((l) => l.rang <= RANG_CRITIQUE_MAX) ? 'critical' : 'default'}
       className={`siege-surveillance${lignes.some((l) => l.rang === 1) ? ' has-critical' : ''}`}
@@ -560,7 +561,7 @@ export function Action({ actions, issues, onRetryActions, onRetryIssues }: { act
             ? <BlockError message="Le suivi des actions est indisponible pour le moment." onRetry={onRetryActions} />
             : (
               <>
-                {stat('Actions à mener en cours', actions.data.enCours.toLocaleString('fr-FR'), <BlockLink to="/actions">Voir les actions</BlockLink>)}
+                {stat(`${LIBELLES.actionPluriel} en cours`, actions.data.enCours.toLocaleString('fr-FR'), <BlockLink to="/actions">Voir les actions</BlockLink>)}
                 {stat('Actions réalisées', actions.data.realisees.toLocaleString('fr-FR'))}
               </>
             )}

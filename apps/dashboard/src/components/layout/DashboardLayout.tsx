@@ -12,6 +12,7 @@ import YamChatPanel, { YAM_PANEL_ID } from '../agent/YamChatPanel';
 import { useYamStore } from '../../stores/yamStore';
 import { useMediaQuery, DESKTOP_QUERY } from '../ui/useMediaQuery';
 import { XCloseIcon } from '../common/Icons';
+import { LIBELLES } from '../../utils/vocabulaire';
 
 // Seuils d'espace utile du contenu (hors sidebar, marges et panneau YAM).
 // L'écart de 40 px évite les bascules répétées quand la largeur varie près du seuil.
@@ -240,7 +241,7 @@ export default function DashboardLayout() {
 
   // Fil d'Ariane dynamique
   const getBreadcrumb = () => {
-    if (location.pathname.includes('/statistiques')) return user?.role === 'admin' ? 'Statistiques de la plateforme' : 'Statistiques';
+    if (location.pathname.includes('/statistiques')) return 'Statistiques';
     if (location.pathname.includes('/admin/organisations')) return 'Organisations';
     if (location.pathname.includes('/admin/facturation')) return 'Facturation';
     if (location.pathname.includes('/admin/journal')) return 'Journal d’audit';
@@ -251,11 +252,11 @@ export default function DashboardLayout() {
     if (location.pathname.includes('/mon-agence')) return 'Mon agence';
     if (location.pathname.includes('/apercu')) return 'Agence';
     if (location.pathname.includes('/admin/dashboard')) return 'Tableau de bord';
-    if (location.pathname.includes('/siege')) return 'Vue d\'ensemble';
-    if (location.pathname.includes('/agence')) return 'Vue d\'ensemble';
+    if (location.pathname.includes('/siege')) return 'Vue d’ensemble';
+    if (location.pathname.includes('/agence')) return 'Vue d’ensemble';
     if (location.pathname.includes('/feedbacks')) return user?.role === 'cx_manager' ? 'Avis du réseau' : 'Avis clients';
     if (location.pathname.includes('/alertes')) return 'Alertes';
-    if (location.pathname.includes('/actions')) return 'Actions à mener';
+    if (location.pathname.includes('/actions')) return LIBELLES.actionPluriel;
     if (location.pathname.includes('/issues')) return 'Problèmes à traiter';
     if (location.pathname.includes('/suggestions')) return 'Suggestions';
     if (location.pathname.includes('/demandes-rappel')) return 'Demandes de rappel';

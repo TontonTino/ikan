@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import case, func
 from sqlalchemy.orm import Session, joinedload
 
+from app.services.urgence import valeurs_filtre_urgence
 from app.api.deps import get_cx_manager, get_cx_or_agency_manager, get_db
 from app.models.agence import Agence
 from app.models.action_corrective import ActionCorrective
@@ -269,7 +270,7 @@ def _enrichir_liste(db: Session, issues: List[Issue], maintenant: datetime) -> L
 def lister_issues(
     response: Response,
     statut: Optional[str] = Query(None),
-    severite: Optional[CriticiteType] = Query(None),
+    severite: Optional[str] = Query(None, description="faible, moyenne, elevee, critique, ou normale (= faible ou moyenne)."),
     agence_id: Optional[UUID] = Query(None),
     categorie_id: Optional[UUID] = Query(None),
     en_retard: Optional[bool] = Query(None, description="True : seulement les problèmes encore à traiter dont le délai de traitement est dépassé. False : tous les autres (délai tenu, sans délai, ou problème résolu)."),
@@ -292,7 +293,10 @@ def lister_issues(
     if statut:
         query = query.filter(Issue.statut == statut)
     if severite:
-        query = query.filter(Issue.severite == severite)
+        valeurs = valeurs_filtre_urgence(severite)
+        if valeurs is None:
+            raise HTTPException(status_code=422, detail="Urgence inconnue.")
+        query = query.filter(Issue.severite.in_(valeurs))
     if agence_id:
         query = query.filter(Issue.agence_id == agence_id)
     if categorie_id:

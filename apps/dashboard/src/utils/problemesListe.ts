@@ -1,5 +1,6 @@
 import type { CriticiteType, Issue, IssueStatut } from '../types';
 import { etatDelai, libelleJours } from './issueSuivi';
+import type { NiveauUrgence } from './vocabulaire';
 
 /**
  * Liste des problèmes : filtres serveur, texte d'avancement, navigation au clavier. Tout est pur (sans React) pour être testé.
@@ -11,7 +12,8 @@ export type TriListe = 'recent' | 'ancien';
 export interface FiltresProblemes {
   /** Un vrai statut à la fois (l'API filtre sur un seul statut) ; null : tous. */
   statut: IssueStatut | null;
-  gravite: CriticiteType | null;
+  /** Niveau d'urgence affiché (critique, élevée, normale) ; `normale` = faible ou moyenne côté API. */
+  gravite: NiveauUrgence | null;
   enRetard: boolean;
   tri: TriListe;
   agenceId: string | null;

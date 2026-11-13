@@ -39,16 +39,16 @@ export const formatDateAvis = (dateStr?: string) => {
 export const libelleAnalyseAbsente = (feedback: Pick<Feedback, 'analyse_statut'>) =>
   feedback.analyse_statut === 'indisponible' ? 'Analyse indisponible' : 'Non analysé';
 
-const libelleGravite = (criticite: string) => (GRAVITE_LABELS[criticite as CriticiteType] ?? criticite).toLowerCase();
+const libelleGravite = (criticite: string) => (GRAVITE_LABELS[criticite as CriticiteType] ?? 'non évaluée').toLowerCase();
 
-/** Pastille de gravité du tableau : toujours un texte (« CRITIQUE », « ÉLEVÉE », « Gravité faible »…). */
+/** Pastille d'urgence du tableau : toujours un texte (« CRITIQUE », « ÉLEVÉE », « Urgence normale »). */
 export function PastilleGravite({ feedback }: { feedback: Feedback }) {
   const criticite = feedback.analyse_ia?.criticite;
-  if (!criticite) return <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-2)' }}>{feedback.analyse_ia ? 'Gravité non évaluée' : libelleAnalyseAbsente(feedback)}</span>;
+  if (!criticite) return <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-2)' }}>{feedback.analyse_ia ? 'Urgence non évaluée' : libelleAnalyseAbsente(feedback)}</span>;
   const fort = criticite === 'critique' || criticite === 'elevee';
   return (
     <span
-      aria-label={`Gravité ${libelleGravite(criticite)}`}
+      aria-label={`Urgence ${libelleGravite(criticite)}`}
       style={{
         background: CRITICITE_STYLE[criticite]?.bg || 'var(--color-neutre-fond)',
         color: CRITICITE_STYLE[criticite]?.text || 'var(--color-text-2)',
@@ -58,7 +58,7 @@ export function PastilleGravite({ feedback }: { feedback: Feedback }) {
         fontWeight: 'var(--weight-semibold)',
       }}
     >
-      {criticite === 'critique' ? 'CRITIQUE' : criticite === 'elevee' ? 'ÉLEVÉE' : `Gravité ${libelleGravite(criticite)}`}
+      {criticite === 'critique' ? 'CRITIQUE' : criticite === 'elevee' ? 'ÉLEVÉE' : `Urgence ${libelleGravite(criticite)}`}
     </span>
   );
 }
@@ -116,7 +116,7 @@ export function AvisCarteMobile({ feedback, afficherAgence, enRetard = false, on
   const criticite = normalizeCriticite(feedback.analyse_ia?.criticite);
   const statut = STATUT_BADGES[(feedback.statut_traitement || 'nouveau') as StatutTraitement] || STATUT_BADGES.nouveau;
   const libelleCriticite = feedback.analyse_ia
-    ? (CRITICITE_STYLE[criticite] ? `${criticite === 'elevee' ? 'Élevée' : criticite.charAt(0).toUpperCase() + criticite.slice(1)}` : 'Gravité non évaluée')
+    ? (CRITICITE_STYLE[criticite] ? GRAVITE_LABELS[criticite as CriticiteType] ?? 'Urgence non évaluée' : 'Urgence non évaluée')
     : libelleAnalyseAbsente(feedback);
   return (
     <article className={`feedbacks-mobile-card${enRetard ? ' is-late' : ''}`}>

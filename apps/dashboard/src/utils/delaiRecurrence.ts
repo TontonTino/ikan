@@ -1,6 +1,7 @@
 import axios from 'axios';
 import type { Issue, IssueStatut, UserRole } from '../types';
 import { shortDate } from '../components/ui/format';
+import { RESPONSABLE_CX } from './vocabulaire';
 
 /**
  * Délai de traitement et récurrence d'un problème : décidés par le CX Manager (règle appliquée par le serveur ; l'interface ne fait que la refléter).
@@ -11,7 +12,7 @@ export const ROLES_FIXER_DELAI_RECURRENCE: readonly UserRole[] = ['cx_manager'];
 export const peutFixerDelaiRecurrence = (role: UserRole | undefined): boolean => !!role && ROLES_FIXER_DELAI_RECURRENCE.includes(role);
 
 /** Dit à l'Agency Manager qui décide (rien n'est grisé sans explication). */
-export const PHRASE_QUI_DECIDE = 'Le délai de traitement et la récurrence sont fixés par le CX Manager.';
+export const PHRASE_QUI_DECIDE = `Le délai de traitement et la récurrence sont fixés par le ${RESPONSABLE_CX}.`;
 
 const RESOLUS: readonly IssueStatut[] = ['resolue', 'verifiee'];
 /** Un problème résolu ou vérifié n'accepte plus de délai (un délai posé après coup fausserait le respect du délai) ; la récurrence reste modifiable. */
@@ -67,7 +68,7 @@ export type NatureEchecDR = 'saisie' | 'refus' | 'disparu' | 'serveur';
 export interface EchecDR { nature: NatureEchecDR; message: string }
 
 export const MESSAGES_DELAI_RECURRENCE = {
-  refus: 'Seul le CX Manager peut modifier le délai et la récurrence. Rien n’a été enregistré.',
+  refus: `Seul le ${RESPONSABLE_CX} peut modifier le délai et la récurrence. Rien n’a été enregistré.`,
   introuvable: 'Ce problème n’existe plus. Le détail vient d’être actualisé.',
   conflit: 'Ce problème a changé entre-temps (il est peut-être déjà résolu, ou d’autres problèmes lui sont liés). Le détail vient d’être actualisé.',
   saisie: 'Cette valeur n’est pas acceptée. Vérifiez la date ou le problème choisi, puis réessayez.',

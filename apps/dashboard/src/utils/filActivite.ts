@@ -1,4 +1,5 @@
 import type { EvenementProbleme } from '../types';
+import { ROLE_LABELS } from './vocabulaire';
 
 /**
  * Fil d'activité d'un problème : traduit les lignes de l'historique en phrases. Tout est pur (sans React). Règle d'honnêteté : on ne dit que ce que la ligne contient ;
@@ -44,7 +45,7 @@ export function libelleEvenement(e: Pick<EvenementProbleme, 'type_evenement' | '
 /** L'auteur par son nom ; « Système » seulement quand la base n'en dit rien. */
 export const libelleAuteur = (e: Pick<EvenementProbleme, 'auteur_nom'>): string => e.auteur_nom?.trim() || AUTEUR_INCONNU;
 
-const ROLES: Record<string, string> = { cx_manager: 'CX Manager', agency_manager: 'Agency Manager', admin: 'Administrateur' };
+const ROLES: Record<string, string> = ROLE_LABELS;
 /** Rôle lisible (infobulle) ; vide si la base ne le dit pas. */
 export const libelleRole = (e: Pick<EvenementProbleme, 'auteur_role'>): string | null => (e.auteur_role ? ROLES[e.auteur_role] ?? null : null);
 

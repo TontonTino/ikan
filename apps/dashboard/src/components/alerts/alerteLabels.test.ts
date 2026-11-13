@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { AVIS_STATUT_LABELS } from '../../utils/vocabulaire';
 import { estAvisPrisEnCharge, libelleStatutAvis } from './alerteLabels';
 
-describe('libelleStatutAvis : statut de traitement d’un avis à risque → libellé français', () => {
+describe('libelleStatutAvis : statut de traitement d’un avis à traiter → libellé français', () => {
   it('en_traitement → « Pris en charge »', () => expect(libelleStatutAvis('en_traitement')).toBe('Pris en charge'));
   it('en_cours → « Action en cours »', () => expect(libelleStatutAvis('en_cours')).toBe('Action en cours'));
   it('nouveau → rien (l’absence de mention veut dire « pas encore pris en charge »)', () => expect(libelleStatutAvis('nouveau')).toBeNull());

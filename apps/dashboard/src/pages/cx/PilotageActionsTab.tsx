@@ -25,6 +25,7 @@ import {
   type FiltresActions,
   type LigneAction,
 } from '../../utils/actionsUnifiees';
+import { LIBELLES } from '../../utils/vocabulaire';
 
 interface Props {
   isAgencyManager: boolean;
@@ -110,7 +111,7 @@ export default function PilotageActionsTab(props: Props) {
       )}
 
       <div className={`pb-mise-en-page${ouvert && panneauAncre ? ' pb-mise-en-page--panneau' : ''}`}>
-        <section aria-label="Actions à mener" className="pb-liste">
+        <section aria-label={LIBELLES.actionPluriel} className="pb-liste">
           <BarreFiltresActions
             filtres={filtres}
             onChange={setFiltres}
@@ -124,7 +125,7 @@ export default function PilotageActionsTab(props: Props) {
           {erreur ? (
             <StatsErrorState message="Impossible de charger les actions. Cela ne signifie pas qu’il n’y en a pas." onRetry={recharger} />
           ) : chargement ? (
-            <div aria-busy="true" aria-label="Chargement des actions à mener" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div aria-busy="true" aria-label="Chargement des actions" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {[0, 1, 2].map((i) => <SkeletonBlock key={i} height={110} radius="var(--radius-xl)" />)}
             </div>
           ) : lignes.length === 0 && enCours && sansFiltre && YAM_PRESENCE ? (

@@ -70,7 +70,7 @@ export function ParametresVue({ settings, nom, retentionTexte, erreurs, saving, 
   const horsBornes = (settings.valeurs_hors_bornes ?? []).includes('retention_mois');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '800px' }}>
-      <PageHeader title="Paramètres système" subtitle="Configuration générale de la plateforme IKAN AI." />
+      <PageHeader title="Paramètres" subtitle="Configuration générale de la plateforme IKAN AI." />
 
       {horsBornes && (
         <Alert tone="warning" title="La durée de conservation enregistrée est hors des limites autorisées">
@@ -225,7 +225,7 @@ function AdminSettingsPageContenu() {
   if (erreurChargement || !settings) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '800px' }}>
-        <PageHeader title="Paramètres système" subtitle="Configuration générale de la plateforme IKAN AI." />
+        <PageHeader title="Paramètres" subtitle="Configuration générale de la plateforme IKAN AI." />
         <Alert
           tone="critical"
           title={erreurChargement || 'Les paramètres ne sont pas disponibles.'}

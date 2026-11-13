@@ -86,3 +86,27 @@ son titre : « Agences sous leur seuil, 7 derniers jours », « Actions et probl
 
 **Classement des agences** — seule la satisfaction est affichée, suivie du nombre d'avis et d'une fiabilité en un mot
 (faible < 10, moyenne 10 à 29, bonne ≥ 30). L'ordre reste celui de l'API (score de Wilson), expliqué en une phrase.
+
+## Un seul nom par notion (lot 4)
+
+Source unique : `apps/dashboard/src/utils/vocabulaire.ts`.
+
+| Avant | Désormais |
+|---|---|
+| À surveiller, Avis à risque, Notifications (pour des avis) | Avis à traiter |
+| Gravité, Criticité, Priorité (niveau) | Urgence : critique, élevée, normale (« normale » = faible ou moyenne en base ; filtre API `normale`) |
+| Actions à mener, Recommandations | Actions ; une suggestion de YAM est une « action suggérée » |
+| CX Manager | Responsable expérience client |
+| Agency Manager, Responsable d'agence | Responsable d'agence |
+| Important (urgence d'une alerte de seuil) | Élevée |
+
+- « Alertes » reste le nom des agences sous leur seuil (page Alertes) : ce ne sont pas des avis.
+- Le bloc « À surveiller » de la vue d'ensemble du réseau (des agences, pas des avis) s'appelle « Agences à suivre ».
+- « Priorités » (bloc de l'accueil d'agence : ce qu'il faut regarder d'abord) n'est pas un niveau d'urgence et garde son nom.
+- Les vues d'administration reçoivent parfois l'ancien libellé du rôle au lieu du code : `codeRole()` ramène les deux au code
+  avant toute comparaison.
+- Thèmes : un libellé par clé, majuscule initiale seulement, identique dans le dashboard (`utils/themeLabels.ts`), l'API
+  (`THEME_LABELS_MAP`) et YAM (`_THEME_LABELS_VEILLE`) ; un test le vérifie. Les noms de catégorie saisis par les organisations
+  sont affichés en majuscule initiale (`enMajusculeInitiale`) sans modifier la base.
+- Vouvoiement partout, y compris les questions suggérées de YAM ; une seule mention « réponses générées automatiquement ».
+- Titre de page = entrée de menu = fil d'Ariane.

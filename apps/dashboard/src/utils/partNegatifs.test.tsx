@@ -61,7 +61,7 @@ describe('thèmes : clic vers la liste « Avis du réseau »', () => {
   it('le nom du thème est un lien qui transmet le thème, la période et l’agence', () => {
     const html = rendu(<ThemesBarList themes={[theme('accueil')]} lienTheme={(t) => lienAvisReseau({ theme: t.theme, jours: 30, agenceId: '11111111-1111-4111-8111-111111111111' })} />);
     expect(html).toContain('href="/feedbacks?agence=11111111-1111-4111-8111-111111111111&amp;theme=accueil&amp;jours=30"');
-    expect(html).toContain('aria-label="Voir les avis du thème Accueil &amp; Conseillers"');
+    expect(html).toContain('aria-label="Voir les avis du thème Accueil &amp; amabilité"');
   });
 
   it('sans lien fourni, le thème n’est pas cliquable (autres vues inchangées)', () => {

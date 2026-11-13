@@ -25,7 +25,7 @@ describe('les huit filtres combinés sont tous affichés, avec leur libellé exa
       { cle: 'theme', libelle: 'Thème : Thème attente' },
       { cle: 'periode', libelle: 'Période : 30 derniers jours' },
       { cle: 'note', libelle: 'Note : 5/5' },
-      { cle: 'criticite', libelle: 'Gravité : Élevée' },
+      { cle: 'criticite', libelle: 'Urgence : Élevée' },
       { cle: 'discordance', libelle: 'Avis contradictoires' },
       { cle: 'recherche', libelle: 'Recherche : « retard »' },
     ]);

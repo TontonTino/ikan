@@ -19,6 +19,7 @@ import {
   type LigneAction,
   type TypeActions,
 } from '../../utils/actionsUnifiees';
+import { ACTIONS_SEGMENTS, ACTION_FIN_LABELS } from '../../utils/vocabulaire';
 
 /** Identifiant DOM du bouton qui ouvre le problème d'une ligne : le panneau y rend le focus quand il se ferme. */
 export const idOuvrirProbleme = (cle: string): string => `action-ligne-${cle}`;
@@ -41,10 +42,10 @@ export function BarreFiltresActions({ filtres, onChange, totalEnCours, totalTerm
     <div className="pb-barre-actions">
       <div className="ui-segmented" role="group" aria-label="État des actions">
         <button type="button" className="ui-segmented__item" aria-pressed={enCours} onClick={() => onChange({ segment: 'en_cours' })} style={{ minHeight: 44 }}>
-          En cours{totalEnCours !== null ? ` (${totalEnCours})` : ''}
+          {ACTIONS_SEGMENTS.enCours}{totalEnCours !== null ? ` (${totalEnCours})` : ''}
         </button>
         <button type="button" className="ui-segmented__item" aria-pressed={!enCours} onClick={() => onChange({ segment: 'terminees', enRetard: false })} style={{ minHeight: 44 }}>
-          Terminées{totalTerminees !== null ? ` (${totalTerminees})` : ''}
+          {ACTIONS_SEGMENTS.terminees}{totalTerminees !== null ? ` (${totalTerminees})` : ''}
         </button>
       </div>
       <div className="pb-filtres" role="group" aria-label="Filtres des actions">
@@ -149,7 +150,7 @@ export function LigneActionItem({ ligne, afficherAgence, role, moiId, maintenant
         {ligne.terminee && ligne.dateFin && (
           <>
             <span className="ui-item__meta-sep" aria-hidden="true" />
-            <span>{probleme ? 'Terminée' : 'Réalisée'} le <time dateTime={ligne.dateFin} title={fullDate(ligne.dateFin)}>{shortDate(ligne.dateFin)}</time></span>
+            <span>{probleme ? ACTION_FIN_LABELS.probleme : ACTION_FIN_LABELS.avis} le <time dateTime={ligne.dateFin} title={fullDate(ligne.dateFin)}>{shortDate(ligne.dateFin)}</time></span>
           </>
         )}
         {retard && (

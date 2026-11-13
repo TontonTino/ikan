@@ -110,7 +110,7 @@ export default function StatsCXView() {
       style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)', width: '100%', maxWidth: '100%', minWidth: 0 }}
     >
       <PageTitle
-        title="Statistiques et tendances"
+        title="Statistiques"
         description="Analysez les performances, les avis et les thèmes du réseau. Pour suivre et traiter un problème signalé, ouvrez Problèmes à traiter."
         actions={
           <>

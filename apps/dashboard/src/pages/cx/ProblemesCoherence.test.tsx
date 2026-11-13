@@ -69,7 +69,7 @@ describe('signal « À surveiller » : problèmes critiques ou élevés sans act
     const l = surveiller(DEMO);
     expect(signal(l, 'a-zone')?.texte).toBe('1 problème sans action en cours (dont 1 critique)');                     // « proprete » : ratée avant
     expect(signal(l, 'a-ouaga')?.texte).toBe('1 problème sans action en cours');                                      // « reservation » (élevée) ; « climatisation » a une action
-    expect(signal(l, 'a-ouaga')?.portee).toBe('gravité critique ou élevée');
+    expect(signal(l, 'a-ouaga')?.portee).toBe('urgence critique ou élevée');
   });
 
   it('avant (drapeau) : le seul problème retenu était celui qui a déjà une action', () => {

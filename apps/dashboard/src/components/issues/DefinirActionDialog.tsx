@@ -20,6 +20,7 @@ import {
 } from '../../utils/actionsProbleme';
 import { SEUIL_COMPTEUR_VOCAL } from '../../utils/episodesAlertes';
 import type { EtatResponsables } from './useResponsables';
+import { LIBELLES } from '../../utils/vocabulaire';
 
 /** Identifiants des champs (liaison étiquette / aide / erreur). */
 export interface IdsChamps {
@@ -64,7 +65,7 @@ export function CorpsDefinirAction({ saisie, onChange, erreurs, envoi, echec, on
       <p className="alerte-dialogue__texte">Décidez ce qui doit être fait pour régler ce problème. L’action apparaît ensuite dans le détail du problème, qui passe à l’état « Action en cours ».</p>
 
       <div className="alerte-dialogue__champ">
-        <label htmlFor={ids.titre} className="alerte-dialogue__label">Action à mener <span className="alerte-dialogue__requis" aria-hidden="true">*</span></label>
+        <label htmlFor={ids.titre} className="alerte-dialogue__label">{LIBELLES.action} <span className="alerte-dialogue__requis" aria-hidden="true">*</span></label>
         <input
           id={ids.titre}
           className="alerte-dialogue__controle"

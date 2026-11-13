@@ -65,7 +65,7 @@ describe('priorités de l’agence', () => {
 
   it('n’invente aucun libellé de statut ni de responsable', () => {
     const [p] = construirePriorites({ alertes: [], avis: [], problemes: [probleme('i1', 'critique')] });
-    expect(p.detail).toMatch(/Gravité critique/);
+    expect(p.detail).toMatch(/Urgence critique/);
     expect(p.detail).not.toMatch(/responsable|échéance/i);
   });
 });

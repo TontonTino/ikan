@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/authStore';
 import AdminAgencesContent from './AdminAgencesContent';
 import AdminUsersContent from './AdminUsersContent';
 import PageTitle from '../../components/ui/PageTitle';
+import { ROLE_LABELS_PLURIEL } from '../../utils/vocabulaire';
 
 /**
  * Page "Gestion des agences".
@@ -20,8 +21,10 @@ export default function GestionAgencesPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-      {currentUser?.role === 'cx_manager' && (
+      {currentUser?.role === 'cx_manager' ? (
         <PageTitle title="Gestion des agences" description="Agences, QR codes et responsables d’agence de votre réseau." />
+      ) : (
+        <PageTitle title="Gestion des agences" description={`Comptes des ${ROLE_LABELS_PLURIEL.cx_manager.toLowerCase()} de chaque organisation.`} />
       )}
       {currentUser?.role === 'cx_manager' ? <AdminAgencesContent /> : <AdminUsersContent />}
     </div>

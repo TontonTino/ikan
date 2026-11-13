@@ -40,8 +40,8 @@ describe('« Définir une action » : visible selon le rôle, jamais grisé', ()
   });
 
   it('Agency Manager, problème sans action : un texte dit qui décide', () => {
-    expect(rendre('agency_manager', probleme('ouverte', []))).toContain('Le CX Manager décide de l’action à mener.');
-    expect(rendre('cx_manager', probleme('ouverte', []))).toContain('Décidez de la première action à mener');
+    expect(rendre('agency_manager', probleme('ouverte', []))).toContain('Le responsable expérience client décide de l’action.');
+    expect(rendre('cx_manager', probleme('ouverte', []))).toContain('Décidez de la première action pour régler ce problème');
     expect(rendre('agency_manager', probleme('verifiee', []))).toContain('Aucune action n’a été définie pour ce problème.');
   });
 });
@@ -49,7 +49,7 @@ describe('« Définir une action » : visible selon le rôle, jamais grisé', ()
 describe('états du bloc « Actions à mener »', () => {
   it('une action : état, responsable, échéance (dans <time>), bouton Terminer', () => {
     const html = rendre('cx_manager', probleme('action_en_cours', [action('a', { responsable_id: 'moi', echeance: '2026-11-20T12:00:00Z' })]));
-    expect(html).toContain('Actions à mener (1)');
+    expect(html).toContain('Actions (1)');
     expect(html).toContain('À faire');
     expect(html).toContain('Responsable : Vous');
     expect(html).toMatch(/Échéance <time dateTime="2026-11-20T12:00:00Z" title="20 novembre 2026[^"]*">20 nov\. 2026<\/time>/);
@@ -64,7 +64,7 @@ describe('états du bloc « Actions à mener »', () => {
 
   it('plusieurs actions dont une terminée : un seul « Terminer », badge « Terminée » sans bouton', () => {
     const html = rendre('cx_manager', probleme('action_en_cours', [action('a'), action('b', { statut: 'terminee', date_completion: '2026-11-02T10:00:00Z' })]));
-    expect(html).toContain('Actions à mener (2)');
+    expect(html).toContain('Actions (2)');
     expect(html.match(/>Terminer</g)).toHaveLength(1);
     expect(html).toContain('Terminée');
     expect(html).toContain('Terminée le <time');
@@ -114,7 +114,7 @@ describe('boîte « Définir une action »', () => {
   it('champs : intitulé (focus à l’ouverture), précisions avec compteur, responsable, échéance facultative', () => {
     const h = html();
     expect(h).toContain('data-autofocus');
-    expect(h).toContain('Action à mener');
+    expect(h).toContain('>Action <');
     expect(h).toContain('Précisions');
     expect(h).toContain('0 / 500 caractères');
     expect(h).toContain('Échéance');

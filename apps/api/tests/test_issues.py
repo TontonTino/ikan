@@ -730,3 +730,21 @@ def test_tri_valeur_inconnue_reste_decroissant(ctx):
     assert r.status_code == 200
     ids_dans_l_ordre = [i["id"] for i in r.json()]
     assert ids_dans_l_ordre == [str(plus_recente), str(plus_ancienne)]
+
+
+# ── Urgence affichée sur trois niveaux (lot 4) : « normale » = faible ou moyenne, valeurs en base inchangées ──
+
+def test_filtre_urgence_normale_regroupe_faible_et_moyenne(ctx):
+    ids = {niveau: _creer_issue(ctx, titre=f"Urgence {niveau}", severite=niveau) for niveau in ("faible", "moyenne", "elevee", "critique")}
+    titres = lambda r: sorted(i["titre"] for i in r.json())
+    r = ctx.call("cx_a", "get", "/issues/", params={"severite": "normale"})
+    assert r.status_code == 200
+    assert titres(r) == ["Urgence faible", "Urgence moyenne"]
+    assert r.headers["X-Total-Count"] == "2"
+    assert titres(ctx.call("cx_a", "get", "/issues/", params={"severite": "critique"})) == ["Urgence critique"]
+    # la valeur stockée ne change pas
+    assert ctx.call("cx_a", "get", f"/issues/{ids['faible']}").json()["severite"] == "faible"
+
+
+def test_filtre_urgence_inconnue_refusee(ctx):
+    assert ctx.call("cx_a", "get", "/issues/", params={"severite": "urgentissime"}).status_code == 422

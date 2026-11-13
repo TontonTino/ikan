@@ -183,7 +183,7 @@ describe('page « Actions à mener » : états', () => {
   it('chargement : squelette occupé', () => {
     const h = rendre({ chargement: true });
     expect(h).toContain('aria-busy="true"');
-    expect(h).toContain('Chargement des actions à mener');
+    expect(h).toContain('Chargement des actions');
   });
 
   it('erreur : ne laisse pas croire qu’il n’y a rien, avec « Réessayer »', () => {

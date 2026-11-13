@@ -227,7 +227,7 @@ export function AgenceDetail({
     <div className="siege-drawer">
       {/* 1. Pourquoi cette agence est signalée (signaux calculés, pas d'interprétation) */}
       {surveillance && (
-        <Alert tone={surveillance.rang <= RANG_CRITIQUE_MAX ? 'critical' : 'warning'} title="Signalée dans « À surveiller »">
+        <Alert tone={surveillance.rang <= RANG_CRITIQUE_MAX ? 'critical' : 'warning'} title="Signalée dans « Agences à suivre »">
           <ul className="siege-drawer__signals">
             {surveillance.signaux.map((s) => <li key={s.type}>{s.texte} <span className="siege-signal__scope">· {s.portee}</span></li>)}
           </ul>

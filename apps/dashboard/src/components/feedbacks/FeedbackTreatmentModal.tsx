@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Feedback, StatutTraitement, HistoriqueFeedback, ReponseClient, UserRole, Issue, IssueStatut, Categorie, CriticiteType } from '../../types';
 import { feedbacksApi, issuesApi, agencesApi } from '../../services/api';
-import { AVIS_STATUT_LABELS, GRAVITE_LABELS, PROBLEME_STATUT_LABELS, ROLE_LABELS, SENTIMENT_LABELS } from '../../utils/vocabulaire';
-import { themeLabel } from '../../utils/themeLabels';
+import { AVIS_STATUT_LABELS, GRAVITE_LABELS, LIBELLES, PROBLEME_STATUT_LABELS, RESPONSABLE_CX, ROLE_LABELS, SENTIMENT_LABELS } from '../../utils/vocabulaire';
+import { enMajusculeInitiale, themeLabel } from '../../utils/themeLabels';
 import { userFacingError } from '../../utils/userFacingError';
 import { aCriticiteElevee, estNegatif } from '../../utils/triageAvis';
 import EmptyState from '../ui/EmptyState';
@@ -230,7 +230,7 @@ export default function FeedbackTreatmentModal({
       onUpdateFeedback(res.data);
       setSuggestionInput('');
       await loadHistoriqueAndReponses(feedback.id);
-      showToast('✓ Suggestion transmise au CX Manager');
+      showToast(`✓ Suggestion transmise au ${RESPONSABLE_CX}`);
     } catch {
       showToast('Erreur lors de l’envoi de la suggestion');
     } finally {
@@ -648,7 +648,7 @@ export default function FeedbackTreatmentModal({
 
           {/* Criticité : afficher uniquement l'analyse réelle et distinguer une valeur absente. */}
           <div style={{ background: feedback.analyse_ia?.criticite === 'critique' ? 'var(--color-critique-fond)' : feedback.analyse_ia?.criticite === 'elevee' ? 'var(--color-surveiller-fond)' : 'var(--color-bg)', color: feedback.analyse_ia?.criticite === 'critique' ? 'var(--color-critique-texte)' : feedback.analyse_ia?.criticite === 'elevee' ? 'var(--color-critique-texte)' : 'var(--color-text-2)', padding: '4px 10px', borderRadius: '8px', border: '1px solid var(--color-trait)', fontWeight: 'var(--weight-semibold)' }}>
-            Gravité : {feedback.analyse_ia ? (feedback.analyse_ia.criticite ? GRAVITE_LABELS[feedback.analyse_ia.criticite] ?? feedback.analyse_ia.criticite : 'Non évaluée') : libelleAnalyseAbsente(feedback)}
+            Urgence : {feedback.analyse_ia ? (feedback.analyse_ia.criticite ? GRAVITE_LABELS[feedback.analyse_ia.criticite] ?? feedback.analyse_ia.criticite : 'Non évaluée') : libelleAnalyseAbsente(feedback)}
           </div>
           {feedback.analyse_ia?.discordance_detectee && (
             <div role="status" style={{ background: 'var(--color-surveiller-fond)', color: 'var(--color-surveiller-texte)', padding: '4px 10px', borderRadius: '8px', fontWeight: 'var(--weight-semibold)' }}>
@@ -757,7 +757,7 @@ export default function FeedbackTreatmentModal({
                 >
                   <ThumbsUpIcon size={20} color="var(--color-bon-texte)" />
                   <div className="t-sm t-semi">
-                    Avis positif : aucune action à mener n’est nécessaire.
+                    Avis positif : aucune action n’est nécessaire.
                   </div>
                 </div>
               )}
@@ -844,17 +844,17 @@ export default function FeedbackTreatmentModal({
                   }}
                 >
                   <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', marginBottom: '6px', textTransform: 'uppercase' }}>
-                    Suggestion pour le CX Manager
+                    Suggestion pour le {RESPONSABLE_CX}
                   </div>
                   <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-2)', margin: '0 0 12px 0' }}>
-                    Proposez une solution ou une amélioration terrain au CX Manager. L’avis restera « Pris en charge » jusqu’à ce qu’une action soit définie.
+                    Proposez une solution ou une amélioration terrain au {RESPONSABLE_CX}. L’avis restera « Pris en charge » jusqu’à ce qu’une action soit définie.
                   </p>
 
                   {feedback.suggestion_agence ? (
                     <div style={{ background: 'var(--color-bon-fond)', border: '1px solid var(--color-trait)', borderRadius: '12px', padding: '12px 14px', color: 'var(--color-encre)', fontSize: 'var(--text-sm)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'var(--weight-semibold)', marginBottom: '4px', color: 'var(--color-bon-texte)' }}>
                         <CheckIcon size={14} />
-                        <span>Suggestion transmise au CX Manager</span>
+                        <span>Suggestion transmise au {RESPONSABLE_CX}</span>
                       </div>
                       <p style={{ margin: '4px 0 0 0', fontStyle: 'italic' }}>"{feedback.suggestion_agence}"</p>
                       {feedback.suggestion_agence_auteur && (
@@ -896,7 +896,7 @@ export default function FeedbackTreatmentModal({
                         }}
                       >
                         <SendIcon size={13} />
-                        <span>{loadingAction ? 'Envoi en cours...' : 'Envoyer la suggestion au CX Manager'}</span>
+                        <span>{loadingAction ? 'Envoi en cours...' : `Envoyer la suggestion au ${RESPONSABLE_CX}`}</span>
                       </button>
                     </form>
                   )}
@@ -932,7 +932,7 @@ export default function FeedbackTreatmentModal({
 
                   {/* Définition ou Confirmation d'Action Corrective — repliée sur une ligne tant qu'il n'y a rien à faire ni à lire */}
                   {!['en_traitement', 'en_cours', 'resolu'].includes(currentStatut) ? (
-                    <p className="ftm-ligne-repliee"><strong>Action à mener</strong> : aucune définie pour l’instant.</p>
+                    <p className="ftm-ligne-repliee"><strong>{LIBELLES.action}</strong> : aucune définie pour l’instant.</p>
                   ) : (
                   <div
                     style={{
@@ -948,14 +948,14 @@ export default function FeedbackTreatmentModal({
 
                     {currentStatut === 'en_traitement' && !actionPermise && (
                       <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-2)', margin: 0 }}>
-                        Une action à mener se définit seulement sur un avis critique ou négatif. Cet avis n’est ni l’un ni l’autre.
+                        Une action se définit seulement sur un avis critique ou négatif. Cet avis n’est ni l’un ni l’autre.
                       </p>
                     )}
 
                     {currentStatut === 'en_traitement' && actionPermise && (
                       <form onSubmit={handleDefinirActionCX}>
                         <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-2)', margin: '0 0 10px 0' }}>
-                          Décrivez l’action à mener. Dès l’enregistrement, le statut passera à <strong>« Action en cours »</strong>.
+                          Décrivez l’action. Dès l’enregistrement, le statut passera à <strong>« Action en cours »</strong>.
                         </p>
                         <textarea
                           rows={3}
@@ -988,7 +988,7 @@ export default function FeedbackTreatmentModal({
                           }}
                         >
                           <PlusIcon size={14} />
-                          <span>{loadingAction ? 'Enregistrement...' : 'Enregistrer l’action à mener'}</span>
+                          <span>{loadingAction ? 'Enregistrement...' : 'Enregistrer l’action'}</span>
                         </button>
                       </form>
                     )}
@@ -1141,8 +1141,9 @@ export default function FeedbackTreatmentModal({
                         required
                         style={{ padding: '8px 10px', borderRadius: '10px', border: '1px solid var(--color-trait)', fontSize: 'var(--text-sm)', fontFamily: 'inherit' }}
                       >
-                        <option value="">Choisir la gravité</option>
-                        {(Object.keys(ISSUE_SEVERITE_LABELS) as CriticiteType[]).map((s) => (
+                        <option value="">Choisir l’urgence</option>
+                        {/* Trois niveaux affichés ; « Normale » enregistre la valeur « moyenne » (valeurs en base inchangées). */}
+                        {(['critique', 'elevee', 'moyenne'] as CriticiteType[]).map((s) => (
                           <option key={s} value={s}>{ISSUE_SEVERITE_LABELS[s]}</option>
                         ))}
                       </select>
@@ -1153,7 +1154,7 @@ export default function FeedbackTreatmentModal({
                       >
                         <option value="">Sans catégorie</option>
                         {categoriesAgence.map((c) => (
-                          <option key={c.id} value={c.id}>{c.nom}</option>
+                          <option key={c.id} value={c.id}>{enMajusculeInitiale(c.nom)}</option>
                         ))}
                       </select>
                     </div>
