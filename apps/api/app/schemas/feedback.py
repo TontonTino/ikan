@@ -20,7 +20,9 @@ _FORMAT_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$")
 
 class FeedbackCreate(BaseModel):
     """Payload envoyé par le formulaire client."""
-    categorie_id: uuid.UUID = Field(..., description="Catégorie choisie par le client parmi celles définies pour cette agence")
+    # Facultative (lot 5) : un client peut envoyer un avis avec seulement une note, sans lire ni choisir de catégorie
+    # (« Autres » sur le formulaire). La colonne était déjà nullable.
+    categorie_id: Optional[uuid.UUID] = Field(None, description="Catégorie choisie par le client parmi celles de cette agence ; absente = « Autres »")
     note: Optional[int] = Field(None, ge=1, le=5, description="Note de satisfaction (1=Négatif, 3=Neutre, 5=Positif)")
     nps_note: Optional[int] = Field(None, ge=0, le=10, description="Réponse NPS facultative (0 à 10)")
     sentiment: Optional[str] = Field(None, max_length=20, description="Sentiment sélectionné (negatif, neutre, positif)")

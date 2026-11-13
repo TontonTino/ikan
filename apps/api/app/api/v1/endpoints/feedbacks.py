@@ -202,13 +202,16 @@ def submit_feedback(
                 response.status_code = status.HTTP_200_OK
             return _reponse_soumission(existant)
 
-    categorie = db.query(Categorie).filter(
-        Categorie.id == data.categorie_id,
-        Categorie.agence_id == qr.agence_id,
-        Categorie.active == True,
-    ).first()
-    if not categorie:
-        raise HTTPException(status_code=400, detail="Catégorie invalide pour cette agence")
+    # Catégorie facultative (lot 5). Si elle est fournie, elle doit appartenir à l'agence du QR code et être active.
+    categorie = None
+    if data.categorie_id is not None:
+        categorie = db.query(Categorie).filter(
+            Categorie.id == data.categorie_id,
+            Categorie.agence_id == qr.agence_id,
+            Categorie.active == True,
+        ).first()
+        if not categorie:
+            raise HTTPException(status_code=400, detail="Catégorie invalide pour cette agence")
 
     try:
         note_val = data.note
@@ -226,7 +229,7 @@ def submit_feedback(
 
         feedback = Feedback(
             qr_code_id=qr.id,
-            categorie_id=categorie.id,
+            categorie_id=categorie.id if categorie else None,
             note=note_val,
             nps_note=data.nps_note,
             commentaire=data.commentaire,

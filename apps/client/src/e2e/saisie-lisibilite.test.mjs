@@ -80,18 +80,19 @@ async function ouvrir(code, largeur = 360, { avant } = {}) {
   await page.goto(`http://127.0.0.1:${PORT_CLIENT}/feedback/${code}`, { waitUntil: 'networkidle0' });
   return { page, fermer: () => contexte.close() };
 }
-const attendreCategories = (page) => page.waitForFunction(() => { const s = document.getElementById('categorieSelect'); return s && !s.disabled && s.options.length > 1; });
+// Catégorie en boutons (lot 5) : une par catégorie de l'agence, puis « Autres ».
+const attendreCategories = (page) => page.waitForFunction(() => document.querySelectorAll('.categorie-btn').length > 1);
 const visible = (page, id) => page.$eval(`#${id}`, (e) => getComputedStyle(e).display !== 'none' && !e.hidden);
 
 async function remplirNote(page, { categorie = 'c2', niveau = 'mauvais', commentaire = 'Attente trop longue au guichet' } = {}) {
   await attendreCategories(page);
-  await page.select('#categorieSelect', categorie);
+  if (categorie) await page.tap(`.categorie-btn[data-categorie="${categorie}"]`);
   await page.tap(`.sentiment-tile[data-sentiment="${niveau}"]`);
   if (commentaire) await page.type('#inputCommentaire', commentaire);
 }
 const etatFormulaire = (page) => page.evaluate(() => ({
   ecranFormulaire: getComputedStyle(document.getElementById('screen-sentiment')).display !== 'none',
-  categorie: document.getElementById('categorieSelect').value,
+  categorie: document.querySelector('.categorie-btn[aria-checked=true]')?.dataset.categorie ?? '',
   niveau: document.querySelector('.sentiment-tile[aria-checked=true]')?.dataset.sentiment ?? null,
   commentaire: document.getElementById('inputCommentaire').value,
   recontactOui: document.getElementById('recontactYes').classList.contains('is-active'),

@@ -50,7 +50,8 @@ const CONTROLES = {
   '.styled-textarea': 'commentaire',
   '.consent-row': 'ligne de la case de consentement',
   '.consent-box': 'case de consentement',
-  '.lien-retour': 'lien « Retour » du formulaire d\'idée',
+  '.lien-retour': 'lien « Retour » du formulaire d\'idée et de l\'écran de notation',
+  ':global(.categorie-btn)': 'boutons de catégorie (lot 5)',
 };
 
 test('toutes les zones tactiles font au moins 44 × 44 px (largeur ET hauteur déclarées)', () => {
@@ -108,6 +109,10 @@ test('le dégradé du bandeau et du bouton d\'envoi ne dépasse pas le vert #2F6
 // [description, couleur du texte, fond]. Les couleurs sont lues dans la feuille quand une règle les porte.
 const couleur = (selecteur) => effective(selecteur, 'color');
 const PAIRES = [
+  ['bouton de catégorie', couleur(':global(.categorie-btn)'), effective(':global(.categorie-btn)', 'background')],
+  ['bouton de catégorie survolé', couleur(':global(.categorie-btn)'), effective(':global(.categorie-btn:hover)', 'background')],
+  ['bouton de catégorie choisi', couleur(":global(.categorie-btn[aria-checked='true'])"), effective(":global(.categorie-btn[aria-checked='true'])", 'background')],
+  ['indicatif +226 du téléphone', couleur('.indicatif-fixe'), '#FFFFFF'],
   ['libellés des champs', couleur('.field-label'), '#FFFFFF'],
   ['texte saisi (champ, liste, commentaire)', couleur('.styled-input'), '#FFFFFF'],
   ['titre du bandeau', couleur('.hero-title'), HERO_CLAIR],

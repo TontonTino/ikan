@@ -102,10 +102,10 @@ def analyser_feedback(feedback_id: uuid.UUID, db: Session | None = None) -> None
             if sugg and sugg.contenu:
                 texte = sugg.contenu.strip()
 
-        # 1. Le thème n'est plus deviné par l'IA : c'est la catégorie choisie par le
-        # client sur le formulaire (fallback "accueil" pour les rares feedbacks
-        # anciens sans catégorie rattachée).
-        theme = feedback.categorie.nom if feedback.categorie else "accueil"
+        # 1. Le thème n'est plus deviné par l'IA : c'est la catégorie choisie par le client sur le formulaire.
+        # Sans catégorie (facultative depuis le lot 5 : bouton « Autres »), le thème est « autre » — jamais une
+        # catégorie inventée.
+        theme = feedback.categorie.nom if feedback.categorie else "autre"
 
         # 2. Inférence du sentiment (moteur lexical déterministe, cf. sentiment.py)
         if not texte:

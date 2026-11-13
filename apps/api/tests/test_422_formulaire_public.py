@@ -54,7 +54,9 @@ def test_le_422_du_formulaire_public_garde_la_forme_attendue_par_apps_client():
     assert "70 12 34 5a" not in apres.text and "70 12 34 5a" in avant.text         # la valeur saisie n'est plus renvoyée
 
 
-@pytest.mark.parametrize("corps", [{}, {"note": "abc"}, {"note": 9}])
+# Un corps vide n'est plus un 422 depuis le lot 5 (catégorie facultative, note facultative côté schéma) : remplacé par une
+# catégorie qui n'est pas un UUID, autre 422 de validation du même formulaire.
+@pytest.mark.parametrize("corps", [{"categorie_id": "pas-un-uuid"}, {"note": "abc"}, {"note": 9}])
 def test_les_autres_422_du_formulaire_public_restent_des_422_en_liste(corps):
     app = _app()
     installer_erreurs_validation(app)

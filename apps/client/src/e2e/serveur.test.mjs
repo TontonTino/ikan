@@ -175,7 +175,8 @@ after(async () => { await navigateur?.close(); });
 
 /** Envoie un avis noté depuis le formulaire (premier écran) et attend la confirmation. */
 async function envoyerAvis(page) {
-  await page.select('#categorieSelect', 'c1');
+  await page.waitForSelector('.categorie-btn[data-categorie="c1"]');
+  await page.click('.categorie-btn[data-categorie="c1"]');
   await page.click('.sentiment-tile[data-sentiment=bien]');
   await page.click('#btnSubmitFeedback');
   await attendre(page, 'screen-success');
@@ -203,7 +204,8 @@ test('chemin 1 « Noter » : formulaire → confirmation, un seul avis envoyé, 
   const ecrans = [];
   const noter = async () => { for (const id of ['screen-sentiment', 'screen-success']) if (await visible(page, id)) ecrans.push(id); };
   await noter();
-  await page.select('#categorieSelect', 'c1');
+  await page.waitForSelector('.categorie-btn[data-categorie="c1"]');
+  await page.click('.categorie-btn[data-categorie="c1"]');
   await page.click('.sentiment-tile[data-sentiment=bien]');
   await page.click('#btnSubmitFeedback');
   await attendre(page, 'screen-success');
@@ -323,5 +325,102 @@ test('zones tactiles ≥ 44 × 44 px mesurées dans le navigateur : formulaire, 
   await page.type('#inputIdee', 'Texte'); await page.click('#btnSubmitIdee'); await attendre(page, 'screen-idee-merci');
   faibles = faibles.concat(await mesurer('merci'));
   assert.deepEqual(faibles, []);
+  await page.close();
+});
+
+// ── Lot 5 : un avis possible sans lire ni remplir ──────────────────────────────────────────────────────────────────
+
+test('lot 5 : la note vient en premier, la catégorie après, facultative, en boutons avec « Autres »', { skip: SANS_NAVIGATEUR }, async () => {
+  const page = await ouvrir();
+  await page.waitForSelector('.categorie-btn[data-categorie="c1"]');
+  const ordre = await page.evaluate(() => {
+    const note = document.querySelector('.sentiment-section'), cat = document.getElementById('categorieSection');
+    return !!(note.compareDocumentPosition(cat) & Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+  assert.equal(ordre, true, 'la catégorie suit la note');
+  assert.equal(await page.$('#categorieSelect'), null, 'plus de liste déroulante');
+  const libelles = await page.$$eval('.categorie-btn', (bs) => bs.map((b) => b.textContent.trim()));
+  assert.deepEqual(libelles, ['Accueil', 'Caisse', 'Autres']);
+  assert.match(await page.$eval('#categorieLabel', (e) => e.textContent), /facultatif/);
+  await page.close();
+});
+
+test('lot 5 : envoyer un avis avec seulement une note (ni catégorie, ni commentaire) fonctionne', { skip: SANS_NAVIGATEUR }, async () => {
+  const page = await ouvrir();
+  await page.click('.sentiment-tile[data-sentiment=mauvais]');
+  await page.click('#btnSubmitFeedback');
+  await attendre(page, 'screen-success');
+  const avis = posts.filter((p) => p.chemin.endsWith('/feedbacks/'));
+  assert.equal(avis.length, 1);
+  assert.equal(avis[0].corps.categorie_id, null);
+  assert.equal(avis[0].corps.note, 1);
+  assert.equal(avis[0].corps.commentaire, null);
+  await page.close();
+});
+
+test('lot 5 : « Autres » laisse la catégorie vide ; une catégorie choisie est envoyée', { skip: SANS_NAVIGATEUR }, async () => {
+  const page = await ouvrir();
+  await page.waitForSelector('.categorie-btn[data-categorie="autres"]');
+  await page.click('.sentiment-tile[data-sentiment=bien]');
+  await page.click('.categorie-btn[data-categorie="c2"]');
+  await page.click('.categorie-btn[data-categorie="autres"]');
+  assert.equal(await page.$eval('.categorie-btn[data-categorie="autres"]', (b) => b.getAttribute('aria-checked')), 'true');
+  assert.equal(await page.$eval('.categorie-btn[data-categorie="c2"]', (b) => b.getAttribute('aria-checked')), 'false');
+  await page.click('#btnSubmitFeedback');
+  await attendre(page, 'screen-success');
+  assert.equal(posts.filter((p) => p.chemin.endsWith('/feedbacks/'))[0].corps.categorie_id, null);
+  await page.close();
+});
+
+test('lot 5 : un numéro tapé en 8 chiffres est accepté, affiché par deux et envoyé au format international', { skip: SANS_NAVIGATEUR }, async () => {
+  const page = await ouvrir();
+  await page.click('.sentiment-tile[data-sentiment=mauvais]');
+  await page.click('#recontactYes');
+  assert.match(await page.$eval('.indicatif-fixe', (e) => e.textContent), /\+226/);
+  await page.type('#contactTelInput', '70123456');
+  assert.equal(await page.$eval('#contactTelInput', (e) => e.value), '70 12 34 56');
+  await page.click('#consentCheckbox');
+  await page.click('#btnSubmitFeedback');
+  await attendre(page, 'screen-success');
+  assert.equal(posts.filter((p) => p.chemin.endsWith('/feedbacks/'))[0].corps.contact_telephone, '+22670123456');
+  await page.close();
+});
+
+test('lot 5 : aucun défilement horizontal à 360 et 375 px, sur tous les écrans du parcours', { skip: SANS_NAVIGATEUR }, async () => {
+  for (const largeur of [360, 375]) {
+    const page = await ouvrir();
+    await page.setViewport({ width: largeur, height: 740, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+    await page.waitForSelector('.categorie-btn');
+    const deborde = async (ecran) => {
+      const [s, w] = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
+      return s === w ? null : `${largeur}px ${ecran} : ${s} > ${w}`;
+    };
+    const problemes = [await deborde('notation')];
+    await page.click('.sentiment-tile[data-sentiment=bien]');
+    await page.click('#recontactYes');
+    problemes.push(await deborde('notation remplie'));
+    await page.click('#recontactNo');
+    await page.click('#btnSubmitFeedback'); await attendre(page, 'screen-success');
+    problemes.push(await deborde('confirmation'));
+    await page.click('#btnSuccesIdee'); await attendre(page, 'screen-idee');
+    problemes.push(await deborde('idée'));
+    await page.type('#inputIdee', 'Texte'); await page.click('#btnSubmitIdee'); await attendre(page, 'screen-idee-merci');
+    problemes.push(await deborde('merci'));
+    assert.deepEqual(problemes.filter(Boolean), []);
+    await page.close();
+  }
+});
+
+test('lot 5 : « Retour » sur l\'écran de notation, au même endroit que sur l\'écran d\'idée, ramène à la confirmation', { skip: SANS_NAVIGATEUR }, async () => {
+  const page = await ouvrir();
+  assert.equal(await visible(page, 'btnRetourNotation'), false, 'QR scanné directement : aucun écran où revenir');
+  await envoyerAvis(page);
+  await page.click('#btnNewFeedback');
+  await attendre(page, 'screen-sentiment');
+  assert.equal(await visible(page, 'btnRetourNotation'), true);
+  assert.equal(await page.$eval('#btnRetourNotation', (b) => b.className), await page.$eval('#btnRetourIdee', (b) => b.className));
+  await page.click('#btnRetourNotation');
+  await attendre(page, 'screen-success');
+  assert.equal(await visible(page, 'screen-sentiment'), false);
   await page.close();
 });

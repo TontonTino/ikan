@@ -64,20 +64,35 @@ test('sans note choisie, l\'envoi est refusé avec un message explicite', () => 
 
 // ── validations ──────────────────────────────────────────────────────────────────────
 
-test('la catégorie est exigée avant la note', () => {
-  assert.equal(verifierSaisie({ niveau: null, categorieId: null, souhaiteEtreRappele: false, telephone: '' }).champ, 'categorie');
+test('la catégorie est facultative (lot 5) : une note seule suffit, sans catégorie ni commentaire', () => {
+  assert.equal(verifierSaisie({ niveau: 'bien', categorieId: null, souhaiteEtreRappele: false, telephone: '' }), null);
+  // sans note : c'est la note qui est demandée, jamais la catégorie
+  assert.equal(verifierSaisie({ niveau: null, categorieId: null, souhaiteEtreRappele: false, telephone: '' }).champ, 'note');
+  const p = construirePayload({ niveau: 'mauvais', categorieId: null, souhaiteEtreRappele: false, telephone: '', commentaire: '', cleEnvoi: 'cle-0000020' });
+  assert.equal(p.categorie_id, null);
+  assert.equal(p.note, 1);
+  assert.equal(p.commentaire, null);
 });
 
 test('commentaire facultatif : une saisie complète sans commentaire est valide', () => {
   assert.equal(verifierSaisie({ niveau: 'bien', categorieId: 'cat-1', souhaiteEtreRappele: false, telephone: '' }), null);
 });
 
-test('rappel demandé : téléphone obligatoire et format international explicite', () => {
+test('rappel demandé : téléphone obligatoire ; 8 chiffres acceptés (indicatif +226 affiché devant le champ)', () => {
   const base = { niveau: 'bien', categorieId: 'cat-1', souhaiteEtreRappele: true, consentement: true };
   assert.equal(verifierSaisie({ ...base, telephone: '  ' }).champ, 'telephone');
   assert.equal(verifierSaisie({ ...base, telephone: '123' }).champ, 'telephone');
+  assert.equal(verifierSaisie({ ...base, telephone: '7012345' }).champ, 'telephone');
   assert.equal(verifierSaisie({ ...base, telephone: '+33 6 12 34 56 78' }), null);
-  assert.equal(verifierSaisie({ ...base, telephone: '70 12 34 56' }).champ, 'telephone');
+  assert.equal(verifierSaisie({ ...base, telephone: '70 12 34 56' }), null);
+  assert.equal(verifierSaisie({ ...base, telephone: '70123456' }), null);
+});
+
+test('payload : le numéro tapé en 8 chiffres part au format international', () => {
+  const base = { niveau: 'bien', categorieId: 'c', souhaiteEtreRappele: true, consentement: true, commentaire: '', cleEnvoi: 'cle-0000021' };
+  for (const telephone of ['70 12 34 56', '70123456', '+226 70 12 34 56', '0022670123456']) {
+    assert.equal(construirePayload({ ...base, telephone }).contact_telephone, '+22670123456', telephone);
+  }
 });
 
 test('téléphone saisi sans consentement : envoi refusé avec le message de consentement', () => {
