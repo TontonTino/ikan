@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import source from './AdminAgencesContent.tsx?raw';
+// @ts-ignore — pas de types Node dans ce projet (même convention que styles/contraste.test.ts).
 import { readFileSync } from 'node:fs';
 
 // Les feuilles CSS ne passent pas par « ?raw » dans vitest : lecture directe, comme styles/contraste.test.ts.
