@@ -1,5 +1,5 @@
 import type { IdeaStatus, IssueStatut, CriticiteType } from '../../types';
-import { GRAVITE_LABELS, PROBLEME_STATUT_LABELS } from '../../utils/vocabulaire';
+import { GRAVITE_LABELS, PROBLEME_STATUT_LABELS, SUGGESTION_STATUT_LABELS } from '../../utils/vocabulaire';
 
 export const ISSUE_STATUT_LABELS: Record<IssueStatut, string> = PROBLEME_STATUT_LABELS;
 
@@ -13,12 +13,9 @@ export const ISSUE_STATUT_BADGE_VARIANT: Record<IssueStatut, 'info' | 'elevee' |
 
 export const ISSUE_SEVERITE_LABELS: Record<CriticiteType, string> = GRAVITE_LABELS;
 
-export const STATUS_LABELS: Record<IdeaStatus, string> = {
-  nouveau: 'Nouveau',
-  en_cours: 'En cours',
-  traite: 'Traité',
-  rejete: 'Rejeté',
-};
+export const STATUS_LABELS: Record<IdeaStatus, string> = SUGGESTION_STATUT_LABELS;
+
+/* Couleurs des statuts de suggestion : jetons de statut du lot 2a (texte + fond, jamais la couleur seule : le libellé est écrit). */
 
 export const STATUS_STYLE: Record<IdeaStatus, { bg: string; text: string; border: string }> = {
   nouveau: { bg: 'var(--color-neutre-fond)', text: 'var(--color-neutre-texte)', border: 'var(--color-neutre-fond)' },

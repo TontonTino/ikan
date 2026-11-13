@@ -41,6 +41,7 @@ import {
   TrashIcon,
 } from '../../components/common/Icons';
 import type { Feedback } from '../../types';
+import { ROLE_LABELS } from '../../utils/vocabulaire';
 
 const DEMO_USER = (role: UserRole): User => ({
   id: 'demo', nom: 'Exemple', prenom: 'Utilisateur', email: 'demo@example.com', role,
@@ -105,7 +106,7 @@ const TOKENS_COLORS = [
 /** Statuts : chaque texte sur son propre fond. */
 const TOKENS_STATUTS = [
   ['Bon', '--color-bon-texte', '--color-bon-fond'],
-  ['À surveiller', '--color-surveiller-texte', '--color-surveiller-fond'],
+  ['Urgence élevée', '--color-surveiller-texte', '--color-surveiller-fond'],
   ['Critique', '--color-critique-texte', '--color-critique-fond'],
   ['Neutre, nouveau', '--color-neutre-texte', '--color-neutre-fond'],
 ];
@@ -148,7 +149,7 @@ export default function DesignSystemPage() {
         <div style={row} role="group" aria-label="Rôle de démonstration">
           {(['cx_manager', 'agency_manager', 'admin'] as UserRole[]).map((r) => (
             <Button key={r} size="sm" variant={demoRole === r ? 'primary' : 'secondary'} aria-pressed={demoRole === r} onClick={() => setDemoRole(r)}>
-              {r === 'cx_manager' ? 'CX Manager' : r === 'agency_manager' ? 'Agency Manager' : 'Admin'}
+              {ROLE_LABELS[r]}
             </Button>
           ))}
         </div>
@@ -182,7 +183,7 @@ export default function DesignSystemPage() {
       </Section>
 
       <Section title="Bento grid (étape 2)">
-        <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>Composition type CX Manager. Ordre du DOM = ordre de lecture : Situation → Évolution → Priorités → Explication → Action → Impact.</p>
+        <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>Composition type responsable expérience client. Ordre du DOM = ordre de lecture : Situation → Évolution → Priorités → Explication → Action → Impact.</p>
         <BentoGrid>
           <BentoItem size="kpi" aria-label="Situation — CSAT"><KpiCard icon={<SmileIcon />} label="CSAT global" value="78 %" trend={{ value: '+3 pts', isPositive: true }} sparkline={SERIES.map((x) => x.csat)} /></BentoItem>
           <BentoItem size="kpi" aria-label="Situation — volume"><KpiCard icon={<MessageSquareIcon />} label="Volume de feedbacks" value="1 284" tone="neutral" trend={{ value: '+12 %', isPositive: true }} /></BentoItem>
@@ -306,7 +307,7 @@ export default function DesignSystemPage() {
         <Modal
           open={modal}
           onClose={() => setModal(false)}
-          title="Transmettre à l'Agency Manager"
+          title="Transmettre au responsable d’agence"
           subtitle="Exemple de modale de décision."
           footer={<><Button variant="secondary" onClick={() => setModal(false)}>Annuler</Button><Button onClick={() => setModal(false)}>Transmettre</Button></>}
         >

@@ -3,6 +3,7 @@
  * navigateur. Module pur (sans React) : les règles se testent sans écran.
  */
 import { PERIODES, libellePeriode } from '../../utils/periodes';
+import { GRAVITE_LABELS, LIBELLES, NIVEAUX_URGENCE } from '../../utils/vocabulaire';
 
 export const TAILLE_PAGE = 25;
 export const LONGUEUR_MAX_RECHERCHE = 100;
@@ -147,7 +148,7 @@ export const nombrePages = (total: number): number => Math.max(1, Math.ceil(tota
 export const libelleTotal = (total: number): string => `${total} avis`;
 
 const LIBELLES_PERIODE: Record<string, string> = Object.fromEntries(PERIODES.map((p) => [String(p.jours), libellePeriode(p.jours)]));
-const LIBELLES_CRITICITE: Record<string, string> = { critique: 'Critique', elevee: 'Élevée', moyenne: 'Moyenne', faible: 'Faible', non_evaluee: 'Non évaluée' };
+const LIBELLES_CRITICITE: Record<string, string> = { ...Object.fromEntries(NIVEAUX_URGENCE.map((n) => [n.valeur, n.libelle])), ...GRAVITE_LABELS, non_evaluee: 'Non évaluée' };
 const LIBELLES_SENTIMENT: Record<string, string> = { positif: 'Positif', neutre: 'Neutre', negatif: 'Négatif' };
 
 export interface FiltreActif { cle: Exclude<keyof FiltresAvis, 'page' | 'onglet'>; libelle: string }
@@ -160,7 +161,7 @@ export function filtresActifs(f: FiltresAvis, aide: { nomAgence?: (id: string) =
   if (f.theme !== 'all') liste.push({ cle: 'theme', libelle: `Thème : ${f.theme === 'non_categorise' ? 'Non catégorisé' : aide.libelleTheme(f.theme)}` });
   if (f.periode !== 'all') liste.push({ cle: 'periode', libelle: `Période : ${LIBELLES_PERIODE[f.periode] || f.periode}` });
   if (f.note !== 'all') liste.push({ cle: 'note', libelle: `Note : ${f.note}/5` });
-  if (f.criticite !== 'all') liste.push({ cle: 'criticite', libelle: `Gravité : ${LIBELLES_CRITICITE[f.criticite] || f.criticite}` });
+  if (f.criticite !== 'all') liste.push({ cle: 'criticite', libelle: `${LIBELLES.urgence} : ${LIBELLES_CRITICITE[f.criticite] || 'non précisée'}` });
   if (f.discordance === 'oui') liste.push({ cle: 'discordance', libelle: 'Avis contradictoires' });
   if (rechercheNormalisee(f.recherche)) liste.push({ cle: 'recherche', libelle: `Recherche : « ${rechercheNormalisee(f.recherche)} »` });
   return liste;

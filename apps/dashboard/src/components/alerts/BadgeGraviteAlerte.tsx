@@ -1,10 +1,12 @@
 import React from 'react';
 import Badge from '../ui/Badge';
 import { AlertTriangleIcon, InfoIcon } from '../common/Icons';
+import { GRAVITE_LABELS } from '../../utils/vocabulaire';
 
 export type GraviteAlerte = 'critique' | 'important';
 
-export const LIBELLE_GRAVITE: Record<GraviteAlerte, string> = { critique: 'Critique', important: 'Important' };
+/** Urgence d'une alerte de satisfaction, dans le vocabulaire commun (lot 4) : « important » s'affiche « Élevée ». */
+export const LIBELLE_GRAVITE: Record<GraviteAlerte, string> = { critique: GRAVITE_LABELS.critique, important: GRAVITE_LABELS.elevee };
 
 /**
  * Gravité d'une alerte de satisfaction (AM-04) : libellé texte ET icône, jamais la couleur seule. Deux icônes différentes
@@ -19,6 +21,7 @@ export default function BadgeGraviteAlerte({ gravite, size = 'sm' }: { gravite?:
       variant={critique ? 'critical' : 'warning'}
       size={size}
       label={LIBELLE_GRAVITE[gravite]}
+      aria-label={`Urgence ${LIBELLE_GRAVITE[gravite].toLowerCase()}`}
       icon={critique ? <AlertTriangleIcon size={12} /> : <InfoIcon size={12} />}
     />
   );

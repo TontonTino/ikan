@@ -8,7 +8,7 @@ import Button from '../ui/Button';
 import SkeletonBlock from '../ui/SkeletonBlock';
 import { CheckCircleIcon } from '../common/Icons';
 import { fullDate, shortDate } from '../ui/format';
-import { GRAVITE_LABELS, PROBLEME_STATUT_LABELS } from '../../utils/vocabulaire';
+import { GRAVITE_LABELS, PROBLEME_ETAPES, PROBLEME_STATUT_LABELS, RESPONSABLE_CX, libelleUrgence } from '../../utils/vocabulaire';
 import { estEnAttente, ilYA, joursDepuis, prochainGeste } from '../../utils/issueSuivi';
 import { peutVerifierResolution, personnesAssignables } from '../../utils/actionsProbleme';
 import ActionsDuProbleme from './ActionsDuProbleme';
@@ -29,7 +29,7 @@ const STATUT_BADGE_VARIANT: Record<IssueStatut, 'info' | 'elevee' | 'positif'> =
 };
 
 // Position du statut dans le cycle de traitement. Un problème rouvert repart du début.
-const ETAPES = ['Enregistré', 'Actions en cours', 'Résolu', 'Résolution vérifiée'];
+const ETAPES = PROBLEME_ETAPES;
 const ETAPE_ACTUELLE: Record<IssueStatut, number> = { ouverte: 0, reouverte: 0, action_en_cours: 1, resolue: 2, verifiee: 3 };
 /** Section « Activité » : le fil du problème (rechargé quand le problème évolue : nouvelle action, résolution, avis rattaché). */
 function SectionActivite({ issue }: { issue: IssueDetail }) {
@@ -66,7 +66,7 @@ export function PiedProbleme({ issue, role, onVerifier }: PiedProps) {
   }
   return (
     <span style={{ flex: 1, fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-      Toutes les actions sont terminées. Le CX Manager confirmera que le problème est réellement réglé.
+      Toutes les actions sont terminées. Le {RESPONSABLE_CX} confirmera que le problème est réellement réglé.
     </span>
   );
 }

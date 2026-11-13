@@ -5,10 +5,11 @@ import Modal from '../ui/Modal';
 import { issuesApi } from '../../services/api';
 import type { ActionCorrective } from '../../types';
 import { envoyerTerminaison, type EchecAction } from '../../utils/actionsProbleme';
+import { RESPONSABLE_CX } from '../../utils/vocabulaire';
 
 /** Phrase de conséquence, affichée telle quelle avant l'envoi. */
 export const TEXTE_CONFIRMATION_TERMINER = 'Cette action sera marquée comme terminée. Cette décision ne peut pas être annulée pour l’instant.';
-export const TEXTE_DERNIERE_ACTION = 'C’est la dernière action à mener : le problème passera à « Résolu ». Le CX Manager pourra alors confirmer la résolution.';
+export const TEXTE_DERNIERE_ACTION = `C’est la dernière action : le problème passera à « Résolu ». Le ${RESPONSABLE_CX} pourra alors confirmer la résolution.`;
 
 interface CorpsProps {
   derniere: boolean;

@@ -26,7 +26,7 @@ describe('page « Avis du réseau » avec des filtres venus du lien', () => {
   it('affiche chaque filtre actif, lisible, avec son bouton de retrait nommé', () => {
     const html = rendu('cx_manager', lien);
     expect(html).toContain('aria-label="Filtres actifs"');
-    for (const libelle of ['Période : 30 derniers jours', 'Thème : Attente &amp; Délais en caisse', 'Agence : Sélectionnée']) {
+    for (const libelle of ['Période : 30 derniers jours', 'Thème : Attente &amp; délais', 'Agence : Sélectionnée']) {
       expect(html).toContain(`aria-label="Retirer le filtre ${libelle}"`);
     }
     expect((html.match(/aria-label="Retirer le filtre /g) || []).length).toBe(3);

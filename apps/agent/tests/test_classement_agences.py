@@ -51,6 +51,7 @@ AUTRES = {
     "Y a-t-il des alertes critiques ?": "alertes_critiques",
     "Quelle est la répartition par thème ?": "statistiques_theme",
     "Fais-moi un résumé de la période": "resume_periode",
+    "Faites-moi un résumé de la période": "resume_periode",  # question suggérée par le panneau (vouvoiement, lot 4)
     "Quels sont les problèmes récurrents ?": "problemes_recurrents",
     "Comment évolue la satisfaction dans le temps ?": "evolution_satisfaction",
     "Quelles sont tes recommandations d'actions prioritaires ?": "recommandations",

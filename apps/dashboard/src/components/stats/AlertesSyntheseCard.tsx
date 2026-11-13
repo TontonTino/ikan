@@ -46,10 +46,10 @@ export default function AlertesSyntheseCard({
           </div>
           <div>
             <div className="t-sm t-semi t-encre">
-              Avis de gravité critique
+              Avis d’urgence critique
             </div>
             <div className="t-xs t-2">
-              Gravité calculée automatiquement à partir de la note, du ton et de mots-clés
+              Urgence calculée automatiquement à partir de la note, du ton et de mots-clés
             </div>
           </div>
         </div>

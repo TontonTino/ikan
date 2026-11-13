@@ -85,7 +85,7 @@ export default function AgencyDecisionKpis({ data, jours }: Props) {
         <KpiCard
           icon={<AlertTriangleIcon />}
           label="Avis critiques"
-          hint="Avis dont la gravité, calculée automatiquement, est « critique » sur la période."
+          hint="Avis dont l’urgence, calculée automatiquement, est « critique » sur la période."
           value={data.nombre_critiques.toLocaleString('fr-FR')}
           tone={data.nombre_critiques > 0 ? 'critical' : 'neutral'}
           subtitle={`${jours} derniers jours`}

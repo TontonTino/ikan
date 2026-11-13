@@ -68,7 +68,7 @@ describe('fil d’activité : contenu', () => {
     const h = rendre(ok(fil));
     expect(h).toContain('Awa Sawadogo');
     expect(h).toContain('Issouf Traoré');
-    expect(h).toContain('title="Agency Manager"');
+    expect(h).toContain('title="Responsable d’agence"');
     expect(h).toContain('>Système<');
     expect(h.match(/>Système</g)).toHaveLength(1);
   });

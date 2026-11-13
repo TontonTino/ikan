@@ -12,6 +12,7 @@ import {
   envoyerPriseEnCharge,
   episodeDeAlerte,
 } from '../../utils/episodesAlertes';
+import { RESPONSABLE_CX } from '../../utils/vocabulaire';
 
 /** Issue de la boîte de dialogue, transmise à la page pour rafraîchir la liste, annoncer le résultat et replacer le focus. */
 export type IssuePriseEnCharge = { type: 'succes' } | { type: 'conflit'; message: string };
@@ -36,7 +37,7 @@ export function CorpsPriseEnCharge({ agenceNom, commentaire, onCommentaire, envo
   return (
     <div className="alerte-dialogue__corps">
       <p className="alerte-dialogue__texte">
-        Vous indiquez à votre CX Manager que vous vous occupez de la situation de <strong>{agenceNom}</strong>. L’alerte reste affichée avec l’état « Prise en
+        Vous indiquez à votre {RESPONSABLE_CX} que vous vous occupez de la situation de <strong>{agenceNom}</strong>. L’alerte reste affichée avec l’état « Prise en
         charge » jusqu’à ce que la satisfaction repasse au-dessus du seuil.
       </p>
       <div className="alerte-dialogue__champ">

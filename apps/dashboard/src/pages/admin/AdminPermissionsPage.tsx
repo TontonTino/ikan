@@ -70,7 +70,7 @@ function AdminPermissionsPageContenu() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* ── Page Header Standardisé ── */}
       <PageHeader
-        title="Rôles et permissions"
+        title="Rôles & permissions"
         subtitle="Ce que chaque rôle peut voir et faire sur la plateforme IKAN AI."
       />
 

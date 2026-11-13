@@ -31,6 +31,7 @@ import AgencyProblemes, { type ProblemesSnapshot } from '../../components/agency
 import { construirePriorites, PROBLEMES_OUVERTS } from '../../components/agency/agenceVue';
 import { elargirPeriode } from '../../utils/periodeElargie';
 import { PERIODES as PERIODES_DASHBOARD } from '../../utils/periodes';
+import { RESPONSABLE_CX } from '../../utils/vocabulaire';
 
 const RESULT_ISSUE_STATUSES: IssueStatut[] = ['resolue', 'verifiee'];
 const ISSUE_STATUSES: IssueStatut[] = [...PROBLEMES_OUVERTS, ...RESULT_ISSUE_STATUSES];
@@ -113,7 +114,7 @@ export default function DashboardAgencePage() {
     return (
       <EmptyState
         title="Aucune agence rattachée à votre compte"
-        message="Contactez votre CX Manager pour être rattaché à une agence."
+        message={`Contactez votre ${RESPONSABLE_CX} pour être rattaché à une agence.`}
         fullHeight
       />
     );

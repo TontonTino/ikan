@@ -28,7 +28,7 @@ describe('qui décide', () => {
   });
 
   it('la phrase de l’Agency Manager dit qui décide', () => {
-    expect(PHRASE_QUI_DECIDE).toContain('CX Manager');
+    expect(PHRASE_QUI_DECIDE).toContain('responsable expérience client');
   });
 
   it('délai modifiable tant que le problème n’est ni résolu ni vérifié', () => {
@@ -86,7 +86,7 @@ describe('problèmes proposés comme origine', () => {
 
 describe('erreurs : classées, texte du serveur jamais affiché', () => {
   it.each([
-    [403, 'refus', /Seul le CX Manager/],
+    [403, 'refus', /Seul le responsable expérience client/],
     [404, 'disparu', /n’existe plus/],
     [409, 'disparu', /changé entre-temps/],
     [422, 'saisie', /n’est pas acceptée/],

@@ -1,6 +1,7 @@
 import type { Alerte, AlerteFeedback } from '../../types';
 import { formaterNombre } from '../../utils/formatNombre';
 import { estAvisPrisEnCharge } from '../../components/alerts/alerteLabels';
+import { RESPONSABLE_CX } from '../../utils/vocabulaire';
 
 /**
  * Règles de lecture de la page /alertes. Tout provient du serveur (GET /alertes/) : aucune catégorie d'alerte,
@@ -111,15 +112,15 @@ export function syntheseAlertes(entrees: { seuil: Alerte[]; avis: AlerteFeedback
   };
 }
 
-/** Les deux moitiés de la phrase de synthèse, séparées pour la mise en page : « 18 situations à surveiller » et « 2 alertes de seuil, 16 avis à risque ». Une partie à zéro est omise (jamais « 0 » par défaut). */
+/** Les deux moitiés de la phrase de synthèse, séparées pour la mise en page : « 3 alertes actives » et « 2 alertes de seuil, 16 avis à traiter ». Une partie à zéro est omise (jamais « 0 » par défaut). */
 export function partiesSynthese(s: SyntheseAlertes): { titre: string; detail: string } {
   const detail: string[] = [];
   if (s.seuil > 0) detail.push(`${formaterNombre(s.seuil, 0)} alerte${s.seuil > 1 ? 's' : ''} de seuil`);
-  if (s.avis > 0) detail.push(`${formaterNombre(s.avis, 0)} avis à risque${s.avisPrisEnCharge > 0 ? `, dont ${formaterNombre(s.avisPrisEnCharge, 0)} pris en charge` : ''}`);
-  return { titre: `${formaterNombre(s.situations, 0)} situation${s.situations > 1 ? 's' : ''} à surveiller`, detail: detail.join(', ') };
+  if (s.avis > 0) detail.push(`${formaterNombre(s.avis, 0)} avis à traiter${s.avisPrisEnCharge > 0 ? `, dont ${formaterNombre(s.avisPrisEnCharge, 0)} pris en charge` : ''}`);
+  return { titre: `${formaterNombre(s.situations, 0)} alerte${s.situations > 1 ? 's' : ''} active${s.situations > 1 ? 's' : ''}`, detail: detail.join(', ') };
 }
 
-/** « 18 situations à surveiller : 2 alertes de seuil, 16 avis à risque ». */
+/** « 3 alertes actives : 2 alertes de seuil, 1 avis à traiter ». */
 export function phraseSynthese(s: SyntheseAlertes): string {
   const { titre, detail } = partiesSynthese(s);
   return `${titre} : ${detail}`;
@@ -169,6 +170,6 @@ export function messageForfait(nomForfait: string | null, cx: boolean): { titre:
     titre: nomForfait ? `Les alertes de satisfaction ne sont pas incluses dans le forfait ${nomForfait}` : 'Les alertes de satisfaction ne sont pas incluses dans le forfait de votre organisation',
     detail: cx
       ? 'Cette liste est vide parce que la fonctionnalité n’est pas disponible, pas parce que la satisfaction du réseau est bonne.'
-      : 'Cette liste est vide parce que la fonctionnalité n’est pas disponible, pas parce que la satisfaction de votre agence est bonne. Rapprochez-vous de votre CX Manager pour faire évoluer le forfait.',
+      : `Cette liste est vide parce que la fonctionnalité n’est pas disponible, pas parce que la satisfaction de votre agence est bonne. Rapprochez-vous de votre ${RESPONSABLE_CX} pour faire évoluer le forfait.`,
   };
 }

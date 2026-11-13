@@ -16,10 +16,10 @@ describe('onglet Thèmes de la page Avis : informations rétablies', () => {
     expect(rendu(<ThemeAgences theme={theme()} />)).toBe('');
   });
 
-  it('gravité la plus fréquente en français, ou « Aucune gravité disponible »', () => {
-    expect(rendu(<ThemeTonGravite theme={theme({ gravite_frequente: 'elevee' })} />)).toContain('Gravité la plus fréquente : élevée');
-    expect(rendu(<ThemeTonGravite theme={theme({ gravite_frequente: 'critique' })} />)).toContain('Gravité la plus fréquente : critique');
-    expect(rendu(<ThemeTonGravite theme={theme({ gravite_frequente: null })} />)).toContain('Aucune gravité disponible');
+  it('gravité la plus fréquente en français, ou « Aucune urgence disponible »', () => {
+    expect(rendu(<ThemeTonGravite theme={theme({ gravite_frequente: 'elevee' })} />)).toContain('Urgence la plus fréquente : élevée');
+    expect(rendu(<ThemeTonGravite theme={theme({ gravite_frequente: 'critique' })} />)).toContain('Urgence la plus fréquente : critique');
+    expect(rendu(<ThemeTonGravite theme={theme({ gravite_frequente: null })} />)).toContain('Aucune urgence disponible');
     expect(rendu(<ThemeTonGravite theme={theme()} />)).toContain('Ton dominant : négatif');
   });
 

@@ -105,7 +105,7 @@ export default function PilotageIssuesTab(props: Props) {
                 <EmptyState
                   illustration="no-alert"
                   title="Aucun problème pour ces filtres"
-                  message="Élargissez l’état ou la gravité, ou retirez « En retard », pour voir les autres problèmes."
+                  message="Élargissez l’état ou l’urgence, ou retirez « En retard », pour voir les autres problèmes."
                   action={{ label: 'Effacer les filtres', onClick: () => setFiltres({ statut: FILTRES_PAR_DEFAUT.statut, gravite: FILTRES_PAR_DEFAUT.gravite, enRetard: FILTRES_PAR_DEFAUT.enRetard }) }}
                 />
               </Card>

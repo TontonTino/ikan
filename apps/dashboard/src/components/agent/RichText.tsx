@@ -1,4 +1,5 @@
 import React from 'react';
+import { LIBELLES } from '../../utils/vocabulaire';
 
 /**
  * Rendu léger des réponses de YAM (gras, listes, tableaux, titres) sans
@@ -33,8 +34,8 @@ const SECTIONS: Record<string, { label: string; kind: SectionKind }> = {
   SITUATION: { label: 'Situation', kind: 'fait' },
   INTERPRETATION: { label: 'Interprétation', kind: 'interpretation' },
   'CAUSE PROBABLE': { label: 'Cause probable (hypothèse)', kind: 'hypothese' },
-  RECOMMANDATION: { label: 'Recommandation (suggestion à valider, rien n’est exécuté)', kind: 'reco' },
-  RECOMMANDATIONS: { label: 'Recommandations (suggestions à valider, rien n’est exécuté)', kind: 'reco' },
+  RECOMMANDATION: { label: `${LIBELLES.actionSuggeree} (à valider, rien n’est exécuté)`, kind: 'reco' },
+  RECOMMANDATIONS: { label: `${LIBELLES.actionsSuggerees} (à valider, rien n’est exécuté)`, kind: 'reco' },
   DONNEES: { label: 'Données', kind: 'donnees' },
 };
 

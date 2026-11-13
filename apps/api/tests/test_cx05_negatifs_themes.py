@@ -158,7 +158,7 @@ def test_casse_melangee_comptee_ensemble_et_affichee_de_facon_coherente(ctx):
         creer(ctx, theme=graphie, sentiment=SentimentType.POSITIF, note=5)
     themes = stats(ctx)["themes"]
     assert [(t["theme"], t["count"]) for t in themes] == [("accueil", 4)]
-    assert themes[0]["label"] == "Accueil & Amabilité"
+    assert themes[0]["label"] == "Accueil & amabilité"  # libellé unique du lot 4
     synthese = get(ctx, "cx_a", "/feedbacks/themes/synthese")["themes"]
     assert [(t["theme"], t["count"]) for t in synthese] == [("accueil", 4)]
     assert get(ctx, "cx_a", "/feedbacks/themes") == ["accueil"]            # catalogue : une seule entrée

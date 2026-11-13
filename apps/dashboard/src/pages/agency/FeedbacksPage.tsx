@@ -22,6 +22,7 @@ import {
 import EtatListeAvis from './EtatListeAvis';
 import PageTitle from '../../components/ui/PageTitle';
 import './FeedbacksPage.css';
+import { NIVEAUX_URGENCE } from '../../utils/vocabulaire';
 
 // Contexte de navigation (liens depuis les tableaux de bord) : valeurs reconnues, tout le reste est ignoré.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -257,7 +258,7 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
         <TabsNavigation tabs={tabsConfig} activeTab={filtres.onglet} onChange={(id) => dispatch({ type: 'definir', champ: 'onglet', valeur: id })} style={{ marginBottom: 0, flex: '1 1 auto' }} />
       </div>
       <p style={{ margin: '-8px 0 0', fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
-        « À traiter » : avis non résolus notés 2 ou moins, au ton négatif ou de gravité élevée, et rappels en attente. Plus de 48 h sans prise en charge : en tête.
+        « À traiter » : avis non résolus notés 2 ou moins, au ton négatif ou d’urgence élevée, et rappels en attente. Plus de 48 h sans prise en charge : en tête.
       </p>
 
       {/* ── ONGLETS 1, 2, 3 : LISTE DES AVIS ── */}
@@ -299,8 +300,8 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
                 <select value={filtres.sentiment} onChange={(e) => dispatch({ type: 'definir', champ: 'sentiment', valeur: e.target.value })} aria-label="Filtrer par ton">
                   <option value="all">Tous les tons</option><option value="positif">Positif</option><option value="neutre">Neutre</option><option value="negatif">Négatif</option>
                 </select>
-                <select value={filtres.criticite} onChange={(e) => dispatch({ type: 'definir', champ: 'criticite', valeur: e.target.value })} aria-label="Filtrer par gravité">
-                  <option value="all">Toutes gravités</option><option value="critique">Critique</option><option value="elevee">Élevée</option><option value="moyenne">Moyenne</option><option value="faible">Faible</option><option value="non_evaluee">Non évaluée</option>
+                <select value={filtres.criticite} onChange={(e) => dispatch({ type: 'definir', champ: 'criticite', valeur: e.target.value })} aria-label="Filtrer par urgence">
+                  <option value="all">Toutes urgences</option>{NIVEAUX_URGENCE.map((n) => <option key={n.valeur} value={n.valeur}>{n.libelle}</option>)}<option value="non_evaluee">Non évaluée</option>
                 </select>
                 <select value={filtres.discordance} onChange={(e) => dispatch({ type: 'definir', champ: 'discordance', valeur: e.target.value })} aria-label="Filtrer les avis contradictoires" title="Avis contradictoires : la note et le ton du texte se contredisent (par exemple 5/5 avec un texte négatif).">
                   <option value="all">Contradictoires ou non</option><option value="oui">Avis contradictoires uniquement</option>

@@ -1,11 +1,10 @@
 import React from 'react';
 import type { CriticiteType, IssueStatut } from '../../types';
 import Button from '../ui/Button';
-import { GRAVITE_LABELS, PROBLEME_STATUT_LABELS } from '../../utils/vocabulaire';
+import { LIBELLES, NIVEAUX_URGENCE, PROBLEME_STATUT_LABELS, type NiveauUrgence } from '../../utils/vocabulaire';
 import { aDesFiltresActifs, FILTRES_PAR_DEFAUT, type FiltresProblemes, type TriListe } from '../../utils/problemesListe';
 
 const STATUTS: IssueStatut[] = ['ouverte', 'reouverte', 'action_en_cours', 'resolue', 'verifiee'];
-const GRAVITES: CriticiteType[] = ['critique', 'elevee', 'moyenne', 'faible'];
 
 interface Props {
   filtres: FiltresProblemes;
@@ -27,10 +26,10 @@ export default function ProblemesFiltres({ filtres, onChange }: Props) {
         </select>
       </label>
       <label className="pb-filtre">
-        <span>Gravité</span>
-        <select value={filtres.gravite ?? ''} onChange={(e) => onChange({ gravite: (e.target.value || null) as CriticiteType | null })}>
+        <span>{LIBELLES.urgence}</span>
+        <select value={filtres.gravite ?? ''} onChange={(e) => onChange({ gravite: (e.target.value || null) as NiveauUrgence | null })}>
           <option value="">Toutes</option>
-          {GRAVITES.map((g) => <option key={g} value={g}>{GRAVITE_LABELS[g]}</option>)}
+          {NIVEAUX_URGENCE.map((n) => <option key={n.valeur} value={n.valeur}>{n.libelle}</option>)}
         </select>
       </label>
       <button

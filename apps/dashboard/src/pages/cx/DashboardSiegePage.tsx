@@ -78,7 +78,7 @@ export default function DashboardSiegePage() {
   return (
     <div className="siege">
       <PageTitle
-        title="Vue réseau"
+        title="Vue d’ensemble"
         description="Faut-il agir ? Situation, priorités et tendances de votre réseau."
         actions={
           <>
@@ -112,7 +112,7 @@ export default function DashboardSiegePage() {
         <SiegeKpis stats={stats} alertes={alertes} nbAgences={stats.status === 'ok' ? ranking.length : agences.status === 'ok' ? agences.data.length : null} jours={jours} onOpen={openKpi} />
 
         {/* À SURVEILLER — immédiatement après les KPI (décision validée) */}
-        <BentoItem size="side-tall" aria-label="À surveiller">
+        <BentoItem size="side-tall" aria-label="Agences à suivre">
           <Surveillance
             lignes={surveillance.lignes}
             total={surveillance.total}

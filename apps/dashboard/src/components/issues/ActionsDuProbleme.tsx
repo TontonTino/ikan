@@ -6,6 +6,7 @@ import { CheckCircleIcon, PlusIcon } from '../common/Icons';
 import { fullDate, shortDate } from '../ui/format';
 import { libelleEtatAction, libelleResponsable, peutDefinirAction, peutTerminerAction, type UtilisateurListe } from '../../utils/actionsProbleme';
 import SectionDetail from './SectionDetail';
+import { LIBELLES, RESPONSABLE_CX } from '../../utils/vocabulaire';
 
 interface Props {
   issue: IssueDetail;
@@ -29,7 +30,7 @@ export default function ActionsDuProbleme({ issue, role, utilisateurs, moiId, no
 
   return (
     <SectionDetail
-      titre={`Actions à mener (${issue.actions.length})`}
+      titre={`${LIBELLES.actionPluriel} (${issue.actions.length})`}
       action={peutDefinir ? (
         <Button size="sm" variant={sansAction ? 'primary' : 'secondary'} icon={<PlusIcon size={14} />} onClick={onDefinir}>
           Définir une action
@@ -40,10 +41,10 @@ export default function ActionsDuProbleme({ issue, role, utilisateurs, moiId, no
       {sansAction ? (
         <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
           {peutDefinir
-            ? 'Aucune action définie. Décidez de la première action à mener pour régler ce problème.'
+            ? 'Aucune action définie. Décidez de la première action pour régler ce problème.'
             : issue.statut === 'resolue' || issue.statut === 'verifiee'
               ? 'Aucune action n’a été définie pour ce problème.'
-              : 'Aucune action définie pour le moment. Le CX Manager décide de l’action à mener.'}
+              : `Aucune action définie pour le moment. Le ${RESPONSABLE_CX} décide de l’action.`}
         </p>
       ) : (
         <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>

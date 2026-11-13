@@ -5,6 +5,7 @@ import { fullDate, shortDate } from '../ui/format';
 import { ISSUE_SEVERITE_LABELS, ISSUE_STATUT_BADGE_VARIANT, ISSUE_STATUT_LABELS } from '../../pages/cx/pilotageConstants';
 import { libelleEnregistre } from '../../utils/issueSuivi';
 import { ligneSuivante, texteActions, texteAvis, texteRetard } from '../../utils/problemesListe';
+import { LIBELLES } from '../../utils/vocabulaire';
 
 /** Identifiant DOM de la ligne (ou de la carte) d'un problème : le panneau y rend le focus quand il se ferme. */
 export const idLigneProbleme = (id: string): string => `pb-ligne-${id}`;
@@ -83,7 +84,7 @@ export function ProblemesTableau({ issues, afficherAgence, ouvertId, onOuvrir, m
         <thead>
           <tr>
             <th scope="col">Problème</th>
-            <th scope="col">Gravité</th>
+            <th scope="col">{LIBELLES.urgence}</th>
             <th scope="col">État</th>
             <th scope="col" className="pb-col-secondaire">Actions</th>
             <th scope="col" className="pb-col-secondaire">Échéance</th>

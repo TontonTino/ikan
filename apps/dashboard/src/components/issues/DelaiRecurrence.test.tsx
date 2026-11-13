@@ -28,14 +28,14 @@ describe('rôles : qui voit des commandes', () => {
     expect(h).toContain('Délai et récurrence');
     expect(h).toContain('Fixer un délai');
     expect(h).toContain('Lier un problème d’origine');
-    expect(h).not.toContain('sont fixés par le CX Manager');
+    expect(h).not.toContain('sont fixés par le responsable expérience client');
   });
 
   it('Agency Manager : valeurs lisibles, AUCUN bouton ni champ de saisie, la phrase dit qui décide', () => {
     const h = rendre('agency_manager', detail({ date_limite_sla: dans(4), issue_origine_id: 'origine' }));
     expect(h).toContain('À traiter avant le');
     expect(h).toContain('Récidive d’un problème précédent');
-    expect(h).toContain('Le délai de traitement et la récurrence sont fixés par le CX Manager.');
+    expect(h).toContain('Le délai de traitement et la récurrence sont fixés par le responsable expérience client.');
     for (const interdit of ['Fixer un délai', 'Modifier le délai', 'Effacer le délai', 'Changer l’origine', 'Retirer le lien', 'Lier un problème', '<input', '<select', '<form']) expect(h).not.toContain(interdit);
     // seul « Voir ce problème » (lecture) est un bouton
     expect(h.match(/<button/g)).toHaveLength(1);
@@ -171,7 +171,7 @@ describe('panneau : la section est présente pour les deux rôles', () => {
     expect(panneau('cx_manager')).toContain('Modifier le délai');
     const am = panneau('agency_manager');
     expect(am).toContain('Délai et récurrence');
-    expect(am).toContain('sont fixés par le CX Manager');
+    expect(am).toContain('sont fixés par le responsable expérience client');
     expect(am).not.toContain('Modifier le délai');
   });
   it('le délai n’est plus répété dans « Situation »', () => {

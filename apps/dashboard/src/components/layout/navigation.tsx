@@ -17,6 +17,7 @@ import {
   TargetIcon,
   UsersIcon,
 } from '../common/Icons';
+import { LIBELLES } from '../../utils/vocabulaire';
 
 /*
  * Source unique de la navigation par rôle.
@@ -110,7 +111,7 @@ export const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
     {
       title: 'COMPRENDRE',
       items: [
-        { path: '/siege', label: "Vue d'ensemble", icon: <LayoutGridIcon size={18} /> },
+        { path: '/siege', label: 'Vue d’ensemble', icon: <LayoutGridIcon size={18} /> },
         { path: '/statistiques', label: 'Statistiques', icon: <BarChartIcon size={18} /> },
         { path: '/feedbacks', label: 'Avis du réseau', icon: <MessageSquareIcon size={18} /> },
       ],
@@ -120,7 +121,7 @@ export const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
       items: [
         { path: '/alertes', label: 'Alertes', icon: <BellIcon size={18} /> },
         { path: '/issues', label: 'Problèmes à traiter', icon: <ActivityIcon size={18} /> },
-        { path: '/actions', label: 'Actions à mener', icon: <TargetIcon size={18} /> },
+        { path: '/actions', label: LIBELLES.actionPluriel, icon: <TargetIcon size={18} /> },
       ],
     },
     {
@@ -134,7 +135,7 @@ export const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
     {
       title: 'MON AGENCE',
       items: [
-        { path: '/agence', label: "Vue d'ensemble", icon: <LayoutGridIcon size={18} /> },
+        { path: '/agence', label: 'Vue d’ensemble', icon: <LayoutGridIcon size={18} /> },
         { path: '/statistiques', label: 'Statistiques', icon: <BarChartIcon size={18} /> },
         { path: '/feedbacks', label: 'Avis clients', icon: <MessageSquareIcon size={18} /> },
       ],
@@ -144,7 +145,7 @@ export const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
       items: [
         { path: '/alertes', label: 'Alertes', icon: <BellIcon size={18} /> },
         { path: '/issues', label: 'Problèmes à traiter', icon: <ActivityIcon size={18} /> },
-        { path: '/actions', label: 'Actions à mener', icon: <TargetIcon size={18} /> },
+        { path: '/actions', label: LIBELLES.actionPluriel, icon: <TargetIcon size={18} /> },
       ],
     },
     {

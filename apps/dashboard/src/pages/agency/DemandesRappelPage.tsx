@@ -15,6 +15,7 @@ import WhatsAppReplyButton from '../../components/feedbacks/WhatsAppReplyButton'
 import { ConfirmationRecontact, CoordonneesMasquees, ConsentementContact, InfoTraitement } from '../../components/feedbacks/DemandeContactBlocs';
 import SkeletonBlock from '../../components/ui/SkeletonBlock';
 import SectionHeading from '../../components/ui/SectionHeading';
+import PageTitle from '../../components/ui/PageTitle';
 import { PhoneIcon, MailIcon, CheckCircleIcon, AlertTriangleIcon } from '../../components/common/Icons';
 
 const formatDate = (iso: string) =>
@@ -123,6 +124,8 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+      {/* Page autonome : même titre que l'entrée de menu (lot 4). Dans l'aperçu d'une agence, l'onglet porte déjà le nom. */}
+      {!agenceId && <PageTitle title="Demandes de rappel" description="Clients qui ont demandé à être recontactés après leur avis." />}
       {toast && (
         <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 1000, background: 'var(--color-encre)', color: 'white', padding: '12px 20px', borderRadius: '12px', fontWeight: 'var(--weight-semibold)' }}>
           {toast}

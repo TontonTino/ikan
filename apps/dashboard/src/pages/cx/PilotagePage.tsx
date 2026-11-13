@@ -13,6 +13,7 @@ import AideAlertes from '../../components/alerts/AideAlertes';
 import { useToast } from '../../components/ui/Toast';
 import { userFacingError } from '../../utils/userFacingError';
 import { FILTRES_PAR_DEFAUT, parametresListe, type FiltresProblemes } from '../../utils/problemesListe';
+import { LIBELLES } from '../../utils/vocabulaire';
 
 /** Une section = une page de la navigation (une destination = une fonction). */
 export type PilotageSection = 'alertes' | 'suggestions' | 'actions' | 'issues';
@@ -29,7 +30,7 @@ const SECTION_HEADER: Record<PilotageSection, { title: string; cx: string; agenc
     agency: 'Idées remontées par les clients de votre agence : étudier, décider, suivre.',
   },
   actions: {
-    title: 'Actions à mener',
+    title: LIBELLES.actionPluriel,
     cx: 'Ce qui reste à faire sur vos problèmes et sur vos avis, au même endroit : qui s’en occupe, pour quand, et ce qui est en retard.',
     agency: 'Ce qui reste à faire dans votre agence, sur les problèmes et sur les avis : qui s’en occupe et pour quand.',
   },

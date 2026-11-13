@@ -33,6 +33,8 @@ import { userFacingError } from '../../utils/userFacingError';
 import { creerMatriceQr, dessinerQrPdf, lienFeedbackAgence, pngQr } from '../../utils/qrCode';
 import QrCodeSvg from '../../components/qr/QrCodeSvg';
 import FicheQrImpression, { PHRASE_INVITATION_QR, imprimerFicheQr } from '../../components/qr/FicheQrImpression';
+import { RESPONSABLE_CX } from '../../utils/vocabulaire';
+import { enMajusculeInitiale } from '../../utils/themeLabels';
 
 const cardStyle: React.CSSProperties = {
   background: 'var(--color-surface)',
@@ -553,7 +555,7 @@ export default function MonAgencePage() {
         <FicheQrImpression nom={agence.nom} url={lien} />
         <h3 style={{ margin: '0 0 4px', fontSize: 'var(--text-base)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>QR code de l'agence</h3>
         <p style={{ margin: '0 0 16px', fontSize: 'var(--text-sm)', color: 'var(--color-text-2)' }}>
-          Vos clients le scannent pour laisser leur avis. Lecture seule : il est géré par le CX Manager.
+          Vos clients le scannent pour laisser leur avis. Lecture seule : il est géré par le {RESPONSABLE_CX}.
         </p>
         <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', alignItems: 'center' }}>
           <QrCodeSvg
@@ -728,7 +730,7 @@ export default function MonAgencePage() {
                       />
                     ) : (
                       <span style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flexWrap: 'wrap' }}>
-                        <span className="t-sm t-semi t-encre">{c.nom}</span>
+                        <span className="t-sm t-semi t-encre">{enMajusculeInitiale(c.nom)}</span>
                         <span
                           style={{
                             fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', padding: '2px 8px', borderRadius: '9999px', whiteSpace: 'nowrap',
@@ -736,7 +738,7 @@ export default function MonAgencePage() {
                             color: c.cree_par_role === 'agency_manager' ? 'var(--color-neutre-texte)' : 'var(--color-text-2)',
                           }}
                         >
-                          {c.cree_par_role === 'agency_manager' ? 'Ajoutée par le responsable d’agence' : 'Ajoutée par le CX Manager'}
+                          {c.cree_par_role === 'agency_manager' ? 'Ajoutée par le responsable d’agence' : `Ajoutée par le ${RESPONSABLE_CX}`}
                         </span>
                         {c.est_categorie_suggestion && (
                           <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', padding: '2px 8px', borderRadius: '9999px', whiteSpace: 'nowrap', background: 'var(--color-neutre-fond)', color: 'var(--color-neutre-texte)' }}>

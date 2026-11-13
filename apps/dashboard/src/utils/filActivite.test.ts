@@ -61,8 +61,8 @@ describe('auteur', () => {
   });
 
   it('rôle lisible, ou rien', () => {
-    expect(libelleRole({ auteur_role: 'cx_manager' })).toBe('CX Manager');
-    expect(libelleRole({ auteur_role: 'agency_manager' })).toBe('Agency Manager');
+    expect(libelleRole({ auteur_role: 'cx_manager' })).toBe('Responsable expérience client');
+    expect(libelleRole({ auteur_role: 'agency_manager' })).toBe('Responsable d’agence');
     expect(libelleRole({ auteur_role: 'inconnu' })).toBeNull();
     expect(libelleRole({ auteur_role: null })).toBeNull();
   });

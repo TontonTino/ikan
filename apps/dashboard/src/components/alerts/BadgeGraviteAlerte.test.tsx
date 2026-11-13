@@ -20,10 +20,11 @@ describe('badge de gravité : libellé texte ET icône', () => {
     expect(html).toContain('ui-badge--critical');
   });
 
-  it('Important : texte + icône (différente de celle de Critique)', () => {
+  it('Important s’affiche « Élevée » (vocabulaire de l’urgence) : texte + icône (différente de celle de Critique)', () => {
     const critique = renderToStaticMarkup(<BadgeGraviteAlerte gravite="critique" />);
     const important = renderToStaticMarkup(<BadgeGraviteAlerte gravite="important" />);
-    expect(important).toContain('Important');
+    expect(important).toContain('Élevée');
+    expect(important).not.toContain('Important');
     expect(important).toContain('<svg');
     expect(important).toContain('ui-badge--warning');
     expect(important.match(/<svg[\s\S]*<\/svg>/)?.[0]).not.toBe(critique.match(/<svg[\s\S]*<\/svg>/)?.[0]); // distinguables sans la couleur
@@ -48,7 +49,7 @@ describe('carte d’alerte de satisfaction', () => {
 
   it('niveau Important', () => {
     const html = dansRouteur(<LigneSeuil alerte={alerte({ gravite: 'important', ecart_seuil: 10, taux_actuel: 60 })} isAgencyManager cible={false} />);
-    expect(html).toContain('Important');
+    expect(html).toContain('Élevée');
     expect(html).not.toContain('Critique');
     expect(html).toContain('10 points sous le seuil');
   });
@@ -56,7 +57,7 @@ describe('carte d’alerte de satisfaction', () => {
   it('ancien serveur sans gravité : libellé d’origine, aucun faux niveau', () => {
     const html = dansRouteur(<LigneSeuil alerte={alerte()} isAgencyManager cible={false} />);
     expect(html).toContain('Satisfaction sous le seuil');
-    expect(html).not.toMatch(/Critique|Important|points sous le seuil/);
+    expect(html).not.toMatch(/Critique|Élevée|Important|points sous le seuil/);
   });
 });
 

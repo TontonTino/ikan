@@ -36,7 +36,7 @@ describe('tableau des problèmes (ordinateur)', () => {
 
   it('colonnes utiles seulement, une ligne par problème', () => {
     const h = html();
-    for (const colonne of ['Problème', 'Gravité', 'État', 'Actions', 'Échéance']) expect(h).toContain(`>${colonne}</th>`);
+    for (const colonne of ['Problème', 'Urgence', 'État', 'Actions', 'Échéance']) expect(h).toContain(`>${colonne}</th>`);
     expect(h.match(/<tr id="pb-ligne-/g)).toHaveLength(3);
     expect(h).toContain('<table');
   });
@@ -115,7 +115,7 @@ describe('filtres : tous côté serveur, vocabulaire des badges', () => {
 
   it('état (statuts réels), gravité, « En retard », tri', () => {
     const h = rendre();
-    for (const libelle of ['À traiter', 'Rouvert', 'Action en cours', 'Résolu', 'Résolution vérifiée', 'Critique', 'Élevée', 'Moyenne', 'Faible', 'En retard', 'Plus récents', 'Plus anciens']) {
+    for (const libelle of ['À traiter', 'Rouvert', 'Action en cours', 'Résolu', 'Résolution vérifiée', 'Critique', 'Élevée', 'Normale', 'En retard', 'Plus récents', 'Plus anciens']) {
       expect(h).toContain(libelle);
     }
   });
@@ -146,7 +146,7 @@ describe('pied du détail : « Confirmer la résolution » selon le rôle', () =
     const h = pied('agency_manager');
     expect(h).not.toContain('Confirmer la résolution');
     expect(h).not.toContain('disabled');
-    expect(h).toContain('Le CX Manager confirmera');
+    expect(h).toContain('Le responsable expérience client confirmera');
   });
 
   it('administrateur ou rôle inconnu : aucun bouton', () => {
@@ -198,10 +198,10 @@ describe('panneau latéral ancré', () => {
   it('Agency Manager : ni « Définir une action » ni « Confirmer la résolution », mais l’explication', () => {
     const resolu = rendre('agency_manager', detail({ statut: 'resolue' }));
     expect(resolu).not.toContain('Confirmer la résolution');
-    expect(resolu).toContain('Le CX Manager confirmera');
+    expect(resolu).toContain('Le responsable expérience client confirmera');
     const ouvert = rendre('agency_manager', detail({ statut: 'ouverte' }));
     expect(ouvert).not.toContain('Définir une action');
-    expect(ouvert).toContain('Le CX Manager décide de l’action à mener.');
+    expect(ouvert).toContain('Le responsable expérience client décide de l’action.');
   });
 
   it('actions : responsable_nom fourni par l’API (même pour l’Agency Manager), échéance, état', () => {

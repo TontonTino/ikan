@@ -15,6 +15,7 @@ import {
   BarChartIcon,
   ClockIcon,
 } from '../common/Icons';
+import { ROLE_LABELS_PLURIEL, RESPONSABLE_CX, codeRole, libelleRole } from '../../utils/vocabulaire';
 
 interface AdminOrganisationsTableProps {
   organisations: AdminOrganisationHierarchy[];
@@ -142,7 +143,7 @@ export default function AdminOrganisationsTable({
               fontWeight: 'var(--weight-normal)',
             }}
           >
-            CX Managers, responsables d’agence, agences et forfaits de chaque organisation
+            {ROLE_LABELS_PLURIEL.cx_manager}, responsables d’agence, agences et forfaits de chaque organisation
           </p>
         </div>
 
@@ -243,7 +244,7 @@ export default function AdminOrganisationsTable({
             <tr>
               {[
                 { label: 'Organisation', align: 'left' },
-                { label: 'CX Managers', align: 'center' },
+                { label: ROLE_LABELS_PLURIEL.cx_manager, align: 'center' },
                 { label: 'Responsables d’agence', align: 'center' },
                 { label: 'Agences', align: 'center' },
                 { label: 'Forfait', align: 'center' },
@@ -566,7 +567,7 @@ export default function AdminOrganisationsTable({
                                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                               >
                                 <UsersIcon size={14} color="var(--color-bon-texte)" />
-                                <span>Ouvrir les comptes CX Manager</span>
+                                <span>Ouvrir les comptes {ROLE_LABELS_PLURIEL.cx_manager.toLowerCase()}</span>
                               </button>
 
                               <button
@@ -635,11 +636,11 @@ export default function AdminOrganisationsTable({
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                                   <UsersIcon size={16} color="var(--color-neutre-texte)" />
                                   <span className="t-sm t-semi t-neutre t-majuscules">
-                                    CX Managers ({org.cx_managers.length})
+                                    {ROLE_LABELS_PLURIEL.cx_manager} ({org.cx_managers.length})
                                   </span>
                                 </div>
                                 {org.cx_managers.length === 0 ? (
-                                  <div className="t-xs t-2">Aucun CX Manager assigné</div>
+                                  <div className="t-xs t-2">Aucun {RESPONSABLE_CX} assigné</div>
                                 ) : (
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                     {org.cx_managers.map((cx) => (
@@ -743,7 +744,7 @@ export default function AdminOrganisationsTable({
                                     </thead>
                                     <tbody>
                                       {org.users.map((u) => {
-                                        const isCX = u.role === 'CX Manager';
+                                        const isCX = codeRole(u.role) === 'cx_manager'; // code, jamais le libellé affiché
                                         return (
                                           <tr key={u.id} style={{ borderBottom: '1px solid var(--color-trait)' }}>
                                             <td style={{ padding: '10px 14px', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>
@@ -764,7 +765,7 @@ export default function AdminOrganisationsTable({
                                                   border: `1px solid ${isCX ? 'var(--color-neutre-fond)' : 'var(--color-bon-fond)'}`,
                                                 }}
                                               >
-                                                {u.role}
+                                                {libelleRole(u.role)}
                                               </span>
                                             </td>
                                             <td style={{ padding: '10px 14px', color: 'var(--color-text-2)', fontWeight: 'var(--weight-semibold)' }}>

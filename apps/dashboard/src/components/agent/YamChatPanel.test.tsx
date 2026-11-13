@@ -28,9 +28,13 @@ describe('panneau YAM : présence', () => {
     expect(html).toContain('loading="lazy"');
     expect(html).toMatch(/width="110"[^>]*height="161"|height="161"[^>]*width="110"/);
     expect(html).toContain('Y a-t-il des alertes critiques ?');
-    expect(html).toContain('Mes réponses sont générées automatiquement');
     expect(html).toContain('Périmètre :');
+    // une seule mention du caractère automatique des réponses dans le panneau (lot 4)
     expect(html).toContain('Réponses générées automatiquement : vérifiez-les avant d’agir.');
+    expect((html.match(/générées automatiquement/g) || []).length).toBe(1);
+    // questions suggérées au vouvoiement
+    expect(html).toContain('Faites-moi un résumé de la période');
+    expect(html).not.toMatch(/Fais-moi|Donne-moi|Montre-moi/);
   });
 
   it('dès qu’il y a un échange, le rendu 3D disparaît (pas de grande image dans une conversation)', () => {

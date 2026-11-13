@@ -17,7 +17,7 @@ export default function AgencyProblemes({ snapshot, failed, onRetry }: { snapsho
   return (
     <Card
       title="Suivi des problèmes"
-      subtitle="Toutes périodes. Un problème est un sujet que vos équipes ont décidé de suivre ; il se distingue d’un avis et d’une action à mener."
+      subtitle="Toutes périodes. Un problème est un sujet que vos équipes ont décidé de suivre ; il se distingue d’un avis et d’une action."
       actions={
         <Link to="/issues" className="siege-link">
           Voir les problèmes

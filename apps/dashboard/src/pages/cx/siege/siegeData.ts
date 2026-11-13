@@ -448,7 +448,7 @@ export function buildSurveillance({ ranking, alertesSeuil, issuesOuvertes, issue
     ajouter(agenceId, nom, {
       type: 'issues',
       texte: `${issuesIncompletes ? '≥ ' : ''}${issues.length} problème${issues.length > 1 ? 's' : ''} sans action en cours${critiques ? ` (dont ${critiques} critique${critiques > 1 ? 's' : ''})` : ''}`,
-      portee: 'gravité critique ou élevée',
+      portee: 'urgence critique ou élevée',
     });
   }
 

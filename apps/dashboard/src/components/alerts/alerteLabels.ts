@@ -1,5 +1,6 @@
 import type { StatutTraitement } from '../../types';
 import { AVIS_STATUT_LABELS } from '../../utils/vocabulaire';
+import { LIBELLES } from '../../utils/vocabulaire';
 
 /** Libellés et ancres partagés entre la page Alertes et la cloche de notifications. */
 
@@ -14,7 +15,7 @@ export const RAISON_LABELS: Record<string, string> = {
 };
 
 /** Libellé d'une raison ; une valeur inconnue reste lisible plutôt qu'une clé technique. */
-export const raisonLabel = (raison: string) => RAISON_LABELS[raison] ?? 'Avis à risque';
+export const raisonLabel = (raison: string) => RAISON_LABELS[raison] ?? LIBELLES.avisATraiter;
 
 /**
  * Statut de traitement d'un avis à risque (AlerteFeedback.statut_traitement), tel qu'en base. Les libellés sont ceux de l'application entière

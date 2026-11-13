@@ -18,6 +18,7 @@ import {
   AlertTriangleIcon,
 } from '../../components/common/Icons';
 import { messageRefusServeur, userFacingError } from '../../utils/userFacingError';
+import { RESPONSABLE_CX, ROLE_LABELS as ROLE_LABELS_VOCABULAIRE, ROLE_LABELS_PLURIEL } from '../../utils/vocabulaire';
 
 type UserRow = {
   id: string;
@@ -31,11 +32,7 @@ type UserRow = {
   created_at?: string;
 };
 
-const ROLE_LABELS: Record<string, string> = {
-  admin: 'Administrateur',
-  cx_manager: 'CX Manager (Siège)',
-  agency_manager: "Responsable d’agence",
-};
+const ROLE_LABELS: Record<string, string> = ROLE_LABELS_VOCABULAIRE;
 
 const ROLE_BADGES: Record<string, { bg: string; text: string; border: string }> = {
   admin: { bg: 'var(--color-surveiller-fond)', text: 'var(--color-surveiller-texte)', border: 'var(--color-surveiller-fond)' },
@@ -142,7 +139,7 @@ export default function AdminUsersContent() {
       return;
     }
     if (isAdmin && !editingUser && !form.organisation_id) {
-      showToast('Choisissez l’organisation de ce CX Manager.');
+      showToast(`Choisissez l’organisation de ce ${RESPONSABLE_CX}.`);
       return;
     }
 
@@ -161,10 +158,10 @@ export default function AdminUsersContent() {
 
       if (editingUser) {
         await utilisateursApi.update(editingUser.id, payload);
-        showToast(isAdmin ? 'CX Manager modifié' : 'Utilisateur modifié');
+        showToast(isAdmin ? `${ROLE_LABELS_VOCABULAIRE.cx_manager} modifié` : 'Utilisateur modifié');
       } else {
         await utilisateursApi.create(payload);
-        showToast(isAdmin ? 'CX Manager créé' : "Responsable d’agence créé");
+        showToast(isAdmin ? `${ROLE_LABELS_VOCABULAIRE.cx_manager} créé` : "Responsable d’agence créé");
       }
 
       const r = await utilisateursApi.list();
@@ -247,7 +244,7 @@ export default function AdminUsersContent() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>
-            {isAdmin ? `CX Managers (${displayedUsers.length})` : `Responsables d’agence (${displayedUsers.length})`}
+            {isAdmin ? `${ROLE_LABELS_PLURIEL.cx_manager} (${displayedUsers.length})` : `${ROLE_LABELS_PLURIEL.agency_manager} (${displayedUsers.length})`}
           </h2>
           <p style={{ margin: '4px 0 0', fontSize: 'var(--text-sm)', color: 'var(--color-text-2)' }}>
             {isAdmin ? 'Gérez les accès et les comptes des responsables CX.' : 'Gérez les comptes des responsables d’agences du réseau.'}
@@ -279,7 +276,7 @@ export default function AdminUsersContent() {
           }}
         >
           <PlusIcon size={16} />
-          {isCXManager ? "Nouveau responsable d’agence" : (showForm ? 'Fermer' : 'Nouveau CX Manager')}
+          {isCXManager ? "Nouveau responsable d’agence" : (showForm ? 'Fermer' : `Nouveau ${RESPONSABLE_CX}`)}
         </button>
       </div>
 
@@ -304,7 +301,7 @@ export default function AdminUsersContent() {
       {showForm && (
         <div style={{ background: 'var(--color-surface)', borderRadius: '24px', padding: '24px 28px', border: '1px solid var(--color-trait)' }}>
           <h3 style={{ margin: '0 0 16px', fontSize: 'var(--text-lg)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>
-            {editingUser ? "Modifier l'utilisateur" : (isAdmin ? 'Créer un CX Manager' : "Créer un responsable d’agence")}
+            {editingUser ? "Modifier l'utilisateur" : (isAdmin ? `Créer un ${RESPONSABLE_CX}` : "Créer un responsable d’agence")}
           </h3>
 
           <form onSubmit={saveUser} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
@@ -379,8 +376,8 @@ export default function AdminUsersContent() {
                   {editingUser
                     ? 'L’organisation d’un compte ne peut pas être modifiée.'
                     : orgs.length === 0
-                      ? 'Aucune organisation disponible : créez-en une avant d’ajouter un CX Manager.'
-                      : 'Le CX Manager ne verra que les données de cette organisation.'}
+                      ? `Aucune organisation disponible : créez-en une avant d’ajouter un ${RESPONSABLE_CX}.`
+                      : `Le ${RESPONSABLE_CX} ne verra que les données de cette organisation.`}
                 </p>
               </div>
             )}
@@ -455,7 +452,7 @@ export default function AdminUsersContent() {
                   <Button variant="secondary" onClick={() => setSearch('')}>Effacer la recherche</Button>
                 </>
               ) : (
-                <p style={{ margin: 0 }}>{isAdmin ? 'Aucun CX Manager pour le moment.' : 'Aucun responsable d’agence pour le moment.'}</p>
+                <p style={{ margin: 0 }}>{isAdmin ? `Aucun ${RESPONSABLE_CX} pour le moment.` : 'Aucun responsable d’agence pour le moment.'}</p>
               )}
             </div>
           ) : (

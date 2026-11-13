@@ -4,28 +4,36 @@
  * Règle : les noms techniques (types, champs API, routes, codes KPI) restent tels quels
  * dans le code ; seul le texte affiché à l'utilisateur passe par ce fichier.
  *
- * Distinctions métier à ne jamais fusionner :
+ * Un seul nom par notion, partout, titres de page et menus compris (lot 4) :
  *  - Avis client          : ce que le client exprime (entité Feedback).
+ *  - Avis à traiter       : LA file d'avis qui demandent un geste (lot 3). Remplace « À surveiller », « Avis à risque »,
+ *                           « Notifications » quand il s'agit d'avis.
+ *  - Alerte               : agence sous son seuil de satisfaction (page Alertes) ; ni un avis, ni un problème.
  *  - Problème à traiter   : situation que l'organisation décide de suivre (entité Issue),
  *                           créée et regroupée par un humain — aucun regroupement automatique.
- *  - Action à mener       : intervention prévue ou effectuée pour traiter un problème
- *                           (ActionCorrective) ; créée ≠ terminée.
+ *  - Action               : intervention prévue ou effectuée pour traiter un problème (ActionCorrective) ; créée ≠ terminée.
+ *                           Une suggestion de YAM est une « action suggérée » : à valider, jamais exécutée.
+ *  - Urgence              : trois niveaux affichés (critique, élevée, normale). Remplace « gravité », « criticité »,
+ *                           « priorité ». En base, `criticite` / `severite` gardent leurs quatre valeurs ; « normale »
+ *                           regroupe « faible » et « moyenne » à l'affichage et dans les filtres (alias API « normale »).
+ *  - Satisfaction         : part des avis notés 4 ou 5, suivie du nombre d'avis et de la fiabilité (lot 3).
  *  - Indicateur           : mesure de pilotage (KPI Engine) ; « aucune donnée » ≠ 0.
- *  - Alerte               : signal calculé (seuil, avis à risque) ; n'est pas un problème.
- *  - Recommandation       : suggestion ; n'est pas une décision exécutée.
  */
-import type { CriticiteType, EscaladeMotif, IssueStatut, SentimentType, StatutTraitement, UserRole } from '../types';
+import type { CriticiteType, EscaladeMotif, IdeaStatus, IssueStatut, SentimentType, StatutTraitement, UserRole } from '../types';
 
 export const LIBELLES = {
   avis: 'Avis client',
   avisPluriel: 'Avis clients',
   probleme: 'Problème à traiter',
   problemePluriel: 'Problèmes à traiter',
-  action: 'Action à mener',
-  actionPluriel: 'Actions à mener',
+  action: 'Action',
+  actionPluriel: 'Actions',
+  actionSuggeree: 'Action suggérée',
+  actionsSuggerees: 'Actions suggérées',
+  avisATraiter: 'Avis à traiter',
   indicateurs: 'Indicateurs',
   tableauDeBord: 'Tableau de bord',
-  gravite: 'Gravité',
+  urgence: 'Urgence',
   sentiment: 'Ton de l’avis',
   avisContradictoire: 'Note et commentaire contradictoires',
   avisContradictoireCourt: 'Avis contradictoire',
@@ -39,21 +47,66 @@ export const LIBELLES = {
   effacerFiltres: 'Effacer les filtres',
 } as const;
 
-/** Nom des rôles affiché à l'utilisateur. « CX Manager » est le nom de poste usuel chez
-    les clients ; « Agency Manager » est rendu par « Responsable d'agence ». */
+/** Nom des rôles affiché à l'utilisateur (codes techniques inchangés : `cx_manager`, `agency_manager`). */
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Administrateur',
-  cx_manager: 'CX Manager',
+  cx_manager: 'Responsable expérience client',
   agency_manager: 'Responsable d’agence',
 };
 
-/** Gravité (champ technique `criticite` / `severite`). */
+/**
+ * Code de rôle d'un utilisateur tel que renvoyé par l'API. Certaines vues d'administration reçoivent encore le LIBELLÉ
+ * historique (« CX Manager », « Agency Manager ») au lieu du code : on ramène les deux au code, pour comparer des codes et
+ * jamais des libellés (un renommage de libellé ne doit pas casser un filtre en silence).
+ */
+const ANCIENS_LIBELLES_ROLE: Record<string, UserRole> = { 'CX Manager': 'cx_manager', 'Agency Manager': 'agency_manager', Admin: 'admin' };
+export function codeRole(valeur: string | null | undefined): UserRole | null {
+  if (!valeur) return null;
+  if (valeur in ROLE_LABELS) return valeur as UserRole;
+  return ANCIENS_LIBELLES_ROLE[valeur] ?? null;
+}
+
+/** Libellé d'un rôle reçu sous forme de code OU d'ancien libellé ; inconnu : « Rôle non précisé » (jamais la valeur brute). */
+export const libelleRole = (valeur: string | null | undefined): string => {
+  const code = codeRole(valeur);
+  return code ? ROLE_LABELS[code] : 'Rôle non précisé';
+};
+
+/** Pluriel des rôles (titres de colonnes, compteurs). */
+export const ROLE_LABELS_PLURIEL: Record<UserRole, string> = {
+  admin: 'Administrateurs',
+  cx_manager: 'Responsables expérience client',
+  agency_manager: 'Responsables d’agence',
+};
+
+/** Le rôle en milieu de phrase : « votre responsable expérience client ». */
+export const roleEnPhrase = (role: UserRole): string => ROLE_LABELS[role].charAt(0).toLowerCase() + ROLE_LABELS[role].slice(1);
+
+/** Responsable expérience client, en milieu de phrase (raccourci de `roleEnPhrase('cx_manager')`). */
+export const RESPONSABLE_CX = roleEnPhrase('cx_manager');
+
+/** Urgence (champ technique `criticite` des avis, `severite` des problèmes) : trois niveaux affichés pour quatre valeurs
+    en base. « faible » et « moyenne » s'affichent toutes deux « Normale » (filtre : valeur `normale`, voir NIVEAUX_URGENCE). */
 export const GRAVITE_LABELS: Record<CriticiteType, string> = {
-  faible: 'Faible',
-  moyenne: 'Moyenne',
+  faible: 'Normale',
+  moyenne: 'Normale',
   elevee: 'Élevée',
   critique: 'Critique',
 };
+export const URGENCE_LABELS = GRAVITE_LABELS;
+
+/** Les trois niveaux proposés dans les filtres d'urgence, du plus urgent au moins urgent. `normale` est un alias de filtre
+    accepté par l'API (= faible ou moyenne), jamais une valeur stockée. */
+export const NIVEAUX_URGENCE = [
+  { valeur: 'critique', libelle: 'Critique' },
+  { valeur: 'elevee', libelle: 'Élevée' },
+  { valeur: 'normale', libelle: 'Normale' },
+] as const;
+export type NiveauUrgence = (typeof NIVEAUX_URGENCE)[number]['valeur'];
+
+/** « Urgence critique », « Urgence normale » ; niveau absent : « Urgence non évaluée ». */
+export const libelleUrgence = (niveau: string | null | undefined): string =>
+  niveau && niveau in GRAVITE_LABELS ? `Urgence ${GRAVITE_LABELS[niveau as CriticiteType].toLowerCase()}` : 'Urgence non évaluée';
 
 /** Ton de l'avis détecté par l'analyse automatique (champ `sentiment`). */
 export const SENTIMENT_LABELS: Record<SentimentType, string> = {
@@ -72,6 +125,28 @@ export const AVIS_STATUT_LABELS: Record<StatutTraitement, string> = {
   resolu: 'Résolu',
 };
 
+/** Statut d'une action (ActionCorrective) dans les cartes d'action. */
+export const ACTION_STATUT_LABELS: Record<'a_faire' | 'en_cours' | 'terminee', string> = {
+  a_faire: 'À faire',
+  en_cours: 'En cours',
+  terminee: 'Terminée',
+};
+
+/** Segments de la page Actions, et mot de fin d'une action selon qu'elle vient d'un problème ou d'un avis. */
+export const ACTIONS_SEGMENTS = { enCours: 'En cours', terminees: 'Terminées' } as const;
+export const ACTION_FIN_LABELS = { probleme: 'Terminée', avis: 'Réalisée' } as const;
+
+/** Les quatre étapes affichées du cycle d'un problème (frise de la fiche problème). */
+export const PROBLEME_ETAPES = ['Enregistré', 'Actions en cours', 'Résolu', 'Résolution vérifiée'] as const;
+
+/** Statut d'une suggestion (idée remontée par un client ou une agence, champ `statut`). */
+export const SUGGESTION_STATUT_LABELS: Record<IdeaStatus, string> = {
+  nouveau: 'Nouveau',
+  en_cours: 'En cours',
+  traite: 'Traité',
+  rejete: 'Rejeté',
+};
+
 /** Statut d'un problème à traiter (Issue). « Résolue » ≠ amélioration démontrée : seule
     « Résolution vérifiée » atteste un contrôle après résolution. */
 export const PROBLEME_STATUT_LABELS: Record<IssueStatut, string> = {
@@ -85,7 +160,7 @@ export const PROBLEME_STATUT_LABELS: Record<IssueStatut, string> = {
 /** Motif d'une escalade (champ `motif` du journal d'escalade). */
 export const ESCALADE_MOTIF_LABELS: Record<EscaladeMotif, string> = {
   sla: 'Délai de traitement dépassé',
-  criticite: 'Gravité élevée',
+  criticite: 'Urgence élevée',
   risque_client: 'Risque de perte du client',
   decision_manageriale: 'Décision de la direction',
   autre: 'Autre motif',
@@ -107,13 +182,13 @@ const EVENEMENT_AGENCE_LABELS: Record<string, string> = {
   suggestion_en_cours: 'Suggestion : en cours d’examen',
   suggestion_traite: 'Suggestion : traitée',
   suggestion_rejete: 'Suggestion : rejetée',
-  action_definie: 'Action à mener définie',
+  action_definie: 'Action définie',
   action_realisee: 'Action réalisée',
   reponse_client: 'Réponse envoyée au client',
   demande_recontactee: 'Client recontacté',
   reouverture: 'Avis rouvert',
-  recommandation_traitee: 'Recommandation traitée',
-  recommandation_rouverte: 'Recommandation remise à traiter',
+  recommandation_traitee: 'Action suggérée traitée',
+  recommandation_rouverte: 'Action suggérée remise à traiter',
 };
 
 export function libelleEvenementAgence(code: string | null | undefined): string {
@@ -143,7 +218,7 @@ export const INDICATEUR_AIDE: Record<string, string> = {
   FEEDBACK_VOLUME: 'Nombre d’avis clients reçus sur la période.',
   ISSUE_VOLUME:
     'Nombre de problèmes à traiter enregistrés sur la période. Un problème qui regroupe plusieurs avis compte une seule fois.',
-  CRITICAL_ISSUE_RATE: 'Part des problèmes enregistrés sur la période dont la gravité est « Critique ».',
+  CRITICAL_ISSUE_RATE: 'Part des problèmes enregistrés sur la période dont l’urgence est « Critique ».',
   ISSUE_RESOLUTION_RATE:
     'Part des problèmes enregistrés sur la période qui sont actuellement résolus. Un problème rouvert n’est plus compté comme résolu.',
   MEDIAN_RESOLUTION_TIME:

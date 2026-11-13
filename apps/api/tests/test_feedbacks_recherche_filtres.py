@@ -359,3 +359,17 @@ def test_indicateur_avis_a_traiter_de_l_agence_suit_la_meme_regle(ctx):
     db.add(DC(id=uuid4(), feedback_id=_u.UUID(rappel), telephone="70000000", traitee=False)); db.commit(); db.close()
     kpi = ctx.client.get(f"/dashboard/agence/{ctx.a1}", headers=ctx.H(ctx.am_a1)).json()["feedbacks_a_traiter"]
     assert kpi == total(lister(ctx, "am_a1", a_traiter=True)) == 2
+
+
+def test_filtre_urgence_normale_regroupe_faible_et_moyenne(ctx):
+    """Lot 4 : l'écran montre trois niveaux d'urgence ; « normale » = faible ou moyenne. Valeurs en base inchangées."""
+    db = ctx.Session(); db.query(Feedback).delete(); db.commit(); db.close()
+    ajouter_avis(ctx, "QR-A1", "urgence faible", note=3, criticite=CriticiteType.FAIBLE)
+    ajouter_avis(ctx, "QR-A1", "urgence moyenne", note=3, criticite=CriticiteType.MOYENNE)
+    ajouter_avis(ctx, "QR-A1", "urgence elevee", note=2, criticite=CriticiteType.ELEVEE)
+    ajouter_avis(ctx, "QR-A1", "sans analyse", note=3, analyse=False)
+    r = lister(ctx, "am_a1", criticite="normale")
+    assert r.status_code == 200
+    assert sorted(commentaires(r)) == ["urgence faible", "urgence moyenne"]
+    assert commentaires(lister(ctx, "am_a1", criticite="moyenne")) == ["urgence moyenne"]
+    assert lister(ctx, "am_a1", criticite="inconnue").status_code == 422

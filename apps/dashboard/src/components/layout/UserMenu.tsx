@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { organisationsApi } from '../../services/api';
 import type { User, UtilisationOrganisation, QuotaUtilisation } from '../../types';
 import { ChevronDownIcon, SettingsIcon, LockIcon, CheckIcon, LogOutIcon, ClockIcon } from '../common/Icons';
+import { RESPONSABLE_CX, ROLE_LABELS_PLURIEL } from '../../utils/vocabulaire';
 
 // À confirmer : adresse de support affichée dans « Obtenir de l'aide » et pour la mise à niveau vers Entreprise (devis).
 const SUPPORT_EMAIL = 'support@ikanai.app';
@@ -16,12 +17,12 @@ const CATALOGUE_OFFRES: Record<'starter' | 'pro', { nom: string; prix: string; l
   starter: {
     nom: 'Starter',
     prix: '30 000 FCFA / mois',
-    limites: ['Jusqu\'à 3 agences', '1 CX Manager', 'Avis clients illimités'],
+    limites: ['Jusqu\'à 3 agences', `1 ${RESPONSABLE_CX}`, 'Avis clients illimités'],
   },
   pro: {
     nom: 'Pro',
     prix: '50 000 FCFA / mois',
-    limites: ['Jusqu\'à 10 agences', '3 CX Managers', 'Avis clients illimités', 'Détection des avis contradictoires'],
+    limites: ['Jusqu\'à 10 agences', `3 ${ROLE_LABELS_PLURIEL.cx_manager.toLowerCase()}`, 'Avis clients illimités', 'Détection des avis contradictoires'],
   },
 };
 
@@ -280,7 +281,7 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
                     <>
                       <QuotaBar label="Agences" quota={utilisation.agences} />
                       <QuotaBar label="Avis reçus ce mois-ci" quota={utilisation.feedbacks_ce_mois} />
-                      <QuotaBar label="CX Managers" quota={utilisation.cx_managers} />
+                      <QuotaBar label={ROLE_LABELS_PLURIEL.cx_manager} quota={utilisation.cx_managers} />
 
                       <div style={{ marginTop: '12px', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         Fonctionnalités

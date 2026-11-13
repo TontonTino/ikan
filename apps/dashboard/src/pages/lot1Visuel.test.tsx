@@ -97,7 +97,7 @@ describe('titres de page', () => {
     expect(html).toContain('Tous les avis');
   });
 
-  it('Gestion des agences (CX Manager) : titre et phrase, contenu conservé ; l’Administrateur n’est pas modifié', () => {
+  it('Gestion des agences : titre du menu pour les deux rôles (lot 4), contenu conservé', () => {
     etat.user = utilisateur('cx_manager');
     const html = dans(<GestionAgencesPage />, '/admin/gestion-agences');
     expect(html).toContain('<h1 class="ui-page-title__h1">Gestion des agences</h1>');
@@ -105,7 +105,7 @@ describe('titres de page', () => {
     expect(html).toContain('contenu agences');
     etat.user = utilisateur('admin');
     const admin = dans(<GestionAgencesPage />, '/admin/gestion-agences');
-    expect(admin).not.toContain('<h1');
+    expect(admin).toContain('<h1 class="ui-page-title__h1">Gestion des agences</h1>');
     expect(admin).toContain('contenu comptes');
   });
 });

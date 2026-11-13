@@ -67,22 +67,23 @@ _VEILLE_SYSTEM_PROMPT = (
     "N'invente pas de faits et ne propose aucune alerte, action ou brouillon."
 )
 _VEILLE_PROMPT_MAX_CHARS = 6000
+# Même libellé par clé que le dashboard (utils/themeLabels.ts) et l'API (THEME_LABELS_MAP) : majuscule initiale seulement (lot 4).
 _THEME_LABELS_VEILLE = {
-    "attente": "Attente & Délais en caisse",
-    "accueil": "Accueil & Conseillers",
-    "disponibilite_accessibilite": "Disponibilité / accessibilité",
-    "tarifs": "Tarifs & Frais",
-    "qualite_produit": "Qualité du produit",
-    "proprete_cadre": "Propreté du cadre",
-    "application_mobile": "Application Mobile & E-espace",
-    "reseau": "Réseau 4G/5G & Connexion",
+    "attente": "Attente & délais",
+    "accueil": "Accueil & amabilité",
+    "disponibilite_accessibilite": "Disponibilité & horaires",
+    "tarifs": "Tarifs & frais",
+    "qualite_produit": "Qualité des produits & services",
+    "proprete_cadre": "Propreté & cadre",
+    "application_mobile": "Application mobile & services en ligne",
+    "reseau": "Réseau & couverture",
     "facturation": "Facturation",
-    "communication_information": "Communication & Conseils",
-    "livraison_logistique": "Livraison & Disponibilité SIM",
-    "resolution_probleme": "SAV & Résolution",
-    "securite_confidentialite": "Sécurité & Confidentialité",
-    "disponibilite_produit": "Disponibilité Stocks / Terminaux",
-    "personnalisation_besoin": "Écoute & Personnalisation",
+    "communication_information": "Information & clarté",
+    "livraison_logistique": "Livraison & logistique",
+    "resolution_probleme": "Prise en charge & SAV",
+    "securite_confidentialite": "Sécurité & confidentialité",
+    "disponibilite_produit": "Disponibilité des stocks & offres",
+    "personnalisation_besoin": "Écoute & conseil personnalisé",
 }
 
 _PATTERN_IDENTITE = re.compile(
@@ -250,8 +251,8 @@ ACTIONS_IKAN_RESPONSABLE = (
 )
 _SEUIL_VOLUME_RECO = 5  # en dessous, des suggestions « prioritaires » reposent sur trop peu d'avis
 MESSAGE_METIER_NON_COMPRIS = (
-    "Je n'ai pas bien compris votre question. Je peux analyser les feedbacks, alertes, thèmes, tendances, "
-    "problèmes récurrents et recommandations de votre périmètre : essayez par exemple « Fais-moi un résumé de "
+    "Je n'ai pas bien compris votre question. Je peux analyser les avis, alertes, thèmes, tendances, "
+    "problèmes récurrents et actions suggérées de votre périmètre : essayez par exemple « Faites-moi un résumé de "
     "la période » ou « Y a-t-il des alertes critiques ? »."
 )
 MESSAGE_DONNEE_INDISPONIBLE = (

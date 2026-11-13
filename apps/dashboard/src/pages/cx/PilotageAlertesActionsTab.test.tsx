@@ -83,7 +83,7 @@ describe('page /alertes — les six états', () => {
 });
 
 describe('page /alertes — seulement les alertes de seuil (lot 3)', () => {
-  it('les avis à risque ne sont plus listés ici, même quand l’API en renvoie', () => {
+  it('les avis à traiter ne sont plus listés ici, même quand l’API en renvoie', () => {
     const html = rendu({ alertes: etatAlertes({ seuil: [seuil()], avis: [avis(1), avis(2)] }) });
     expect(html).not.toContain('Avis à risque');
     expect(html).not.toContain('alerte-feedback-');
@@ -179,14 +179,14 @@ describe('page /alertes — liens', () => {
 describe('page /alertes — synthèse', () => {
   it('bande compacte, chiffres en <b>, pas de carte KPI', () => {
     const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ seuil: [seuil('a1'), seuil('a2')] }) });
-    expect(synthese(html)).toBe('2 situations à surveiller : 2 alertes de seuil 2 agences concernées');
+    expect(synthese(html)).toBe('2 alertes actives : 2 alertes de seuil 2 agences concernées');
     expect(html).toContain('<b class="alerte-synthese__n">2</b>');
     expect(html).not.toContain('ui-kpi');
   });
 
   it('Responsable d’agence : pas d’« agences concernées »', () => {
     const html = rendu({ alertes: etatAlertes({ seuil: [seuil('a1')] }) });
-    expect(synthese(html)).toBe('1 situation à surveiller : 1 alerte de seuil');
+    expect(synthese(html)).toBe('1 alerte active : 1 alerte de seuil');
   });
 
   it('absente en chargement, en erreur, sans forfait et sans alerte (jamais de « 0 situation »)', () => {
@@ -203,7 +203,7 @@ describe('page /alertes — ligne d’alerte de seuil', () => {
   it('agence, puis niveau, puis raison, puis détail, puis action ; une seule pastille', () => {
     const html = rendu({ isAgencyManager: false, alertes: etatAlertes({ seuil: [{ ...seuil('a9'), gravite: 'important' }] }) });
     const l = (html.match(/<li id="alerte-seuil-a9".*?<\/li>/) || [''])[0];
-    const ordre = ['alerte-ligne__agence', 'Important', 'alerte-ligne__raison', 'alerte-ligne__detail', 'alerte-ligne__action'];
+    const ordre = ['alerte-ligne__agence', 'Élevée', 'alerte-ligne__raison', 'alerte-ligne__detail', 'alerte-ligne__action'];
     for (let i = 1; i < ordre.length; i++) expect(apres(l, ordre[i - 1], ordre[i]), `${ordre[i - 1]} avant ${ordre[i]}`).toBe(true);
     expect((l.match(/class="ui-badge /g) || []).length).toBe(1);
     expect(l).toContain('class="ui-btn ui-btn--secondary ui-btn--sm alerte-ligne__action"');

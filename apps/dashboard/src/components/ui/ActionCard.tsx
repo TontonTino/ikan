@@ -5,6 +5,7 @@ import Button from './Button';
 import Card from './Card';
 import { CalendarIcon, CheckIcon, ClockIcon, UsersIcon } from '../common/Icons';
 import { fullDate, relativeTime, shortDate } from './format';
+import { ACTION_STATUT_LABELS, LIBELLES } from '../../utils/vocabulaire';
 
 export type ActionStatus = 'a_faire' | 'en_cours' | 'terminee';
 
@@ -31,7 +32,7 @@ export interface ActionCardData {
   impact?: { label: string; isPositive: boolean };
 }
 
-const STATUS_LABEL: Record<ActionStatus, string> = { a_faire: 'À faire', en_cours: 'En cours', terminee: 'Terminée' };
+const STATUS_LABEL: Record<ActionStatus, string> = ACTION_STATUT_LABELS;
 const STATUS_TONE: Record<ActionStatus, 'neutral' | 'warning' | 'success'> = { a_faire: 'neutral', en_cours: 'warning', terminee: 'success' };
 
 /**
@@ -41,7 +42,7 @@ const STATUS_TONE: Record<ActionStatus, 'neutral' | 'warning' | 'success'> = { a
 export function actionFromFeedback(f: Feedback): ActionCardData {
   return {
     id: f.id,
-    title: f.action_a_prendre || 'Action à mener',
+    title: f.action_a_prendre || LIBELLES.action,
     description: f.commentaire,
     status: f.action_realisee ? 'terminee' : f.action_a_prendre ? 'en_cours' : 'a_faire',
     owner: f.assigne_a_nom,

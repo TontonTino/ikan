@@ -57,6 +57,7 @@ from app.core.rate_limit import limiter_ip_public, limiter_soumission
 from app.services.ai.analyse_service import analyser_feedback
 from app.services.ai.reprise_analyse import TYPES_TECHNIQUES, etat_analyse
 from app.core.config import settings
+from app.services.urgence import valeurs_filtre_urgence
 from app.services.dashboard_helpers import NOTE_FAIBLE_MAX, condition_a_traiter_sql, condition_en_retard_sql, est_critique_ou_negatif
 from app.services.brouillon_reponse import (
     RAISON_AUCUN_SUIVI,
@@ -351,7 +352,7 @@ def list_feedbacks(
     action_realisee: Optional[bool] = Query(None),
     theme: Optional[str] = Query(None, min_length=1, max_length=100),
     sentiment: Optional[SentimentType] = Query(None, description="Ton de l'analyse IA : positif, neutre ou negatif."),
-    criticite: Optional[str] = Query(None, description="faible, moyenne, elevee, critique, ou non_evaluee (avis sans analyse)."),
+    criticite: Optional[str] = Query(None, description="faible, moyenne, elevee, critique, normale (= faible ou moyenne), ou non_evaluee (avis sans analyse)."),
     note: Optional[int] = Query(None, ge=1, le=5, description="Note exacte (1 à 5)."),
     discordance: Optional[bool] = Query(
         None,
@@ -371,8 +372,8 @@ def list_feedbacks(
     (file « À traiter » : avis sans prise en charge depuis plus de 48 h en tête, du plus ancien au plus récent).
     """
     recherche = valider_recherche(q)
-    if criticite is not None and criticite != "non_evaluee" and criticite not in {c.value for c in CriticiteType}:
-        raise HTTPException(status_code=422, detail="Gravité inconnue.")
+    if criticite is not None and criticite != "non_evaluee" and valeurs_filtre_urgence(criticite) is None:
+        raise HTTPException(status_code=422, detail="Urgence inconnue.")
     query = (
         db.query(Feedback)
         .options(
@@ -437,7 +438,7 @@ def list_feedbacks(
     if criticite == "non_evaluee":
         query = query.filter(AnalyseIA.id.is_(None))
     elif criticite:
-        query = query.filter(AnalyseIA.criticite == CriticiteType(criticite))
+        query = query.filter(AnalyseIA.criticite.in_(valeurs_filtre_urgence(criticite)))
     if recherche:
         # Texte de l'avis UNIQUEMENT (jamais nom, téléphone ni e-mail de la demande de contact). Valeur liée en paramètre,
         # jokers et caractères spéciaux neutralisés, casse et accents ignorés (voir app/utils/recherche_texte.py).
@@ -497,7 +498,7 @@ def synthese_themes(
     agence_id: Optional[UUID] = Query(None),
     jours: Optional[int] = Query(None, ge=1, le=365, description="Période en jours ; absent = toute la période."),
     sentiment: Optional[SentimentType] = Query(None),
-    criticite: Optional[str] = Query(None, description="faible, moyenne, elevee, critique, ou non_evaluee (avis sans analyse)."),
+    criticite: Optional[str] = Query(None, description="faible, moyenne, elevee, critique, normale (= faible ou moyenne), ou non_evaluee (avis sans analyse)."),
     note: Optional[int] = Query(None, ge=1, le=5),
     discordance: Optional[bool] = Query(None),
     q: Optional[str] = Query(None, max_length=LONGUEUR_MAX_RECHERCHE),
@@ -509,8 +510,8 @@ def synthese_themes(
     catégorisé » inclus). Avec `jours`, part d'avis négatifs et évolution par rapport à la période précédente de même durée.
     """
     recherche = valider_recherche(q)
-    if criticite is not None and criticite != "non_evaluee" and criticite not in {c.value for c in CriticiteType}:
-        raise HTTPException(status_code=422, detail="Gravité inconnue.")
+    if criticite is not None and criticite != "non_evaluee" and valeurs_filtre_urgence(criticite) is None:
+        raise HTTPException(status_code=422, detail="Urgence inconnue.")
     criteres: list = []
     if current_user.role == UserRole.AGENCY_MANAGER:
         criteres.append(QRCode.agence_id == current_user.agence_id)
@@ -525,7 +526,7 @@ def synthese_themes(
     if criticite == "non_evaluee":
         criteres.append(AnalyseIA.id.is_(None))
     elif criticite:
-        criteres.append(AnalyseIA.criticite == CriticiteType(criticite))
+        criteres.append(AnalyseIA.criticite.in_(valeurs_filtre_urgence(criticite)))
     if note is not None:
         criteres.append(Feedback.note == note)
     if discordance is True:
