@@ -57,6 +57,12 @@ Typographie : Poppins auto-hébergée (`apps/dashboard/public/fonts`), 400 et 60
 Les anciens noms (`--color-primary`, `--color-text-muted`, `--color-success-*`, `--weight-bold`…) restent, en alias vers ces
 jetons : le lot 2b remplace leurs usages un groupe de fichiers à la fois.
 
+## Formulaire client : couleurs d'origine conservées
+
+Décision du 13 novembre 2026 : le formulaire public (`apps/client`) garde ses couleurs d'origine (en-tête vert en dégradé,
+visages colorés, boutons verts). La refonte ne le modifie pas. Ses contrastes restent vérifiés par
+`apps/client/src/utils/accessibilite.test.mjs`.
+
 ## Une seule file d'avis et des périodes cohérentes (lot 3)
 
 **File « À traiter »** — une seule règle, écrite côté serveur (`apps/api/app/services/dashboard_helpers.py`,
