@@ -63,6 +63,26 @@ export function CoordonneesMasquees() {
   );
 }
 
+/**
+ * Coordonnées affichées SEULEMENT avec un consentement enregistré (lot 6). « Consentement non enregistré » (demande antérieure
+ * à la migration 030) ou refusé : rien ne montre que le client a accepté d'être recontacté, le numéro et l'e-mail ne
+ * s'affichent pas. Masquage d'affichage seulement : l'API les renvoie encore (voir docs/etat-des-lieux.md, lot 6).
+ */
+export const coordonneesAutorisees = (demande: ChampsTraitementDemande): boolean => demande.consentement_contact === true;
+
+/** Phrase qui remplace les coordonnées sans consentement, et dit pourquoi elles ne s'affichent pas. */
+export function CoordonneesSansConsentement({ demande }: { demande: ChampsTraitementDemande }) {
+  const raison = demande.consentement_contact === false
+    ? 'le client n’a pas accepté d’être recontacté.'
+    : 'cette demande est antérieure à l’enregistrement du consentement, rien ne montre que le client a accepté d’être recontacté.';
+  return (
+    <p style={{ margin: 0, display: 'inline-flex', alignItems: 'flex-start', gap: '6px', color: 'var(--color-text-2)', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', lineHeight: 1.5 }}>
+      <LockIcon size={14} color="var(--color-text-2)" aria-hidden="true" style={{ flexShrink: 0, marginTop: 3 }} />
+      <span>Coordonnées non affichées : {raison}</span>
+    </p>
+  );
+}
+
 /** Consentement à être recontacté. « Consentement non enregistré » (lignes antérieures à la migration 030) ne bloque rien. */
 export function ConsentementContact({ demande }: { demande: ChampsTraitementDemande }) {
   let texte: string;

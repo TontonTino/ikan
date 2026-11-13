@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Area, ComposedChart, CartesianGrid, Line, ResponsiveContainer, Tooltip as RTooltip, XAxis, YAxis } from 'recharts';
+import { formaterDateAxe } from '../../utils/formatNombre';
 import {
   ActionCard,
   Alert,
@@ -88,8 +89,10 @@ const DEMO_FEEDBACKS: Feedback[] = [
   },
 ];
 
+// Axe du temps en dates, jamais en numéros de semaine (lot 6) : lundis successifs à partir du 4 mai 2026.
 const SERIES = Array.from({ length: 12 }, (_, i) => ({
-  label: `S${i + 1}`,
+  ordre: i,
+  label: formaterDateAxe(new Date(Date.UTC(2026, 4, 4 + 7 * i)).toISOString().slice(0, 10)),
   csat: [72, 74, 73, 76, 75, 78, 77, 74, 71, 73, 76, 79][i],
   previous: [70, 71, 72, 72, 73, 74, 74, 73, 72, 72, 73, 74][i],
 }));
@@ -384,7 +387,7 @@ export default function DesignSystemPage() {
               rows={SERIES}
               rowKey={(r) => r.label}
               columns={[
-                { key: 'label', header: 'Semaine' },
+                { key: 'label', header: 'Semaine du' },
                 { key: 'csat', header: 'CSAT', align: 'right', numeric: true, render: (r) => `${r.csat} %` },
                 { key: 'previous', header: 'Période préc.', align: 'right', numeric: true, render: (r) => `${r.previous} %` },
               ]}
@@ -415,12 +418,12 @@ export default function DesignSystemPage() {
           rowLabel={(r) => `Ouvrir ${r.label}`}
           defaultSort={{ key: 'csat', direction: 'desc' }}
           columns={[
-            { key: 'label', header: 'Semaine', sortValue: (r) => r.label },
+            { key: 'label', header: 'Semaine du', sortValue: (r) => r.ordre },
             { key: 'csat', header: 'CSAT', align: 'right', numeric: true, sortValue: (r) => r.csat, render: (r) => `${r.csat} %` },
           ]}
         />
-        <DataTable caption="Chargement" rows={[] as typeof SERIES} rowKey={(r) => r.label} loading skeletonRows={3} columns={[{ key: 'label', header: 'Semaine' }, { key: 'csat', header: 'CSAT', numeric: true }]} />
-        <DataTable caption="Vide" rows={[] as typeof SERIES} rowKey={(r) => r.label} emptyTitle="Aucune action en cours." emptyMessage="Les actions créées depuis un feedback apparaîtront ici." columns={[{ key: 'label', header: 'Semaine' }]} />
+        <DataTable caption="Chargement" rows={[] as typeof SERIES} rowKey={(r) => r.label} loading skeletonRows={3} columns={[{ key: 'label', header: 'Semaine du' }, { key: 'csat', header: 'CSAT', numeric: true }]} />
+        <DataTable caption="Vide" rows={[] as typeof SERIES} rowKey={(r) => r.label} emptyTitle="Aucune action en cours." emptyMessage="Les actions créées depuis un feedback apparaîtront ici." columns={[{ key: 'label', header: 'Semaine du' }]} />
       </Section>
 
       <Section title="EmptyState & Skeleton">

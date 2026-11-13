@@ -12,7 +12,12 @@ import AgenceFilterSelect from '../../components/stats/AgenceFilterSelect';
 import { StatsErrorState } from '../../components/stats/StatsStates';
 import EmptyState from '../../components/ui/EmptyState';
 import WhatsAppReplyButton from '../../components/feedbacks/WhatsAppReplyButton';
-import { ConfirmationRecontact, CoordonneesMasquees, ConsentementContact, InfoTraitement } from '../../components/feedbacks/DemandeContactBlocs';
+import {
+  ConfirmationRecontact, CoordonneesMasquees, CoordonneesSansConsentement, ConsentementContact, InfoTraitement, coordonneesAutorisees,
+} from '../../components/feedbacks/DemandeContactBlocs';
+import { formaterTelephone, telephoneCompact } from '../../utils/telephone';
+import { anciennete, jourComplet } from '../../utils/dateJour';
+import { demandeEnRetard } from '../../utils/fileATraiter';
 import SkeletonBlock from '../../components/ui/SkeletonBlock';
 import SectionHeading from '../../components/ui/SectionHeading';
 import PageTitle from '../../components/ui/PageTitle';
@@ -211,9 +216,13 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
         )
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {demandes.map((d) => (
+          {demandes.map((d) => {
+            const enRetard = demandeEnRetard(d);
+            const autorisees = coordonneesAutorisees(d);
+            return (
             <div
               key={d.id}
+              className={`demande-rappel${enRetard ? ' is-late' : ''}`}
               style={{
                 background: 'var(--color-surface)',
                 border: '1px solid var(--color-trait)',
@@ -235,22 +244,28 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
                     {d.nom || 'Client anonyme'}
                   </h3>
                 </div>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-2)', fontWeight: 'var(--weight-semibold)', whiteSpace: 'nowrap' }}>
-                  Demandé le {formatDate(d.date_demande)}
+                {/* Lot 6 : en attente, l'ancienneté (« il y a 35 jours ») plutôt que la date ; la date exacte reste au survol. */}
+                <span className="demande-rappel__age">
+                  {d.traitee ? (
+                    <span>Demandée le {formatDate(d.date_demande)}</span>
+                  ) : (
+                    <span>Demandée <time dateTime={d.date_demande} title={jourComplet(d.date_demande)}>{anciennete(d.date_demande)}</time></span>
+                  )}
+                  {enRetard && <span className="demande-rappel__retard">En attente depuis plus de 48 h</span>}
                 </span>
               </div>
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: 'var(--text-sm)' }}>
-                {d.telephone && (
+                {autorisees && d.telephone && (
                   <a
-                    href={`tel:${d.telephone}`}
+                    href={`tel:${telephoneCompact(d.telephone)}`}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', minHeight: 44, color: 'var(--color-bon-texte)', fontWeight: 'var(--weight-semibold)', textDecoration: 'none' }}
                   >
                     <PhoneIcon size={14} color="var(--color-bon-texte)" />
-                    {d.telephone}
+                    {formaterTelephone(d.telephone)}
                   </a>
                 )}
-                {d.email && (
+                {autorisees && d.email && (
                   <a
                     href={`mailto:${d.email}`}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', minHeight: 44, color: 'var(--color-bon-texte)', fontWeight: 'var(--weight-semibold)', textDecoration: 'none' }}
@@ -260,6 +275,7 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
                   </a>
                 )}
                 {d.coordonnees_masquees && <CoordonneesMasquees />}
+                {!d.coordonnees_masquees && !autorisees && (d.telephone || d.email) && <CoordonneesSansConsentement demande={d} />}
                 {!d.coordonnees_masquees && !d.telephone && !d.email && (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--color-surveiller-texte)', fontWeight: 'var(--weight-semibold)' }}>
                     <AlertTriangleIcon size={14} color="var(--color-surveiller-texte)" />
@@ -282,7 +298,7 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
                 <ConsentementContact demande={d} />
               </div>
 
-              {isAgencyManager && !d.coordonnees_masquees && (
+              {isAgencyManager && !d.coordonnees_masquees && autorisees && (
                 <WhatsAppReplyButton telephone={d.telephone} telephoneWhatsapp={d.telephone_whatsapp} masque={d.coordonnees_masquees} />
               )}
 
@@ -305,7 +321,8 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
       {!loading && !error && demandes.length < demandesTotal && (

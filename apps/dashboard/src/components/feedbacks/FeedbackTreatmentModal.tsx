@@ -9,7 +9,8 @@ import EmptyState from '../ui/EmptyState';
 import { useOverlay } from '../ui/useOverlay';
 import PriseEnChargeBanner from './PriseEnChargeBanner';
 import WhatsAppReplyButton from './WhatsAppReplyButton';
-import { CoordonneesMasquees, ConsentementContact, InfoTraitement } from './DemandeContactBlocs';
+import { CoordonneesMasquees, CoordonneesSansConsentement, ConsentementContact, InfoTraitement, coordonneesAutorisees } from './DemandeContactBlocs';
+import { formaterTelephone, telephoneCompact } from '../../utils/telephone';
 import ReponseClientSection from './ReponseClientSection';
 import { libelleAnalyseAbsente } from './avisAffichage';
 import { shortDate } from '../ui/format';
@@ -786,15 +787,15 @@ export default function FeedbackTreatmentModal({
 
                   <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-critique-texte)', display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '12px' }}>
                     {feedback.demande_contact.nom && <div><strong>Nom :</strong> {feedback.demande_contact.nom}</div>}
-                    {feedback.demande_contact.telephone && (
+                    {coordonneesAutorisees(feedback.demande_contact) && feedback.demande_contact.telephone && (
                       <div>
                         <strong>Téléphone :</strong>{' '}
-                        <a href={`tel:${feedback.demande_contact.telephone}`} style={{ color: 'var(--color-critique-texte)', fontWeight: 'var(--weight-semibold)', textDecoration: 'none' }}>
-                          {feedback.demande_contact.telephone}
+                        <a href={`tel:${telephoneCompact(feedback.demande_contact.telephone)}`} style={{ color: 'var(--color-critique-texte)', fontWeight: 'var(--weight-semibold)', textDecoration: 'none' }}>
+                          {formaterTelephone(feedback.demande_contact.telephone)}
                         </a>
                       </div>
                     )}
-                    {feedback.demande_contact.email && (
+                    {coordonneesAutorisees(feedback.demande_contact) && feedback.demande_contact.email && (
                       <div>
                         <strong>E-mail :</strong>{' '}
                         <a href={`mailto:${feedback.demande_contact.email}`} style={{ color: 'var(--color-critique-texte)', fontWeight: 'var(--weight-semibold)', textDecoration: 'none' }}>
@@ -805,13 +806,17 @@ export default function FeedbackTreatmentModal({
                   </div>
 
                   {feedback.demande_contact.coordonnees_masquees && <div style={{ marginBottom: '8px' }}><CoordonneesMasquees /></div>}
+                  {!feedback.demande_contact.coordonnees_masquees && !coordonneesAutorisees(feedback.demande_contact)
+                    && (feedback.demande_contact.telephone || feedback.demande_contact.email) && (
+                    <div style={{ marginBottom: '8px' }}><CoordonneesSansConsentement demande={feedback.demande_contact} /></div>
+                  )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '12px' }}>
                     <InfoTraitement demande={feedback.demande_contact} />
                     <ConsentementContact demande={feedback.demande_contact} />
                   </div>
 
                   {/* Réponse WhatsApp (Agency Manager uniquement) : ouvre wa.me, aucun envoi ni marquage « traitée ». */}
-                  {isAgencyManager && !feedback.demande_contact.coordonnees_masquees && (
+                  {isAgencyManager && !feedback.demande_contact.coordonnees_masquees && coordonneesAutorisees(feedback.demande_contact) && (
                     <div style={{ marginBottom: '12px' }}>
                       <WhatsAppReplyButton
                         telephone={feedback.demande_contact.telephone}

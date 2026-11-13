@@ -126,3 +126,27 @@ Couleurs du formulaire inchangées (décision du 13 novembre) ; seuls l'ordre, l
   internationaux restent acceptés (`utils/telephone.ts`).
 - **Retour** sur l'écran de notation : même bouton, même place et même comportement que sur l'écran d'idée (retour à l'écran
   d'où l'on vient). Il n'apparaît pas quand il n'y a nulle part où revenir (QR scanné directement).
+
+## Finitions (lot 6)
+
+- **Connexion** : exemple d'adresse neutre (`prenom.nom@entreprise.com`, plus d'adresse tunisienne ; même correction sur la
+  création d'organisation), champ mot de passe vide. « Mot de passe oublié ? » ouvre une boîte : l'API n'a pas de
+  réinitialisation en libre-service (un administrateur redonne un mot de passe), elle dit donc qui contacter selon le rôle,
+  avec l'adresse de l'équipe IKAN AI (`utils/contact.ts`, la même que « Obtenir de l'aide »). Aucune fausse page.
+- **Gestion des agences** : « Modifier le responsable », « Modifier l'agence » ; « Désactiver l'agence » seule en bas de la
+  fiche, après un trait et un espace, et toujours confirmée (la boîte nomme l'agence).
+- **Demandes de rappel** :
+  - en attente, l'ancienneté (« il y a 35 jours », sans bascule en date après 30 jours : le nombre de jours est
+    l'information) ; date exacte au survol ;
+  - plus de 48 h sans traitement : même marque que les avis en retard du lot 3 (trait à gauche) et la phrase « En attente
+    depuis plus de 48 h » ;
+  - numéro par groupes de deux (`+226 56 46 58 88`), lien `tel:` compact ;
+  - sans consentement enregistré (ou refusé), ni numéro ni e-mail, ni bouton WhatsApp, et une phrase dit pourquoi. Même règle
+    dans la fenêtre de traitement d'un avis. **Masquage d'affichage seulement** : l'API renvoie encore ces coordonnées ; les
+    retirer de la réponse serait un changement d'API à décider.
+- **Graphiques** : plus de numéros de semaine. L'API écrit la date du lundi (« 4 août », année ajoutée si la série couvre
+  deux années) et les jours en clair (« 4 août ») ; infobulles « Semaine du 3 au 9 août 2026 ». Mois abrégés identiques à
+  Intl fr-FR, dans l'API (`MOIS_COURTS_FR`) et le dashboard (`MOIS_COURTS`).
+- **Carte du réseau** : les marqueurs proches à l'écran (moins de 44 px) se regroupent en une pastille numérotée, recalculée à
+  chaque zoom ; un clic ou Entrée zoome sur le groupe. Un « ! » signale un groupe qui contient une agence sous son seuil, et le
+  title détaille les statuts. Sans nouvelle dépendance (pas de leaflet.markercluster) : `components/map/regroupement.ts`.

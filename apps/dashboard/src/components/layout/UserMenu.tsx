@@ -4,9 +4,9 @@ import { organisationsApi } from '../../services/api';
 import type { User, UtilisationOrganisation, QuotaUtilisation } from '../../types';
 import { ChevronDownIcon, SettingsIcon, LockIcon, CheckIcon, LogOutIcon, ClockIcon } from '../common/Icons';
 import { RESPONSABLE_CX, ROLE_LABELS_PLURIEL } from '../../utils/vocabulaire';
+import { SUPPORT_EMAIL } from '../../utils/contact';
 
-// À confirmer : adresse de support affichée dans « Obtenir de l'aide » et pour la mise à niveau vers Entreprise (devis).
-const SUPPORT_EMAIL = 'support@ikanai.app';
+// À confirmer : adresse de support (utils/contact.ts) affichée dans « Obtenir de l'aide » et pour la mise à niveau vers Entreprise (devis).
 
 // Catalogue d'affichage des forfaits payants en libre-service (Stripe Checkout).
 // Miroir des limites définies dans apps/api/app/services/plan_catalog.py (PLANS) —

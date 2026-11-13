@@ -2,7 +2,8 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import {
-  AvertissementReponse, ConfirmationRecontact, ConsentementContact, CoordonneesMasquees, InfoTraitement,
+  AvertissementReponse, ConfirmationRecontact, ConsentementContact, CoordonneesMasquees, CoordonneesSansConsentement, InfoTraitement,
+  coordonneesAutorisees,
   MESSAGE_AVERTISSEMENT_REPONSE, MESSAGE_CONFIRMATION_RECONTACT,
 } from './DemandeContactBlocs';
 import WhatsAppReplyButton from './WhatsAppReplyButton';
@@ -117,13 +118,45 @@ describe('câblage dans les écrans (garde au niveau du source : pas d’environ
     expect(fiche).not.toContain('Enregistrer une réponse au client');
   });
 
-  it('aucun bouton WhatsApp pour une demande masquée, dans la page comme dans la fiche', () => {
-    expect(lire(sourcePageDemandes)).toMatch(/isAgencyManager && !d\.coordonnees_masquees && \(/);
-    expect(lire(sourceFicheAvis)).toMatch(/isAgencyManager && !feedback\.demande_contact\.coordonnees_masquees && \(/);
+  it('aucun bouton WhatsApp pour une demande masquée ni sans consentement (lot 6), dans la page comme dans la fiche', () => {
+    expect(lire(sourcePageDemandes)).toMatch(/isAgencyManager && !d\.coordonnees_masquees && autorisees && \(/);
+    expect(lire(sourceFicheAvis)).toMatch(/isAgencyManager && !feedback\.demande_contact\.coordonnees_masquees && coordonneesAutorisees\(feedback\.demande_contact\) && \(/);
+  });
+
+  it('sans consentement, ni le numéro ni l’e-mail ne s’affichent, dans la page comme dans la fiche (lot 6)', () => {
+    const page = lire(sourcePageDemandes);
+    expect(page).toMatch(/\{autorisees && d\.telephone && \(/);
+    expect(page).toMatch(/\{autorisees && d\.email && \(/);
+    expect(page).toContain('<CoordonneesSansConsentement demande={d} />');
+    const fiche = lire(sourceFicheAvis);
+    expect(fiche).toMatch(/\{coordonneesAutorisees\(feedback\.demande_contact\) && feedback\.demande_contact\.telephone && \(/);
+    expect(fiche).toMatch(/\{coordonneesAutorisees\(feedback\.demande_contact\) && feedback\.demande_contact\.email && \(/);
+    expect(fiche).toContain('<CoordonneesSansConsentement demande={feedback.demande_contact} />');
+  });
+
+  it('le numéro s’affiche par groupes de deux chiffres, le lien « tel: » reste compact (lot 6)', () => {
+    expect(lire(sourcePageDemandes)).toContain('href={`tel:${telephoneCompact(d.telephone)}`}');
+    expect(lire(sourcePageDemandes)).toContain('{formaterTelephone(d.telephone)}');
+    expect(lire(sourceFicheAvis)).toContain('{formaterTelephone(feedback.demande_contact.telephone)}');
   });
 });
 
 describe('état masqué, consentement et traçabilité', () => {
+  it('coordonnées autorisées seulement avec un consentement enregistré (lot 6)', () => {
+    expect(coordonneesAutorisees({ traitee: false, consentement_contact: true })).toBe(true);
+    expect(coordonneesAutorisees({ traitee: false, consentement_contact: false })).toBe(false);
+    expect(coordonneesAutorisees({ traitee: false, consentement_contact: null })).toBe(false);
+    expect(coordonneesAutorisees({ traitee: false })).toBe(false);
+  });
+
+  it('sans consentement : une phrase dit pourquoi les coordonnées ne s’affichent pas', () => {
+    const nonEnregistre = renderToStaticMarkup(<CoordonneesSansConsentement demande={{ traitee: false, consentement_contact: null }} />);
+    expect(nonEnregistre).toContain('Coordonnées non affichées : cette demande est antérieure à l’enregistrement du consentement, rien ne montre que le client a accepté d’être recontacté.');
+    expect(nonEnregistre).toContain('<svg');
+    const refuse = renderToStaticMarkup(<CoordonneesSansConsentement demande={{ traitee: false, consentement_contact: false }} />);
+    expect(refuse).toContain('Coordonnées non affichées : le client n’a pas accepté d’être recontacté.');
+  });
+
   it('coordonnées masquées : message explicite (texte + icône)', () => {
     const html = renderToStaticMarkup(<CoordonneesMasquees />);
     expect(html).toContain('Coordonnées masquées : la demande a été traitée.');

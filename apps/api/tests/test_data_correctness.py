@@ -12,6 +12,7 @@ Les tests d'endpoints passent par le VRAI routeur et la VRAIE authentification J
 une base SQLite en mémoire (même montage que test_isolation_multi_org.py).
 """
 import os
+import re
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from uuid import uuid4
@@ -46,6 +47,7 @@ from app.services.dashboard_helpers import (
     _est_traite,
     _libelles_semaines,
     _taux,
+    date_courte,
 )
 from app.services.kpi.engine import calculer_csat
 
@@ -107,9 +109,20 @@ def test_cle_semaine_iso_passage_d_annee():
 
 
 def test_libelles_semaines():
-    assert _libelles_semaines(["2026-W09", "2026-W10"]) == {"2026-W09": "Sem 9", "2026-W10": "Sem 10"}
-    # Deux années ISO : l'année est ajoutée pour lever l'ambiguïté.
-    assert _libelles_semaines(["2025-W52", "2026-W01"]) == {"2025-W52": "Sem 52 2025", "2026-W01": "Sem 1 2026"}
+    # Lot 6 : la date du lundi de la semaine, jamais un numéro de semaine.
+    assert _libelles_semaines(["2026-W09", "2026-W10"]) == {"2026-W09": "23 févr.", "2026-W10": "2 mars"}
+    assert _libelles_semaines(["2026-W32", "2026-W33"]) == {"2026-W32": "3 août", "2026-W33": "10 août"}
+    # La semaine ISO 2026-W01 commence le lundi 29 décembre 2025 : c'est l'année de ce lundi qui compte, pas l'année
+    # ISO. Deux lundis de 2025 : aucune ambiguïté, pas d'année.
+    assert _libelles_semaines(["2025-W52", "2026-W01"]) == {"2025-W52": "22 déc.", "2026-W01": "29 déc."}
+    # Des lundis sur deux années : l'année est ajoutée pour lever l'ambiguïté.
+    assert _libelles_semaines(["2026-W01", "2026-W02"]) == {"2026-W01": "29 déc. 2025", "2026-W02": "5 janv. 2026"}
+
+
+def test_date_courte_sans_zero_initial():
+    assert date_courte(datetime(2026, 8, 4)) == "4 août"
+    assert date_courte(datetime(2026, 9, 1)) == "1 sept."
+    assert date_courte(datetime(2026, 12, 25)) == "25 déc."
 
 
 def test_cle_heure_inclut_date_et_normalise_utc():
@@ -132,7 +145,7 @@ def test_tendances_hebdo_chronologiques_sans_fusion_inter_annees():
     ]
     tendances = _compute_tendances(feedbacks, jours=365)
     assert [t.date for t in tendances] == [
-        "Semaine 10 2025", "Semaine 52 2025", "Semaine 1 2026", "Semaine 2 2026", "Semaine 10 2026",
+        "3 mars 2025", "22 déc. 2025", "29 déc. 2025", "5 janv. 2026", "2 mars 2026",
     ]
     assert [t.taux for t in tendances] == [100.0, 0.0, 100.0, 100.0, 0.0]
     assert all(t.nombre_feedbacks == 1 for t in tendances)
@@ -356,7 +369,9 @@ def test_statistics_series_hebdo_iso(ctx):
     cles = [p["date"] for p in serie]
     assert cles == sorted(cles) and len(cles) == 4
     assert all(len(k) == 8 and k[4:6] == "-W" for k in cles)
-    assert all(p["label"].startswith("Sem ") for p in serie)
+    # Lot 6 : l'axe montre la date du lundi (« 4 août »), plus de « Sem 32 ».
+    assert not any(p["label"].startswith("Sem") for p in serie)
+    assert all(re.fullmatch(r"\d{1,2} \S+", p["label"]) for p in serie)
 
 
 def test_statistics_series_24h_preserve_date_and_volume(ctx):

@@ -28,3 +28,25 @@ export function pinIcon(color: string, symbole?: string): L.DivIcon {
   }
   return icon;
 }
+
+// ── Groupe d'agences proches (lot 6) : pastille encre avec le nombre d'agences ──
+// Couleur neutre (l'encre du menu) : un groupe n'a pas de statut propre. S'il contient au moins une agence sous son seuil,
+// un « ! » (le symbole du pin « sous le seuil ») s'ajoute en coin : le signal passe par le symbole, pas par la couleur seule.
+const GROUPE_TAILLE = 40;
+const groupeIconCache = new Map<string, L.DivIcon>();
+export function groupeIcon(nombre: number, contientSousSeuil: boolean): L.DivIcon {
+  const cle = `${nombre}|${contientSousSeuil}`;
+  let icon = groupeIconCache.get(cle);
+  if (!icon) {
+    const alerte = contientSousSeuil ? '<span class="carte-groupe__alerte" aria-hidden="true">!</span>' : '';
+    icon = L.divIcon({
+      className: 'carte-groupe',
+      html: `<span class="carte-groupe__pastille" aria-hidden="true">${nombre}</span>${alerte}`,
+      iconSize: [GROUPE_TAILLE, GROUPE_TAILLE],
+      iconAnchor: [GROUPE_TAILLE / 2, GROUPE_TAILLE / 2],
+      popupAnchor: [0, -GROUPE_TAILLE / 2],
+    });
+    groupeIconCache.set(cle, icon);
+  }
+  return icon;
+}

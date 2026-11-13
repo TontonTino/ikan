@@ -22,3 +22,13 @@ export function estEnRetard(avis: Pick<Feedback, 'statut_traitement' | 'date_sou
   const soumis = new Date(avis.date_soumission).getTime();
   return Number.isFinite(soumis) && maintenant.getTime() - soumis > DELAI_PRISE_EN_CHARGE_HEURES * 3600 * 1000;
 }
+
+/**
+ * Demande de rappel en attente depuis plus de 48 h (lot 6) : même délai et même marque que les avis en retard (trait à gauche,
+ * plus une phrase : jamais la couleur seule). Une demande traitée n'est jamais en retard.
+ */
+export function demandeEnRetard(demande: { traitee: boolean; date_demande: string }, maintenant: Date = new Date()): boolean {
+  if (demande.traitee) return false;
+  const demandee = new Date(demande.date_demande).getTime();
+  return Number.isFinite(demandee) && maintenant.getTime() - demandee > DELAI_PRISE_EN_CHARGE_HEURES * 3600 * 1000;
+}
