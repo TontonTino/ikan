@@ -56,6 +56,16 @@ describe('palette : chaque texte contre chacun de ses fonds (≥ 4,5:1)', () => 
     expect(ratio(jeton('--color-text-on-dark-muted'), jeton('--color-encre'))).toBeGreaterThanOrEqual(TEXTE);
   });
 
+  it('menu en dégradé (encre → vert de la marque) : chaque texte lisible aux DEUX extrémités', () => {
+    expect(tokens).toMatch(/--sidebar-bg-from:\s*var\(--color-encre\)/);
+    expect(tokens).toMatch(/--sidebar-bg-to:\s*var\(--color-marque\)/);
+    for (const fond of [jeton('--color-encre'), jeton('--color-marque')]) {
+      for (const texte of ['--sidebar-text', '--sidebar-text-strong', '--sidebar-muted']) {
+        expect(ratio(jeton(texte), fond), `${texte} sur ${fond}`).toBeGreaterThanOrEqual(TEXTE);
+      }
+    }
+  });
+
   it('texte principal et secondaire sur un élément sélectionné', () => {
     expect(ratio(jeton('--color-encre'), jeton('--color-active-item'))).toBeGreaterThanOrEqual(TEXTE);
     expect(ratio(jeton('--color-text-2'), jeton('--color-active-item'))).toBeGreaterThanOrEqual(TEXTE);

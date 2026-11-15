@@ -201,12 +201,15 @@
   --control-lg: 44px;
   --drawer-width: 480px;
 
-  /* ── Sidebar : encre unie (plus de dégradé décoratif) ───────────────── */
+  /* ── Sidebar : dégradé de l'encre (haut) vers le vert de la marque (bas), pour plus d'éclat.
+     Les textes du menu sont vérifiés sur les DEUX extrémités (contraste.test.ts) : sur le vert du bas, le blanc fait
+     5,36:1 et le texte discret 4,58:1 ; sur l'encre du haut, 14,35 et 12,2. ─────────────────────────────── */
   --sidebar-bg-from: var(--color-encre);
-  --sidebar-bg-to: var(--color-encre);
-  --sidebar-text: #D5E0DC;          /* 10,6:1 sur l'encre */
+  --sidebar-bg-to: var(--color-marque);
+  --sidebar-gradient: linear-gradient(170deg, var(--sidebar-bg-from) 0%, var(--sidebar-bg-from) 22%, var(--sidebar-bg-to) 100%);
+  --sidebar-text: #FFFFFF;
   --sidebar-text-strong: #FFFFFF;
-  --sidebar-muted: var(--color-text-on-dark-muted); /* 6,3:1 */
+  --sidebar-muted: #EAEEED;         /* titres de section : 4,58:1 sur le vert du bas */
   --sidebar-hover-bg: rgba(255, 255, 255, 0.06);
   --sidebar-active-bg: rgba(255, 255, 255, 0.10);
   --sidebar-active-border: rgba(255, 255, 255, 0.16);
