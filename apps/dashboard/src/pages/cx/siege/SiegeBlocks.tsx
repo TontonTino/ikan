@@ -55,6 +55,7 @@ import { PHRASE_TRI_CLASSEMENT } from '../../../utils/scoreFiabilise';
 import YamNote from '../../../components/agent/YamNote';
 import { formaterPourcentage } from '../../../utils/formatNombre';
 import { libelleDatePoint } from '../../../utils/satisfactionSeries';
+import LegendeVolume from '../../../components/ui/LegendeVolume';
 import { LIBELLES } from '../../../utils/vocabulaire';
 
 export type KpiKind = 'satisfaction' | 'volume' | 'critiques' | 'seuil';
@@ -381,7 +382,7 @@ export function Evolution({ stats, jours, onRetry, elargir }: { stats: Source<St
     <>
     <Chart
       title="Évolution de la satisfaction"
-      subtitle={`${periodeLabel(jours)} · part des avis notés 4 ou 5${faibles ? ' · ○ point à faible volume (< ' + FAIBLE_VOLUME_POINT + ' avis)' : ''}`}
+      subtitle={<>{`${periodeLabel(jours)} · part des avis notés 4 ou 5`}{faibles > 0 && <LegendeVolume />}</>}
       loading={stats.status === 'loading'}
       error={stats.status === 'error' ? 'Les statistiques du réseau n’ont pas pu être chargées.' : undefined}
       onRetry={onRetry}

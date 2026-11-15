@@ -2,6 +2,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import YamChatPanel from './YamChatPanel';
+import { SOURCES_YAM_3D } from './YamPicture3D';
 
 const etat = vi.hoisted(() => ({ messages: [] as unknown[], loading: false }));
 vi.mock('./useYamChat', () => ({
@@ -22,8 +23,8 @@ describe('panneau YAM : présence', () => {
     const image = html.indexOf('/yam/yam-3d-face');
     expect(image).toBeGreaterThan(-1);
     expect(image).toBeLessThan(html.indexOf('Bonjour, je suis'));
-    expect(html).toContain('<source type="image/webp" srcSet="/yam/yam-3d-face.webp 1x, /yam/yam-3d-face@2x.webp 2x"');
-    expect(html).toContain('src="/yam/yam-3d-face.png"');
+    expect(html).toContain(`<source type="image/webp" srcSet="${SOURCES_YAM_3D.webp} 1x, ${SOURCES_YAM_3D.webp2x} 2x"`);
+    expect(html).toContain(`src="${SOURCES_YAM_3D.png}"`);
     expect(html).toContain('alt="YAM"');
     expect(html).toContain('loading="lazy"');
     expect(html).toMatch(/width="110"[^>]*height="161"|height="161"[^>]*width="110"/);
