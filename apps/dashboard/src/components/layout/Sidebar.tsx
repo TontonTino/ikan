@@ -2,11 +2,10 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import type { User } from '../../types';
 import IkanLogo from '../common/IkanLogo';
-import { ChevronRightIcon, XCloseIcon } from '../common/Icons';
+import { XCloseIcon } from '../common/Icons';
 import Tooltip from '../ui/Tooltip';
 import SidebarWorkspaceCard from './SidebarWorkspaceCard';
-import YamAvatar from '../agent/YamAvatar';
-import { YAM_PANEL_ID } from '../agent/YamChatPanel';
+import UserMenu from './UserMenu';
 import type { NavSection } from './navigation';
 
 export const SIDEBAR_ID = 'dashboard-sidebar';
@@ -21,7 +20,7 @@ export interface SidebarProps {
   /** Tiroir mobile/tablette ouvert. */
   mobileOpen: boolean;
   onCloseMobile: () => void;
-  yam?: { open: boolean; onToggle: () => void };
+  onLogout: () => void | Promise<void>;
 }
 
 /**
@@ -34,7 +33,7 @@ export interface SidebarProps {
  * Les liens proviennent de ROLE_NAV_SECTIONS (navigation.tsx), alignés sur
  * les gardes de route : un rôle ne voit que ce qu'il peut ouvrir.
  */
-export default function Sidebar({ user, sections, collapsed, mobileOpen, onCloseMobile, yam }: SidebarProps) {
+export default function Sidebar({ user, sections, collapsed, mobileOpen, onCloseMobile, onLogout }: SidebarProps) {
   const withTooltip = (label: string, node: React.ReactElement) =>
     collapsed ? (
       <Tooltip content={label} placement="right" decorative delay={0}>
@@ -117,30 +116,10 @@ export default function Sidebar({ user, sections, collapsed, mobileOpen, onClose
         ))}
       </nav>
 
-      {/* Assistant YAM : ouvre le panneau, ne change pas de page */}
-      {yam &&
-        withTooltip(
-          'Demander à YAM',
-          <button
-            type="button"
-            onClick={yam.onToggle}
-            aria-expanded={yam.open}
-            aria-controls={YAM_PANEL_ID}
-            aria-label={collapsed ? 'Demander à YAM, assistant IA' : undefined}
-            className="ikan-yam-button"
-          >
-            <YamAvatar size={34} />
-            <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25, minWidth: 0 }}>
-              <span className="ikan-yam-button-label" style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-md)', color: 'var(--sidebar-text-strong)' }}>
-                Demander à YAM
-              </span>
-              <span className="ikan-yam-subtitle" style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-xs)' }}>Assistant IA</span>
-            </span>
-            <span className="ikan-yam-chevron" aria-hidden="true">
-              <ChevronRightIcon size={14} />
-            </span>
-          </button>,
-        )}
+      {/* Compte : profil, utilisation du forfait, aide, déconnexion. YAM est en haut à droite de l'en-tête. */}
+      <div className="dashboard-sidebar__compte">
+        <UserMenu user={user} onLogout={onLogout} placement="menu" collapsed={collapsed} />
+      </div>
 
     </aside>
   );

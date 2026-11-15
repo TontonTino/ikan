@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { organisationsApi } from '../../services/api';
 import type { User, UtilisationOrganisation, QuotaUtilisation } from '../../types';
-import { ChevronDownIcon, SettingsIcon, LockIcon, CheckIcon, LogOutIcon, ClockIcon } from '../common/Icons';
+import { ChevronDownIcon, ChevronUpIcon, SettingsIcon, LockIcon, CheckIcon, LogOutIcon, ClockIcon } from '../common/Icons';
 import { RESPONSABLE_CX, ROLE_LABELS_PLURIEL } from '../../utils/vocabulaire';
 import { SUPPORT_EMAIL } from '../../utils/contact';
 
@@ -38,7 +39,17 @@ function offresDisponiblesPour(planCode: string | undefined): ('starter' | 'pro'
 interface UserMenuProps {
   user: User | null;
   onLogout: () => void | Promise<void>;
+  /**
+   * `menu` : en bas du menu latéral (fond foncé). La liste s'ouvre vers le haut, en portail (le menu latéral coupe ce qui
+   * dépasse) ; menu replié : l'avatar seul, la liste s'ouvre à droite.
+   */
+  placement?: 'entete' | 'menu';
+  collapsed?: boolean;
 }
+
+/** Position de la liste quand le menu utilisateur est dans le menu latéral (coordonnées de l'écran). */
+interface PositionListe { left: number; bottom: number; maxHeight: number }
+const LARGEUR_LISTE = 330;
 
 const itemStyle: React.CSSProperties = {
   display: 'flex',
@@ -89,7 +100,10 @@ function QuotaBar({ label, quota }: { label: string; quota: QuotaUtilisation }) 
   );
 }
 
-export default function UserMenu({ user, onLogout }: UserMenuProps) {
+export default function UserMenu({ user, onLogout, placement = 'entete', collapsed = false }: UserMenuProps) {
+  const enMenu = placement === 'menu';
+  const listeRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<PositionListe | null>(null);
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [utilisation, setUtilisation] = useState<UtilisationOrganisation | null>(null);
@@ -106,7 +120,9 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const cible = e.target as Node;
+      if (ref.current?.contains(cible) || listeRef.current?.contains(cible)) return;
+      setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false);
@@ -118,6 +134,23 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
       document.removeEventListener('keydown', onKey);
     };
   }, [open]);
+
+  // Dans le menu latéral : la liste se place au-dessus du déclencheur (à sa droite si le menu est replié), sans
+  // dépasser de l'écran, et suit les redimensionnements.
+  useLayoutEffect(() => {
+    if (!open || !enMenu) return;
+    const placer = () => {
+      const r = ref.current?.getBoundingClientRect();
+      if (!r) return;
+      const marge = 8;
+      const left = Math.max(marge, Math.min(collapsed ? r.right + 12 : r.left, window.innerWidth - LARGEUR_LISTE - marge));
+      const bottom = collapsed ? window.innerHeight - r.bottom : window.innerHeight - r.top + marge;
+      setPosition({ left, bottom, maxHeight: Math.max(240, window.innerHeight - bottom - 16) });
+    };
+    placer();
+    window.addEventListener('resize', placer);
+    return () => window.removeEventListener('resize', placer);
+  }, [open, enMenu, collapsed]);
 
   // Les sections repliables repartent toujours fermées à la prochaine ouverture du menu.
   useEffect(() => {
@@ -148,6 +181,9 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
   }, [open, isCX]);
 
   if (!user) return null;
+
+  // Dans le menu latéral, la liste sort par un portail : le menu latéral coupe tout ce qui dépasse de ses bords.
+  const afficherListe = (liste: React.ReactElement) => (enMenu ? createPortal(liste, document.body) : liste);
 
   const initials = `${user.prenom?.[0] || 'A'}${user.nom?.[0] || 'D'}`.toUpperCase();
   const fullName = `${user.prenom || ''} ${user.nom || ''}`.trim() || 'Utilisateur';
@@ -182,7 +218,9 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="menu"
         aria-expanded={open}
-        style={{
+        aria-label={enMenu && collapsed ? `Compte de ${fullName}` : undefined}
+        className={enMenu ? `user-menu-lateral${collapsed ? ' user-menu-lateral--replie' : ''}` : undefined}
+        style={enMenu ? undefined : {
           display: 'flex',
           alignItems: 'center',
           gap: '10px',
@@ -195,33 +233,49 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
         }}
       >
         <div
+          aria-hidden={enMenu ? true : undefined}
           style={{
             width: '30px', height: '30px', borderRadius: '50%', background: 'var(--color-bon-fond)', color: 'var(--color-bon-texte)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-xs)',
+            flexShrink: 0,
           }}
         >
           {initials}
         </div>
-        <span className="user-menu__nom" style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>{fullName}</span>
-        <ChevronDownIcon size={14} color="var(--color-text-2)" />
+        {enMenu ? (
+          !collapsed && (
+            <>
+              <span className="user-menu-lateral__texte">
+                <span className="user-menu-lateral__nom">{fullName}</span>
+                {user.organisation_nom && <span className="user-menu-lateral__org">{user.organisation_nom}</span>}
+              </span>
+              <ChevronUpIcon size={14} color="var(--sidebar-muted)" />
+            </>
+          )
+        ) : (
+          <>
+            <span className="user-menu__nom" style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)' }}>{fullName}</span>
+            <ChevronDownIcon size={14} color="var(--color-text-2)" />
+          </>
+        )}
       </button>
 
-      {open && (
+      {open && (!enMenu || position) && afficherListe(
         <div
+          ref={listeRef}
           role="menu"
           style={{
-            position: 'absolute',
-            right: 0,
-            top: 'calc(100% + 8px)',
-            width: '330px',
-            maxHeight: 'calc(100vh - 100px)',
+            ...(enMenu && position
+              ? { position: 'fixed', left: position.left, bottom: position.bottom, maxHeight: position.maxHeight, zIndex: 75 } // au-dessus du tiroir mobile (--z-drawer : 70)
+              : { position: 'absolute', right: 0, top: 'calc(100% + 8px)', maxHeight: 'calc(100vh - 100px)' }),
+            width: `${LARGEUR_LISTE}px`,
             overflowY: 'auto',
             background: 'var(--color-surface)',
             border: '1px solid var(--color-trait)',
             borderRadius: '16px',
             boxShadow: 'var(--shadow-dropdown)',
             padding: '8px 0',
-            zIndex: 60,
+            ...(enMenu ? {} : { zIndex: 60 }),
           }}
         >
           {/* En-tête : nom + email */}
