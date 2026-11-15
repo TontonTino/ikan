@@ -3,7 +3,7 @@ import { Outlet, useNavigate, useLocation, matchPath } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { alertesApi, feedbacksApi } from '../../services/api';
 import type { AlertesResponse, UserRole } from '../../types';
-import UserMenu from './UserMenu';
+import YamBoutonEntete from './YamBoutonEntete';
 import BackButton from './BackButton';
 import Sidebar, { SIDEBAR_ID } from './Sidebar';
 import NotificationCenter, { type FileATraiter } from './NotificationCenter';
@@ -293,7 +293,7 @@ export default function DashboardLayout() {
         collapsed={collapsed}
         mobileOpen={mobileMenuOpen}
         onCloseMobile={() => setMobileMenuOpen(false)}
-        yam={canUseYam ? { open: yamOpen, onToggle: toggleYam } : undefined}
+        onLogout={handleLogout}
       />
 
       {/* ── Zone Contenu Principal ── */}
@@ -368,8 +368,8 @@ export default function DashboardLayout() {
               <NotificationCenter file={fileATraiter} loading={alertesLoading} showAgency={user.role === 'cx_manager'} />
             )}
 
-            {/* Menu utilisateur : profil, utilisation du forfait, aide, déconnexion */}
-            <UserMenu user={user} onLogout={handleLogout} />
+            {/* YAM, dans le coin droit (le compte est en bas du menu latéral) */}
+            {canUseYam && <YamBoutonEntete ouvert={yamOpen} onBasculer={toggleYam} />}
           </div>
         </header>
 

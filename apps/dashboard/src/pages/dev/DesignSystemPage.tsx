@@ -158,10 +158,10 @@ export default function DesignSystemPage() {
         </div>
         <div style={{ ...row, alignItems: 'flex-start' }}>
           <SidebarFrame label="Ouverte : libellés, sections, espace de travail">
-            <Sidebar user={DEMO_USER(demoRole)} sections={ROLE_NAV_SECTIONS[demoRole]} collapsed={false} mobileOpen={false} onCloseMobile={() => undefined} yam={demoRole !== 'admin' ? { open: false, onToggle: () => undefined } : undefined} />
+            <Sidebar user={DEMO_USER(demoRole)} sections={ROLE_NAV_SECTIONS[demoRole]} collapsed={false} mobileOpen={false} onCloseMobile={() => undefined} onLogout={() => undefined} />
           </SidebarFrame>
           <SidebarFrame label="Réduite : icônes + tooltip au survol et au focus (Tab)">
-            <Sidebar user={DEMO_USER(demoRole)} sections={ROLE_NAV_SECTIONS[demoRole].map((sec, i) => i === 0 ? { ...sec, items: sec.items.map((it, j) => j === 2 ? { ...it, badge: 4, badgeUrgent: true } : it) } : sec)} collapsed mobileOpen={false} onCloseMobile={() => undefined} yam={demoRole !== 'admin' ? { open: false, onToggle: () => undefined } : undefined} />
+            <Sidebar user={DEMO_USER(demoRole)} sections={ROLE_NAV_SECTIONS[demoRole].map((sec, i) => i === 0 ? { ...sec, items: sec.items.map((it, j) => j === 2 ? { ...it, badge: 4, badgeUrgent: true } : it) } : sec)} collapsed mobileOpen={false} onCloseMobile={() => undefined} onLogout={() => undefined} />
           </SidebarFrame>
         </div>
       </Section>

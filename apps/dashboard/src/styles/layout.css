@@ -102,17 +102,13 @@
   .dashboard-sidebar--collapsed .dashboard-role-label,
   .dashboard-sidebar--collapsed .ikan-nav-section-title,
   .dashboard-sidebar--collapsed .ikan-nav-link-label,
-  .dashboard-sidebar--collapsed .ikan-nav-badge,
-  .dashboard-sidebar--collapsed .ikan-yam-button-label,
-  .dashboard-sidebar--collapsed .ikan-yam-subtitle,
-  .dashboard-sidebar--collapsed .ikan-yam-chevron { display: none; }
+  .dashboard-sidebar--collapsed .ikan-nav-badge { display: none; }
   .dashboard-sidebar--collapsed .dashboard-nav-section + .dashboard-nav-section { padding-top: var(--space-3); border-top: 1px solid var(--sidebar-active-border); }
   /* Le menu continue de défiler en mode réduit : les tooltips sont en portail, rien à laisser déborder. */
   .dashboard-sidebar--collapsed .dashboard-primary-nav { gap: var(--space-3); }
   .dashboard-sidebar--collapsed .dashboard-nav-list > li > span { width: 100%; }
   .dashboard-sidebar--collapsed .ikan-nav-link { justify-content: center; width: 100%; min-height: var(--touch-target); padding: var(--space-3) var(--space-2); }
   .dashboard-sidebar--collapsed .ikan-nav-link-content { justify-content: center; }
-  .dashboard-sidebar--collapsed .ikan-yam-button { justify-content: center; padding: var(--space-2); }
 
   /* Carte d'espace de travail (SidebarWorkspaceCard) */
   .dashboard-sidebar--collapsed .agency-context-wrap { margin-bottom: var(--space-3); }

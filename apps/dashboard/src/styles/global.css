@@ -501,41 +501,43 @@ body {
   color: var(--color-critique-texte);
 }
 
-.ikan-yam-button {
-  margin-top: 14px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 11px 12px;
-  border-radius: 14px;
-  border: 1px solid var(--sidebar-active-border);
-  background: var(--sidebar-hover-bg);
-  cursor: pointer;
-  text-align: left;
-  font-family: inherit;
+/* ── Compte, en bas du menu latéral (à la place de l'ancien bouton YAM) ──
+   Pastille translucide sur le dégradé : nom en blanc, organisation en texte discret, chevron vers le haut (la liste s'ouvre
+   au-dessus). Menu replié : l'avatar seul, centré. */
+.dashboard-sidebar__compte { margin-top: 14px; }
+.user-menu-lateral {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px;
+  border-radius: 14px; border: 1px solid var(--sidebar-active-border); background: var(--sidebar-hover-bg);
+  cursor: pointer; text-align: left; font-family: inherit; color: var(--sidebar-text-strong);
   transition: background 0.15s ease, border-color 0.15s ease;
 }
-.ikan-yam-button[aria-expanded="true"] {
-  background: var(--sidebar-active-bg);
-  border-color: var(--sidebar-active-border);
+.user-menu-lateral:hover, .user-menu-lateral[aria-expanded="true"] { background: var(--sidebar-active-bg); }
+.user-menu-lateral:focus-visible { outline: 2px solid var(--color-text-inverse); outline-offset: 2px; }
+.user-menu-lateral--replie { justify-content: center; padding: var(--space-2); }
+.user-menu-lateral__texte { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
+.user-menu-lateral__nom { font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--sidebar-text-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-menu-lateral__org { font-size: var(--text-xs); color: var(--sidebar-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── YAM, en haut à droite de l'en-tête ──
+   Même pastille que l'ancien menu du compte : fond blanc, bordure de contrôle ; ouvert : bordure encre. */
+.yam-entete {
+  display: inline-flex; align-items: center; gap: 10px; padding: 4px 14px 4px 4px; min-height: var(--control-md);
+  border-radius: var(--radius-pill); background: var(--color-surface); border: 1px solid var(--color-border);
+  cursor: pointer; font-family: inherit; color: var(--color-encre); font-size: var(--text-sm); font-weight: var(--weight-semibold);
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
-.ikan-yam-chevron {
-  margin-left: auto;
-  color: var(--sidebar-muted);
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-/* Contraste ~6.2:1 au pire cas (fond translucide sur le dégradé sidebar),
-   contre ~4.77:1 avec --sidebar-muted : marge insuffisante pour un sous-titre. */
-.ikan-yam-subtitle {
-  color: var(--sidebar-text);
+.yam-entete:hover { background: var(--color-bg); }
+.yam-entete--ouvert { border-color: var(--color-encre); }
+.yam-entete:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+@media (max-width: 640px) {
+  .yam-entete { padding: 4px; }
+  .yam-entete__libelle { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .ikan-nav-link,
-  .ikan-yam-button {
+  .user-menu-lateral,
+  .yam-entete {
     transition: none;
   }
 }
