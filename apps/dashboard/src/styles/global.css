@@ -438,8 +438,8 @@ body {
    tiroir mobile) : radius/largeur/position restent en styles inline sur
    le <aside>, cette classe ne fournit que fond/bordure/ombre. */
 .ikan-sidebar--dark {
-  /* Encre unie : ni dégradé ni filigrane décoratif (kanso). */
-  background: var(--color-encre);
+  /* Dégradé encre → vert de la marque (jetons --sidebar-*), sans filigrane. */
+  background: var(--sidebar-gradient);
   border: 1px solid var(--sidebar-active-border);
   box-shadow: var(--shadow-card);
 }
