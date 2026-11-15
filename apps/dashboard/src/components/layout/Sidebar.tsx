@@ -6,6 +6,7 @@ import { XCloseIcon } from '../common/Icons';
 import Tooltip from '../ui/Tooltip';
 import SidebarWorkspaceCard from './SidebarWorkspaceCard';
 import UserMenu from './UserMenu';
+import CubeIkan from '../common/CubeIkan';
 import type { NavSection } from './navigation';
 
 export const SIDEBAR_ID = 'dashboard-sidebar';
@@ -60,6 +61,8 @@ export default function Sidebar({ user, sections, collapsed, mobileOpen, onClose
         .filter(Boolean)
         .join(' ')}
     >
+      {/* Filigrane : le cube du logo, ton sur ton, comme dans l'en-tête du formulaire client. Responsables seulement. */}
+      {(user?.role === 'cx_manager' || user?.role === 'agency_manager') && <CubeIkan className="dashboard-sidebar__filigrane" />}
       <div className="dashboard-sidebar__head">
         <div className="dashboard-sidebar-brand-logo">
           <IkanLogo variant="light" size={28} showText={!collapsed} />

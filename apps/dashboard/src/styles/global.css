@@ -708,3 +708,13 @@ button.espace-carte:hover .espace-indice, .espace-carte.is-ouverte .espace-indic
 /* ── Légende des points de courbe (plein : volume suffisant ; creux : moins de 5 avis) ── */
 .legende-volume { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin-top: var(--space-2); font-size: var(--text-xs); color: var(--color-text-2); }
 .legende-volume__item { display: inline-flex; align-items: center; gap: var(--space-2); }
+
+/* ── Filigrane du menu : le cube du logo, ton sur ton (inspiré de l'en-tête du formulaire client) ──
+   Vectoriel (net sur tous les écrans), en bas à droite, coupé par le bord du menu. Plus SOMBRE que le fond (encre
+   translucide) : là où il passe, le texte blanc garde, voire gagne, du contraste. Derrière le contenu (z-index -1 dans
+   le contexte d'empilement du menu), sans capter la souris. Masqué quand le menu est replié. */
+.dashboard-sidebar__filigrane {
+  position: absolute; z-index: -1; right: -64px; bottom: -48px; width: 260px; height: auto;
+  color: var(--color-encre); opacity: 0.22; pointer-events: none; user-select: none;
+}
+.dashboard-sidebar--collapsed .dashboard-sidebar__filigrane { display: none; }
