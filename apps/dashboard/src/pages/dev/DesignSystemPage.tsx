@@ -101,7 +101,7 @@ const SERIES = Array.from({ length: 12 }, (_, i) => ({
 const TOKENS_COLORS = [
   ['--color-encre', 'Menu, titres, texte principal'], ['--color-text-2', 'Texte secondaire'],
   ['--color-accent', 'Boutons et liens'], ['--color-accent-vif', 'Icônes et traits, jamais de texte'],
-  ['--color-marque', 'Logo et statut « bon »'], ['--color-citron', 'Graphiques et décor, jamais de texte'],
+  ['--color-marque', 'Logo et statut « bon »'], ['--color-citron', 'Graphiques et décor, jamais de texte'], ['--color-vert-clair', 'Vert clair de la charte : décor seulement'],
   ['--color-bg', 'Fond de page'], ['--color-surface', 'Cartes et tableaux'],
   ['--color-border', 'Bordures de champs et de boutons'], ['--color-trait', 'Séparateurs, contours de cartes'],
 ];

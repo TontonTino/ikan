@@ -38,7 +38,7 @@
 
 .ui-btn--primary { background: var(--color-primary); color: var(--color-text-inverse); }
 .ui-btn--primary:hover:not(:disabled) { background: var(--color-primary-hover); }
-/* Accent corail : texte blanc (4,85:1), survol plus sombre (6,3:1) */
+/* Accent vert de la charte : texte blanc (5,42:1), survol plus sombre (7,65:1) */
 .ui-btn--accent { background: var(--color-accent); color: var(--color-text-inverse); }
 .ui-btn--accent:hover:not(:disabled) { background: var(--color-accent-hover); }
 .ui-btn--secondary { background: var(--color-surface); color: var(--color-text-body); border-color: var(--color-border); }

@@ -161,5 +161,5 @@
 .feedbacks-meta { margin-top: 2px; color: var(--color-text-2); font-size: var(--text-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .feedbacks-consulter { padding: 4px 12px; min-height: 32px; border-radius: 10px; }
 /* Avis de la file sans prise en charge depuis plus de 48 h : un trait à gauche et la tête de liste, pas de badge (dit aussi aux lecteurs d'écran). */
-.feedbacks-ligne.is-late > td:first-child { box-shadow: inset 3px 0 0 var(--color-accent-vif); }
-.feedbacks-mobile-card.is-late { box-shadow: inset 3px 0 0 var(--color-accent-vif); }
+.feedbacks-ligne.is-late > td:first-child { box-shadow: inset 3px 0 0 var(--color-critique-texte); }
+.feedbacks-mobile-card.is-late { box-shadow: inset 3px 0 0 var(--color-critique-texte); }

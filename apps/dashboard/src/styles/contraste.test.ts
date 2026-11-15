@@ -19,6 +19,9 @@ const ratio = (a: string, b: string) => {
 };
 
 const tokens: string = readFileSync(new URL('./tokens.css', import.meta.url), 'utf8');
+const cssGlobal: string = readFileSync(new URL('./global.css', import.meta.url), 'utf8');
+const cssLayout: string = readFileSync(new URL('./layout.css', import.meta.url), 'utf8');
+const cssAvis: string = readFileSync(new URL('../pages/agency/FeedbacksPage.css', import.meta.url), 'utf8');
 
 /** Valeur hexadécimale d'un jeton, en suivant les alias `var(--autre)`. */
 const jeton = (nom: string, profondeur = 0): string => {
@@ -121,9 +124,34 @@ describe('couleurs interdites en texte : la règle est écrite et les valeurs le
     }
   });
 
-  it('l’accent du deck (#C94A26) échoue en lien sur la crème : la variante conforme est utilisée', () => {
-    expect(ratio('#C94A26', jeton('--color-bg'))).toBeLessThan(TEXTE);
-    expect(jeton('--color-accent')).not.toBe('#C94A26');
+  it('le vert clair de la charte (#75B72A) échoue à 3:1 : il ne sert qu’au décor, la variante conforme porte icônes et traits', () => {
+    expect(jeton('--color-vert-clair')).toBe('#75B72A');
+    expect(ratio(jeton('--color-vert-clair'), BLANC)).toBeLessThan(GRAPHIQUE);
+    expect(tokens).toMatch(/--color-vert-clair:[^\n]*décor seulement/);
+    expect(jeton('--color-accent-vif')).not.toBe('#75B72A');
+  });
+});
+
+describe('la charte IKAN AI est la palette du dashboard', () => {
+  it('encre, vert, citron et blanc sont ceux de la charte, à l’identique', () => {
+    expect(jeton('--color-encre')).toBe('#02302D');
+    expect(jeton('--color-marque')).toBe('#3C7730');
+    expect(jeton('--color-citron')).toBe('#BCCF00');
+    expect(jeton('--color-surface')).toBe('#FFFFFF');
+  });
+
+  it('l’action porte le vert de la charte ; plus aucun corail', () => {
+    expect(jeton('--color-accent')).toBe('#3C7730');
+    for (const corail of ['#C94A26', '#C54825', '#A63C1E', '#E5603B']) expect(tokens.toUpperCase()).not.toContain(corail);
+  });
+
+  it('un retard ne prend jamais la couleur de l’action : trait en statut « critique »', () => {
+    for (const regle of [cssGlobal, cssLayout, cssAvis]) {
+      for (const trait of regle.match(/\.is-late[^{]*\{[^}]*\}/g) ?? []) {
+        expect(trait).not.toMatch(/--color-accent/);
+        expect(trait).toContain('var(--color-critique-texte)');
+      }
+    }
   });
 });
 

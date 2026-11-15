@@ -156,3 +156,14 @@ Couleurs du formulaire inchangées (décision du 13 novembre) ; seuls l'ordre, l
 Le lot 1 avait retiré l'entrée de menu et la route `/veille` (fonction prévue en V2). À la demande du propriétaire, elle est
 remise pour la présentation : « Réseaux sociaux », section RÉSEAU, responsable expérience client uniquement. Le titre de la
 page et le fil d'Ariane disent aussi « Réseaux sociaux ». La page n'affiche des mentions que si le service de veille répond.
+
+## Palette : la charte IKAN AI remplace le corail
+
+Le lot 2a avait installé la palette du plan, avec un corail pour l'action. Elle est remplacée par la charte officielle
+(#02302D, #3C7730, #75B72A, #BCCF00, #FFFFFF), à la demande du propriétaire :
+- action (boutons, liens, onglet actif, anneau de focus) : le vert #3C7730 (blanc dessus 5,42:1), survol #2E5E25 ;
+- vert clair #75B72A : 2,45:1 sur blanc, trop peu pour une icône ou un trait (3:1). Variante conforme la plus proche
+  #659E24 pour les icônes et traits (`--color-accent-vif`) ; la teinte exacte reste en `--color-vert-clair`, décor seulement ;
+- traits « en retard » (avis et demandes de rappel, plus de 48 h) : couleur de statut « critique », plus l'accent, pour qu'un
+  retard ne soit jamais dit en vert ;
+- formulaire client inchangé (il garde ses couleurs d'origine).

@@ -218,7 +218,7 @@
 .notif__list { flex: 1; overflow-y: auto; margin: 0; padding: var(--space-1) 0; list-style: none; }
 .notif__item { position: relative; display: flex; gap: var(--space-3); padding: var(--space-3) var(--space-4); }
 .notif__item + .notif__item { border-top: 1px solid var(--color-border-subtle); }
-.notif__item.is-late { box-shadow: inset 3px 0 0 var(--color-accent-vif); } /* sans prise en charge depuis plus de 48 h (dit aussi en texte) */
+.notif__item.is-late { box-shadow: inset 3px 0 0 var(--color-critique-texte); } /* sans prise en charge depuis plus de 48 h (dit aussi en texte) */
 .notif__icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 32px; height: 32px; border-radius: var(--radius-sm); }
 .notif__icon--feedback { background: var(--color-warning-bg); color: var(--color-warning-text); }
 .notif__body { flex: 1; min-width: 0; }

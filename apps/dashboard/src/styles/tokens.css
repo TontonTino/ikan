@@ -4,13 +4,13 @@
    Tout composant consomme ces variables : aucune couleur, aucun radius,
    aucun espacement ni aucune durée en dur dans un composant.
 
-   Palette (deck de pitch, lot 2a) : un rôle fixe par couleur — une couleur ne sert qu'à une chose.
+   Palette : la charte IKAN AI (#02302D, #3C7730, #75B72A, #BCCF00, #FFFFFF). Un rôle fixe par couleur.
      encre     menu, titres, texte principal         citron      graphiques et décor, JAMAIS de texte
      texte-2   texte secondaire                      fond        page (crème)
-     accent    boutons et liens (corail)              surface     cartes et tableaux
+     accent    boutons et liens (vert de la charte)  surface     cartes et tableaux
      accent-vif icônes et traits, JAMAIS de texte    border      champs et boutons
      marque    logo et statut « bon »                 trait       séparateurs, contours de cartes
-   Le corail sert à l'action, pas à l'alerte ; le vert ne sert plus aux boutons.
+   Le vert de la charte porte l'action ; un retard ou une alerte prend une couleur de statut, jamais l'accent.
 
    Contrastes WCAG 2.1 calculés et vérifiés par src/styles/contraste.test.ts :
    4,5:1 pour le texte, 3:1 pour les bordures de contrôles, icônes et l'anneau de focus.
@@ -87,12 +87,14 @@
      Contrastes : sur blanc / sur crème (--color-bg).                     */
   --color-encre: #02302D;        /* menu, titres, texte principal — 14,35 / 13,41 */
   --color-text-2: #5C7268;       /* texte secondaire — 5,17 / 4,83 */
-  /* Boutons et liens. Deck : #C94A26, mais un lien de cette couleur sur la crème ne fait que 4,37:1 (< 4,5) :
-     variante conforme la plus proche, à l'œil identique. Blanc dessus : 4,85 ; sur blanc 4,85 ; sur crème 4,53. */
-  --color-accent: #C54825;
-  --color-accent-hover: #A63C1E; /* survol et appui d'un bouton — blanc dessus : 6,3 */
-  --color-accent-vif: #E5603B;   /* icônes et traits seulement, jamais de texte — 3,46 / 3,23 */
-  --color-marque: #3C7830;       /* logo et statut « bon » — 5,36 / 5,00 */
+  /* Boutons et liens : le vert de la charte. Blanc dessus : 5,42 ; sur blanc 5,42 ; sur crème 5,06. */
+  --color-accent: #3C7730;
+  --color-accent-hover: #2E5E25; /* survol et appui d'un bouton — blanc dessus : 7,65 */
+  /* Vert clair de la charte (#75B72A) : 2,45:1 sur blanc, sous les 3:1 d'une icône ou d'un trait. Variante conforme la
+     plus proche (même teinte, plus sombre) pour les icônes et traits ; la teinte d'origine reste en --color-vert-clair. */
+  --color-accent-vif: #659E24;   /* icônes et traits seulement, jamais de texte — 3,25 / 3,03 */
+  --color-vert-clair: #75B72A;   /* décor seulement (aucun sens porté) ; sur l'encre : 5,85 */
+  --color-marque: #3C7730;       /* logo et statut « bon » — 5,42 / 5,06 */
   --color-citron: #BCCF00;       /* graphiques et décor seulement, jamais de texte : 1,74 sur blanc, 8,24 sur l'encre */
   --color-bg: #F6F8F1;           /* fond de page (crème) */
   --color-surface: #FFFFFF;      /* cartes et tableaux */
