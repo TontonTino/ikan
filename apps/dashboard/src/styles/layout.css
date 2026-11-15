@@ -110,16 +110,8 @@
   .dashboard-sidebar--collapsed .ikan-nav-link { justify-content: center; width: 100%; min-height: var(--touch-target); padding: var(--space-3) var(--space-2); }
   .dashboard-sidebar--collapsed .ikan-nav-link-content { justify-content: center; }
 
-  /* Carte d'espace de travail (SidebarWorkspaceCard) */
-  .dashboard-sidebar--collapsed .agency-context-wrap { margin-bottom: var(--space-3); }
-  .dashboard-sidebar--collapsed .agency-context-button,
-  .dashboard-sidebar--collapsed .cx-context-card { min-height: 52px; padding: var(--space-1); }
-  .dashboard-sidebar--collapsed .agency-context-chevron { display: none; }
-  .dashboard-sidebar--collapsed .agency-context-logo { width: 42px; height: 42px; }
-  .dashboard-sidebar--collapsed .agency-context-tooltip { width: 220px; left: calc(100% + var(--space-2)); top: 0; }
-  .dashboard-sidebar--collapsed .sidebar-admin-context { justify-content: center; padding: 6px; background: transparent; border-color: transparent; box-shadow: none; }
-  .dashboard-sidebar--collapsed .sidebar-admin-context > div:not(:first-child) { display: none !important; }
-  .dashboard-sidebar--collapsed .sidebar-admin-context > div:first-child { width: 44px; height: 44px; }
+  /* Carte d'espace (SidebarWorkspaceCard) : le logo seul, centré ; nom et contexte dans l'info-bulle. */
+  .dashboard-sidebar--collapsed .espace { margin-bottom: var(--space-3); }
 }
 
 /* ── Mobile / tablette : tiroir ──────────────────────────────────────── */

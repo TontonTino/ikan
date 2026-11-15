@@ -47,18 +47,21 @@ describe('initiales de l’organisation (repli sans logo)', () => {
 });
 
 describe('carte de contexte de la barre latérale', () => {
-  it('sans logo : deux initiales et le nom complet accessible', () => {
+  it('sans logo : deux initiales, et le nom complet AFFICHÉ (plus seulement au survol)', () => {
     etat.user = utilisateur('cx_manager');
     const html = dans(<SidebarWorkspaceCard user={etat.user as User} />);
     expect(html).toContain('>RP<');
-    expect(html).toContain('role="img" aria-label="Restaurant Le Prestige"');
-    expect(html).toContain('aria-label="Sélectionner une agence dans Restaurant Le Prestige"');   // comportement existant conservé
+    expect(html).toMatch(/class="espace-nom"[^>]*>Restaurant Le Prestige</);
+    expect(html).toMatch(/class="espace-contexte"[^>]*>Toutes les agences</);
+    expect(html).toContain('aria-label="Périmètre affiché : Restaurant Le Prestige, Toutes les agences. Changer de périmètre."');
+    expect(html).toContain('aria-haspopup="listbox"');
   });
 
-  it('Agency Manager : même repli, bouton « Ouvrir Mon agence » inchangé', () => {
+  it('Agency Manager : même repli, nom et agence affichés, bouton « Ouvrir Mon agence » conservé', () => {
     const html = dans(<SidebarWorkspaceCard user={utilisateur('agency_manager', { organisation_nom: 'Orange Bank' })} />);
     expect(html).toContain('>OB<');
-    expect(html).toContain('aria-label="Orange Bank"');
+    expect(html).toMatch(/class="espace-nom"[^>]*>Orange Bank</);
+    expect(html).toMatch(/class="espace-contexte"[^>]*>Agence Ouaga 2000</);
     expect(html).toContain('Ouvrir Mon agence.');
   });
 

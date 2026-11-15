@@ -17,6 +17,7 @@ import {
   MagnifyingGlass,
   CaretDown,
   CaretUp,
+  CaretUpDown,
   ThumbsDown,
   MapPin,
   Lightning,
@@ -97,6 +98,7 @@ export const ShieldCheckIcon = wrap(ShieldCheck, 20);
 export const SearchIcon = wrap(MagnifyingGlass, 20);
 export const ChevronDownIcon = wrap(CaretDown, 20);
 export const ChevronUpIcon = wrap(CaretUp, 20);
+export const SelecteurIcon = wrap(CaretUpDown, 20);
 export const ChevronRightIcon = wrap(CaretRight, 20);
 export const PlusIcon = wrap(Plus, 20);
 export const ArrowUpRightIcon = wrap(ArrowUpRight, 14);
