@@ -225,8 +225,9 @@ export default function VeillePage() {
       {/* ── En-tête ── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
         <div>
+          {/* Même libellé que le menu et le fil d'Ariane (lot 4). */}
           <h1 style={{ margin: 0, fontSize: 'var(--text-xl)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text-main)' }}>
-            Veille réseaux sociaux
+            Réseaux sociaux
           </h1>
           <p style={{ margin: '4px 0 0', fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', maxWidth: '560px' }}>
             Mentions publiques (Facebook) analysées automatiquement par IKAN AI.

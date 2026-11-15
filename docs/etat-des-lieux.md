@@ -150,3 +150,9 @@ Couleurs du formulaire inchangées (décision du 13 novembre) ; seuls l'ordre, l
 - **Carte du réseau** : les marqueurs proches à l'écran (moins de 44 px) se regroupent en une pastille numérotée, recalculée à
   chaque zoom ; un clic ou Entrée zoome sur le groupe. Un « ! » signale un groupe qui contient une agence sous son seuil, et le
   title détaille les statuts. Sans nouvelle dépendance (pas de leaflet.markercluster) : `components/map/regroupement.ts`.
+
+## Veille réseaux sociaux remise au menu (après le lot 6)
+
+Le lot 1 avait retiré l'entrée de menu et la route `/veille` (fonction prévue en V2). À la demande du propriétaire, elle est
+remise pour la présentation : « Réseaux sociaux », section RÉSEAU, responsable expérience client uniquement. Le titre de la
+page et le fil d'Ariane disent aussi « Réseaux sociaux ». La page n'affiche des mentions que si le service de veille répond.
