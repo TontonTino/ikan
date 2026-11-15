@@ -348,7 +348,7 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 35%;
+  object-position: center; /* image carrée : tête et pousse du YAM 3D (public/yam-avatar-icon.png) */
   display: block;
   user-select: none;
 }
