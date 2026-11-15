@@ -9,8 +9,8 @@ interface Props {
 }
 
 /**
- * Avatar de YAM : le visage de la mascotte dans un conteneur rond.
- * Seul point d'affichage de l'avatar dans le dashboard (bouton de la sidebar,
+ * Avatar de YAM : la tête et la pousse du YAM 3D officiel (cadrage de public/yam/yam-3d-face@2x.png) dans un rond.
+ * Seul point d'affichage de l'avatar dans le dashboard (bouton « Demander à YAM » de l'en-tête,
  * en-tête du panneau, bulles de chat, indicateur d'attente).
  */
 export default function YamAvatar({ size = 36, pulsing = false }: Props) {
