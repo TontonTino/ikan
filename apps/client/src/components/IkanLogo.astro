@@ -5,7 +5,8 @@ export interface Props {
   alt?: string;
   class?: string;
   size?: number;
-  variant?: 'dark' | 'green' | 'lime' | 'white';
+  /** dark : logo principal (texte noir), fond clair. white : logo principal blanc, fond foncé. Variantes officielles seulement. */
+  variant?: 'dark' | 'white';
 }
 
 const {
@@ -18,13 +19,7 @@ const {
 } = Astro.props;
 
 const targetWidth = width || size || 140;
-const logoSrc = variant === 'green'
-  ? '/ikanai-logo-horizontal-green.png'
-  : variant === 'lime'
-    ? '/ikanai-logo-horizontal-lime.png'
-    : variant === 'white'
-      ? '/ikanai-mark-white.png'
-      : '/ikanai-logo-stacked.png';
+const logoSrc = variant === 'white' ? '/ikanai-logo-stacked-white.png' : '/ikanai-logo-stacked.png';
 ---
 
 <div class={`ikan-logo-official-container ${className}`} style={`width: ${targetWidth}px;`}>

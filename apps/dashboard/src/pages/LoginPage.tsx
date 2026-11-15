@@ -221,7 +221,7 @@ export default function LoginPage() {
           {/* Logo IKAN AI */}
           <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
             <img
-              src="/ikanai-logo-horizontal-green.png"
+              src="/ikanai-logo-horizontal.png"
               alt="IKAN AI"
               style={{
                 height: '90px',
