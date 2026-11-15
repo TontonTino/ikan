@@ -30,7 +30,7 @@ figurent que dans la configuration de déploiement (`render.yaml`, puis celle d'
 
 ## Palette retenue (lot 2a)
 
-Un rôle fixe par couleur. Le corail porte l'action, le vert porte la marque et le statut « bon ».
+Un rôle fixe par couleur. Le vert de la charte (#3C7730) porte l'action et la marque ; le statut « bon » a son propre vert foncé sur fond pâle (voir « Palette : la charte IKAN AI remplace le corail » plus bas).
 Valeurs et contrastes dans `apps/dashboard/src/styles/tokens.css`, vérifiés par `src/styles/contraste.test.ts`.
 
 | Jeton | Valeur | Rôle |
