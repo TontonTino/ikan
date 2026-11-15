@@ -148,13 +148,15 @@ describe('YamNote sous le graphique de la Vue réseau', () => {
   it('affichée si un point est à faible volume (logique existante, rien recalculé)', () => {
     const html = rendu([12, 2, 30]);
     expect(html).toContain('Trop peu d’avis pour conclure.');
-    expect(html).toContain('point à faible volume');            // la mention existante du graphique est conservée
+    // La légende du graphique explique les points creux (elle remplace l'ancienne mention « ○ point à faible volume »).
+    expect(html).toContain('class="legende-volume"');
+    expect(html).toContain(`Moins de ${FAIBLE_VOLUME_POINT} avis : à lire avec prudence`);
   });
 
   it('absente quand aucun point n’est à faible volume', () => {
     const html = rendu([12, FAIBLE_VOLUME_POINT, 30]);
     expect(html).not.toContain('Trop peu d’avis');
-    expect(html).not.toContain('point à faible volume');
+    expect(html).not.toContain('legende-volume');
   });
 });
 

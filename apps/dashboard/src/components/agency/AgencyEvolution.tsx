@@ -3,6 +3,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import type { TendanceSatisfaction } from '../../types';
 import Chart, { ChartTooltip, DATAVIZ, chartAxisProps, chartGridProps } from '../ui/Chart';
 import { FAIBLE_VOLUME_POINT } from '../../pages/cx/siege/siegeData';
+import LegendeVolume from '../ui/LegendeVolume';
 import { interpretationEvolution, resumeAccessibleEvolution } from './agenceVue';
 import YamNote from '../agent/YamNote';
 import type { ElargirPeriode } from '../ui/GraphiqueVide';
@@ -58,7 +59,12 @@ export default function AgencyEvolution({ points, periode, elargir }: { points: 
       title="Évolution de la satisfaction"
       subtitle={
         points.length
-          ? `${periode} · part des avis notés 4 ou 5 sur 5. ${interpretationEvolution(points)} Pas de comparaison avec la période précédente. Point creux : moins de ${FAIBLE_VOLUME_POINT} avis, à interpréter avec prudence.`
+          ? (
+            <>
+              {`${periode} · part des avis notés 4 ou 5 sur 5. ${interpretationEvolution(points)} Pas de comparaison avec la période précédente.`}
+              {points.some((p) => p.nombre_feedbacks < FAIBLE_VOLUME_POINT) && <LegendeVolume />}
+            </>
+          )
           : undefined
       }
       height={240}

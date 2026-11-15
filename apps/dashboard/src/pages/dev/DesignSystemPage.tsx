@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Area, ComposedChart, CartesianGrid, Line, ResponsiveContainer, Tooltip as RTooltip, XAxis, YAxis } from 'recharts';
+import { SOURCES_YAM_3D } from '../../components/agent/YamPicture3D';
 import { formaterDateAxe } from '../../utils/formatNombre';
 import {
   ActionCard,
@@ -458,7 +459,7 @@ export default function DesignSystemPage() {
         <div style={{ ...row, alignItems: 'stretch' }}>
           {[['Blanc', '#ffffff'], ['Vert foncé', '#02302d'], ['Vert clair', '#edf3e4']].map(([nom, fond]) => (
             <figure key={nom} style={{ margin: 0, padding: 'var(--space-4)', background: fond, borderRadius: 'var(--radius-lg, 16px)', border: '1px solid var(--color-border)', textAlign: 'center' }}>
-              <img src="/yam/yam-3d-face.png" srcSet="/yam/yam-3d-face.png 1x, /yam/yam-3d-face@2x.png 2x" alt={`YAM en 3D sur fond ${nom.toLowerCase()}`} height={320} style={{ height: 320, width: 'auto', display: 'block', margin: '0 auto' }} />
+              <img src={SOURCES_YAM_3D.png} srcSet={`${SOURCES_YAM_3D.png} 1x, ${SOURCES_YAM_3D.png2x} 2x`} alt={`YAM en 3D sur fond ${nom.toLowerCase()}`} height={320} style={{ height: 320, width: 'auto', display: 'block', margin: '0 auto' }} />
               <figcaption style={{ marginTop: 'var(--space-2)', color: fond === '#02302d' ? '#fff' : 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>{nom}</figcaption>
             </figure>
           ))}
