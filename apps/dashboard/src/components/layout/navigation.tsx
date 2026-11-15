@@ -9,6 +9,7 @@ import {
   LandmarkIcon,
   LayoutGridIcon,
   LightbulbIcon,
+  MegaphoneIcon,
   MessageSquareIcon,
   PhoneIcon,
   SettingsIcon,
@@ -61,6 +62,7 @@ export const ROUTE_ROLES: Record<string, UserRole[]> = {
   '/alertes': MANAGERS,
   '/actions': MANAGERS,
   '/issues': MANAGERS,
+  '/veille': ['cx_manager'],
   '/admin/dashboard': ['admin'],
   '/admin/statistiques': ['admin'],
   '/admin/organisations': ['admin'],
@@ -127,6 +129,7 @@ export const ROLE_NAV_SECTIONS: Record<UserRole, NavSection[]> = {
     {
       title: 'RÉSEAU',
       items: [
+        { path: '/veille', label: 'Réseaux sociaux', icon: <MegaphoneIcon size={18} /> },
         { path: '/admin/gestion-agences', label: 'Gestion des agences', icon: <StoreIcon size={18} /> },
       ],
     },

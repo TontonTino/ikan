@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { UserRole } from '../../types';
 import { ROLE_HOME, ROLE_NAV_SECTIONS, ROUTE_ROLES, redirectionRole } from './navigation';
+import sourceApp from '../../App.tsx?raw';
+import sourceVeille from '../../pages/cx/VeillePage.tsx?raw';
+import sourceLayout from './DashboardLayout.tsx?raw';
 
 const ROLES: UserRole[] = ['admin', 'cx_manager', 'agency_manager'];
 const liens = (role: UserRole) => ROLE_NAV_SECTIONS[role].flatMap((section) => section.items);
@@ -32,18 +35,27 @@ describe('sidebar du CX Manager', () => {
   });
 });
 
-describe('veille réseaux sociaux (reportée en V2)', () => {
-  it('n’apparaît plus dans aucun menu ni aucune route protégée', () => {
-    for (const sections of Object.values(ROLE_NAV_SECTIONS)) {
-      for (const section of sections) expect(section.items.map((item) => item.path)).not.toContain('/veille');
-    }
-    expect(ROUTE_ROLES).not.toHaveProperty('/veille');
+describe('veille réseaux sociaux (remise au menu pour la présentation)', () => {
+  it('« Réseaux sociaux » figure au menu du responsable expérience client, section RÉSEAU', () => {
+    const reseau = ROLE_NAV_SECTIONS.cx_manager.find((section) => section.title === 'RÉSEAU');
+    expect(reseau?.items.map((item) => item.path)).toContain('/veille');
+    expect(reseau?.items.find((item) => item.path === '/veille')?.label).toBe('Réseaux sociaux');
   });
 
-  it('la page et ses composants restent dans le code pour la V2', () => {
-    const fichiers = Object.keys(import.meta.glob(['/src/pages/cx/VeillePage.tsx', '/src/components/veille/*.tsx']));
-    expect(fichiers).toContain('/src/pages/cx/VeillePage.tsx');
-    expect(fichiers.length).toBeGreaterThan(1);
+  it('réservée au responsable expérience client : ni l’admin ni le responsable d’agence ne la voient', () => {
+    expect(ROUTE_ROLES['/veille']).toEqual(['cx_manager']);
+    for (const role of ['admin', 'agency_manager'] as const) {
+      for (const section of ROLE_NAV_SECTIONS[role]) expect(section.items.map((item) => item.path)).not.toContain('/veille');
+    }
+  });
+
+  it('la route /veille est déclarée, protégée par le rôle', () => {
+    expect(sourceApp).toContain('<Route path="veille" element={<RoleRoute pattern="/veille"><VeillePage /></RoleRoute>} />');
+  });
+
+  it('menu, titre de page et fil d’Ariane disent la même chose', () => {
+    expect(sourceVeille).toMatch(/<h1[^>]*>\s*Réseaux sociaux\s*<\/h1>/);
+    expect(sourceLayout).toContain("if (location.pathname.includes('/veille')) return 'Réseaux sociaux';");
   });
 });
 

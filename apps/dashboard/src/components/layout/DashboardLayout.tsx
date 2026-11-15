@@ -260,6 +260,7 @@ export default function DashboardLayout() {
     if (location.pathname.includes('/issues')) return 'Problèmes à traiter';
     if (location.pathname.includes('/suggestions')) return 'Suggestions';
     if (location.pathname.includes('/demandes-rappel')) return 'Demandes de rappel';
+    if (location.pathname.includes('/veille')) return 'Réseaux sociaux';
     return 'Tableau de bord';
   };
 
