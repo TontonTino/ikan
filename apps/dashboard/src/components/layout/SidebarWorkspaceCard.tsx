@@ -1,460 +1,144 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { agencesApi } from '../../services/api';
 import type { AgenceContexteItem, User } from '../../types';
-import { ChevronDownIcon, ChevronRightIcon, SearchIcon } from '../common/Icons';
+import { ChevronRightIcon, SelecteurIcon } from '../common/Icons';
+import Tooltip from '../ui/Tooltip';
 import { initialesOrganisation } from '../../utils/initialesOrganisation';
+import { agenceAffichee } from '../../utils/perimetre';
+import SelecteurPerimetre from './SelecteurPerimetre';
 
 interface SidebarWorkspaceCardProps {
   user: User | null;
   collapsed?: boolean;
 }
 
-// Avatar de remplacement (initiales) : un seul style neutre de la palette, quelle que soit l'organisation.
-// Les cinq teintes d'avant (orange, bleu, rose, violet…) n'avaient aucun rôle dans la palette.
-const FALLBACK_PALETTES = [
-  { bg: 'var(--color-neutre-fond)', text: 'var(--color-encre)', border: 'var(--color-neutre-fond)' },
-];
+/** « Agence Pissy » → tel quel ; « Pissy » → « Agence Pissy ». */
+const nomAgence = (nom: string) => (nom.trim().toLowerCase().startsWith('agence') ? nom.trim() : `Agence ${nom.trim()}`);
 
-function getPalette(name: string) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % FALLBACK_PALETTES.length;
-  return FALLBACK_PALETTES[index];
-}
-
-const AdminProfessionalAvatar: React.FC = () => (
-  <svg
-    width="48"
-    height="48"
-    viewBox="0 0 48 48"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    style={{ display: 'block', width: '100%', height: '100%', borderRadius: '12px' }}
-  >
-    <defs>
-      <linearGradient id="avatarBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#EAF5EC" />
-        <stop offset="100%" stopColor="#D5EBD7" />
-      </linearGradient>
-      <linearGradient id="avatarJacketGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#02302D" />
-        <stop offset="100%" stopColor="#054743" />
-      </linearGradient>
-      <linearGradient id="avatarHairGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#1E293B" />
-        <stop offset="100%" stopColor="#0F172A" />
-      </linearGradient>
-    </defs>
-
-    {/* Background Base with Soft Rounding */}
-    <rect width="48" height="48" rx="12" fill="url(#avatarBgGrad)" />
-
-    {/* Ambient Glow */}
-    <circle cx="24" cy="20" r="16" fill="#CDECD2" opacity="0.6" />
-
-    {/* Body / Professional Suit Jacket */}
-    <path
-      d="M10 46C10 38.5 15.5 34 24 34C32.5 34 38 38.5 38 46"
-      fill="url(#avatarJacketGrad)"
-    />
-
-    {/* Inner Shirt (White) */}
-    <path d="M21 34L24 40L27 34" fill="var(--color-text-inverse)" />
-
-    {/* Tie / Accent (IKAN Green) */}
-    <path d="M23 37L24 44L25 37Z" fill="#75B72A" />
-
-    {/* Neck */}
-    <rect x="21" y="27" width="6" height="8" rx="3" fill="#F4C7A5" />
-
-    {/* Head */}
-    <ellipse cx="24" cy="21" rx="8" ry="9" fill="#F8D3B4" />
-
-    {/* Ears */}
-    <circle cx="15.5" cy="21" r="2" fill="#F4C7A5" />
-    <circle cx="32.5" cy="21" r="2" fill="#F4C7A5" />
-
-    {/* Modern Haircut */}
-    <path
-      d="M16 19C16 13.5 19 11 24 11C29 11 32 13.5 32 18C30.5 17 28 16.5 24 16.5C19.5 16.5 17.5 17.5 16 19Z"
-      fill="url(#avatarHairGrad)"
-    />
-    <path
-      d="M16 19C15.5 21.5 16 23 16.5 24C17 22 17 20 17 19H16Z"
-      fill="url(#avatarHairGrad)"
-    />
-    <path
-      d="M32 18C32.5 20.5 32 22 31.5 23C31 21 31 19 31 18H32Z"
-      fill="url(#avatarHairGrad)"
-    />
-
-    {/* Minimalist Modern Glasses */}
-    <rect x="18" y="19" width="5" height="3.5" rx="1" stroke="var(--color-encre)" strokeWidth="1" fill="none" />
-    <rect x="25" y="19" width="5" height="3.5" rx="1" stroke="var(--color-encre)" strokeWidth="1" fill="none" />
-    <line x1="23" y1="20.5" x2="25" y2="20.5" stroke="var(--color-encre)" strokeWidth="1" />
-
-    {/* Friendly Smile */}
-    <path d="M22.5 26C23.2 26.8 24.8 26.8 25.5 26" stroke="#C28260" strokeWidth="1" strokeLinecap="round" />
-
-    {/* Subtle Online / Pro Badge on Avatar Corner */}
-    <circle cx="39" cy="9" r="4" fill="var(--color-text-inverse)" />
-    <circle cx="39" cy="9" r="3" fill="#75B72A" />
-  </svg>
-);
-
+/**
+ * Carte d'espace, en haut du menu : QUI (l'organisation) et QUOI (le périmètre affiché), lisibles sans survol.
+ * Même anatomie pour les trois rôles : logo, nom, ligne de contexte, indice d'action à droite.
+ *  - Responsable expérience client : sélecteur de périmètre (« Toutes les agences » ou une agence) ; icône ⇅.
+ *  - Responsable d'agence : son agence ; ouvre « Mon agence » ; icône ›.
+ *  - Admin : carte d'information, sans action.
+ * Menu replié : le logo seul ; nom et contexte dans l'info-bulle et le nom accessible.
+ */
 export default function SidebarWorkspaceCard({ user, collapsed = false }: SidebarWorkspaceCardProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [imgError, setImgError] = useState(false);
-  const [contextHovered, setContextHovered] = useState(false);
-  const [contextFocused, setContextFocused] = useState(false);
-  const [contextOpen, setContextOpen] = useState(false);
-  const [contextAgences, setContextAgences] = useState<AgenceContexteItem[]>([]);
-  const [contextLoading, setContextLoading] = useState(false);
-  const [contextError, setContextError] = useState('');
-  const [contextSearch, setContextSearch] = useState('');
-  const contextRef = useRef<HTMLDivElement>(null);
-  const logoUrl = user?.organisation_logo;
-  useEffect(() => setImgError(false), [logoUrl]);
-  useEffect(() => {
-    if (!contextOpen) return;
-    const closeOnOutside = (event: PointerEvent) => {
-      if (!contextRef.current?.contains(event.target as Node)) setContextOpen(false);
-    };
-    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setContextOpen(false); };
-    document.addEventListener('pointerdown', closeOnOutside);
-    document.addEventListener('keydown', closeOnEscape);
-    return () => {
-      document.removeEventListener('pointerdown', closeOnOutside);
-      document.removeEventListener('keydown', closeOnEscape);
-    };
-  }, [contextOpen]);
+  const carteRef = useRef<HTMLButtonElement>(null);
+  const [logoEnErreur, setLogoEnErreur] = useState(false);
+  const [ouvert, setOuvert] = useState(false);
+  const [agences, setAgences] = useState<AgenceContexteItem[]>([]);
+  const [chargement, setChargement] = useState(false);
+  const [erreur, setErreur] = useState('');
+  useEffect(() => setLogoEnErreur(false), [user?.organisation_logo]);
 
-  const toggleAgencyContext = async () => {
-    if (contextOpen) { setContextOpen(false); return; }
-    setContextOpen(true);
-    if (contextAgences.length || contextLoading) return;
-    setContextLoading(true);
-    setContextError('');
-    try { setContextAgences((await agencesApi.listContext()).data); }
-    catch { setContextError('Impossible de charger les agences. Réessayez.'); }
-    finally { setContextLoading(false); }
-  };
+  const estCx = user?.role === 'cx_manager';
+  const estAgence = user?.role === 'agency_manager';
+  const estAdmin = user?.role === 'admin';
+
+  const charger = useCallback(async () => {
+    setChargement(true);
+    setErreur('');
+    try { setAgences((await agencesApi.listContext()).data); }
+    catch { setErreur('Impossible de charger les agences.'); }
+    finally { setChargement(false); }
+  }, []);
+
+  // Responsable expérience client : la liste est chargée une fois, pour afficher le nom de l'agence consultée dès l'arrivée.
+  useEffect(() => { if (estCx) void charger(); }, [estCx, charger]);
+  // Changer de page referme le sélecteur.
+  useEffect(() => setOuvert(false), [location.pathname]);
 
   if (!user) return null;
 
-  const isAdmin = user.role === 'admin';
-  // Seul l'Agency Manager a une page "Mon agence" pertinente sans paramètre (/mon-agence
-  // résout sur user.agence_id) : pour le CX Manager ou l'Admin, la carte reste informative.
-  const isAgencyManager = user.role === 'agency_manager';
-  const isCxManager = user.role === 'cx_manager';
-  const orgName = isAdmin ? 'IKAN AI' : (user.organisation_nom || 'Organisation');
-  const orgLogo = (!isAdmin && !imgError && user.organisation_logo) ? user.organisation_logo : null;
+  const organisation = estAdmin ? 'IKAN AI' : (user.organisation_nom || 'Organisation');
+  const logo = !estAdmin && !logoEnErreur && user.organisation_logo ? user.organisation_logo : null;
+  const selection = estCx ? agenceAffichee(location.pathname) : null;
+  const agenceCourante = selection ? agences.find((a) => a.id === selection) : undefined;
 
-  // Calcul du sous-titre de l'espace
-  let spaceSub = 'Espace de travail';
-  if (isAdmin) {
-    spaceSub = 'Espace Administration';
-  } else if (user.role === 'cx_manager') {
-    spaceSub = 'Espace Siège & Réseau';
-  } else if (user.role === 'agency_manager') {
-    if (user.agence_nom) {
-      const cleanAgence = user.agence_nom.trim();
-      spaceSub = cleanAgence.toLowerCase().startsWith('agence')
-        ? cleanAgence
-        : `Agence ${cleanAgence}`;
-    } else {
-      spaceSub = 'Espace Agence';
-    }
-  }
+  const contexte = estAdmin
+    ? 'Administration'
+    : estAgence
+      ? (user.agence_nom ? nomAgence(user.agence_nom) : 'Mon agence')
+      : selection
+        ? (agenceCourante?.nom ?? 'Agence')
+        : 'Toutes les agences';
 
-  const palette = getPalette(orgName);
-  const initiales = initialesOrganisation(orgName);
+  const vignette = (
+    <span className={`espace-logo${logo || estAdmin ? ' espace-logo--image' : ''}`} aria-hidden="true">
+      {estAdmin ? <img src="/ikanai-mark.png" alt="" /> : logo ? <img src={logo} alt="" onError={() => setLogoEnErreur(true)} /> : initialesOrganisation(organisation)}
+    </span>
+  );
+  const textes = !collapsed && (
+    <span className="espace-textes">
+      <span className="espace-nom" title={organisation}>{organisation}</span>
+      <span className="espace-contexte" title={contexte}>{contexte}</span>
+    </span>
+  );
+  const classe = `espace-carte${collapsed ? ' espace-carte--replie' : ''}`;
+  const infobulle = (noeud: React.ReactElement) => (collapsed ? (
+    <Tooltip content={<><strong>{organisation}</strong><br />{contexte}</>} placement="right" decorative delay={0}>{noeud}</Tooltip>
+  ) : noeud);
 
-  if (isAgencyManager || isCxManager) {
-    const tooltipId = 'agency-context-tooltip';
-    const tooltipVisible = !contextOpen && (contextHovered || contextFocused);
-    const contextLogo = (
-      <span className="agency-context-logo">
-        {orgLogo ? (
-          <img src={orgLogo} alt="" onError={() => setImgError(true)} />
-        ) : (
-          <span role="img" aria-label={orgName}>{initiales}</span>
-        )}
-      </span>
-    );
-
-    return (
-      <div ref={contextRef} className={`agency-context-wrap${collapsed ? ' agency-context-wrap--collapsed' : ''}`}>
-        {isAgencyManager ? (
-          <button
-            type="button"
-            className="agency-context-button"
-            aria-label={`Contexte actuel : ${orgName}, ${spaceSub}. Ouvrir Mon agence.`}
-            aria-describedby={tooltipVisible ? tooltipId : undefined}
-            onClick={() => navigate('/mon-agence')}
-            onMouseEnter={() => setContextHovered(true)}
-            onMouseLeave={() => setContextHovered(false)}
-            onFocus={() => setContextFocused(true)}
-            onBlur={() => setContextFocused(false)}
-          >
-            {contextLogo}
-            <span className="agency-context-chevron" aria-hidden="true">
-              <ChevronRightIcon size={16} />
-            </span>
-          </button>
-        ) : (
-          <button type="button" className="cx-context-card" aria-haspopup="dialog" aria-expanded={contextOpen}
-            aria-label={`Sélectionner une agence dans ${orgName}`} onClick={toggleAgencyContext}
-            onMouseEnter={() => setContextHovered(true)} onMouseLeave={() => setContextHovered(false)}>
-            {contextLogo}
-            <span className="agency-context-chevron" aria-hidden="true"><ChevronDownIcon size={16} /></span>
-          </button>
-        )}
-
-        {tooltipVisible && (
-          <div className="agency-context-tooltip" id={tooltipId} role="tooltip">
-            <span className="agency-context-tooltip-org">{orgName}</span>
-            <span className="agency-context-tooltip-agency">{spaceSub}</span>
-          </div>
-        )}
-
-        {isCxManager && contextOpen && (
-          <div className="cx-context-menu" role="dialog" aria-label="Choisir une agence">
-            <label className="cx-context-search"><SearchIcon size={15} aria-hidden="true" /><input autoFocus value={contextSearch} onChange={(event) => setContextSearch(event.target.value)} placeholder="Rechercher une agence" aria-label="Rechercher une agence" /></label>
-            <button type="button" className={`cx-context-option${!location.pathname.startsWith('/agences/') ? ' is-selected' : ''}`} onClick={() => { setContextOpen(false); navigate('/siege'); }}>Toutes les agences</button>
-            {contextLoading && <div className="cx-context-message" role="status">Chargement des agences…</div>}
-            {contextError && <div className="cx-context-message cx-context-error" role="alert">{contextError}</div>}
-            {!contextLoading && !contextError && contextAgences.filter((agence) => `${agence.nom} ${agence.ville ?? ''}`.toLocaleLowerCase().includes(contextSearch.trim().toLocaleLowerCase())).map((agence) => (
-              <button key={agence.id} type="button" className={`cx-context-option${location.pathname.includes(agence.id) ? ' is-selected' : ''}`} onClick={() => { setContextOpen(false); navigate(`/agences/${agence.id}/apercu`); }}>
-                <span>{agence.nom}</span><small>{agence.ville || 'Ville non renseignée'}</small>
-              </button>
-            ))}
-            {!contextLoading && !contextError && contextAgences.length > 0 && contextAgences.filter((agence) => `${agence.nom} ${agence.ville ?? ''}`.toLocaleLowerCase().includes(contextSearch.trim().toLocaleLowerCase())).length === 0 && <div className="cx-context-message">Aucune agence ne correspond.</div>}
-            <style>{`
-              .cx-context-menu { position:absolute; top:0; left:calc(100% + 10px); z-index:60; width:min(300px, calc(100vw - 100px)); max-height:min(420px, 70vh); overflow:auto; padding:10px; box-sizing:border-box; background:var(--color-surface); color:var(--color-encre); border:1px solid var(--color-trait); border-radius:14px; box-shadow:var(--shadow-overlay); }
-              .cx-context-search { display:flex; align-items:center; gap:8px; min-height:44px; box-sizing:border-box; padding:9px 10px; margin-bottom:7px; border: 1px solid var(--color-border); border-radius:9px; color:var(--color-text-2); }
-              .cx-context-search input { min-width:0; width:100%; min-height:24px; border:0; outline:0; font:inherit; font-size:var(--text-sm); }
-              .cx-context-option { display:flex; flex-direction:column; align-items:flex-start; gap:2px; width:100%; padding:9px 10px; border:0; border-radius:8px; background:transparent; color:var(--color-encre); text-align:left; font:inherit; font-size:var(--text-sm); cursor:pointer; }
-              .cx-context-option:hover,.cx-context-option:focus-visible,.cx-context-option.is-selected { background: var(--color-neutre-fond); outline:none; }
-              .cx-context-option small { color:var(--color-text-2); font-size:var(--text-xs); }
-              .cx-context-message { padding:10px; color:var(--color-text-2); font-size:var(--text-xs); }
-              .cx-context-error { color:var(--color-critique-texte); }
-              @media(max-width:1024px) { .cx-context-menu { left:0; top:calc(100% + 8px); width:100%; } }
-            `}</style>
-          </div>
-        )}
-
-        <style>{`
-          .agency-context-wrap {
-            position: relative;
-            margin-bottom: 24px;
-            z-index: 2;
-          }
-          .agency-context-button,
-          .cx-context-card {
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            min-height: 68px;
-            padding: 9px 36px;
-            color: var(--color-text-inverse);
-            background: var(--sidebar-hover-bg);
-            border: 1px solid var(--sidebar-active-border);
-            border-radius: 14px;
-            cursor: pointer;
-            transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
-          }
-          .agency-context-button:hover {
-            background: var(--sidebar-active-bg);
-            border-color: var(--sidebar-active-border);
-          }
-          .agency-context-button:focus-visible {
-            outline: 3px solid var(--sidebar-text-strong);
-            outline-offset: 3px;
-          }
-          .cx-context-card {
-            cursor: default;
-          }
-          .agency-context-logo {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 46px;
-            height: 46px;
-            padding: 4px;
-            box-sizing: border-box;
-            overflow: hidden;
-            color: ${palette.text};
-            background: ${orgLogo ? 'var(--color-surface)' : palette.bg};
-            border: 1px solid ${orgLogo ? 'var(--color-trait)' : palette.border};
-            border-radius: 12px;
-            font-size: var(--text-base);
-            font-weight: 800;
-          }
-          .agency-context-logo img {
-            display: block;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-          }
-          .agency-context-chevron {
-            position: absolute;
-            right: 12px;
-            display: flex;
-            align-items: center;
-            color: var(--sidebar-muted);
-            transition: color 180ms ease, transform 180ms ease;
-          }
-          .agency-context-button:hover .agency-context-chevron,
-          .agency-context-button:focus-visible .agency-context-chevron {
-            color: var(--sidebar-text-strong);
-            transform: translateX(2px);
-          }
-          .agency-context-tooltip {
-            position: absolute;
-            top: calc(100% + 8px);
-            left: 0;
-            z-index: 40;
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-            width: 100%;
-            padding: 11px 13px;
-            box-sizing: border-box;
-            color: var(--color-text-inverse);
-            background: var(--color-encre);
-            border: 1px solid var(--sidebar-active-border);
-            border-radius: 12px;
-            box-shadow: var(--shadow-dropdown);
-            pointer-events: none;
-          }
-          .agency-context-tooltip-org {
-            font-size: var(--text-xs);
-            font-weight: 700;
-            line-height: 1.35;
-          }
-          .agency-context-tooltip-agency {
-            color: var(--sidebar-text);
-            font-size: var(--text-xs);
-            font-weight: 500;
-            line-height: 1.4;
-            overflow-wrap: anywhere;
-          }
-          @media (prefers-reduced-motion: reduce) {
-            .agency-context-button,
-            .cx-context-card,
-            .agency-context-chevron {
-              transition: none;
-            }
-          }
-        `}</style>
-      </div>
-    );
-  }
-
-  // Cliquable uniquement pour l'Agency Manager (vers /mon-agence) ; pour les autres rôles,
-  // reste une carte purement informative — aucun comportement de bouton, texte toujours
-  // affiché en entier.
-  return (
-    <div
-      onClick={isAgencyManager ? () => navigate('/mon-agence') : undefined}
-      role={isAgencyManager ? 'button' : undefined}
-      tabIndex={isAgencyManager ? 0 : undefined}
-      onKeyDown={
-        isAgencyManager
-          ? (e) => {
-              if (e.key === 'Enter' || e.key === ' ') navigate('/mon-agence');
-            }
-          : undefined
-      }
-      className={`sidebar-admin-context${collapsed ? ' sidebar-admin-context--collapsed' : ''}`}
-      style={{
-        background: 'var(--color-surface)',
-        border: '1px solid var(--color-trait)',
-        borderRadius: '16px',
-        padding: '12px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        marginBottom: '24px',
-        cursor: isAgencyManager ? 'pointer' : 'default',
-        userSelect: 'none',
-        boxShadow: 'var(--shadow-sm)',
-      }}
-    >
-      {/* Logo ou Avatar */}
-      <div
-        style={{
-          width: '44px',
-          height: '44px',
-          borderRadius: '12px',
-          background: isAdmin ? 'transparent' : (orgLogo ? 'var(--color-surface)' : palette.bg),
-          border: isAdmin ? 'none' : `1px solid ${orgLogo ? 'var(--color-trait)' : palette.border}`,
-          color: isAdmin ? 'var(--color-text-inverse)' : palette.text,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 'var(--text-base)',
-          fontWeight: 'var(--weight-semibold)',
-          flexShrink: 0,
-          overflow: 'hidden',
-          padding: orgLogo ? '6px' : 0,
-          boxSizing: 'border-box',
-        }}
+  let carte: React.ReactElement;
+  if (estCx) {
+    carte = (
+      <button
+        ref={carteRef}
+        type="button"
+        className={`${classe}${ouvert ? ' is-ouverte' : ''}`}
+        aria-haspopup="listbox"
+        aria-expanded={ouvert}
+        aria-label={`Périmètre affiché : ${organisation}, ${contexte}. Changer de périmètre.`}
+        onClick={() => setOuvert((o) => !o)}
       >
-        {isAdmin ? (
-          <AdminProfessionalAvatar />
-        ) : orgLogo ? (
-          <img
-            src={orgLogo}
-            alt=""
-            onError={() => setImgError(true)}
-            style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-          />
-        ) : (
-          initiales
-        )}
+        {vignette}
+        {textes}
+        {!collapsed && <span className="espace-indice" aria-hidden="true"><SelecteurIcon size={16} /></span>}
+      </button>
+    );
+  } else if (estAgence) {
+    carte = (
+      <button
+        type="button"
+        className={classe}
+        aria-label={`${organisation}, ${contexte}. Ouvrir Mon agence.`}
+        onClick={() => navigate('/mon-agence')}
+      >
+        {vignette}
+        {textes}
+        {!collapsed && <span className="espace-indice" aria-hidden="true"><ChevronRightIcon size={16} /></span>}
+      </button>
+    );
+  } else {
+    carte = (
+      <div className={`${classe} espace-carte--info`} role="group" aria-label={`${organisation}, ${contexte}`}>
+        {vignette}
+        {textes}
       </div>
+    );
+  }
 
-      {/* Titre & Sous-titre : retour à la ligne libre, la carte grandit en hauteur */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontSize: 'var(--text-sm)',
-            color: 'var(--color-encre)',
-            fontWeight: 'var(--weight-semibold)',
-            lineHeight: 1.3,
-            whiteSpace: 'normal',
-            overflowWrap: 'break-word',
-          }}
-        >
-          {orgName}
-        </div>
-        <div
-          style={{
-            fontSize: 'var(--text-xs)',
-            color: 'var(--color-text-2)',
-            fontWeight: 'var(--weight-normal)',
-            lineHeight: 1.3,
-            marginTop: '2px',
-            whiteSpace: 'normal',
-            overflowWrap: 'break-word',
-          }}
-        >
-          {spaceSub}
-        </div>
-      </div>
-
-      {/* Chevron décoratif (indique le clic possible pour l'Agency Manager, voir commentaire ci-dessus). */}
-      <span style={{ display: 'flex', alignItems: 'center', color: 'var(--color-text-2)', flexShrink: 0 }} aria-hidden="true">
-        <ChevronDownIcon size={16} />
-      </span>
+  return (
+    <div className="espace">
+      {infobulle(carte)}
+      {estCx && ouvert && (
+        <SelecteurPerimetre
+          ancre={carteRef}
+          organisation={organisation}
+          agences={agences}
+          chargement={chargement}
+          erreur={erreur}
+          selection={selection}
+          onChoisir={(id) => { setOuvert(false); navigate(id ? `/agences/${id}/apercu` : '/siege'); }}
+          onGererAgences={() => { setOuvert(false); navigate('/admin/gestion-agences'); }}
+          onReessayer={() => void charger()}
+          onFermer={() => setOuvert(false)}
+        />
+      )}
     </div>
   );
 }
