@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { renderToStaticMarkup } from 'react-dom/server';
+import PageTitle from '../ui/PageTitle';
 import type { UserRole } from '../../types';
 import { ROLE_HOME, ROLE_NAV_SECTIONS, ROUTE_ROLES, redirectionRole } from './navigation';
 import sourceApp from '../../App.tsx?raw';
@@ -54,7 +56,9 @@ describe('veille réseaux sociaux (remise au menu pour la présentation)', () =>
   });
 
   it('menu, titre de page et fil d’Ariane disent la même chose', () => {
-    expect(sourceVeille).toMatch(/<h1[^>]*>\s*Réseaux sociaux\s*<\/h1>/);
+    // Le titre passe par PageTitle, qui porte le <h1> unique de la page.
+    expect(sourceVeille).toMatch(/<PageTitle\s+title="Réseaux sociaux"/);
+    expect(renderToStaticMarkup(<PageTitle title="Réseaux sociaux" />)).toMatch(/<h1[^>]*>Réseaux sociaux<\/h1>/);
     expect(sourceLayout).toContain("if (location.pathname.includes('/veille')) return 'Réseaux sociaux';");
   });
 });

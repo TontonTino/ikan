@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { VeilleSyntheseJour } from '../../types';
 import { formaterDateAxe } from '../../utils/formatNombre';
 import { jourComplet, jourRelatifOuAbsolu } from '../../utils/dateJour';
@@ -22,36 +22,51 @@ export function EtiquetteJour({ jour }: { jour: string }) {
   return <time dateTime={jour} title={jourComplet(jour)}>{jourRelatifOuAbsolu(jour)}</time>;
 }
 
+/** Infobulle : le jour (convention du dashboard) puis le détail chiffré, ton par ton, avec son libellé (jamais la couleur seule). */
+function InfobulleJour({ active, payload, label }: any) {
+  const jour = payload?.[0]?.payload as VeilleSyntheseJour | undefined;
+  if (!active || !jour) return null;
+  const total = jour.positif + jour.neutre + jour.negatif;
+  return (
+    <div className="veille-infobulle" role="status">
+      <strong><EtiquetteJour jour={String(label)} /> · {total} mention{total > 1 ? 's' : ''}</strong>
+      {(['positif', 'neutre', 'negatif'] as const).map((cle) => (
+        <span key={cle}>
+          <i className={`veille-ton__pastille veille-ton__pastille--${cle}`} aria-hidden="true" />
+          {cle === 'positif' ? 'Positif' : cle === 'neutre' ? 'Neutre' : 'Négatif'} : {jour[cle]}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function VeilleDailyChart({ data }: { data: VeilleSyntheseJour[] }) {
   if (data.length === 0) {
-    return (
-      <div style={{ padding: '32px 16px', textAlign: 'center', fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
-        Aucune mention datée sur la période sélectionnée.
-      </div>
-    );
+    return <p className="veille-vide-court">Aucune mention datée sur la période sélectionnée.</p>;
   }
 
   const total = data.reduce((acc, j) => acc + j.positif + j.neutre + j.negatif, 0);
-  const description = `Évolution journalière du ton des mentions, du ${data[0].date} au ${data[data.length - 1].date}, ${total} mentions au total : ${data
-    .map((j) => `${j.date} : ${j.positif} positif, ${j.neutre} neutre, ${j.negatif} négatif`)
+  const description = `Évolution journalière du ton des mentions, du ${jourComplet(data[0].date)} au ${jourComplet(data[data.length - 1].date)}, ${total} mentions au total : ${data
+    .map((j) => `${jourComplet(j.date)} : ${j.positif} positif, ${j.neutre} neutre, ${j.negatif} négatif`)
     .join(' ; ')}.`;
 
   return (
     <div>
-      <div role="img" aria-label={description} style={{ width: '100%', height: 260 }}>
+      <ul className="veille-ton__legende veille-ton__legende--ligne" aria-hidden="true">
+        <li><span className="veille-ton__pastille veille-ton__pastille--positif" />Positif</li>
+        <li><span className="veille-ton__pastille veille-ton__pastille--neutre" />Neutre</li>
+        <li><span className="veille-ton__pastille veille-ton__pastille--negatif" />Négatif</li>
+      </ul>
+      <div role="img" aria-label={description} style={{ width: '100%', height: 240 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-trait)" />
-            <XAxis dataKey="date" tickFormatter={(v) => formaterDateAxe(v)} tick={{ fontSize: 'var(--text-xs)', fill: 'var(--color-text-muted)' }} />
-            <YAxis allowDecimals={false} tick={{ fontSize: 'var(--text-xs)', fill: 'var(--color-text-muted)' }} />
-            <Tooltip
-              labelFormatter={(jour) => <EtiquetteJour jour={String(jour)} />}
-              contentStyle={{ background: 'var(--color-primary-dark)', borderRadius: '10px', border: 'none', color: 'var(--color-text-inverse)', fontSize: 'var(--text-xs)' }}
-            />
-            <Legend wrapperStyle={{ fontSize: 'var(--text-xs)' }} />
-            <Bar dataKey="positif" name="Positif" stackId="sentiment" fill="var(--color-success)" />
-            <Bar dataKey="neutre" name="Neutre" stackId="sentiment" fill="var(--color-text-muted)" />
-            <Bar dataKey="negatif" name="Négatif" stackId="sentiment" fill="var(--color-error)" />
+          <BarChart data={data} margin={{ top: 8, right: 4, left: -16, bottom: 0 }} barCategoryGap="28%">
+            <CartesianGrid vertical={false} stroke="var(--dataviz-grid)" />
+            <XAxis dataKey="date" tickFormatter={(v) => formaterDateAxe(v)} tick={{ fontSize: 12, fill: 'var(--dataviz-axis)' }} tickLine={false} axisLine={{ stroke: 'var(--color-trait)' }} minTickGap={24} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: 'var(--dataviz-axis)' }} tickLine={false} axisLine={false} width={44} />
+            <Tooltip content={<InfobulleJour />} cursor={{ fill: 'var(--color-bg)' }} />
+            <Bar dataKey="positif" name="Positif" stackId="sentiment" fill="var(--dataviz-positive)" maxBarSize={28} isAnimationActive={false} />
+            <Bar dataKey="neutre" name="Neutre" stackId="sentiment" fill="var(--color-border)" maxBarSize={28} isAnimationActive={false} />
+            <Bar dataKey="negatif" name="Négatif" stackId="sentiment" fill="var(--dataviz-critical)" maxBarSize={28} isAnimationActive={false} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -69,7 +84,7 @@ export default function VeilleDailyChart({ data }: { data: VeilleSyntheseJour[] 
         <tbody>
           {data.map((j) => (
             <tr key={j.date}>
-              <th scope="row">{j.date}</th>
+              <th scope="row">{jourComplet(j.date)}</th>
               <td>{j.positif}</td>
               <td>{j.neutre}</td>
               <td>{j.negatif}</td>

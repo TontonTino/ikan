@@ -57,6 +57,7 @@ import {
   Info,
   WifiHigh,
   WifiSlash,
+  FacebookLogo,
   SmileyMeh,
   CalendarBlank,
 } from '@phosphor-icons/react';
@@ -145,6 +146,7 @@ export const MegaphoneIcon = wrap(Megaphone, 20);
 export const InfoIcon = wrap(Info, 18);
 export const WifiHighIcon = wrap(WifiHigh, 16);
 export const WifiSlashIcon = wrap(WifiSlash, 16);
+export const FacebookIcon = wrap(FacebookLogo, 16);
 export const SmileyMehIcon = wrap(SmileyMeh, 18);
 export const CalendarIcon = wrap(CalendarBlank, 16);
 
