@@ -163,4 +163,15 @@ describe('typographie (lot 2a)', () => {
     expect(tokens).toMatch(/url\('\/fonts\/poppins-latin-400-normal\.woff2'\)/);
     expect(tokens).toMatch(/url\('\/fonts\/poppins-latin-600-normal\.woff2'\)/);
   });
+
+  it('le rouge d’alerte (critique) ne se confond pas avec le corail d’action : au moins 20° de teinte d’écart', () => {
+    const teinte = (hex: string) => {
+      const [r, g, b] = [1, 3, 5].map((k) => parseInt(hex.slice(k, k + 2), 16) / 255);
+      const max = Math.max(r, g, b), d = max - Math.min(r, g, b);
+      const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      return (h * 60 + 360) % 360;
+    };
+    const ecart = Math.abs(teinte(jeton('--color-critique-texte')) - teinte(jeton('--color-accent')));
+    expect(Math.min(ecart, 360 - ecart)).toBeGreaterThanOrEqual(20);
+  });
 });
