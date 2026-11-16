@@ -32,6 +32,7 @@ import { construirePriorites, PROBLEMES_OUVERTS } from '../../components/agency/
 import { elargirPeriode } from '../../utils/periodeElargie';
 import { PERIODES as PERIODES_DASHBOARD } from '../../utils/periodes';
 import { RESPONSABLE_CX } from '../../utils/vocabulaire';
+import { useMiseAJourAuto } from '../../hooks/useMiseAJourAuto';
 
 const RESULT_ISSUE_STATUSES: IssueStatut[] = ['resolue', 'verifiee'];
 const ISSUE_STATUSES: IssueStatut[] = [...PROBLEMES_OUVERTS, ...RESULT_ISSUE_STATUSES];
@@ -67,11 +68,14 @@ export default function DashboardAgencePage() {
 
   const agenceId = user?.agence_id;
 
-  const load = useCallback(() => {
+  const load = useCallback((silencieux = false) => {
     if (!agenceId) return;
     const requestId = ++requestIdRef.current;
-    setLoading(true);
-    setSourceErrors({ dashboard: false, alerts: false, issues: false });
+    // Mise à jour automatique (silencieux) : ni état de chargement, ni erreur signalée ; les données affichées restent.
+    if (!silencieux) {
+      setLoading(true);
+      setSourceErrors({ dashboard: false, alerts: false, issues: false });
+    }
     Promise.allSettled([
       dashboardApi.agence(agenceId, jours),
       alertesApi.list(),
@@ -81,14 +85,14 @@ export default function DashboardAgencePage() {
         if (requestId !== requestIdRef.current) return;
         // En cas d'échec, les données déjà affichées sont conservées : seule la source en erreur est signalée.
         if (dashboard.status === 'fulfilled') setData(dashboard.value.data);
-        else { console.error('Erreur chargement du dashboard agence:', dashboard.reason); setSourceErrors((current) => ({ ...current, dashboard: true })); }
+        else if (!silencieux) { console.error('Erreur chargement du dashboard agence:', dashboard.reason); setSourceErrors((current) => ({ ...current, dashboard: true })); }
         if (alerts.status === 'fulfilled') {
           const response = alerts.value.data;
           setAlertes((response?.alertes_seuil ?? []).filter((item: Alerte) => item.agence_id === agenceId));
           setFeedbackAlerts((response?.alertes_feedback ?? []).filter((item: AlerteFeedback) => item.agence_id === agenceId));
-        } else { setSourceErrors((current) => ({ ...current, alerts: true })); }
+        } else if (!silencieux) { setSourceErrors((current) => ({ ...current, alerts: true })); }
         if (issuesResult.status === 'fulfilled') setIssues(issuesResult.value);
-        else { setSourceErrors((current) => ({ ...current, issues: true })); }
+        else if (!silencieux) { setSourceErrors((current) => ({ ...current, issues: true })); }
       })
       .finally(() => {
         if (requestId === requestIdRef.current) setLoading(false);
@@ -99,6 +103,7 @@ export default function DashboardAgencePage() {
     load();
     return () => { requestIdRef.current += 1; };
   }, [load]);
+  useMiseAJourAuto(() => load(true), { actif: !!agenceId });
 
   const priorites = useMemo(
     () =>
@@ -138,7 +143,7 @@ export default function DashboardAgencePage() {
                 </button>
               ))}
             </div>
-            <IconButton label="Actualiser les données" icon={<RefreshIcon size={16} />} onClick={load} />
+            <IconButton label="Actualiser les données" icon={<RefreshIcon size={16} />} onClick={() => load()} />
           </>
         }
       />
@@ -147,7 +152,7 @@ export default function DashboardAgencePage() {
         <Alert
           tone="warning"
           title={data ? 'Les indicateurs n’ont pas pu être actualisés : les dernières données chargées restent affichées.' : 'Impossible de charger les indicateurs de l’agence. Les priorités disponibles restent affichées.'}
-          action={<Button size="sm" variant="secondary" onClick={load}>Réessayer</Button>}
+          action={<Button size="sm" variant="secondary" onClick={() => load()}>Réessayer</Button>}
         />
       )}
 
@@ -181,7 +186,7 @@ export default function DashboardAgencePage() {
             problemesIndisponibles={sourceErrors.issues}
             avisATraiter={data?.feedbacks_a_traiter ?? 0}
             periode={`${jours} derniers jours`}
-            onRetry={load}
+            onRetry={() => load()}
           />
         </BentoItem>
 
@@ -206,7 +211,7 @@ export default function DashboardAgencePage() {
 
         {/* SUIVI DES PROBLÈMES */}
         <BentoItem size="full" aria-label="Suivi des problèmes">
-          <AgencyProblemes snapshot={issues} failed={sourceErrors.issues} onRetry={load} />
+          <AgencyProblemes snapshot={issues} failed={sourceErrors.issues} onRetry={() => load()} />
         </BentoItem>
       </BentoGrid>
     </div>

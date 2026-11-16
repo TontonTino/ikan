@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { agencesApi, alertesApi, feedbacksApi, issuesApi, statisticsApi } from '../../../services/api';
 import type { Agence, Issue, StatsCXResponse } from '../../../types';
 import { ISSUE_STATUTS_OUVERTS, normaliserAlertes, type AlertesSiege } from './siegeData';
@@ -66,29 +66,34 @@ export async function fetchActionsTotaux(agenceId?: string): Promise<ActionsTota
 function useSource<T>(load: () => Promise<T>, deps: unknown[]) {
   const [state, setState] = useState<Source<T>>({ status: 'loading' });
   const [token, setToken] = useState(0);
+  const silencieux = useRef(false);
   useEffect(() => {
     let cancelled = false;
+    // Mise à jour automatique : en cas d'échec, les données affichées restent (pas de bloc en erreur toutes les minutes).
+    const garderSiEchec = silencieux.current;
+    silencieux.current = false;
     // Lors d'un rechargement, les données précédentes restent affichées (pas de saut de layout).
     setState((prev) => (prev.status === 'ok' ? prev : { status: 'loading' }));
     load()
       .then((data) => { if (!cancelled) setState({ status: 'ok', data }); })
-      .catch(() => { if (!cancelled) setState({ status: 'error' }); });
+      .catch(() => { if (!cancelled) setState((prev) => (garderSiEchec && prev.status === 'ok' ? prev : { status: 'error' })); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, token]);
   const reload = useCallback(() => setToken((t) => t + 1), []);
-  return [state, reload] as const;
+  const reloadSilencieux = useCallback(() => { silencieux.current = true; setToken((t) => t + 1); }, []);
+  return [state, reload, reloadSilencieux] as const;
 }
 
 export function useSiegeData(jours: number) {
-  const [stats, reloadStats] = useSource<StatsCXResponse>(async () => (await statisticsApi.cx({ jours })).data, [jours]);
-  const [alertes, reloadAlertes] = useSource<AlertesSiege>(async () => normaliserAlertes((await alertesApi.list()).data), []);
+  const [stats, reloadStats, majStats] = useSource<StatsCXResponse>(async () => (await statisticsApi.cx({ jours })).data, [jours]);
+  const [alertes, reloadAlertes, majAlertes] = useSource<AlertesSiege>(async () => normaliserAlertes((await alertesApi.list()).data), []);
   const [agences, reloadAgences] = useSource<Agence[]>(async () => {
     const r = await agencesApi.list();
     return Array.isArray(r.data) ? r.data : [];
   }, []);
-  const [issues, reloadIssues] = useSource<IssuesOuvertes>(() => fetchIssuesOuvertes(), []);
-  const [actions, reloadActions] = useSource<ActionsTotaux>(() => fetchActionsTotaux(), []);
+  const [issues, reloadIssues, majIssues] = useSource<IssuesOuvertes>(() => fetchIssuesOuvertes(), []);
+  const [actions, reloadActions, majActions] = useSource<ActionsTotaux>(() => fetchActionsTotaux(), []);
 
   const reloadAll = useCallback(() => {
     reloadStats();
@@ -98,5 +103,13 @@ export function useSiegeData(jours: number) {
     reloadActions();
   }, [reloadStats, reloadAlertes, reloadAgences, reloadIssues, reloadActions]);
 
-  return { stats, alertes, agences, issues, actions, reloadStats, reloadIssues, reloadActions, reloadAll };
+  // Mise à jour automatique : tout sauf la liste des agences (elle change rarement), sans squelette ni erreur affichée.
+  const miseAJourSilencieuse = useCallback(() => {
+    majStats();
+    majAlertes();
+    majIssues();
+    majActions();
+  }, [majStats, majAlertes, majIssues, majActions]);
+
+  return { stats, alertes, agences, issues, actions, reloadStats, reloadIssues, reloadActions, reloadAll, miseAJourSilencieuse };
 }

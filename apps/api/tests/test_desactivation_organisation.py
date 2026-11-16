@@ -164,6 +164,30 @@ def test_refresh_d_un_compte_desactive_repond_401_et_non_500(ctx):
     assert ctx.client.post("/auth/refresh", params={"refresh_token": jeton}).status_code == 401
 
 
+def test_refresh_lit_le_cookie_pose_a_la_connexion(ctx):
+    """Le dashboard ne voit pas le jeton (HttpOnly) : la prolongation de session passe par le cookie, sans paramètre."""
+    ctx.client.cookies.set("refresh_token", create_refresh_token(str(ctx.ids["cx_a"])))
+    try:
+        reponse = ctx.client.post("/auth/refresh")
+        assert reponse.status_code == 200
+        assert "access_token=" in reponse.headers.get("set-cookie", "")
+        ctx.client.cookies.set("refresh_token", "jeton-invalide")
+        assert ctx.client.post("/auth/refresh").status_code == 401
+    finally:
+        ctx.client.cookies.clear()
+
+
+def test_refresh_sans_aucun_jeton_repond_401(ctx):
+    ctx.client.cookies.clear()
+    assert ctx.client.post("/auth/refresh").status_code == 401
+
+
+def test_deconnexion_supprime_les_cookies_avec_leurs_attributs(ctx):
+    entetes = ctx.client.post("/auth/logout").headers.get_list("set-cookie")
+    assert any(e.startswith("access_token=") for e in entetes) and any(e.startswith("refresh_token=") for e in entetes)
+    assert all("httponly" in e.lower() for e in entetes)
+
+
 @pytest.mark.parametrize("sujet", ["pas-un-uuid", "", str(uuid.uuid4())])
 def test_refresh_avec_identifiant_invalide_ou_inconnu_repond_401(ctx, sujet):
     assert ctx.client.post("/auth/refresh", params={"refresh_token": create_refresh_token(sujet)}).status_code == 401

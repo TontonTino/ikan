@@ -22,6 +22,7 @@ import SkeletonBlock from '../../components/ui/SkeletonBlock';
 import SectionHeading from '../../components/ui/SectionHeading';
 import PageTitle from '../../components/ui/PageTitle';
 import { PhoneIcon, MailIcon, CheckCircleIcon, AlertTriangleIcon } from '../../components/common/Icons';
+import { useMiseAJourAuto } from '../../hooks/useMiseAJourAuto';
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -68,11 +69,14 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
       .catch(() => setAgencesList([]));
   }, [isCXManager, agenceId]);
 
-  const fetchDemandes = useCallback(async () => {
+  const fetchDemandes = useCallback(async (silencieux = false) => {
     const requestId = ++requestIdRef.current;
-    setLoading(true);
-    setLoadingMore(false);
-    setError(false);
+    // Mise à jour automatique (silencieux) : la liste affichée reste, sans squelette ni message d'erreur.
+    if (!silencieux) {
+      setLoading(true);
+      setLoadingMore(false);
+      setError(false);
+    }
     try {
       const res = await demandesContactApi.list(parametresDemandes(toggle === 'traitees', agenceFiltre, 0));
       if (requestId === requestIdRef.current) {
@@ -80,7 +84,7 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
         setDemandesTotal(Number(res.headers?.['x-total-count'] || 0));
       }
     } catch {
-      if (requestId === requestIdRef.current) setError(true);
+      if (requestId === requestIdRef.current && !silencieux) setError(true);
     } finally {
       if (requestId === requestIdRef.current) {
         setLoading(false);
@@ -107,6 +111,8 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
     fetchDemandes();
     return () => { requestIdRef.current += 1; };
   }, [fetchDemandes]);
+  // Seulement sur la première page (sinon la mise à jour ramènerait la liste au début) et hors confirmation en cours.
+  useMiseAJourAuto(() => fetchDemandes(true), { actif: demandes.length <= 50 && !loadingMore && !aConfirmer && !enregistrement });
 
   const marquerTraitee = async (id: string) => {
     setEnregistrement(id);
@@ -191,7 +197,7 @@ export default function DemandesRappelPage({ agenceId }: { agenceId?: string } =
       <SectionHeading>Demandes de rappel ({firstLoadDone && !error ? `${demandes.length}/${demandesTotal}` : '…'})</SectionHeading>
 
       {error ? (
-        <StatsErrorState message="Impossible de charger les demandes de rappel." onRetry={fetchDemandes} />
+        <StatsErrorState message="Impossible de charger les demandes de rappel." onRetry={() => fetchDemandes()} />
       ) : loading ? (
         <div aria-busy="true" aria-label="Chargement des demandes de rappel" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {[0, 1, 2].map((i) => (

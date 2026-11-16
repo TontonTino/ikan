@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { ThemesSynthese } from '../types';
+import { creerGestionnaireSession } from './sessionAuto';
 
 // L'adresse de l'API vient TOUJOURS de VITE_API_URL. Sans elle, en développement, '/api/v1' passe par le
 // proxy de Vite (vite.config.ts → localhost:8000). En production, le build s'arrête si elle manque
@@ -15,19 +16,16 @@ const api = axios.create({
   },
 });
 
-// Intercepteur pour gérer les 401 (session expirée sur les routes protégées)
+// Session expirée (401) : prolongation silencieuse puis requête rejouée ; page de connexion seulement si elle échoue.
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    const url = error.config?.url || '';
-    const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/me');
-    if (error.response?.status === 401 && !isAuthEndpoint) {
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
-    }
-    return Promise.reject(error);
-  }
+  creerGestionnaireSession({
+    rafraichir: () => api.post('/auth/refresh'),
+    rejouer: (config) => api.request(config),
+    versConnexion: () => {
+      if (window.location.pathname !== '/login') window.location.href = '/login';
+    },
+  })
 );
 
 export default api;
