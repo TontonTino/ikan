@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { User } from '../types';
 import SidebarWorkspaceCard from '../components/layout/SidebarWorkspaceCard';
 import { initialesOrganisation } from '../utils/initialesOrganisation';
+import { logoOrganisation } from '../utils/logoOrganisation';
 import FeedbacksPage from './agency/FeedbacksPage';
 import GestionAgencesPage from './admin/GestionAgencesPage';
 import sourceSiege from './cx/siege/SiegeBlocks.tsx?raw';
@@ -52,15 +53,16 @@ describe('carte de contexte de la barre latérale', () => {
     const html = dans(<SidebarWorkspaceCard user={etat.user as User} />);
     expect(html).toContain('>RP<');
     expect(html).toMatch(/class="espace-nom"[^>]*>Restaurant Le Prestige</);
-    expect(html).toMatch(/class="espace-contexte"[^>]*>Toutes les agences</);
+    // Sur tout le réseau, le nom suffit : « Toutes les agences » n'est plus affiché, il reste dans le nom accessible.
+    expect(html).not.toContain('class="espace-contexte"');
     expect(html).toContain('aria-label="Périmètre affiché : Restaurant Le Prestige, Toutes les agences. Changer de périmètre."');
     expect(html).toContain('aria-haspopup="listbox"');
   });
 
   it('Agency Manager : même repli, nom et agence affichés, bouton « Ouvrir Mon agence » conservé', () => {
-    const html = dans(<SidebarWorkspaceCard user={utilisateur('agency_manager', { organisation_nom: 'Orange Bank' })} />);
+    const html = dans(<SidebarWorkspaceCard user={utilisateur('agency_manager', { organisation_nom: 'Oasis Bank' })} />);
     expect(html).toContain('>OB<');
-    expect(html).toMatch(/class="espace-nom"[^>]*>Orange Bank</);
+    expect(html).toMatch(/class="espace-nom"[^>]*>Oasis Bank</);
     expect(html).toMatch(/class="espace-contexte"[^>]*>Agence Ouaga 2000</);
     expect(html).toContain('Ouvrir Mon agence.');
   });
@@ -69,6 +71,25 @@ describe('carte de contexte de la barre latérale', () => {
     const html = dans(<SidebarWorkspaceCard user={utilisateur('cx_manager', { organisation_logo: 'https://exemple.org/logo.png' } as Partial<User>)} />);
     expect(html).toContain('src="https://exemple.org/logo.png"');
     expect(html).not.toContain('>RP<');
+  });
+});
+
+describe('logo de l’organisation', () => {
+  it('logo configuré : respecté tel quel ; chemin local officiel : version embarquée', () => {
+    expect(logoOrganisation('https://exemple.org/logo.png', 'Orange Burkina Faso')).toEqual({ src: 'https://exemple.org/logo.png', officiel: false });
+    expect(logoOrganisation('/org-logos/orange.png', 'Peu importe')?.officiel).toBe(true);
+  });
+
+  it('sans logo configuré : une organisation « Orange … » reçoit le logo officiel, les autres gardent leurs initiales', () => {
+    expect(logoOrganisation(null, 'Orange Burkina Faso')?.officiel).toBe(true);
+    expect(logoOrganisation('  ', 'orange bank')?.officiel).toBe(true);
+    for (const nom of ['Orangerie du Sud', 'Restaurant Le Prestige', '', null]) expect(logoOrganisation(null, nom)).toBeNull();
+  });
+
+  it('la carte d’Orange Burkina Faso montre le logo, plus « OB »', () => {
+    const html = dans(<SidebarWorkspaceCard user={utilisateur('cx_manager', { organisation_nom: 'Orange Burkina Faso' })} />);
+    expect(html).toContain('espace-logo--officiel');
+    expect(html).not.toContain('>OB<');
   });
 });
 

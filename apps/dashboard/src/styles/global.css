@@ -634,7 +634,7 @@ body {
    vignette 40 px · nom (une ligne) · contexte (une ligne) · indice d'action (⇅ sélecteur, › page). */
 .espace { position: relative; margin-bottom: var(--space-5); }
 .espace-carte {
-  display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: 60px; box-sizing: border-box;
+  display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: 58px; box-sizing: border-box;
   padding: var(--space-2) var(--space-3) var(--space-2) var(--space-2);
   border-radius: var(--radius-md); border: 1px solid var(--sidebar-active-border); background: var(--sidebar-hover-bg);
   color: var(--sidebar-text-strong); font-family: inherit; text-align: left;
@@ -650,6 +650,8 @@ button.espace-carte:focus-visible { outline: 2px solid var(--sidebar-text-strong
   font-size: var(--text-sm); font-weight: var(--weight-semibold); letter-spacing: 0.02em; overflow: hidden;
 }
 .espace-logo--image { background: var(--color-surface); padding: 5px; }
+.espace-logo--officiel { padding: 0; background: transparent; }
+.espace-logo--officiel img { object-fit: cover; }
 .espace-logo img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .espace-textes { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; line-height: 1.3; }
 .espace-nom {
