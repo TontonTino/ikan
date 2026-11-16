@@ -631,11 +631,11 @@ body {
 
 /* ── Carte d'espace, en haut du menu (SidebarWorkspaceCard) ───────────────────────────────────
    Qui (l'organisation) et quoi (le périmètre affiché), lisibles sans survol. Même anatomie pour les trois rôles :
-   vignette 40 px · nom (une ligne) · contexte (une ligne) · indice d'action (⇅ sélecteur, › page). */
+   vignette 34 px · nom (une ligne) · contexte (une ligne) · indice d'action (⇅ sélecteur, › page). */
 .espace { position: relative; margin-bottom: var(--space-5); }
 .espace-carte {
-  display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: 58px; box-sizing: border-box;
-  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-2);
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; box-sizing: border-box;
+  padding: 6px var(--space-2) 6px 6px;
   border-radius: var(--radius-md); border: 1px solid var(--sidebar-active-border); background: var(--sidebar-hover-bg);
   color: var(--sidebar-text-strong); font-family: inherit; text-align: left;
   transition: background var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
@@ -643,10 +643,10 @@ body {
 button.espace-carte { cursor: pointer; }
 button.espace-carte:hover, .espace-carte.is-ouverte { background: var(--sidebar-active-bg); }
 button.espace-carte:focus-visible { outline: 2px solid var(--sidebar-text-strong); outline-offset: 2px; }
-.espace-carte--replie { justify-content: center; min-height: 52px; padding: var(--space-1); }
+.espace-carte--replie { justify-content: center; min-height: 46px; padding: var(--space-1); }
 .espace-logo {
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 40px; height: 40px; box-sizing: border-box;
-  border-radius: 10px; background: var(--color-neutre-fond); color: var(--color-encre);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 34px; height: 34px; box-sizing: border-box;
+  border-radius: 8px; background: var(--color-neutre-fond); color: var(--color-encre);
   font-size: var(--text-sm); font-weight: var(--weight-semibold); letter-spacing: 0.02em; overflow: hidden;
 }
 .espace-logo--image { background: var(--color-surface); padding: 5px; }
@@ -656,8 +656,8 @@ button.espace-carte:focus-visible { outline: 2px solid var(--sidebar-text-strong
 .espace-textes { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; line-height: 1.3; }
 .espace-nom {
   font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--sidebar-text-strong);
-  /* Deux lignes au plus : « Orange Burkina Faso » se lit en entier au lieu d'être coupé. */
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;
+  /* Une seule ligne : la carte reste basse. Un nom trop long est coupé par « … » et lisible en entier au survol. */
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .espace-contexte { font-size: var(--text-xs); color: var(--sidebar-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .espace-indice { display: flex; flex-shrink: 0; color: var(--sidebar-muted); }
