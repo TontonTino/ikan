@@ -14,6 +14,9 @@ Par défaut : aperçu sans écriture. Avec --apply : écriture dans une seule tr
 Usage (depuis apps/api) :
     python scripts/renseigner_coordonnees_agences.py           # aperçu
     python scripts/renseigner_coordonnees_agences.py --apply   # écriture
+
+Sur la base de PRODUCTION, le script est refusé par la garde SD-02 sauf autorisation volontaire, posée dans le terminal
+pour cette seule commande : IKAN_AUTORISER_PRODUCTION=oui (jamais dans un fichier .env).
 """
 import sys
 import unicodedata
@@ -78,6 +81,12 @@ def main() -> int:
     from app.models.agence import Agence
     from app.models.organisation import Organisation
 
+    from app.core.config import settings
+    from app.core.garde_production import refuser_si_production
+
+    # SD-02 : comme tous les scripts, refus AVANT toute connexion si la base visée est la production protégée,
+    # sauf autorisation volontaire posée dans le terminal pour cette commande (IKAN_AUTORISER_PRODUCTION=oui).
+    refuser_si_production(settings.DATABASE_URL, "renseigner les coordonnées des agences")
     appliquer = "--apply" in sys.argv[1:]
     db = SessionLocal()
     try:
