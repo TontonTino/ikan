@@ -4,7 +4,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useYamStore } from '../../stores/yamStore';
 import Button from '../ui/Button';
 import { construireSynthese, type EntreesSynthese } from './construireSynthese';
-import YamMascot from './YamMascot';
+import YamAvatar from './YamAvatar';
 import './yamPresence.css';
 
 /**
@@ -19,7 +19,7 @@ export default function YamSynthese({ entrees }: { entrees: EntreesSynthese }) {
   if (!YAM_PRESENCE || role !== 'cx_manager' || !synthese.message) return null;
   return (
     <section className="yam-synthese" aria-label="Synthèse de YAM">
-      <YamMascot variant="tete" state="accueil" size={56} />
+      <YamAvatar size={56} />
       <div className="yam-synthese__texte">
         <h2 className="yam-synthese__titre">YAM · {synthese.periode}</h2>
         <p className="yam-synthese__message">{synthese.message}</p>

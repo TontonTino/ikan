@@ -49,8 +49,9 @@ describe('YamSynthese : rôles et bouton', () => {
     expect(html).toContain('YAM · 30 derniers jours');
     expect(html).toContain('Sur les 30 derniers jours, 45 avis');
     expect(html).toContain('Voir pourquoi');
-    expect(html).toContain('data-yam-variant="tete"');
-    expect(html).toContain('data-yam-state="accueil"');
+    // Le visage de YAM est l'avatar officiel (image 3D), plus la mascotte dessinée.
+    expect(html).toContain('class="yam-avatar"');
+    expect(html).not.toContain('data-yam-variant');
   });
 
   it.each(['agency_manager', 'admin'] as const)('%s : rien n’est affiché', (role) => {

@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { PlusIcon, SendIcon, XCloseIcon } from '../common/Icons';
 import RichText from './RichText';
 import YamAvatar from './YamAvatar';
-import YamMascot from './YamMascot';
 import YamPicture3D from './YamPicture3D';
 import { YAM_PRESENCE } from '../../config';
 import './yamPresence.css';
@@ -30,7 +29,7 @@ function ThinkingBubble() {
   }, []);
   return (
     <div className="yam-row yam-row-assistant" role="status" aria-live="polite">
-      <YamAvatar size={28} pulsing />
+      <YamAvatar size={28} pulsing etat={YAM_PRESENCE ? 'reflexion' : undefined} />
       <div className="yam-bubble yam-bubble-assistant">
         <span className="yam-thinking">
           YAM réfléchit
@@ -41,10 +40,7 @@ function ThinkingBubble() {
           </span>
         </span>
         {YAM_PRESENCE && (
-          <span className="yam-attente">
-            <YamMascot variant="tete" state="reflexion" size={30} />
-            YAM analyse vos avis…
-          </span>
+          <span className="yam-attente">YAM analyse vos avis…</span>
         )}
         {slow && (
           <div className="yam-slow-hint">
@@ -235,14 +231,9 @@ export default function YamChatPanel({ open, onClose }: Props) {
             </div>
           ) : m.role === 'error' ? (
             <div key={m.id} className="yam-row yam-row-assistant" role="alert">
-              <YamAvatar size={28} />
+              <YamAvatar size={28} etat={YAM_PRESENCE ? 'alerte' : undefined} />
               <div className="yam-bubble yam-bubble-error">
                 <div>
-                  {YAM_PRESENCE && (
-                    <span className="yam-erreur-mascotte">
-                      <YamMascot variant="tete" state="alerte" size={30} />
-                    </span>
-                  )}
                   {m.text}
                 </div>
                 {m.retryQuestion && (

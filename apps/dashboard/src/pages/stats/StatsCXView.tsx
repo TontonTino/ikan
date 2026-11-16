@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useEffect, useMemo, useState, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { statisticsApi, agencesApi } from '../../services/api';
 import type { StatsCXResponse, Agence } from '../../types';
 import TabsNavigation from '../../components/ui/TabsNavigation';
@@ -212,7 +212,10 @@ export default function StatsCXView() {
                   </Suspense>
                 ) : (
                   <p style={{ margin: 0, textAlign: 'center', padding: 'var(--space-7) 0', color: 'var(--color-text-muted)' }}>
-                    Aucune agence n'a de coordonnées géographiques : renseignez-les dans Gestion des agences.
+                    Aucune agence n’a encore de position sur la carte.{' '}
+                    <Link to="/admin/gestion-agences" style={{ color: 'var(--color-encre)', fontWeight: 'var(--weight-semibold)' }}>
+                      Placer les agences dans Gestion des agences
+                    </Link>
                   </p>
                 )}
               </StatsSectionCard>

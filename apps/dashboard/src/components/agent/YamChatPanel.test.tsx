@@ -49,7 +49,9 @@ describe('panneau YAM : présence', () => {
     const html = rendre();
     expect(html).toContain('YAM analyse vos avis…');
     expect(html).toContain('data-yam-state="reflexion"');
-    expect(html).toMatch(/<svg[^>]*aria-hidden="true"[^>]*data-yam-state="reflexion"|<svg[^>]*data-yam-state="reflexion"[^>]*aria-hidden="true"/);
+    // Le repère d'état est posé sur l'avatar officiel (image), plus sur une mascotte dessinée : toujours décoratif.
+    expect(html).toMatch(/<span[^>]*aria-hidden="true"[^>]*data-yam-state="reflexion"|<span[^>]*data-yam-state="reflexion"[^>]*aria-hidden="true"/);
+    expect(html).not.toContain('<svg data-yam');
     expect(html).toContain('YAM réfléchit');
     expect(html).toContain('role="status" aria-live="polite"');
     expect(html).toContain('yam-dots');

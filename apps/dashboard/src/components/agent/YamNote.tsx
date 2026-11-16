@@ -1,7 +1,7 @@
 import React from 'react';
 import { YAM_PRESENCE } from '../../config';
 import { FAIBLE_VOLUME_POINT } from '../../pages/cx/siege/siegeData';
-import YamMascot from './YamMascot';
+import YamAvatar from './YamAvatar';
 import './yamPresence.css';
 
 /**
@@ -12,7 +12,7 @@ export default function YamNote({ pointsFaibleVolume }: { pointsFaibleVolume: nu
   if (!YAM_PRESENCE || !(pointsFaibleVolume > 0)) return null;
   return (
     <div className="yam-note" role="note">
-      <YamMascot variant="tete" state="reflexion" size={30} />
+      <YamAvatar size={32} etat="reflexion" />
       <p>
         <strong>Trop peu d’avis pour conclure.</strong> Plusieurs jours comptent moins de {FAIBLE_VOLUME_POINT} avis : le pourcentage varie
         beaucoup sans que la situation change. Je ne tire pas de tendance de ces points.
