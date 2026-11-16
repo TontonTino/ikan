@@ -41,7 +41,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm, cache-dependency-path: apps/client/package-lock.json }
+        with: { node-version: 22, cache: npm, cache-dependency-path: apps/client/package-lock.json }  # node --test avec motif « *.test.mjs » : Node 21+
       - run: npm ci
       - run: npm test
       - name: Build
