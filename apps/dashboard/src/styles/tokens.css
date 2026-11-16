@@ -103,7 +103,7 @@
   /* ── Statuts : texte sur son fond (la couleur n'est jamais le seul porteur de sens : icône ou libellé en plus) */
   --color-bon-texte: #1F5A25;         --color-bon-fond: #E8F0E0;          /* 7,05 */
   --color-surveiller-texte: #7A5200;  --color-surveiller-fond: #FBF0D0;   /* 6,09 */
-  --color-critique-texte: #8C3A1B;    --color-critique-fond: #FBE8E2;     /* 6,48 */
+  --color-critique-texte: #A11A3B;    --color-critique-fond: #FCE8EC;     /* 6,56 — carmin : teinte nettement séparée du corail d'action */
   --color-neutre-texte: #3D4A44;      --color-neutre-fond: #EEF1EC;       /* 8,15 — neutre, nouveau */
 
   /* ── Alias historiques (ne pas supprimer : utilisés par les pages existantes) → jetons ci-dessus.
