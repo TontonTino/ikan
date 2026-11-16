@@ -17,7 +17,7 @@
 
 @media (max-width: 640px) {
   .yam-synthese { flex-direction: column; align-items: stretch; text-align: left; }
-  .yam-synthese svg { align-self: flex-start; }
+  .yam-synthese .yam-avatar { align-self: flex-start; }
   .yam-synthese > button { width: 100%; }
 }
 
@@ -32,7 +32,7 @@
   color: var(--color-text-body, var(--color-text-main));
   font-size: var(--text-sm, 0.875rem);
 }
-.yam-note svg { flex: 0 0 auto; }
+.yam-note .yam-avatar-etat { margin-top: 2px; }
 .yam-note p { margin: 0; overflow-wrap: anywhere; }
 
 .yam-etat-vide {
@@ -48,5 +48,3 @@
 
 .yam-hero { display: flex; justify-content: center; padding: var(--space-2) 0 var(--space-3); }
 .yam-attente { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; font-size: var(--text-sm); }
-.yam-attente svg, .yam-erreur-mascotte svg { flex: 0 0 auto; }
-.yam-erreur-mascotte { display: inline-flex; vertical-align: middle; margin-right: 8px; }

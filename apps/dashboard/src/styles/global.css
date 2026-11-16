@@ -348,10 +348,18 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center; /* image carrée : tête et pousse du YAM 3D (public/yam-avatar-icon.png) */
+  object-position: center; /* image carrée : tête et pousse du YAM 3D (assets/yam/yam-avatar-icon.png) */
   display: block;
   user-select: none;
 }
+.yam-avatar-etat { position: relative; display: inline-flex; flex-shrink: 0; }
+.yam-avatar-etat__repere {
+  position: absolute; right: -4px; bottom: -3px; display: inline-flex; align-items: center; justify-content: center;
+  min-width: 14px; height: 14px; padding: 0 2px; border-radius: 999px; border: 1.5px solid var(--color-surface);
+  font-style: normal; font-size: 10px; font-weight: var(--weight-semibold); line-height: 1; color: var(--color-text-inverse);
+}
+.yam-avatar-etat__repere--reflexion { background: var(--color-encre); }
+.yam-avatar-etat__repere--alerte { background: var(--color-critique-texte); }
 .yam-avatar-pulse { animation: yam-pulse 1.4s ease-in-out infinite; }
 @keyframes yam-pulse {
   0%, 100% { transform: scale(1); opacity: 0.7; }
