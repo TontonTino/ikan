@@ -1,12 +1,12 @@
 /**
  * Vue Admin — compteurs structurels uniquement (aucune donnée de satisfaction client : hors périmètre du rôle).
- * <h1> porté par AdminWelcomeBanner ; <h2> « Structure de la plateforme » ici, <h2> « Organisations » dans le tableau.
+ * <h1> porté par PageTitle ; <h2> « Structure de la plateforme » ici, <h2> « Organisations » dans le tableau.
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { dashboardApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
-import AdminWelcomeBanner from '../../components/admin/AdminWelcomeBanner';
+import PageTitle from '../../components/ui/PageTitle';
 import AdminStructureKpis from '../../components/admin/AdminStructureKpis';
 import RepartitionForfaitsCard from '../../components/admin/RepartitionForfaitsCard';
 import AdminOrganisationsTable from '../../components/admin/AdminOrganisationsTable';
@@ -50,17 +50,13 @@ export default function AdminDashboardPage() {
     return <Navigate to="/siege" replace />;
   }
 
-  const prenom = user?.prenom || 'Système';
   // Échec du chargement : visible pour l'utilisateur (l'erreur n'est plus seulement dans la console).
   const loadFailed = !loading && !stats;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-      {/* ── 1. Bannière ── */}
-      <AdminWelcomeBanner
-        userName={prenom}
-        subtitle="Voici un aperçu structurel de vos organisations, agences et comptes sur la plateforme IKAN AI."
-      />
+      {/* ── 1. En-tête : le même que toutes les pages (plus de bannière, d'illustration ni de date en surtitre) ── */}
+      <PageTitle title="Tableau de bord" description="La plateforme en un coup d’œil : organisations clientes, agences et comptes." />
 
       {loadFailed ? (
         <EmptyState

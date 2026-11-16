@@ -247,7 +247,8 @@ export default function UserMenu({ user, onLogout, placement = 'entete', collaps
             <>
               <span className="user-menu-lateral__texte">
                 <span className="user-menu-lateral__nom">{fullName}</span>
-                {user.organisation_nom && <span className="user-menu-lateral__org">{user.organisation_nom}</span>}
+                {/* Administrateur : son rôle (il gère toute la plateforme), pas l'organisation à laquelle son compte est rattaché. */}
+                {isAdmin ? <span className="user-menu-lateral__org">Administrateur</span> : user.organisation_nom && <span className="user-menu-lateral__org">{user.organisation_nom}</span>}
               </span>
               <ChevronUpIcon size={14} color="var(--sidebar-muted)" />
             </>

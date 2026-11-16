@@ -21,10 +21,15 @@ const COLONNES: DataTableColumn<JournalAuditEntree>[] = [
     key: 'acteur',
     header: 'Acteur',
     render: (l) => (
-      <>
-        <div>{l.acteur_email ?? '—'}</div>
-        <div className="t-xs t-2">{libelleRoleJournal(l.acteur_role)}</div>
-      </>
+      // Action automatique (aucun e-mail) : le rôle seul (« Système »), sans tiret orphelin au-dessus.
+      l.acteur_email ? (
+        <>
+          <div>{l.acteur_email}</div>
+          <div className="t-xs t-2">{libelleRoleJournal(l.acteur_role)}</div>
+        </>
+      ) : (
+        <div className="t-2">{libelleRoleJournal(l.acteur_role)}</div>
+      )
     ),
   },
   { key: 'action', header: 'Action', render: (l) => libelleAction(l.action) },
@@ -37,7 +42,7 @@ const COLONNES: DataTableColumn<JournalAuditEntree>[] = [
     },
   },
   { key: 'resultat', header: 'Résultat', render: (l) => libelleResultat(l.resultat), width: 100 },
-  { key: 'details', header: 'Détail', render: (l) => resumeDetails(l.details) || '—' },
+  { key: 'details', header: 'Détail', render: (l) => resumeDetails(l.details) || <span className="t-2" aria-label="Aucun détail">—</span> },
 ];
 
 /** Vue pure (testable sans réseau) : erreur serveur, chargement, état vide, tableau. Aucune action d'écriture. */

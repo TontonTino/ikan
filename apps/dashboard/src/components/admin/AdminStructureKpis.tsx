@@ -1,6 +1,5 @@
 import React from 'react';
-import KpiCard from '../ui/KpiCard';
-import { BuildingIcon, StoreIcon, UsersIcon } from '../common/Icons';
+import ChiffresCles from './ChiffresCles';
 import { ROLE_LABELS_PLURIEL } from '../../utils/vocabulaire';
 
 interface AdminStructureKpisProps {
@@ -14,12 +13,15 @@ interface AdminStructureKpisProps {
 /** Compteurs structurels de la plateforme (aucune donnée issue des feedbacks). */
 export default function AdminStructureKpis(p: AdminStructureKpisProps) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', width: '100%' }}>
-      <KpiCard icon={<BuildingIcon size={20} />} label="Organisations" value={p.totalOrganisations} compact subtitle="Organisations clientes actives" />
-      <KpiCard icon={<StoreIcon size={20} />} label="Agences" value={p.totalAgences} compact subtitle="Agences enregistrées" />
-      <KpiCard icon={<UsersIcon size={20} />} label={ROLE_LABELS_PLURIEL.cx_manager} value={p.totalCXManagers} compact subtitle="Au siège" />
-      <KpiCard icon={<UsersIcon size={20} />} label="Responsables d’agence" value={p.totalAgencyManagers} compact subtitle="Comptes actifs" />
-      <KpiCard icon={<UsersIcon size={20} />} label="Utilisateurs actifs" value={p.totalUtilisateursActifs} compact subtitle="Tous rôles confondus" />
-    </div>
+    <ChiffresCles
+      label="Structure de la plateforme"
+      items={[
+        { label: 'Organisations', valeur: p.totalOrganisations, note: 'clientes, actives' },
+        { label: 'Agences', valeur: p.totalAgences, note: 'enregistrées' },
+        { label: ROLE_LABELS_PLURIEL.cx_manager, valeur: p.totalCXManagers, note: 'au siège' },
+        { label: ROLE_LABELS_PLURIEL.agency_manager, valeur: p.totalAgencyManagers, note: 'comptes actifs' },
+        { label: 'Utilisateurs actifs', valeur: p.totalUtilisateursActifs, note: 'tous rôles' },
+      ]}
+    />
   );
 }

@@ -6,7 +6,7 @@ import PageHeader from '../../components/ui/PageHeader';
 import Alert from '../../components/ui/Alert';
 import Button from '../../components/ui/Button';
 import { userFacingError } from '../../utils/userFacingError';
-import { ShieldCheckIcon, BarChartIcon, StoreIcon, UsersIcon, CheckIcon } from '../../components/common/Icons';
+import { ShieldCheckIcon, BarChartIcon, StoreIcon, UsersIcon, CheckIcon, InfoIcon } from '../../components/common/Icons';
 
 interface Permission {
   role: string;
@@ -83,11 +83,6 @@ function AdminPermissionsPageContenu() {
           Cela ne signifie pas que les rôles sont vides.
         </Alert>
       )}
-
-      <Alert tone="warning" title="Liste indicative">
-        Ces descriptions sont rédigées à la main côté serveur : elles résument les droits mais ne sont pas ce qui les applique.
-        Le contrôle réel est fait fonction par fonction par l’API, et certains droits n’ont pas d’écran dédié dans l’interface.
-      </Alert>
 
       {!erreur && permissions.length === 0 && (
         <Alert tone="info" title="Aucun rôle à afficher" />
@@ -229,23 +224,16 @@ function AdminPermissionsPageContenu() {
         })}
       </div>
 
-      {/* ── Note d'information ── */}
-      <div
-        style={{
-          background: 'var(--color-surveiller-fond)',
-          border: '1px solid var(--color-surveiller-fond)',
-          borderRadius: '16px',
-          padding: '16px 20px',
-          display: 'flex',
-          gap: '12px',
-          alignItems: 'center',
-        }}
-      >
-        <ShieldCheckIcon size={20} color="var(--color-surveiller-texte)" />
-        <div className="t-sm t-surveiller t-semi">
-          <strong>Sécurité :</strong> les droits sont attribués par rôle et ne peuvent pas être personnalisés utilisateur par utilisateur.
-          Pour toute demande particulière, contactez le support IKAN AI.
-        </div>
+      {/* ── Notes : une information, pas une alerte (rien n'est à surveiller) — texte discret, sans bandeau jaune ── */}
+      <div className="admin-notes">
+        <p className="admin-note">
+          <ShieldCheckIcon size={15} aria-hidden="true" />
+          Les droits sont attribués par rôle et ne peuvent pas être personnalisés utilisateur par utilisateur. Pour une demande particulière, contactez le support IKAN AI.
+        </p>
+        <p className="admin-note">
+          <InfoIcon size={15} aria-hidden="true" />
+          Ces descriptions résument les droits ; le contrôle réel est fait par l’API, fonction par fonction. Certains droits n’ont pas d’écran dédié.
+        </p>
       </div>
     </div>
   );
