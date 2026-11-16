@@ -6,6 +6,7 @@ import { ChevronRightIcon, SelecteurIcon } from '../common/Icons';
 import Tooltip from '../ui/Tooltip';
 import { initialesOrganisation } from '../../utils/initialesOrganisation';
 import { agenceAffichee } from '../../utils/perimetre';
+import { logoOrganisation } from '../../utils/logoOrganisation';
 import SelecteurPerimetre from './SelecteurPerimetre';
 
 interface SidebarWorkspaceCardProps {
@@ -19,7 +20,7 @@ const nomAgence = (nom: string) => (nom.trim().toLowerCase().startsWith('agence'
 /**
  * Carte d'espace, en haut du menu : QUI (l'organisation) et QUOI (le périmètre affiché), lisibles sans survol.
  * Même anatomie pour les trois rôles : logo, nom, ligne de contexte, indice d'action à droite.
- *  - Responsable expérience client : sélecteur de périmètre (« Toutes les agences » ou une agence) ; icône ⇅.
+ *  - Responsable expérience client : sélecteur de périmètre ; le nom seul sur tout le réseau, l'agence en 2e ligne si une est consultée ; icône ⇅.
  *  - Responsable d'agence : son agence ; ouvre « Mon agence » ; icône ›.
  *  - Admin : carte d'information, sans action.
  * Menu replié : le logo seul ; nom et contexte dans l'info-bulle et le nom accessible.
@@ -55,7 +56,7 @@ export default function SidebarWorkspaceCard({ user, collapsed = false }: Sideba
   if (!user) return null;
 
   const organisation = estAdmin ? 'IKAN AI' : (user.organisation_nom || 'Organisation');
-  const logo = !estAdmin && !logoEnErreur && user.organisation_logo ? user.organisation_logo : null;
+  const logo = !estAdmin && !logoEnErreur ? logoOrganisation(user.organisation_logo, user.organisation_nom) : null;
   const selection = estCx ? agenceAffichee(location.pathname) : null;
   const agenceCourante = selection ? agences.find((a) => a.id === selection) : undefined;
 
@@ -66,21 +67,24 @@ export default function SidebarWorkspaceCard({ user, collapsed = false }: Sideba
       : selection
         ? (agenceCourante?.nom ?? 'Agence')
         : 'Toutes les agences';
+  // Responsable expérience client sur tout le réseau : le nom de l'organisation suffit, la ligne de contexte n'est pas affichée
+  // (elle reste dans le nom accessible). Elle réapparaît dès qu'une agence précise est consultée.
+  const contexteVisible = estCx && !selection ? null : contexte;
 
   const vignette = (
-    <span className={`espace-logo${logo || estAdmin ? ' espace-logo--image' : ''}`} aria-hidden="true">
-      {estAdmin ? <img src="/ikanai-mark.png" alt="" /> : logo ? <img src={logo} alt="" onError={() => setLogoEnErreur(true)} /> : initialesOrganisation(organisation)}
+    <span className={`espace-logo${logo?.officiel ? ' espace-logo--officiel' : logo || estAdmin ? ' espace-logo--image' : ''}`} aria-hidden="true">
+      {estAdmin ? <img src="/ikanai-mark.png" alt="" /> : logo ? <img src={logo.src} alt="" onError={() => setLogoEnErreur(true)} /> : initialesOrganisation(organisation)}
     </span>
   );
   const textes = !collapsed && (
     <span className="espace-textes">
       <span className="espace-nom" title={organisation}>{organisation}</span>
-      <span className="espace-contexte" title={contexte}>{contexte}</span>
+      {contexteVisible && <span className="espace-contexte" title={contexteVisible}>{contexteVisible}</span>}
     </span>
   );
   const classe = `espace-carte${collapsed ? ' espace-carte--replie' : ''}`;
   const infobulle = (noeud: React.ReactElement) => (collapsed ? (
-    <Tooltip content={<><strong>{organisation}</strong><br />{contexte}</>} placement="right" decorative delay={0}>{noeud}</Tooltip>
+    <Tooltip content={<><strong>{organisation}</strong>{contexteVisible && <><br />{contexteVisible}</>}</>} placement="right" decorative delay={0}>{noeud}</Tooltip>
   ) : noeud);
 
   let carte: React.ReactElement;
