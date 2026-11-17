@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { get } = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock('axios', () => ({
   default: {
-    create: () => ({ get, interceptors: { response: { use: vi.fn() } } }),
+    create: () => ({ get, post: vi.fn(), request: vi.fn(), interceptors: { response: { use: vi.fn() } } }),
   },
 }));
 

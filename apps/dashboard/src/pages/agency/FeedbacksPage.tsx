@@ -23,6 +23,7 @@ import EtatListeAvis from './EtatListeAvis';
 import PageTitle from '../../components/ui/PageTitle';
 import './FeedbacksPage.css';
 import { NIVEAUX_URGENCE } from '../../utils/vocabulaire';
+import { useMiseAJourAuto } from '../../hooks/useMiseAJourAuto';
 
 // Contexte de navigation (liens depuis les tableaux de bord) : valeurs reconnues, tout le reste est ignoré.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -66,6 +67,9 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
   const [loadError, setLoadError] = useState(false);
   const [themeCatalogError, setThemeCatalogError] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
+  // Mise à jour automatique : même requêtes que reloadToken, mais silencieuses (liste gardée, ni squelette ni erreur).
+  const [majToken, setMajToken] = useState(0);
+  const majSilencieuse = useRef({ liste: false, themes: false, compteurs: false });
   const [toast, setToast] = useState('');
   const [selectedFeedbackForTreatment, setSelectedFeedbackForTreatment] = useState<Feedback | null>(null);
   const avisModifie = useRef(false);
@@ -98,8 +102,12 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
   useEffect(() => {
     if (filtres.onglet === 'thematiques') return;
     let cancelled = false;
-    setLoading(true);
-    setLoadError(false);
+    const silencieux = majSilencieuse.current.liste;
+    majSilencieuse.current.liste = false;
+    if (!silencieux) {
+      setLoading(true);
+      setLoadError(false);
+    }
     feedbacksApi.list(paramsListe)
       .then((res) => {
         if (cancelled) return;
@@ -110,45 +118,56 @@ export default function FeedbacksPage({ agenceId }: FeedbacksPageProps = {}) {
       })
       .catch((err) => {
         console.error('Erreur chargement:', err);
-        if (cancelled) return;
+        if (cancelled || silencieux) return;
         setAvis([]);
         setTotal(0);
         setLoadError(true);
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [cleListe, reloadToken]);
+  }, [cleListe, reloadToken, majToken]);
 
   // ── Compteurs des onglets : mêmes filtres, hors onglet et hors page, une requête légère chacun ──
   const cleCompteurs = JSON.stringify(parametresApi(filtres, { agenceFixe: agenceId, onglet: 'tous', limit: 1, offset: 0 }));
   useEffect(() => {
     let cancelled = false;
+    const silencieux = majSilencieuse.current.compteurs;
+    majSilencieuse.current.compteurs = false;
     const compter = (onglet: OngletAvis) => feedbacksApi.list(parametresApi(filtres, { agenceFixe: agenceId, onglet, limit: 1, offset: 0 }))
       .then((res) => Number(res?.headers?.['x-total-count']));
     Promise.all([compter('tous'), compter('a_traiter')])
       .then(([tous, a_traiter]) => { if (!cancelled) setCompteurs({ tous, a_traiter }); })
-      .catch(() => { if (!cancelled) setCompteurs(null); });
+      .catch(() => { if (!cancelled && !silencieux) setCompteurs(null); });
     return () => { cancelled = true; };
-  }, [cleCompteurs, reloadToken]);
+  }, [cleCompteurs, reloadToken, majToken]);
 
   // ── Onglet « Thèmes » : agrégat serveur sur TOUS les avis correspondant aux filtres (sauf le thème lui-même) ──
   const cleThemes = JSON.stringify(parametresThemes(filtres, { agenceFixe: agenceId }));
   useEffect(() => {
     if (filtres.onglet !== 'thematiques') return;
     let cancelled = false;
-    setLoading(true);
-    setLoadError(false);
+    const silencieux = majSilencieuse.current.themes;
+    majSilencieuse.current.themes = false;
+    if (!silencieux) {
+      setLoading(true);
+      setLoadError(false);
+    }
     feedbacksApi.themesSynthese(parametresThemes(filtres, { agenceFixe: agenceId }))
       .then((res) => { if (!cancelled) setSynthese(res.data); })
       .catch((err) => {
         console.error('Erreur chargement des thèmes:', err);
-        if (cancelled) return;
+        if (cancelled || silencieux) return;
         setSynthese(null);
         setLoadError(true);
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [filtres.onglet, cleThemes, reloadToken]);
+  }, [filtres.onglet, cleThemes, reloadToken, majToken]);
+  // Pas de mise à jour pendant le traitement d'un avis : la liste ne bouge pas sous les yeux de l'utilisateur.
+  useMiseAJourAuto(() => {
+    majSilencieuse.current = { liste: true, themes: true, compteurs: true };
+    setMajToken((n) => n + 1);
+  }, { actif: !selectedFeedbackForTreatment });
 
   // ── Catalogue des thèmes et liste des agences ──
   useEffect(() => {

@@ -12,8 +12,9 @@ import PageTitle from '../../components/ui/PageTitle';
 import AideAlertes from '../../components/alerts/AideAlertes';
 import { useToast } from '../../components/ui/Toast';
 import { userFacingError } from '../../utils/userFacingError';
-import { FILTRES_PAR_DEFAUT, parametresListe, type FiltresProblemes } from '../../utils/problemesListe';
+import { FILTRES_PAR_DEFAUT, parametresListe, type FiltresProblemes, TAILLE_PAGE } from '../../utils/problemesListe';
 import { LIBELLES } from '../../utils/vocabulaire';
+import { useMiseAJourAuto } from '../../hooks/useMiseAJourAuto';
 
 /** Une section = une page de la navigation (une destination = une fonction). */
 export type PilotageSection = 'alertes' | 'suggestions' | 'actions' | 'issues';
@@ -107,17 +108,20 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
   const [issueDetail, setIssueDetail] = useState<IssueDetail | null>(null);
   const [issueDetailLoading, setIssueDetailLoading] = useState(false);
 
-  const fetchIssuesList = useCallback(async () => {
-    setIssuesListLoading(true);
-    setIssuesListError(false);
+  const fetchIssuesList = useCallback(async (silencieux = false) => {
+    // Mise à jour automatique (silencieux) : la liste affichée reste, sans état de chargement ni erreur.
+    if (!silencieux) {
+      setIssuesListLoading(true);
+      setIssuesListError(false);
+    }
     try {
       const res = await issuesApi.list(parametresListe({ ...filtresIssues, agenceId: issuesAgenceId }));
       setIssuesListRaw(res.data || []);
       setIssuesTotal(Number(res.headers?.['x-total-count'] || 0));
     } catch {
-      setIssuesListError(true);
+      if (!silencieux) setIssuesListError(true);
     } finally {
-      setIssuesListLoading(false);
+      if (!silencieux) setIssuesListLoading(false);
       setIssuesFirstLoadDone(true);
     }
   }, [issuesAgenceId, filtresIssues]);
@@ -139,6 +143,8 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
     if (section !== 'issues') return;
     fetchIssuesList();
   }, [fetchIssuesList, section]);
+  // Problèmes à traiter : seulement sur la première page et quand aucun détail n'est ouvert.
+  useMiseAJourAuto(() => fetchIssuesList(true), { actif: section === 'issues' && issuesListRaw.length <= TAILLE_PAGE && !issuesLoadingMore && !selectedIssueId });
 
   const openIssueDetail = useCallback(async (issueId: string) => {
     setSelectedIssueId(issueId);
@@ -209,7 +215,7 @@ export default function PilotagePage({ section }: { section: PilotageSection }) 
 
 
       {/* ── SECTION ISSUES (KPI P0 + liste + détail — pas de création ici, voir rapport) ── */}
-      {section === 'issues' && <PilotageIssuesTab isAgencyManager={isAgencyManager} agencesList={agencesList} issuesJours={issuesJours} setIssuesJours={setIssuesJours} issuesAgenceId={issuesAgenceId} setIssuesAgenceId={setIssuesAgenceId} filtres={filtresIssues} setFiltres={changerFiltresIssues} issuesKpisRefreshToken={issuesKpisRefreshToken} issuesFirstLoadDone={issuesFirstLoadDone} issuesListRaw={issuesListRaw} issuesTotal={issuesTotal} issuesListError={issuesListError} issuesListLoading={issuesListLoading} fetchIssuesList={fetchIssuesList} openIssueDetail={openIssueDetail} issuesLoadingMore={issuesLoadingMore} loadMoreIssues={loadMoreIssues} selectedIssueId={selectedIssueId} issueDetail={issueDetail} issueDetailLoading={issueDetailLoading} closeIssueDetail={closeIssueDetail} apresActionIssue={apresActionIssue} verifierIssue={verifierIssue} />}
+      {section === 'issues' && <PilotageIssuesTab isAgencyManager={isAgencyManager} agencesList={agencesList} issuesJours={issuesJours} setIssuesJours={setIssuesJours} issuesAgenceId={issuesAgenceId} setIssuesAgenceId={setIssuesAgenceId} filtres={filtresIssues} setFiltres={changerFiltresIssues} issuesKpisRefreshToken={issuesKpisRefreshToken} issuesFirstLoadDone={issuesFirstLoadDone} issuesListRaw={issuesListRaw} issuesTotal={issuesTotal} issuesListError={issuesListError} issuesListLoading={issuesListLoading} fetchIssuesList={() => fetchIssuesList()} openIssueDetail={openIssueDetail} issuesLoadingMore={issuesLoadingMore} loadMoreIssues={loadMoreIssues} selectedIssueId={selectedIssueId} issueDetail={issueDetail} issueDetailLoading={issueDetailLoading} closeIssueDetail={closeIssueDetail} apresActionIssue={apresActionIssue} verifierIssue={verifierIssue} />}
     </div>
   );
 }

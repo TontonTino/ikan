@@ -128,20 +128,29 @@ def login(
 
 @router.post("/logout")
 def logout(response: Response):
-    """Déconnexion — supprime les cookies d'authentification."""
-    response.delete_cookie("access_token")
-    response.delete_cookie("refresh_token")
+    """Déconnexion — supprime les cookies d'authentification.
+
+    Mêmes attributs qu'à la pose (Secure, SameSite) : sans eux, un navigateur peut ignorer la suppression d'un cookie SameSite=None.
+    """
+    for nom in ("access_token", "refresh_token"):
+        response.delete_cookie(nom, httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE)
     return {"message": "Déconnexion réussie"}
 
 
 @router.post("/refresh", response_model=TokenResponse)
 def refresh_token(
+    request: Request,
     response: Response,
     refresh_token: str | None = None,
     db: Session = Depends(get_db),
 ):
-    """Rafraîchit le token d'accès depuis le refresh token."""
-    from fastapi import Cookie as FastAPICookie
+    """Rafraîchit le token d'accès depuis le refresh token.
+
+    Le dashboard n'a jamais accès au jeton (cookie HttpOnly) : il est lu dans le cookie « refresh_token » posé à la connexion.
+    Le paramètre de requête reste accepté pour les clients qui transmettent le jeton eux-mêmes (tests, outils).
+    Avant cette correction, seul le paramètre était lu : le dashboard ne pouvait jamais prolonger la session.
+    """
+    refresh_token = request.cookies.get("refresh_token") or refresh_token
 
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

@@ -30,6 +30,7 @@ import { Action, Evolution, Pourquoi, Reseau, SiegeKpis, Surveillance, type KpiK
 import { elargirPeriode } from '../../utils/periodeElargie';
 import { PERIODES as PERIODES_DASHBOARD } from '../../utils/periodes';
 import { AgenceDetail, KPI_TITRE, KpiDetail } from './siege/SiegeDrawers';
+import { useMiseAJourAuto } from '../../hooks/useMiseAJourAuto';
 
 const PERIODES = PERIODES_DASHBOARD.map((p) => ({ v: p.jours, l: p.label }));
 
@@ -38,6 +39,7 @@ type DrawerView = { type: 'kpi'; kind: KpiKind } | { type: 'agence'; id: string 
 export default function DashboardSiegePage() {
   const [jours, setJours] = useState(30);
   const data = useSiegeData(jours);
+  useMiseAJourAuto(data.miseAJourSilencieuse);
   const { stats, alertes, agences, issues, actions } = data;
 
   // Pile du panneau latéral : KPI → agence, avec retour au niveau précédent.

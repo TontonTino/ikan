@@ -7,6 +7,7 @@ import YamBoutonEntete from './YamBoutonEntete';
 import BackButton from './BackButton';
 import Sidebar, { SIDEBAR_ID } from './Sidebar';
 import NotificationCenter, { type FileATraiter } from './NotificationCenter';
+import { useMiseAJourAuto } from '../../hooks/useMiseAJourAuto';
 import { ROLE_NAV_SECTIONS, type NavSection } from './navigation';
 import YamChatPanel, { YAM_PANEL_ID } from '../agent/YamChatPanel';
 import { useYamStore } from '../../stores/yamStore';
@@ -200,14 +201,19 @@ export default function DashboardLayout() {
   // Badge du menu « Alertes » : alertes de seuil actives (la page Alertes ne garde qu'elles). Cloche : la file « À traiter »
   // (même liste que l'onglet de la page Avis, voir utils/fileATraiter.ts). Rafraîchies à chaque changement de page.
   // L'Admin n'a ni l'une ni l'autre.
+  const [majBadges, setMajBadges] = useState(0);
+  const badgesSilencieux = useRef(false);
   useEffect(() => {
     if (user?.role !== 'cx_manager' && user?.role !== 'agency_manager') return;
     let cancelled = false;
-    setAlertesLoading(true);
+    // Mise à jour automatique : silencieuse (les nombres affichés restent jusqu'à la réponse, et y restent si elle échoue).
+    const silencieux = badgesSilencieux.current;
+    badgesSilencieux.current = false;
+    if (!silencieux) setAlertesLoading(true);
     alertesApi
       .list()
       .then((r) => { if (!cancelled) setAlertes(r.data ?? null); })
-      .catch(() => { if (!cancelled) setAlertes(null); });
+      .catch(() => { if (!cancelled && !silencieux) setAlertes(null); });
     feedbacksApi
       .list({ a_traiter: true, limit: 8, offset: 0 })
       .then((r) => {
@@ -216,10 +222,11 @@ export default function DashboardLayout() {
         const avis = Array.isArray(r.data) ? r.data : [];
         setFileATraiter({ avis, total: Number.isFinite(total) ? total : avis.length });
       })
-      .catch(() => { if (!cancelled) setFileATraiter(null); })
+      .catch(() => { if (!cancelled && !silencieux) setFileATraiter(null); })
       .finally(() => { if (!cancelled) setAlertesLoading(false); });
     return () => { cancelled = true; };
-  }, [user?.role, location.pathname]);
+  }, [user?.role, location.pathname, majBadges]);
+  useMiseAJourAuto(() => { badgesSilencieux.current = true; setMajBadges((n) => n + 1); }, { actif: user?.role === 'cx_manager' || user?.role === 'agency_manager' });
   const alertesActives = alertes?.alertes_seuil?.length ?? 0;
 
   const handleLogout = async () => {
