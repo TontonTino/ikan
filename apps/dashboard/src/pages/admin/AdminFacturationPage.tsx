@@ -9,11 +9,12 @@ import type {
   ChangementPlanHistoriqueItem,
 } from '../../types';
 import PageHeader from '../../components/ui/PageHeader';
+import ChiffresCles from '../../components/admin/ChiffresCles';
 import EmptyState from '../../components/ui/EmptyState';
 import Alert from '../../components/ui/Alert';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
-import { AlertTriangleIcon, ClockIcon } from '../../components/common/Icons';
+import { AlertTriangleIcon, CheckCircleIcon, ClockIcon } from '../../components/common/Icons';
 import { userFacingError } from '../../utils/userFacingError';
 import { formaterPourcentage } from '../../utils/formatNombre';
 
@@ -265,30 +266,20 @@ function AdminFacturationPageContenu() {
         </Alert>
       )}
 
-      {/* ── KPIs : répartition par forfait + taux de conversion ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '14px' }}>
-        {vueEnsemble?.repartition.map((r) => (
-          <div key={r.code} style={cardStyle()}>
-            <div style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text-2)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-              {r.nom}
-            </div>
-            <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', marginTop: '4px' }}>{r.nombre}</div>
-          </div>
-        ))}
-        <div style={{ ...cardStyle(), background: 'var(--color-bon-fond)', border: '1px solid var(--color-trait)' }}>
-          <div style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-bon-texte)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-            Passage du forfait Gratuit à un forfait payant (30 jours)
-          </div>
-          <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-encre)', marginTop: '4px' }}>
-            {vueEnsemble?.taux_conversion_30j === null || vueEnsemble?.taux_conversion_30j === undefined
-              ? '—'
-              : formaterPourcentage(Math.round(vueEnsemble.taux_conversion_30j * 100), 0)}
-          </div>
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-bon-texte)', marginTop: '2px' }}>
-            {vueEnsemble?.nb_conversions_30j ?? 0} conversion(s) / {vueEnsemble?.nb_base_calcul_30j ?? 0} organisation(s)
-          </div>
-        </div>
-      </div>
+      {/* ── Chiffres clés : organisations par forfait + passage au payant, dans une seule carte ── */}
+      {vueEnsemble && (
+        <ChiffresCles
+          label="Forfaits"
+          items={[
+            ...vueEnsemble.repartition.map((r) => ({ label: r.nom, valeur: r.nombre, note: r.nombre > 1 ? 'organisations' : 'organisation' })),
+            {
+              label: 'Passage au payant (30 j)',
+              valeur: vueEnsemble.taux_conversion_30j === null || vueEnsemble.taux_conversion_30j === undefined ? '—' : formaterPourcentage(Math.round(vueEnsemble.taux_conversion_30j * 100), 0),
+              note: `${vueEnsemble.nb_conversions_30j ?? 0} sur ${vueEnsemble.nb_base_calcul_30j ?? 0} au forfait Gratuit`,
+            },
+          ]}
+        />
+      )}
 
       {/* ── Paiements en échec ── */}
       <div style={cardStyle()}>
@@ -305,13 +296,10 @@ function AdminFacturationPageContenu() {
             Les paiements en échec n’ont pas pu être chargés : cela ne signifie pas qu’il n’y en a aucun.
           </p>
         ) : paiementsEchoues.length === 0 ? (
-          <div className="saas-card saas-card--success" style={{ padding: 0 }}>
-            <EmptyState
-              title="Aucun paiement en échec"
-              message="Aucun paiement en échec actuellement."
-              illustration="no-alert"
-            />
-          </div>
+          <p className="admin-etat-calme">
+            <CheckCircleIcon size={16} aria-hidden="true" />
+            Aucun paiement en échec.
+          </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {paiementsEchoues.map((p) => {
@@ -377,20 +365,9 @@ function AdminFacturationPageContenu() {
                 </td>
                 <td style={{ padding: '12px 20px' }}>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      onClick={() => setOrgPourChangement(o)}
-                      className="btn-primary"
-                      style={{ padding: '6px 12px', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', fontFamily: 'inherit' }}
-                    >
-                      Changer le forfait
-                    </button>
-                    <button
-                      onClick={() => setOrgPourHistorique(o)}
-                      className="btn-secondary"
-                      style={{ padding: '6px 12px', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)', fontFamily: 'inherit' }}
-                    >
-                      Historique
-                    </button>
+                    {/* Action de ligne : secondaire (le corail est réservé à l'action principale d'un écran, pas répété ligne par ligne). */}
+                    <Button size="sm" variant="secondary" onClick={() => setOrgPourChangement(o)}>Changer le forfait</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setOrgPourHistorique(o)}>Historique</Button>
                   </div>
                 </td>
               </tr>

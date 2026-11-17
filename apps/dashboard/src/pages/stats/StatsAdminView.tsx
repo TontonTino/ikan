@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { statisticsApi } from '../../services/api';
 import type { StatsAdminResponse } from '../../types';
 import PageHeader from '../../components/ui/PageHeader';
-import KpiCard from '../../components/ui/KpiCard';
+import ChiffresCles from '../../components/admin/ChiffresCles';
 import TabsNavigation from '../../components/ui/TabsNavigation';
 import RepartitionForfaitsCard from '../../components/admin/RepartitionForfaitsCard';
 import OrganisationsStatsTable from '../../components/stats/OrganisationsStatsTable';
@@ -75,13 +75,16 @@ export default function StatsAdminView() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {activeTab === 'overview' && (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-                <KpiCard icon={<BuildingIcon size={20} />} label="Organisations actives" value={kpis.organisations_actives?.valeur ?? 0} compact subtitle={kpis.organisations_actives?.sous_titre || undefined} />
-                <KpiCard icon={<StoreIcon size={20} />} label="Agences" value={kpis.total_agences?.valeur ?? 0} compact subtitle={kpis.total_agences?.sous_titre || undefined} />
-                <KpiCard icon={<UsersIcon size={20} />} label="Utilisateurs actifs" value={kpis.utilisateurs_actifs?.valeur ?? 0} compact subtitle={kpis.utilisateurs_actifs?.sous_titre || undefined} />
-                <KpiCard icon={<UsersIcon size={20} />} label={ROLE_LABELS_PLURIEL.cx_manager} value={kpis.cx_managers?.valeur ?? 0} compact subtitle={kpis.cx_managers?.sous_titre || undefined} />
-                <KpiCard icon={<UsersIcon size={20} />} label="Responsables d’agence" value={kpis.agency_managers?.valeur ?? 0} compact subtitle={kpis.agency_managers?.sous_titre || undefined} />
-              </div>
+              <ChiffresCles
+                label="Structure de la plateforme"
+                items={[
+                  { label: 'Organisations actives', valeur: kpis.organisations_actives?.valeur ?? 0, note: kpis.organisations_actives?.sous_titre || undefined },
+                  { label: 'Agences', valeur: kpis.total_agences?.valeur ?? 0, note: kpis.total_agences?.sous_titre || undefined },
+                  { label: 'Utilisateurs actifs', valeur: kpis.utilisateurs_actifs?.valeur ?? 0, note: kpis.utilisateurs_actifs?.sous_titre || undefined },
+                  { label: ROLE_LABELS_PLURIEL.cx_manager, valeur: kpis.cx_managers?.valeur ?? 0, note: kpis.cx_managers?.sous_titre || undefined },
+                  { label: ROLE_LABELS_PLURIEL.agency_manager, valeur: kpis.agency_managers?.valeur ?? 0, note: kpis.agency_managers?.sous_titre || undefined },
+                ]}
+              />
               <RepartitionForfaitsCard repartition={data.repartition_forfaits} />
             </>
           )}

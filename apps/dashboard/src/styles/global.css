@@ -731,3 +731,39 @@ button.espace-carte:hover .espace-indice, .espace-carte.is-ouverte .espace-indic
   color: var(--color-encre); opacity: 0.22; pointer-events: none; user-select: none;
 }
 .dashboard-sidebar--collapsed .dashboard-sidebar__filigrane { display: none; }
+
+/* ── Administration : chiffres clés et répartition par forfait ─────────────────────────────── */
+.chiffres-cles { display: grid; grid-template-columns: repeat(var(--chiffres-colonnes, 4), minmax(0, 1fr)); padding: 0; overflow: hidden; }
+/* Grille à 3 rangées : un libellé sur 2 lignes ne décale pas la valeur, les chiffres restent alignés d'une cellule à l'autre. */
+.chiffres-cles__cellule { display: grid; grid-template-rows: 1fr auto auto; row-gap: 8px; min-width: 0; padding: var(--space-5); }
+.chiffres-cles__label { align-self: start; }
+.chiffres-cles__cellule + .chiffres-cles__cellule { border-left: 1px solid var(--color-trait); }
+.chiffres-cles__label { margin: 0; font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--color-text-2); line-height: var(--leading-tight); }
+.chiffres-cles__valeur { margin: 0; font-size: var(--text-2xl); font-weight: var(--weight-semibold); color: var(--color-encre); line-height: 1; font-variant-numeric: tabular-nums; }
+.chiffres-cles__note { margin: 0; font-size: var(--text-xs); color: var(--color-text-2); }
+@media (max-width: 900px) {
+  .chiffres-cles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .chiffres-cles__cellule + .chiffres-cles__cellule { border-left: 0; }
+  .chiffres-cles__cellule { border-top: 1px solid var(--color-trait); }
+  .chiffres-cles__cellule:nth-child(-n + 2) { border-top: 0; }
+  .chiffres-cles__cellule:nth-child(even) { border-left: 1px solid var(--color-trait); }
+}
+
+.repartition-forfaits { display: flex; flex-direction: column; gap: var(--space-3); }
+.repartition-forfaits__entete { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.repartition-forfaits__titre { margin: 0; font-size: var(--text-base); font-weight: var(--weight-semibold); color: var(--color-encre); }
+.repartition-forfaits__total { font-size: var(--text-sm); color: var(--color-text-2); font-variant-numeric: tabular-nums; }
+.repartition-forfaits__barre { display: flex; gap: 2px; height: 10px; border-radius: var(--radius-pill); overflow: hidden; background: var(--color-neutre-fond); }
+.repartition-forfaits__barre > span { display: block; min-width: 4px; }
+.repartition-forfaits__legende { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: 0; padding: 0; list-style: none; font-size: var(--text-sm); color: var(--color-text-2); }
+.repartition-forfaits__legende li { display: inline-flex; align-items: center; gap: 7px; }
+.repartition-forfaits__legende strong { color: var(--color-encre); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
+.repartition-forfaits__vide { opacity: 0.6; }
+.repartition-forfaits__pastille { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 8px; }
+/* État calme (rien à signaler) : une ligne discrète, pas un grand bloc coloré qui attire l'œil sur une absence. */
+.admin-etat-calme { display: flex; align-items: center; gap: 8px; margin: 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--color-bg); font-size: var(--text-sm); color: var(--color-text-2); }
+.admin-etat-calme svg { color: var(--color-bon-texte); flex: 0 0 auto; }
+/* Notes d'information (administration) : texte discret, pas de bandeau coloré. */
+.admin-notes { display: flex; flex-direction: column; gap: var(--space-2); }
+.admin-note { display: flex; align-items: flex-start; gap: 8px; margin: 0; max-width: 860px; font-size: var(--text-xs); color: var(--color-text-2); line-height: var(--leading-normal); }
+.admin-note svg { flex: 0 0 auto; margin-top: 1px; }

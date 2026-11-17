@@ -81,7 +81,8 @@ export default function Sidebar({ user, sections, collapsed, mobileOpen, onClose
         )}
       </div>
 
-      <SidebarWorkspaceCard user={user} collapsed={collapsed} />
+      {/* Administrateur : l'en-tête « IKAN AI · Administration » dit déjà où l'on est ; la carte d'espace ferait doublon. */}
+      {user?.role !== 'admin' && <SidebarWorkspaceCard user={user} collapsed={collapsed} />}
 
       <nav aria-label="Navigation principale" className="dashboard-primary-nav">
         {sections.map((section, idx) => (
