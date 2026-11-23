@@ -14,6 +14,7 @@ import { useYamStore } from '../../stores/yamStore';
 import { useMediaQuery, DESKTOP_QUERY } from '../ui/useMediaQuery';
 import { XCloseIcon } from '../common/Icons';
 import { LIBELLES } from '../../utils/vocabulaire';
+import { BUILD_DEMO, MENTION_DEMO } from '../../services/demo';
 
 // Seuils d'espace utile du contenu (hors sidebar, marges et panneau YAM).
 // L'écart de 40 px évite les bascules répétées quand la largeur varie près du seuil.
@@ -305,6 +306,29 @@ export default function DashboardLayout() {
 
       {/* ── Zone Contenu Principal ── */}
       <div className="dashboard-content">
+        {/* Démonstration publique : rappel discret et permanent que rien ici n'est réel. */}
+        {BUILD_DEMO && (
+          <div
+            role="note"
+            className="bandeau-demo"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '7px 16px',
+              background: 'var(--color-bon-fond)',
+              color: 'var(--color-bon-texte)',
+              fontSize: 'var(--text-xs)',
+              fontWeight: 'var(--weight-semibold)',
+              letterSpacing: '0.01em',
+              textAlign: 'center',
+            }}
+          >
+            <span aria-hidden="true" style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-marque)', flexShrink: 0 }} />
+            {MENTION_DEMO}
+          </div>
+        )}
         {/* ── Top Bar Header (Breadcrumb + Search + Quick Actions) ── */}
         <header
           className="dashboard-header-inner"

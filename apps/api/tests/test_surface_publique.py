@@ -21,6 +21,9 @@ ROUTES_PUBLIQUES = {
     ("POST", "/api/v1/auth/login"),
     ("POST", "/api/v1/auth/logout"),
     ("POST", "/api/v1/auth/refresh"),
+    # Démonstration publique (app/core/demo.py) : 404 hors démo ; en démo, n'ouvre que les comptes d'entrée désignés.
+    ("GET", "/api/v1/auth/demo"),
+    ("POST", "/api/v1/auth/demo"),
     ("POST", "/api/v1/feedbacks/"),
     ("POST", "/api/v1/feedbacks/{feedback_id}/nps"),
     ("GET", "/api/v1/qr-codes/ping"),

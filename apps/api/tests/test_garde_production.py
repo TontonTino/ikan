@@ -264,6 +264,7 @@ ENTREES = [
     ("scripts/seed_restauration_demo.py", "main"),
     ("scripts/seed_mentions_veille_demo.py", "main"),
     ("scripts/clear_demo_veille_urls.py", "main"),
+    ("scripts/demo_remettre_a_zero.py", "main"),
     ("scripts/renseigner_coordonnees_agences.py", "main"),
 ]
 

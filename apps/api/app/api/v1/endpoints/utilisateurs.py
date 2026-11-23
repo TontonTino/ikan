@@ -11,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_cx_or_admin, get_current_active_user, get_db
+from app.core import demo
 from app.core.security import get_password_hash
 from app.models.utilisateur import Utilisateur
 from app.models.enums import UserRole
@@ -202,6 +203,7 @@ def update_utilisateur(
         raise HTTPException(status_code=404, detail="Utilisateur introuvable")
 
     updates = data.model_dump(exclude_unset=True)
+    demo.refuser_si_compte_demo(user)   # démonstration : un compte d'entrée garde son e-mail, son mot de passe et son accès
     controler_modification_compte(db, user, updates, current_user, requete=request)   # après l'existence et l'appartenance
     if "email" in updates:
         if updates["email"] is None:
@@ -277,6 +279,7 @@ def delete_utilisateur(
     if not user:
         raise HTTPException(status_code=404, detail="Utilisateur introuvable")
 
+    demo.refuser_si_compte_demo(user)
     controler_retrait_compte(db, user, current_user, requete=request)   # après l'existence et l'appartenance
     avant_active = user.active
     user.active = False

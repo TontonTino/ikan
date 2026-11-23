@@ -70,3 +70,4 @@ apps/veille/state/
 apps/veille/debug/
 apps/veille/data/
 apps/veille/*.json
+dist-demo/

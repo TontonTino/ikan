@@ -7,7 +7,7 @@ import { QuiContacter } from './MotDePasseOublie';
 import sourceOubli from './MotDePasseOublie.tsx?raw';
 import { SUPPORT_EMAIL } from '../utils/contact';
 
-vi.mock('../stores/authStore', () => ({ useAuthStore: (selecteur: (s: unknown) => unknown) => selecteur({ user: null, login: vi.fn() }) }));
+vi.mock('../stores/authStore', () => ({ useAuthStore: (selecteur: (s: unknown) => unknown) => selecteur({ user: null, login: vi.fn(), entrerDemo: vi.fn() }) }));
 
 const page = () => renderToStaticMarkup(<StaticRouter location="/login"><LoginPage /></StaticRouter>);
 

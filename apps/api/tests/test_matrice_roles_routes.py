@@ -68,6 +68,7 @@ MATRICE: dict[tuple[str, str], object] = {
     ("GET", "/"): P, ("GET", "/health"): P, ("POST", "/webhooks/stripe"): P,
     # --- Authentification ---
     ("POST", f"{V1}/auth/login"): P, ("POST", f"{V1}/auth/logout"): P, ("POST", f"{V1}/auth/refresh"): P,
+    ("GET", f"{V1}/auth/demo"): P, ("POST", f"{V1}/auth/demo"): P,   # démonstration publique : 404 hors démo
     ("GET", f"{V1}/auth/me"): TOUS, ("PATCH", f"{V1}/auth/me"): TOUS, ("POST", f"{V1}/auth/me/mot-de-passe"): TOUS,
     ("GET", f"{V1}/auth/agent-token"): CA,
     # --- Organisations ---

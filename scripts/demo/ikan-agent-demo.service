@@ -1,0 +1,15 @@
+# YAM de la démonstration publique (docs/demo-publique.md). Copier dans /etc/systemd/system/.
+[Unit]
+Description=IKAN AI — YAM de démonstration
+After=network-online.target postgresql.service
+
+[Service]
+User=ec2-user
+WorkingDirectory=/home/ec2-user/ikan/apps/agent
+EnvironmentFile=/home/ec2-user/ikan-demo/agent.env
+ExecStart=/home/ec2-user/ikan/apps/agent/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8101
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

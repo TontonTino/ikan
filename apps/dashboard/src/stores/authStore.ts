@@ -12,6 +12,7 @@ interface AuthState {
   loading: boolean;
   setUser: (user: User | null) => void;
   login: (email: string, password: string) => Promise<void>;
+  entrerDemo: (role: 'cx_manager' | 'agency_manager') => Promise<void>;
   logout: () => Promise<void>;
   fetchMe: () => Promise<void>;
 }
@@ -28,6 +29,17 @@ export const useAuthStore = create<AuthState>()(
         set({ loading: true });
         try {
           const res = await authApi.login(email, password);
+          set({ user: res.data.user, loading: false });
+        } catch (err) {
+          set({ loading: false });
+          throw err;
+        }
+      },
+
+      entrerDemo: async (role) => {
+        set({ loading: true });
+        try {
+          const res = await authApi.entrerDemo(role);
           set({ user: res.data.user, loading: false });
         } catch (err) {
           set({ loading: false });

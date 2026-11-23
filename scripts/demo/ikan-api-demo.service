@@ -1,0 +1,15 @@
+# API de la démonstration publique (docs/demo-publique.md). Copier dans /etc/systemd/system/.
+[Unit]
+Description=IKAN AI — API de démonstration
+After=network-online.target postgresql.service
+
+[Service]
+User=ec2-user
+WorkingDirectory=/home/ec2-user/ikan/apps/api
+EnvironmentFile=/home/ec2-user/ikan-demo/api.env
+ExecStart=/home/ec2-user/ikan/apps/api/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8100
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

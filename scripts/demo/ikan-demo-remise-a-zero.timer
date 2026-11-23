@@ -1,0 +1,10 @@
+# Chaque nuit à 3 h 30 (heure du serveur, UTC = heure de Ouagadougou). Persistent : rattrapée au démarrage si le serveur était éteint.
+[Unit]
+Description=IKAN AI — remise à zéro nocturne de la démonstration
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -4,6 +4,8 @@ import { useAuthStore } from '../stores/authStore';
 import { AlertTriangleIcon } from '../components/common/Icons';
 import { userFacingError } from '../utils/userFacingError';
 import MotDePasseOublie from './MotDePasseOublie';
+import EntreeDemo from './EntreeDemo';
+import { useRolesDemo, type RoleDemo } from '../services/demo';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -13,6 +15,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const user = useAuthStore((s) => s.user);
   const login = useAuthStore((s) => s.login);
+  const entrerDemo = useAuthStore((s) => s.entrerDemo);
+  const rolesDemo = useRolesDemo();
+  const enDemo = rolesDemo.length > 0;
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,6 +47,20 @@ export default function LoginPage() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEntreeDemo = async (role: RoleDemo) => {
+    setError('');
+    try {
+      await entrerDemo(role);
+      navigate('/');
+    } catch (err: any) {
+      setError(
+        !err?.response
+          ? 'Impossible de joindre le serveur. Veuillez vérifier votre connexion ou réessayer.'
+          : userFacingError(err, 'La démonstration est momentanément indisponible. Réessayez dans quelques instants.'),
+      );
     }
   };
 
@@ -243,7 +262,7 @@ export default function LoginPage() {
               letterSpacing: '-0.02em',
             }}
           >
-            Connexion
+            {enDemo ? 'Découvrir IKAN AI' : 'Connexion'}
           </h2>
 
           <p
@@ -255,8 +274,10 @@ export default function LoginPage() {
               fontWeight: 'var(--weight-normal)',
             }}
           >
-            Accédez à votre espace de gestion
+            {enDemo ? 'Une démonstration complète, sans compte' : 'Accédez à votre espace de gestion'}
           </p>
+
+          <EntreeDemo roles={rolesDemo} onEntrer={handleEntreeDemo} desactive={loading} />
 
           {/* Formulaire de Connexion */}
           <form onSubmit={handleSubmit} style={{ width: '100%' }}>
