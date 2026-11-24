@@ -13,6 +13,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user, get_db
+from app.core import demo
 from app.core.config import settings
 from app.models.agence import Agence
 from app.models.enums import SentimentType, UserRole
@@ -118,6 +119,7 @@ async def facebook_connect(
     renvoyée au navigateur. Réservé aux CX Managers.
     """
     _exiger_cx_manager(current_user)
+    demo.refuser_en_demo()   # démonstration : aucune vraie Page Facebook n'y est reliée
 
     try:
         authorize_url = await start_facebook_connection(_client_id(current_user), _return_url_veille())

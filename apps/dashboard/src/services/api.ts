@@ -36,6 +36,9 @@ export const authApi = {
     api.post('/auth/login', { email, password }),
   logout: () => api.post('/auth/logout'),
   me: () => api.get('/auth/me'),
+  // Démonstration publique (demo.ikanai.bf) : 404 sur une instance normale.
+  demo: () => api.get<{ roles: string[] }>('/auth/demo'),
+  entrerDemo: (role: 'cx_manager' | 'agency_manager') => api.post('/auth/demo', { role }),
   updateMe: (data: { nom?: string; prenom?: string; email?: string; delai_alerte_negatif_heures?: number }) =>
     api.patch<import('../types').User>('/auth/me', data),
   changerMotDePasse: (ancienMotDePasse: string, nouveauMotDePasse: string) =>

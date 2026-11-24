@@ -79,6 +79,9 @@ def on_startup():
 
     # SD-02 : hors APP_ENV=production (Render), refuse de démarrer contre la base de production protégée. Aucune connexion ouverte.
     refuser_si_production(settings.DATABASE_URL, "démarrage de l'API", app_env=settings.APP_ENV)
+    # Démonstration publique : jamais contre la base de production, même avec APP_ENV=production (entrée sans mot de passe).
+    from app.core.demo import verifier_demarrage as verifier_demarrage_demo
+    verifier_demarrage_demo()
 
     # Aucun seed au démarrage, dans AUCUN environnement : le démarrage ne crée ni ne supprime jamais
     # d'utilisateurs, d'agences ni d'organisations. Les données de démonstration se chargent à la main,

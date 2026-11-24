@@ -74,6 +74,12 @@ class Settings(BaseSettings):
     # Interrupteur d'urgence : ALERTES_EPISODES=non la désactive entièrement (aucune lecture ni écriture d'épisode). Actif par défaut.
     ALERTES_EPISODES: str = "oui"
 
+    # Démonstration publique (app/core/demo.py, docs/demo-publique.md). JAMAIS sur la base de production : l'API refuse alors
+    # de démarrer. DEMO_MODE=oui (valeur exacte) ouvre l'entrée sans mot de passe sur les comptes désignés par leur e-mail.
+    DEMO_MODE: str = "non"
+    DEMO_COMPTE_CX: str = ""
+    DEMO_COMPTE_AGENCE: str = ""
+
     # Agent IA YAM (optionnel — service séparé, port 8001). Vide = notification désactivée.
     # AGENT_WEBHOOK_URL = URL de BASE du service (ex. http://localhost:8001) ;
     # WEBHOOK_SECRET doit être IDENTIQUE à celui de apps/agent/.env.

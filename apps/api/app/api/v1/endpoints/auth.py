@@ -9,6 +9,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user
+from app.core import demo
 from app.core.config import settings
 from app.core.login_throttle import noter_echec, noter_succes, verifier_avant_connexion
 from app.core.security import (
@@ -25,7 +26,7 @@ from app.schemas.mot_de_passe import MESSAGE_MOT_DE_PASSE_IDENTIQUE, exiger_mot_
 from app.services import journal_audit as journal
 from app.services.comptes import requete_comptes_utilisables
 from app.schemas.auth import (
-    AgentTokenResponse, ChangerMotDePasseRequest, LoginRequest, TokenResponse,
+    AgentTokenResponse, ChangerMotDePasseRequest, DemoInfo, EntreeDemoRequest, LoginRequest, TokenResponse,
     UpdateMeRequest, UserPublic,
 )
 
@@ -96,6 +97,11 @@ def login(
         )
 
     noter_succes(request, email)
+    return _ouvrir_session(response, user, "Connexion réussie")
+
+
+def _ouvrir_session(response: Response, user: Utilisateur, message: str) -> TokenResponse:
+    """Jetons d'accès et de rafraîchissement, posés en cookies HTTP-only et renvoyés dans le corps (connexion et entrée démo)."""
     access_token = create_access_token(subject=str(user.id))
     refresh_token = create_refresh_token(subject=str(user.id))
 
@@ -118,12 +124,44 @@ def login(
     )
 
     return TokenResponse(
-        message="Connexion réussie",
+        message=message,
         user=UserPublic.model_validate(user),
         access_token=access_token,
         refresh_token=refresh_token,
         token_type="bearer",
     )
+
+
+# ── Démonstration publique (app/core/demo.py) ──────────────────────────────────────────────────────────────────────────────────
+# Hors démo, les deux routes répondent 404 et n'ouvrent rien (le dashboard de production ne les appelle jamais).
+
+def _exiger_demo() -> None:
+    if not demo.demo_active():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+
+
+@router.get("/demo", response_model=DemoInfo)
+def infos_demo():
+    """Rôles proposés à l'entrée de la démonstration (le dashboard affiche un bouton par rôle)."""
+    _exiger_demo()
+    return DemoInfo(roles=[role.value for role in demo.comptes_demo()])
+
+
+@router.post("/demo", response_model=TokenResponse)
+def entrer_dans_la_demo(data: EntreeDemoRequest, response: Response, db: Session = Depends(get_db)):
+    """Entrée sans mot de passe dans la démonstration, sur le compte d'entrée du rôle choisi."""
+    _exiger_demo()
+    email = demo.comptes_demo().get(data.role)
+    if not email:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ce rôle n'est pas proposé dans la démonstration.")
+    user = requete_comptes_utilisables(db).filter(func.lower(Utilisateur.email) == email, Utilisateur.role == data.role).first()
+    if not user:
+        # Base pas encore remplie, ou compte d'entrée retiré : la remise à zéro de la nuit le restaure.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="La démonstration est en cours de préparation. Réessayez dans quelques minutes.",
+        )
+    return _ouvrir_session(response, user, "Bienvenue dans la démonstration")
 
 
 @router.post("/logout")
@@ -225,6 +263,8 @@ def update_me(
     if updates.get("email"):
         nouvel_email = updates["email"].strip().lower()
         if nouvel_email != current_user.email.lower():
+            demo.refuser_si_compte_demo(current_user)   # sinon le bouton d'entrée de la démo ne trouverait plus le compte
+        if nouvel_email != current_user.email.lower():
             existing = db.query(Utilisateur).filter(
                 Utilisateur.email.ilike(nouvel_email),
                 Utilisateur.id != current_user.id,
@@ -252,6 +292,7 @@ def changer_mot_de_passe(
     current_user: Utilisateur = Depends(get_current_active_user),
 ):
     """Change son propre mot de passe — exige l'ancien mot de passe."""
+    demo.refuser_si_compte_demo(current_user)
     exiger_mot_de_passe_acceptable(data.nouveau_mot_de_passe, current_user.email)
     if not verify_password(data.ancien_mot_de_passe, current_user.mot_de_passe_hash):
         raise HTTPException(

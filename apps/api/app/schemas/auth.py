@@ -74,3 +74,20 @@ class ChangerMotDePasseRequest(BaseModel):
     @classmethod
     def _mot_de_passe_valide(cls, valeur: str) -> str:
         return verifier_mot_de_passe(valeur)
+
+
+class DemoInfo(BaseModel):
+    """Démonstration publique : rôles proposés à l'entrée (valeurs de UserRole)."""
+    roles: list[str]
+
+
+class EntreeDemoRequest(BaseModel):
+    """Entrée dans la démonstration : seuls les rôles CX Manager et Agency Manager existent (l'Admin n'y est jamais proposé)."""
+    role: UserRole
+
+    @field_validator("role")
+    @classmethod
+    def _pas_d_admin(cls, valeur: UserRole) -> UserRole:
+        if valeur == UserRole.ADMIN:
+            raise ValueError("Ce rôle n'est pas proposé dans la démonstration.")
+        return valeur

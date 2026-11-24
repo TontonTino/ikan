@@ -1,0 +1,7 @@
+# Remise à zéro de la démonstration publique (docs/demo-publique.md). Déclenché par ikan-demo-remise-a-zero.timer.
+[Unit]
+Description=IKAN AI — remise à zéro de la démonstration
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /home/ec2-user/ikan/scripts/demo/remettre-a-zero.sh

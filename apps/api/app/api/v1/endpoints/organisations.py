@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_admin_user, get_cx_manager, get_db
+from app.core import demo
 from app.core.config import settings
 from app.models.changement_plan import ChangementPlan
 from app.models.plan import Plan
@@ -54,6 +55,7 @@ def creer_session_checkout(
     de l'organisation au passage. Ne modifie jamais plan_id directement — c'est le webhook
     Stripe (Phase 2) qui le fera après confirmation réelle du paiement.
     """
+    demo.refuser_en_demo()   # démonstration : aucun paiement, même de test
     if not current_user.organisation_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aucune organisation rattachée")
 
